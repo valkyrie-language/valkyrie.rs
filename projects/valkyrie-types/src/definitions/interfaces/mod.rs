@@ -1,5 +1,4 @@
 use super::*;
-use crate::ValkyrieString;
 
 pub struct ValkyrieInterface {
     /// package∷module∷Interface

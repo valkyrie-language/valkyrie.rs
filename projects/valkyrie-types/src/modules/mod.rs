@@ -1,12 +1,17 @@
-use crate::{values::symbols::AsSymbol, FileCache, FileID, ValkyrieStructure, ValkyrieSymbol};
+use crate::{
+    types::function_type::FunctionDefinition, values::symbols::AsSymbol, FileCache, FileID, ValkyrieField, ValkyrieFunction,
+    ValkyrieStructure, ValkyrieSymbol,
+};
 use indexmap::{map::Entry, IndexMap};
 use nyar_error::{Failure, NyarError, Result, Success, Validation};
-use nyar_wasm::Operation;
+use nyar_wasm::{FunctionType, Operation};
 use std::{
     fmt::{Debug, Formatter},
     mem::take,
 };
-use valkyrie_ast::{ClassDeclaration, NamespaceDeclaration, ProgramRoot, StatementKind};
+use valkyrie_ast::{
+    ClassDeclaration, ClassTerm, ExpressionKind, FunctionDeclaration, NamespaceDeclaration, ProgramRoot, StatementKind,
+};
 use valkyrie_parser::{ProgramContext, StatementNode};
 
 pub struct ValkyrieModule {}
@@ -27,6 +32,7 @@ pub struct ModuleResolver {
 pub enum ModuleItem {
     External(ValkyrieSymbol),
     Imported(ValkyrieSymbol),
+    Function(ValkyrieFunction),
     Structure(ValkyrieStructure),
 }
 
@@ -36,16 +42,17 @@ impl Debug for ModuleItem {
             Self::External(v) => Debug::fmt(v, f),
             Self::Imported(v) => Debug::fmt(v, f),
             Self::Structure(v) => Debug::fmt(v, f),
+            Self::Function(v) => Debug::fmt(v, f),
         }
     }
 }
 
-pub(crate) trait AsModuleItem {
+pub(crate) trait HIR {
     type Output = ();
     fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output>;
 }
 
-impl AsModuleItem for ProgramRoot {
+impl HIR for ProgramRoot {
     fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         for statement in self.statements {
             statement.send_module(ctx)?
@@ -54,7 +61,17 @@ impl AsModuleItem for ProgramRoot {
     }
 }
 
-impl AsModuleItem for StatementKind {
+impl HIR for FunctionDeclaration {
+    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
+        ctx.items.insert(
+            self.name.to_string(),
+            ModuleItem::Function(ValkyrieFunction { name: self.name.to_string(), span: Default::default() }),
+        );
+        Ok(())
+    }
+}
+
+impl HIR for StatementKind {
     fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         match self {
             Self::Nothing => {}
@@ -67,7 +84,7 @@ impl AsModuleItem for StatementKind {
             Self::Enumerate(_) => {}
             Self::Trait(_) => {}
             Self::Extends(_) => {}
-            Self::Function(_) => {}
+            Self::Function(f) => f.send_module(ctx)?,
             Self::Variable(_) => {}
             Self::Guard(_) => {}
             Self::While(_) => {}
@@ -79,28 +96,12 @@ impl AsModuleItem for StatementKind {
     }
 }
 
-impl AsModuleItem for NamespaceDeclaration {
+impl HIR for NamespaceDeclaration {
     fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         ctx.namespace = Some(self.path.as_symbol());
         Ok(())
     }
 }
-impl AsModuleItem for ClassDeclaration {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        let symbol = self.name.as_namespace_symbol(&ctx.namespace);
-        let item = ValkyrieStructure { symbol, fields: Default::default(), methods: Default::default() };
-        match ctx.items.entry(item.name()) {
-            Entry::Occupied(e) => {
-                todo!()
-            }
-            Entry::Vacant(e) => {
-                e.insert(ModuleItem::Structure(item));
-            }
-        }
-        Ok(())
-    }
-}
-
 impl ModuleResolver {
     pub fn parse(&mut self, file: FileID, cache: &mut FileCache) -> Vec<NyarError> {
         let root = ProgramContext { file }.parse(cache);

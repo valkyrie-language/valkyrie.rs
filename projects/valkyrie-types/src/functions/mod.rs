@@ -1,4 +1,5 @@
 use crate::{
+    backends::ConvertTo,
     modifiers::{AccessType, CurryType, InlineType},
     types::ValkyrieMetaType,
     ValkyrieResult, ValkyrieValue,
@@ -9,6 +10,7 @@ use shredder::Gc;
 use std::{collections::BTreeMap, sync::Arc};
 use valkyrie_ast::StatementBlock;
 
+mod codegen;
 pub mod operators;
 
 pub trait ValkyrieFunctionType {
@@ -33,8 +35,6 @@ pub trait ValkyrieFunctionType {
 pub struct ValkyrieFunction {
     pub name: String,
     pub span: FileSpan,
-    pub overridable: bool,
-    pub return_type: Arc<ValkyrieMonomorphicFunction>,
 }
 
 /// Actual function definition, non-overloading, non-overriding
@@ -138,13 +138,14 @@ impl ValkyriePartialFunction {
         }
     }
     pub fn add_positional(&mut self, value: ValkyrieValue) -> ValkyrieResult<()> {
-        match self.positional.len() {
-            len if len < self.prototype.return_type.positional.len() => {
-                self.positional.push(value);
-                Ok(())
-            }
-            _ => Err(RuntimeError::new("too many arguments"))?,
-        }
+        todo!()
+        // match self.positional.len() {
+        //     len if len < self.prototype.return_type.positional.len() => {
+        //         self.positional.push(value);
+        //         Ok(())
+        //     }
+        //     _ => Err(RuntimeError::new("too many arguments"))?,
+        // }
     }
     pub fn add_named(&mut self, name: String, value: ValkyrieValue) -> ValkyrieResult<()> {
         match self.named.get(&name) {

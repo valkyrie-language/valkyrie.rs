@@ -25,8 +25,8 @@ generational-arena = "0.2.9"
 
 
 [dependencies.nyar-wasm]
-version = "0.0.2"
-#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
+version = "0.0.3"
+path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
 
 [dependencies.nyar-error]
 version = "0.1.12"
