@@ -2,7 +2,7 @@
 
 use crate::ProgramNode;
 use nyar_error::{Failure, FileCache, FileID, NyarError, Success, Validation};
-use std::str::FromStr;
+use std::{ops::AddAssign, str::FromStr};
 use valkyrie_ast::ProgramRoot;
 
 pub struct ProgramContext {
@@ -12,6 +12,12 @@ pub struct ProgramContext {
 pub(crate) struct ProgramState {
     pub file: FileID,
     errors: Vec<NyarError>,
+}
+
+impl AddAssign<NyarError> for ProgramState {
+    fn add_assign(&mut self, rhs: NyarError) {
+        self.errors.push(rhs)
+    }
 }
 
 pub(crate) struct LooperState {

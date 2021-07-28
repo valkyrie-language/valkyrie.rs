@@ -1,4 +1,5 @@
 use super::*;
+use crate::{utils::Ast2Hir, TupleLiteralNode};
 
 // static PREFIX: &'static str = r#"^(?x)(
 //       [+\-±]
@@ -33,7 +34,7 @@ impl crate::AttributeItemNode {
             kind: Default::default(),
             path: self.namepath.build(ctx),
             variant: vec![],
-            arguments: Default::default(),
+            arguments: self.arguments(ctx),
             domain: self.domain(ctx),
             span: self.span.clone(),
         }
@@ -41,7 +42,14 @@ impl crate::AttributeItemNode {
     fn domain(&self, ctx: &mut ProgramState) -> Option<StatementBlock> {
         Some(self.continuation.as_ref()?.build(ctx))
     }
+    fn arguments(&self, ctx: &mut ProgramState) -> ArgumentsList {
+        match &self.tuple_literal {
+            Some(s) => s.to_hir(ctx),
+            None => ArgumentsList::default(),
+        }
+    }
 }
+
 impl crate::AnnotationTermNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeList {
         let terms = match self {

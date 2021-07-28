@@ -2,7 +2,7 @@ use crate::{
     backends::ConvertTo,
     modifiers::{AccessType, CurryType, InlineType},
     types::ValkyrieMetaType,
-    ValkyrieResult, ValkyrieValue,
+    ValkyrieResult, ValkyrieSymbol, ValkyrieValue,
 };
 use indexmap::IndexMap;
 use nyar_error::{FileSpan, RuntimeError};
@@ -33,8 +33,29 @@ pub trait ValkyrieFunctionType {
 /// ```
 #[derive(Clone, Debug)]
 pub struct ValkyrieFunction {
-    pub name: String,
-    pub span: FileSpan,
+    name: ValkyrieSymbol,
+}
+
+impl ValkyrieFunction {
+    pub fn new(name: ValkyrieSymbol) -> Self {
+        Self { name }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ValkyrieExternalFunction {
+    name: ValkyrieSymbol,
+    bind_module: Arc<str>,
+    bind_name: Arc<str>,
+}
+
+impl ValkyrieExternalFunction {
+    pub fn new(name: ValkyrieSymbol) -> Self {
+        Self { name, bind_module: Arc::from(""), bind_name: Arc::from("") }
+    }
+    pub fn with_path(self, module: &str, name: &str) -> Self {
+        Self { bind_module: Arc::from(module), bind_name: Arc::from(name), ..self }
+    }
 }
 
 /// Actual function definition, non-overloading, non-overriding

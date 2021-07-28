@@ -1,5 +1,6 @@
 use super::*;
 use crate::StatementBlock;
+use core::ops::AddAssign;
 
 mod display;
 
@@ -11,6 +12,11 @@ pub struct ArgumentsList {
     pub terms: Vec<ArgumentTerm>,
 }
 
+impl AddAssign<ArgumentTerm> for ArgumentsList {
+    fn add_assign(&mut self, rhs: ArgumentTerm) {
+        self.terms.push(rhs)
+    }
+}
 impl Debug for ArgumentsList {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.terms.iter()).finish()

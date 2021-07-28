@@ -1,4 +1,5 @@
 use super::*;
+use crate::utils::Ast2Hir;
 
 impl crate::NewStatementNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ConstructNewNode> {
@@ -11,7 +12,7 @@ impl crate::NewStatementNode {
             annotations: self.annotations(ctx),
             namepath,
             generics,
-            arguments: self.tuple_literal.as_ref().map(|s| s.tuple_terms.build(ctx)).unwrap_or_default(),
+            arguments: self.tuple_literal.as_ref().map(|s| s.tuple_terms.to_hir(ctx)).unwrap_or_default(),
             body: self.new_block.as_ref().map(|s| s.build(ctx)).unwrap_or_default(),
             span: self.span.clone(),
         })

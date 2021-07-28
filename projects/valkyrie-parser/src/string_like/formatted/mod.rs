@@ -147,7 +147,7 @@ impl crate::StringInterpolationComplexNode {
         let argument = self.main_expression.build(&mut ProgramState::new(ctx.file))?;
         let mut formatters = Vec::with_capacity(self.tuple_pair.len());
         for x in self.tuple_pair.iter() {
-            match x.build(&mut ProgramState::new(ctx.file)) {
+            match x.to_hir(&mut ProgramState::new(ctx.file)) {
                 Ok(o) => formatters.push(o),
                 Err(e) => ctx.errors.push(e),
             }

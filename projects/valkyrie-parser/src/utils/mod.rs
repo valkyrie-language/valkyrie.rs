@@ -2,6 +2,9 @@ use crate::{helpers::ProgramState, AnnotationTermMixNode, AnnotationTermNode, De
 use nyar_error::Result;
 use valkyrie_ast::{AttributeList, ConstraintDeclaration, ModifierList};
 
+pub(crate) trait Ast2Hir<Out> {
+    fn to_hir(&self, ctx: &mut ProgramState) -> Out;
+}
 pub(crate) fn build_constraint(this: &Option<DefineConstraintNode>, ctx: &mut ProgramState) -> ConstraintDeclaration {
     match this {
         Some(s) => s.build(ctx),

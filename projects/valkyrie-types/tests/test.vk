@@ -1,8 +1,5 @@
 namespace core.text;
 
-
-
-
 structure Point {
     x: f64,
     y: f64,
@@ -14,27 +11,33 @@ structure Point {
 
 extends Point {
     sum(self): f64 {
+        print_f32(self.x)
+        print_f32(self.y)
         add(self.x, self.y)
     }
 }
 
 
-function add(i: f32, j: f32): f32 {
-    print_f32(i)
-    print_f32(j)
-    i + j
+
+
+
+
+
+
+#ffi("js", "print_char")
+private function print_char(n: char) {
+    // external function
 }
 
-#ffi("js", "print_f64")
+#ffi("js", "print_i32")
 private function print_i32(n: i32) {
     // external function
 }
 
-#ffi("js", "print_f64")
+#ffi("js", "print_i64")
 private function print_i64(n: i64) {
     // external function
 }
-
 
 #ffi("js", "print_f64")
 private function print_f32(n: f32) {

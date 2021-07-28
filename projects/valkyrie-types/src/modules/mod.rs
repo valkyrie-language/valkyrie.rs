@@ -1,6 +1,6 @@
 use crate::{
-    types::function_type::FunctionDefinition, values::symbols::AsSymbol, FileCache, FileID, ValkyrieField, ValkyrieFunction,
-    ValkyrieStructure, ValkyrieSymbol,
+    functions::ValkyrieExternalFunction, types::function_type::FunctionDefinition, values::symbols::AsSymbol, FileCache,
+    FileID, ValkyrieField, ValkyrieFunction, ValkyrieStructure, ValkyrieSymbol,
 };
 use indexmap::{map::Entry, IndexMap};
 use nyar_error::{Failure, NyarError, Result, Success, Validation};
@@ -30,7 +30,7 @@ pub struct ModuleResolver {
 }
 
 pub enum ModuleItem {
-    External(ValkyrieSymbol),
+    External(ValkyrieExternalFunction),
     Imported(ValkyrieSymbol),
     Function(ValkyrieFunction),
     Structure(ValkyrieStructure),
@@ -63,10 +63,24 @@ impl HIR for ProgramRoot {
 
 impl HIR for FunctionDeclaration {
     fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        ctx.items.insert(
-            self.name.to_string(),
-            ModuleItem::Function(ValkyrieFunction { name: self.name.to_string(), span: Default::default() }),
-        );
+        let symbol = self.name.as_namespace_symbol(&ctx.namespace);
+        for attr in self.annotations.attributes.terms {
+            let name = attr.path.to_string();
+            match name.as_str() {
+                "ffi" => {
+                    println!("{:?}", attr.arguments.terms);
+                    let (module, name) = attr.as_ffi()?;
+                    let external = ValkyrieExternalFunction::new(symbol.clone()).with_path(module, name);
+                    ctx.items.insert(symbol.to_string(), ModuleItem::External(external));
+                    return Ok(());
+                }
+                _ => {
+                    println!("Unhanded: {name}")
+                }
+            }
+        }
+
+        ctx.items.insert(symbol.to_string(), ModuleItem::Function(ValkyrieFunction::new(symbol)));
         Ok(())
     }
 }
