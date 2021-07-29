@@ -95,25 +95,17 @@ impl AttributeTerm {
     pub fn as_ffi(&self) -> Result<(&str, &str), NyarError> {
         let module = match self.arguments.terms.get(0) {
             Some(s) => match &s.value {
-                ExpressionKind::Text(s) => s.text.as_str(),
-                _ => {
-                    panic!("1")
-                }
+                ExpressionKind::String(s) => s.literal.text.as_str(),
+                _ => Err(NyarError::custom("except string in `ffi`"))?,
             },
-            None => {
-                panic!("2")
-            }
+            None => Err(NyarError::custom("missing module name in `ffi`"))?,
         };
         let name = match self.arguments.terms.get(1) {
             Some(s) => match &s.value {
-                ExpressionKind::Text(s) => s.text.as_str(),
-                _ => {
-                    panic!("3")
-                }
+                ExpressionKind::String(s) => s.literal.text.as_str(),
+                _ => Err(NyarError::custom("except string in `ffi`"))?,
             },
-            None => {
-                panic!("4")
-            }
+            None => Err(NyarError::custom("missing field name in ffi name in `ffi`"))?,
         };
         Ok((module, name))
     }

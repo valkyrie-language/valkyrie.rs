@@ -1,16 +1,21 @@
 use crate::{
     backends::ConvertTo,
+    functions::externals::ValkyrieExternalFunction,
     modifiers::{AccessType, CurryType, InlineType},
+    modules::Hir2Mir,
     types::ValkyrieMetaType,
-    ValkyrieResult, ValkyrieSymbol, ValkyrieValue,
+    values::symbols::AsSymbol,
+    ModuleItem, ModuleResolver, ValkyrieResult, ValkyrieSymbol, ValkyrieValue,
 };
 use indexmap::IndexMap;
-use nyar_error::{FileSpan, RuntimeError};
+use nyar_error::{Result, RuntimeError};
+use nyar_wasm::{ExternalType, FunctionType};
 use shredder::Gc;
 use std::{collections::BTreeMap, sync::Arc};
-use valkyrie_ast::StatementBlock;
+use valkyrie_ast::{FunctionDeclaration, StatementBlock};
 
 mod codegen;
+pub mod externals;
 pub mod operators;
 
 pub trait ValkyrieFunctionType {
@@ -39,22 +44,6 @@ pub struct ValkyrieFunction {
 impl ValkyrieFunction {
     pub fn new(name: ValkyrieSymbol) -> Self {
         Self { name }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ValkyrieExternalFunction {
-    name: ValkyrieSymbol,
-    bind_module: Arc<str>,
-    bind_name: Arc<str>,
-}
-
-impl ValkyrieExternalFunction {
-    pub fn new(name: ValkyrieSymbol) -> Self {
-        Self { name, bind_module: Arc::from(""), bind_name: Arc::from("") }
-    }
-    pub fn with_path(self, module: &str, name: &str) -> Self {
-        Self { bind_module: Arc::from(module), bind_name: Arc::from(name), ..self }
     }
 }
 

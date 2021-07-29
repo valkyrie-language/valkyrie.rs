@@ -12,7 +12,7 @@ impl ModuleResolver {
             match item {
                 ModuleItem::Imported(_) => {}
                 ModuleItem::Structure(v) => builder.register(v.convert()),
-                ModuleItem::External(_) => {}
+                ModuleItem::External(v) => builder.register(v.convert()),
                 ModuleItem::Function(v) => builder.register(v.convert()),
             }
         }

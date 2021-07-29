@@ -1,17 +1,13 @@
 use crate::{
-    functions::ValkyrieExternalFunction, types::function_type::FunctionDefinition, values::symbols::AsSymbol, FileCache,
-    FileID, ValkyrieField, ValkyrieFunction, ValkyrieStructure, ValkyrieSymbol,
+    values::symbols::AsSymbol, FileCache, FileID, ValkyrieExternalFunction, ValkyrieFunction, ValkyrieStructure, ValkyrieSymbol,
 };
-use indexmap::{map::Entry, IndexMap};
-use nyar_error::{Failure, NyarError, Result, Success, Validation};
-use nyar_wasm::{FunctionType, Operation};
+use indexmap::IndexMap;
+use nyar_error::{Failure, NyarError, Result, Success};
 use std::{
     fmt::{Debug, Formatter},
     mem::take,
 };
-use valkyrie_ast::{
-    ClassDeclaration, ClassTerm, ExpressionKind, FunctionDeclaration, NamespaceDeclaration, ProgramRoot, StatementKind,
-};
+use valkyrie_ast::{NamespaceDeclaration, ProgramRoot, StatementKind};
 use valkyrie_parser::{ProgramContext, StatementNode};
 
 pub struct ValkyrieModule {}
@@ -47,58 +43,34 @@ impl Debug for ModuleItem {
     }
 }
 
-pub(crate) trait HIR {
+pub(crate) trait Hir2Mir {
     type Output = ();
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output>;
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output>;
 }
 
-impl HIR for ProgramRoot {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
+impl Hir2Mir for ProgramRoot {
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         for statement in self.statements {
-            statement.send_module(ctx)?
+            statement.to_mir(ctx)?
         }
         Ok(())
     }
 }
 
-impl HIR for FunctionDeclaration {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        let symbol = self.name.as_namespace_symbol(&ctx.namespace);
-        for attr in self.annotations.attributes.terms {
-            let name = attr.path.to_string();
-            match name.as_str() {
-                "ffi" => {
-                    println!("{:?}", attr.arguments.terms);
-                    let (module, name) = attr.as_ffi()?;
-                    let external = ValkyrieExternalFunction::new(symbol.clone()).with_path(module, name);
-                    ctx.items.insert(symbol.to_string(), ModuleItem::External(external));
-                    return Ok(());
-                }
-                _ => {
-                    println!("Unhanded: {name}")
-                }
-            }
-        }
-
-        ctx.items.insert(symbol.to_string(), ModuleItem::Function(ValkyrieFunction::new(symbol)));
-        Ok(())
-    }
-}
-
-impl HIR for StatementKind {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
+impl Hir2Mir for StatementKind {
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         match self {
             Self::Nothing => {}
             Self::Document(_) => {}
             Self::Annotation(_) => {}
-            Self::Namespace(v) => v.send_module(ctx)?,
+            Self::Namespace(v) => v.to_mir(ctx)?,
             Self::Import(_) => {}
-            Self::Class(v) => v.send_module(ctx)?,
+            Self::Class(v) => v.to_mir(ctx)?,
             Self::Union(_) => {}
             Self::Enumerate(_) => {}
             Self::Trait(_) => {}
             Self::Extends(_) => {}
-            Self::Function(f) => f.send_module(ctx)?,
+            Self::Function(f) => f.to_mir(ctx)?,
             Self::Variable(_) => {}
             Self::Guard(_) => {}
             Self::While(_) => {}
@@ -110,8 +82,8 @@ impl HIR for StatementKind {
     }
 }
 
-impl HIR for NamespaceDeclaration {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
+impl Hir2Mir for NamespaceDeclaration {
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         ctx.namespace = Some(self.path.as_symbol());
         Ok(())
     }
@@ -134,7 +106,7 @@ impl ModuleResolver {
     }
 
     pub fn visit(&mut self, root: ProgramRoot) -> Vec<NyarError> {
-        let progress = root.send_module(self);
+        let progress = root.to_mir(self);
         let mut errors = take(&mut self.errors);
         match progress {
             Ok(_) => {}

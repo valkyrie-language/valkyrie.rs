@@ -35,7 +35,7 @@ pub use self::{
     },
     collection::dict::ValkyrieDict,
     definitions::{enumerates::ValkyrieEnumerate, fields::ValkyrieField, interfaces::ValkyrieInterface, names::ValkyrieName},
-    functions::{ValkyrieFunction, ValkyrieFunctionType, ValkyrieMonomorphicFunction},
+    functions::{externals::ValkyrieExternalFunction, ValkyrieFunction, ValkyrieFunctionType, ValkyrieMonomorphicFunction},
     modifiers::{FeatureType, InitializeType, MutableType},
     modules::{ModuleItem, ModuleResolver, ValkyrieModule},
     packages::ids::{ValkyrieID, ValkyrieUniverse},
@@ -45,7 +45,7 @@ pub use self::{
     },
     values::{symbols::ValkyrieSymbol, ValkyrieValue},
 };
-pub(crate) use self::{modules::HIR, values::symbols::AsSymbol};
+pub(crate) use self::{modules::Hir2Mir, values::symbols::AsSymbol};
 pub use nyar_error::{
     Failure, FileCache, FileID, MissingError, NyarError as ValkyrieError, Result as ValkyrieResult, RuntimeError, Success,
     SyntaxError,

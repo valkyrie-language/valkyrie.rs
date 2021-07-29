@@ -1,7 +1,7 @@
 use super::*;
 
-impl HIR for ClassDeclaration {
-    fn send_module(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
+impl Hir2Mir for ClassDeclaration {
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         let symbol = self.name.as_namespace_symbol(&ctx.namespace);
         let mut class = ValkyrieStructure { symbol, fields: Default::default(), methods: Default::default() };
 

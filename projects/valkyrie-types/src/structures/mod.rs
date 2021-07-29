@@ -1,5 +1,5 @@
 use crate::{
-    backends::ConvertTo, modules::HIR, types::method_type::MethodDefinition, values::symbols::AsSymbol, ModuleItem,
+    backends::ConvertTo, modules::Hir2Mir, types::method_type::MethodDefinition, values::symbols::AsSymbol, ModuleItem,
     ModuleResolver, ValkyrieField, ValkyrieSymbol,
 };
 use indexmap::{
