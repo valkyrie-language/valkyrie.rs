@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use serde::{
     de::{EnumAccess, Error, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer,

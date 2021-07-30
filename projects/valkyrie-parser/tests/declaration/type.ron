@@ -99,7 +99,43 @@ FunctionDeclaration {
                 kind: Normal,
                 path: ensures,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: InfixNode {
+                            infix: ==,
+                            lhs: DotCallNode {
+                                monadic: false,
+                                base: InfixNode {
+                                    infix: ∧,
+                                    lhs: DotCallNode {
+                                        monadic: false,
+                                        base: InfixNode {
+                                            infix: ==,
+                                            lhs: InfixNode {
+                                                infix: /,
+                                                lhs: DotCallNode {
+                                                    monadic: false,
+                                                    base: result,
+                                                    term: MetaType,
+                                                    span: 299..301,
+                                                },
+                                                rhs: 2,
+                                            },
+                                            rhs: result,
+                                        },
+                                        term: 1,
+                                        span: 315..317,
+                                    },
+                                    rhs: result,
+                                },
+                                term: 2,
+                                span: 327..329,
+                            },
+                            rhs: 'a',
+                        },
+                    },
+                ],
                 domain: None,
                 span: 285..337,
             },

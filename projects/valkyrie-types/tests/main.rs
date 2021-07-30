@@ -9,7 +9,7 @@ fn ready() {
 
 #[test]
 fn test() {
-    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/test.vk").canonicalize().unwrap();
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/random.vk").canonicalize().unwrap();
     let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/debug/valkyrie/test.wasm");
     let mut cache = FileCache::default();
     let file = cache.load_local(file).unwrap();

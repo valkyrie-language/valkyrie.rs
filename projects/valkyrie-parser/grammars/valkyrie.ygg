@@ -168,7 +168,7 @@ class InheritTerm {
 }
 // === object statement === --------------------------------------------------------------------------------------------
 class ObjectStatement {
-    KW_Object DefineInherit? TypeHint ClassBlock ^EOS?
+    KW_OBJECT DefineInherit? TypeHint ClassBlock ^EOS?
 }
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineEnumerate {
@@ -270,7 +270,7 @@ class ParameterPair {
     Identifier TypeHint ParameterDefault
 }
 text class ParameterHint {
-    /[.]{2,3}|[~^]/
+    /[.]{2,3}|[%^]/
 }
 class Continuation {
     '{' Statement* '}'
@@ -451,7 +451,7 @@ text class MainPrefix {
 @style(operator)
 text class TypePrefix {
     / [-+¬]
-    | [~&]
+    | [&^]
     /
 }
 @railway(false)
@@ -873,7 +873,7 @@ hide class SkipSpace {
 }
 @style(comment)
 hide class Comment {
-    | '//' ROL
+    | [~⍝🗨] ROL
     | '/*' '*/'
 }
 // ============================-----------------------------------------------------------------------------------------

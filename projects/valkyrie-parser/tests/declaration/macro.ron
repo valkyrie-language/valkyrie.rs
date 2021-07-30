@@ -15,7 +15,32 @@ FunctionDeclaration {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Copy,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Clone,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: PartialEq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Eq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Hash,
+                    },
+                ],
                 domain: None,
                 span: 124..172,
             },

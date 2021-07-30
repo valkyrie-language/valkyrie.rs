@@ -1,6 +1,5 @@
 use super::*;
 use nyar_error::third_party::JsonValue;
-use std::convert::Infallible;
 
 impl ValkyrieType for JsonValue {
     fn boxed(self) -> ValkyrieValue {

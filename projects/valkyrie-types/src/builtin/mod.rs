@@ -13,10 +13,10 @@ pub mod texts;
 
 use crate::{types::ValkyrieMetaType, ValkyrieType, ValkyrieValue};
 use indexmap::IndexMap;
-use shredder::{marker::GcSafe, Gc, Scan, Scanner};
+use shredder::Gc;
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
-    fmt::{Debug, Formatter},
+    fmt::Debug,
     hash::{Hash, Hasher},
     ops::Not,
     sync::Arc,

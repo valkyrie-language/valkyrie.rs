@@ -410,7 +410,20 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Default,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Serde,
+                    },
+                ],
                 domain: None,
                 span: 1716..1746,
             },
@@ -541,7 +554,12 @@ FunctionDeclaration {
                 kind: Normal,
                 path: require,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: safe,
+                    },
+                ],
                 domain: None,
                 span: 2018..2032,
             },

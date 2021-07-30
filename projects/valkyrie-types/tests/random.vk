@@ -1,0 +1,16 @@
+namespace package.random;
+
+#ffi("wasi:random/random", "get-random-u64")
+function random_seed_safe() -> u64 {
+
+}
+
+#ffi("wasi:random/insecure", "get-insecure-random-u64")
+function random_seed_fast() -> u64 {
+
+}
+
+#main
+function main() : u64 {
+    random_seed_safe() + random_seed_fast()
+}

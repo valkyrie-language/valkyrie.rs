@@ -26,7 +26,12 @@ Union {
                 kind: Normal,
                 path: tag,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Tag1,
+                    },
+                ],
                 domain: None,
                 span: 151..161,
             },
@@ -58,7 +63,15 @@ Union {
                 kind: Normal,
                 path: tag,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: UnaryNode {
+                            prefix: &,
+                            base: Tag1,
+                        },
+                    },
+                ],
                 domain: None,
                 span: 276..287,
             },

@@ -30,7 +30,32 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Copy,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Clone,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: PartialEq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Eq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Hash,
+                    },
+                ],
                 domain: None,
                 span: 114..162,
             },
@@ -202,7 +227,12 @@ DefineClass {
                 kind: Normal,
                 path: Copy,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Clone,
+                    },
+                ],
                 domain: None,
                 span: 675..686,
             },
@@ -218,7 +248,20 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: PartialEq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Eq,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Hash,
+                    },
+                ],
                 domain: None,
                 span: 704..732,
             },
@@ -250,7 +293,16 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Serialize,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Deserialize,
+                    },
+                ],
                 domain: None,
                 span: 771..801,
             },
@@ -332,7 +384,24 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Default,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Encode,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Decode,
+                    },
+                ],
                 domain: None,
                 span: 1104..1143,
             },
@@ -540,7 +609,24 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Default,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Encode,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Decode,
+                    },
+                ],
                 domain: None,
                 span: 1767..1806,
             },
@@ -556,7 +642,20 @@ DefineClass {
                 kind: Normal,
                 path: derive,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Default,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Debug,
+                    },
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: Serde,
+                    },
+                ],
                 domain: None,
                 span: 1829..1859,
             },

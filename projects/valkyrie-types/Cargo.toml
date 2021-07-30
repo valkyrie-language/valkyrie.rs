@@ -10,22 +10,22 @@ license = "MPL-2.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0.188"
+serde = "1.0.196"
 im = "15.1.0"
-xxhash-rust = { version = "0.8.7", features = ["xxh3", "const_xxh3"] }
+xxhash-rust = { version = "0.8.10", features = ["xxh3", "const_xxh3"] }
 shredder = "0.2.0"
-smallvec = "2.0.0-alpha.1"
+smallvec = "2.0.0-alpha.3"
 id-arena = { version = "2", features = ["rayon"] }
 dashmap = "5.5.3"
-indexmap = "2.1.0"
-itertools = "0.12.0"
-image = { version = "0.24.7", features = [] }
+indexmap = "2.2.3"
+itertools = "0.12.1"
+image = { version = "0.24.8", features = [] }
 jupyter-types = "0.0.*"
 generational-arena = "0.2.9"
 
 
 [dependencies.nyar-wasm]
-version = "0.0.3"
+version = "0.0.4"
 path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
 
 [dependencies.nyar-error]

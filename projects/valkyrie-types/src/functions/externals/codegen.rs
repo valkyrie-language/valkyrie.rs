@@ -1,10 +1,12 @@
 use super::*;
-use nyar_wasm::{ArrayType, WasmSymbol, WasmType};
+use nyar_wasm::{ArrayType, ExternalFunctionType, WasmSymbol, WasmType};
+use std::str::FromStr;
 
-impl ConvertTo<ExternalType> for ValkyrieExternalFunction {
-    fn convert(&self) -> ExternalType {
-        let mut item = ExternalType::new(self.bind_module.clone(), self.bind_name.clone());
-        item += WasmSymbol::from(self.name.to_string());
+impl ConvertTo<ExternalFunctionType> for ValkyrieExternalFunction {
+    fn convert(&self) -> ExternalFunctionType {
+        let external = WasmExternalName::from_str(&self.bind_module).unwrap();
+        let mut item = ExternalFunctionType::new(external, self.bind_name.clone());
+        item.local_name = WasmSymbol::from(self.name.to_string());
         for param in self.inputs.iter() {
             match param {
                 ParameterTerm::LMark => {}
@@ -19,6 +21,7 @@ impl ConvertTo<ExternalType> for ValkyrieExternalFunction {
                     }
                     item += p
                 }
+
                 // `..args: Type`
                 ParameterTerm::UnpackList { key, bound, .. } => {
                     let mut p = WasmParameter::new(key.name.as_str());

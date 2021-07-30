@@ -44,7 +44,7 @@ pub struct ElseStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct JumpStatement {
-    /// Jump target id of local fsm
+    /// Jump target id of imports fsm
     pub target: i32,
     /// Jump condition if exists
     pub condition: Option<ExpressionNode>,

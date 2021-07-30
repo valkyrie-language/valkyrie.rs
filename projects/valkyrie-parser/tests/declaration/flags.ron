@@ -299,7 +299,12 @@ Flags {
                 kind: Normal,
                 path: layout,
                 variant: [],
-                arguments: [],
+                arguments: [
+                    ArgumentTerm {
+                        key: Nothing,
+                        value: u8,
+                    },
+                ],
                 domain: None,
                 span: 262..273,
             },
