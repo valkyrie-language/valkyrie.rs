@@ -1,3 +1,5 @@
+mod exports;
+mod helpers;
 mod imports;
 
-pub use crate::imports::ValkyrieFFI;
+pub use crate::{exports::ValkyrieWIT, imports::ValkyrieFFI};
