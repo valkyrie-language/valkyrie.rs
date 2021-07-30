@@ -1,5 +1,6 @@
 use super::*;
-use nyar_wasm::ParameterType;
+use nyar_wasm::WasmParameter;
+use std::ops::AddAssign;
 use valkyrie_ast::{ExpressionKind, ParameterTerm};
 
 mod codegen;
@@ -13,6 +14,12 @@ pub struct ValkyrieExternalFunction {
     outputs: Vec<ExpressionKind>,
 }
 
+impl AddAssign<ParameterTerm> for ValkyrieExternalFunction {
+    fn add_assign(&mut self, rhs: ParameterTerm) {
+        self.inputs.push(rhs)
+    }
+}
+
 impl ValkyrieExternalFunction {
     /// Create a new external function
     pub fn new(name: ValkyrieSymbol) -> Self {
@@ -21,8 +28,5 @@ impl ValkyrieExternalFunction {
     pub fn set_path(&mut self, module: &str, name: &str) {
         self.bind_module = Arc::from(module);
         self.bind_name = Arc::from(name);
-    }
-    pub fn add_parameter(&mut self, e: ParameterTerm) {
-        self.inputs.push(e)
     }
 }

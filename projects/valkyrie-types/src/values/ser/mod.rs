@@ -1,5 +1,5 @@
 use crate::ValkyrieValue;
-use serde::{ser::SerializeSeq, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 
 impl Serialize for ValkyrieValue {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -1,7 +1,6 @@
 use crate::{
-    types::{atomic_type::ValkyrieDocument, method_type::MethodDefinition},
-    utils::primitive_type,
-    ValkyrieDict, ValkyrieID, ValkyrieString, ValkyrieStructure, ValkyrieValue,
+    types::atomic_type::ValkyrieDocument, utils::primitive_type, ValkyrieDict, ValkyrieID, ValkyrieString, ValkyrieStructure,
+    ValkyrieValue,
 };
 use indexmap::IndexMap;
 use itertools::Itertools;

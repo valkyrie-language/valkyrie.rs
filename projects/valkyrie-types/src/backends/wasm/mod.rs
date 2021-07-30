@@ -31,12 +31,15 @@ impl ConvertTo<WasmType> for ExpressionKind {
                     "u16" => WasmType::U16,
                     "u32" => WasmType::U32,
                     "u64" => WasmType::U64,
+                    "usize" => WasmType::U32,
                     "i8" => WasmType::I8,
                     "i16" => WasmType::I16,
                     "i32" => WasmType::I32,
                     "i64" => WasmType::I64,
+                    "isize" => WasmType::I32,
                     "f32" => WasmType::F32,
                     "f64" => WasmType::F64,
+                    "char" => WasmType::Unicode,
                     _ => WasmType::Reference { name: WasmSymbol::from(name), nullable: false },
                 }
             }

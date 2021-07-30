@@ -52,7 +52,7 @@ pub enum ParameterTerm {
         /// The list receiver name
         key: IdentifierNode,
         /// The type boundary of the parameter
-        bound: Option<ExpressionNode>,
+        bound: Option<ExpressionKind>,
     },
     /// `#annotation modifier ...dict: Type`
     UnpackDict {
@@ -61,7 +61,7 @@ pub enum ParameterTerm {
         /// The dict receiver name
         key: IdentifierNode,
         /// The type boundary of the parameter
-        bound: Option<ExpressionNode>,
+        bound: Option<ExpressionKind>,
     },
 }
 

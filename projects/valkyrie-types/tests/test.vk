@@ -1,6 +1,19 @@
-namespace core.text;
+namespace core.memory;
 
-structure Point {
+
+
+structure MemoryArea {
+    offset: usize,
+    length: usize,
+    construct(x: offset, y: length) {
+        self.offset = x;
+        self.length = y;
+    }
+}
+
+namespace engine64;
+
+structure vec2 {
     x: f64,
     y: f64,
     construct(x: f64, y: f64) {
@@ -9,42 +22,47 @@ structure Point {
     }
 }
 
-extends Point {
+extends vec2 {
     sum(self): f64 {
-        print_f32(self.x)
-        print_f32(self.y)
+        js::print_f32(self.x)
+        js::print_f32(self.y)
         add(self.x, self.y)
     }
 }
 
 
-
-
-
-
-
-
-#ffi("js", "print_char")
-private function print_char(n: char) {
-    // external function
-}
+namespace js;
 
 #ffi("js", "print_i32")
-private function print_i32(n: i32) {
+function print_i32(n: i32) {
     // external function
 }
 
 #ffi("js", "print_i64")
-private function print_i64(n: i64) {
+function print_i64(n: i64) {
     // external function
 }
 
 #ffi("js", "print_f64")
-private function print_f32(n: f32) {
+function print_f32(n: f32) {
     // external function
 }
 
 #ffi("js", "print_f32")
-private function print_f64(n: f64) {
+function print_f64(n: f64) {
     // external function
+}
+
+#ffi("js", "print_char")
+function print_char(n: char) {
+    // external function
+}
+
+#ffi("js", "print_str")
+function print_str(offset: usize, length: usize) {
+    // external function
+}
+
+function print_mem(memory: core::memory::MemoryArea) {
+    print_str(memory.offset, memory.length)
 }

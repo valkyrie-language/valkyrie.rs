@@ -1,4 +1,4 @@
-use nyar_error::{third_party::Url, FileCache};
+use nyar_error::FileCache;
 use std::{path::Path, process::Command};
 use valkyrie_types::ModuleResolver;
 
@@ -18,7 +18,6 @@ fn test() {
         error.as_report().eprint(&cache).unwrap()
     }
     let wasm = reolver.build_wasm();
-    println!("{:#?}", wasm);
     let _ = wasm.build_module(output).unwrap();
     let o = Command::new("valor").arg("build").output().unwrap();
     println!("{}", String::from_utf8_lossy(&o.stdout))

@@ -1,6 +1,6 @@
 use crate::{
     helpers::ProgramState,
-    utils::{build_annotation_terms, build_annotation_terms_mix},
+    utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
 };
 use nyar_error::Result;
 use valkyrie_ast::*;

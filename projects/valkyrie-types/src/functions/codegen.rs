@@ -1,7 +1,7 @@
 use super::*;
 
 impl Hir2Mir for FunctionDeclaration {
-    fn to_mir(self, ctx: &mut ModuleResolver) -> nyar_error::Result<Self::Output> {
+    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
         let symbol = self.name.as_namespace_symbol(&ctx.namespace);
         for attr in self.annotations.attributes.terms {
             let name = attr.path.to_string();
@@ -11,7 +11,7 @@ impl Hir2Mir for FunctionDeclaration {
                     let mut external = ValkyrieExternalFunction::new(symbol.clone());
                     external.set_path(module, name);
                     for i in self.parameters.terms {
-                        external.add_parameter(i)
+                        external += i
                     }
                     ctx.items.insert(symbol.to_string(), ModuleItem::External(external));
                     return Ok(());

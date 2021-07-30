@@ -1,6 +1,7 @@
 use super::*;
 use crate::helper::WrapDisplay;
 
+mod builtin;
 mod display;
 
 /// `#module∷name.variant(args) { ... } modifiers`
@@ -88,27 +89,6 @@ pub struct AttributeTerm {
     pub domain: Option<StatementBlock>,
     /// The range of the node
     pub span: Range<u32>,
-}
-
-impl AttributeTerm {
-    /// Interpreted as an external function call
-    pub fn as_ffi(&self) -> Result<(&str, &str), NyarError> {
-        let module = match self.arguments.terms.get(0) {
-            Some(s) => match &s.value {
-                ExpressionKind::String(s) => s.literal.text.as_str(),
-                _ => Err(NyarError::custom("except string in `ffi`"))?,
-            },
-            None => Err(NyarError::custom("missing module name in `ffi`"))?,
-        };
-        let name = match self.arguments.terms.get(1) {
-            Some(s) => match &s.value {
-                ExpressionKind::String(s) => s.literal.text.as_str(),
-                _ => Err(NyarError::custom("except string in `ffi`"))?,
-            },
-            None => Err(NyarError::custom("missing field name in ffi name in `ffi`"))?,
-        };
-        Ok((module, name))
-    }
 }
 
 /// `public static final synchronized class Main {}`
