@@ -1,8 +1,8 @@
 use convert_case::{Case, Casing};
 use std::{fs::File, io::Write, path::Path};
 use wit_parser::{Function, Interface, Package, Resolve, SourceMap, TypeDef, TypeDefKind, UnresolvedPackage};
-mod document;
-mod workspace;
+
+mod visit_types;
 
 pub struct ValkyrieFFI {
     cache: Resolve,

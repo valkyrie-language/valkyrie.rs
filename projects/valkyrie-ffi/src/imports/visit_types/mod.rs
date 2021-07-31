@@ -1,5 +1,7 @@
 use super::*;
 
+mod visit_functions;
+
 impl ValkyrieFFI {
     pub(crate) fn export_type(&self, ty: &TypeDef, file: &mut File) -> std::io::Result<()> {
         match ty.kind {
