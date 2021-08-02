@@ -2,11 +2,20 @@ Variant
 
 Record
 
-class Resource
+#resource
+class Statement {}
 
-class Resource
+#resource
+class Error {}
 
-class Resource
+#resource
+class Connection {}
+
+function
+
+function
+
+function
 
 Type
 
@@ -15,4 +24,8 @@ Type
 Type
 
 Type
+
+function
+
+function
 

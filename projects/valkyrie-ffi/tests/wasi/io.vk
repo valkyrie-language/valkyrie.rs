@@ -1,6 +1,16 @@
-class Resource
+#resource
+class Error {}
 
-class Resource
+function
+
+#resource
+class Pollable {}
+
+function
+
+function
+
+function
 
 Type
 
@@ -8,7 +18,39 @@ Type
 
 Variant
 
-class Resource
+#resource
+class InputStream {}
 
-class Resource
+#resource
+class OutputStream {}
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
 

@@ -1,16 +1,40 @@
-Type
+function
+
+function
+
+function
+
+function
+
+function
 
 Type
 
-Type
-
-class Resource
-
-class Resource
+function
 
 Type
 
-Type
+function
 
 Type
+
+function
+
+#resource
+class TerminalInput {}
+
+#resource
+class TerminalOutput {}
+
+Type
+
+function
+
+Type
+
+function
+
+Type
+
+function
 

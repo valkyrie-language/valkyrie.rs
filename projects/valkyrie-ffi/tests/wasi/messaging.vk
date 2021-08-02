@@ -1,6 +1,8 @@
-class Resource
+#resource
+class Client {}
 
-class Resource
+#resource
+class Error {}
 
 Type
 
@@ -10,7 +12,9 @@ Enum
 
 Record
 
-Type
+function
+
+function
 
 Type
 
@@ -22,7 +26,25 @@ Type
 
 Type
 
+function
+
+function
+
+function
+
+function
+
+function
+
 Type
+
+Type
+
+Type
+
+function
+
+function
 
 Type
 
@@ -32,5 +54,5 @@ Type
 
 Type
 
-Type
+function
 

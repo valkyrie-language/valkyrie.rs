@@ -43,12 +43,18 @@ impl ValkyrieFFI {
     fn export_interface(&self, interface: &Interface, file: &mut File) -> std::io::Result<()> {
         for (name, item) in interface.types.iter() {
             match self.cache.types.get(*item) {
-                Some(s) => self.export_type(s, file)?,
+                Some(s) => {
+                    if let Err(e) = self.export_type(s, file) {
+                        tracing::error!("error exporting type: {:?}", e)
+                    }
+                }
                 None => tracing::error!("type not found: {:?}", name),
             }
         }
         for (_, item) in interface.functions.iter() {
-            self.export_functions(item, file)?;
+            if let Err(e) = self.export_functions(item, file) {
+                tracing::error!("error exporting function: {:?}", e)
+            }
         }
         Ok(())
     }

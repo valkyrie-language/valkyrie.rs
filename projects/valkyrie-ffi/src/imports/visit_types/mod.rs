@@ -49,7 +49,13 @@ impl ValkyrieFFI {
         Ok(())
     }
     fn export_resource(&self, ty: &TypeDef, file: &mut File) -> std::io::Result<()> {
-        file.write(b"class Resource\n\n")?;
-        Ok(())
+        let name = match &ty.name {
+            Some(s) => s.to_case(Case::UpperCamel),
+            None => Err(std::io::Error::new(std::io::ErrorKind::Other, "missing name"))?,
+        };
+        writeln!(file, "#resource")?;
+        writeln!(file, "#ffi(\"{}\")", name)?;
+        writeln!(file, "class {} {{}}", name)?;
+        writeln!(file, "")
     }
 }

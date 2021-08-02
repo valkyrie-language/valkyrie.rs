@@ -1,6 +1,5 @@
 use std::path::Path;
 use valkyrie_wit::ValkyrieFFI;
-use wit_parser::Resolve;
 
 #[test]
 fn ready() {

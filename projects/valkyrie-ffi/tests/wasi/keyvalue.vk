@@ -1,4 +1,7 @@
-class Resource
+#resource
+class Error {}
+
+function
 
 Type
 
@@ -6,22 +9,49 @@ Type
 
 Type
 
-class Resource
+#resource
+class Bucket {}
 
 Type
 
-class Resource
+#resource
+class OutgoingValue {}
 
 Type
 
 List
 
-class Resource
+#resource
+class IncomingValue {}
 
 Type
 
 List
 
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+Type
+
+Type
+
+Type
+
+function
+
+function
+
 Type
 
 Type
@@ -32,25 +62,50 @@ Type
 
 Type
 
-Type
+#resource
+class FutureGetResult {}
 
-Type
+#resource
+class FutureExistsResult {}
 
-Type
+#resource
+class FutureResult {}
 
-class Resource
+#resource
+class FutureGetOrSetResult {}
 
-class Resource
-
-class Resource
-
-class Resource
-
-class Resource
+#resource
+class Vacancy {}
 
 Variant
 
-Type
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
+
+function
 
 Type
 
@@ -62,7 +117,13 @@ Type
 
 Type
 
-Type
+function
+
+function
+
+function
+
+function
 
 Type
 
@@ -74,5 +135,21 @@ Type
 
 Type
 
+function
+
+function
+
+function
+
+function
+
 Type
+
+Type
+
+Type
+
+function
+
+function
 
