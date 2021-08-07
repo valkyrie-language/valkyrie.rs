@@ -10,6 +10,7 @@ license = "MPL-2.0"
 
 
 [dependencies]
+nyar-wasm = "0.0.4"
 anyhow = "1.0.80"
 wit-parser = "0.201.0"
 tracing = "0.1.40"

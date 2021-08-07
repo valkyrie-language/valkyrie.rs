@@ -1,20 +1,17 @@
-Type
+Type: Some("pollable") Id(Id { idx: 2 })
+Type: Some("instant") U64
+Type: Some("duration") U64
+micro now(
 
-Type
+micro resolution(
 
-Type
+micro subscribe_instant(
 
-function
-
-function
-
-function
-
-function
+micro subscribe_duration(
 
 Record
 
-function
+micro now(
 
-function
+micro resolution(
 

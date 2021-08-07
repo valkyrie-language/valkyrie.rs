@@ -1,40 +1,36 @@
-function
+micro get_environment(
 
-function
+micro get_arguments(
 
-function
+micro initial_cwd(
 
-function
+micro exit(
 
-function
+micro run(
 
-Type
+Type: Some("input-stream") Id(Id { idx: 10 })
+micro get_stdin(
 
-function
+Type: Some("output-stream") Id(Id { idx: 11 })
+micro get_stdout(
 
-Type
-
-function
-
-Type
-
-function
+Type: Some("output-stream") Id(Id { idx: 11 })
+micro get_stderr(
 
 #resource
+#ffi("TerminalInput")
 class TerminalInput {}
 
 #resource
+#ffi("TerminalOutput")
 class TerminalOutput {}
 
-Type
+Type: Some("terminal-input") Id(Id { idx: 228 })
+micro get_terminal_stdin(
 
-function
+Type: Some("terminal-output") Id(Id { idx: 229 })
+micro get_terminal_stdout(
 
-Type
-
-function
-
-Type
-
-function
+Type: Some("terminal-output") Id(Id { idx: 229 })
+micro get_terminal_stderr(
 

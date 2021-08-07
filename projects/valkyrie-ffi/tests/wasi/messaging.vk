@@ -1,58 +1,43 @@
 #resource
+#ffi("Client")
 class Client {}
 
 #resource
+#ffi("Error")
 class Error {}
 
-Type
-
+Type: Some("channel") String
 Record
 
 Enum
 
 Record
 
-function
+Type: Some("client") Id(Id { idx: 448 })
+Type: Some("message") Id(Id { idx: 458 })
+Type: Some("channel") Id(Id { idx: 450 })
+Type: Some("error") Id(Id { idx: 449 })
+Type: Some("guest-configuration") Id(Id { idx: 455 })
+micro subscribe_try_receive(
 
-function
+micro subscribe_receive(
 
-Type
+micro update_guest_configuration(
 
-Type
+micro complete_message(
 
-Type
+micro abandon_message(
 
-Type
+Type: Some("message") Id(Id { idx: 458 })
+Type: Some("guest-configuration") Id(Id { idx: 455 })
+Type: Some("error") Id(Id { idx: 449 })
+micro configure(
 
-Type
+micro handler(
 
-function
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-function
+Type: Some("client") Id(Id { idx: 448 })
+Type: Some("channel") Id(Id { idx: 450 })
+Type: Some("message") Id(Id { idx: 458 })
+Type: Some("error") Id(Id { idx: 449 })
+micro send(
 

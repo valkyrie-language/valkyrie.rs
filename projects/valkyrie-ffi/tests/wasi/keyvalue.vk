@@ -1,155 +1,103 @@
 #resource
+#ffi("Error")
 class Error {}
 
-function
-
-Type
-
-Type
-
-Type
-
+Type: Some("input-stream") Id(Id { idx: 10 })
+Type: Some("output-stream") Id(Id { idx: 11 })
+Type: Some("error") Id(Id { idx: 343 })
 #resource
+#ffi("Bucket")
 class Bucket {}
 
-Type
-
+Type: Some("key") String
 #resource
+#ffi("OutgoingValue")
 class OutgoingValue {}
 
-Type
-
+Type: Some("outgoing-value-body-async") Id(Id { idx: 346 })
 List
 
 #resource
+#ffi("IncomingValue")
 class IncomingValue {}
 
-Type
-
+Type: Some("incoming-value-async-body") Id(Id { idx: 345 })
 List
 
-function
+Type: Some("bucket") Id(Id { idx: 348 })
+Type: Some("error") Id(Id { idx: 347 })
+Type: Some("key") Id(Id { idx: 349 })
+micro increment(
 
-function
+micro compare_and_swap(
 
-function
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
+Type: Some("pollable") Id(Id { idx: 2 })
+Type: Some("key") Id(Id { idx: 349 })
+Type: Some("incoming-value") Id(Id { idx: 353 })
+Type: Some("outgoing-value") Id(Id { idx: 350 })
+Type: Some("error") Id(Id { idx: 347 })
 #resource
+#ffi("FutureGetResult")
 class FutureGetResult {}
 
 #resource
+#ffi("FutureExistsResult")
 class FutureExistsResult {}
 
 #resource
+#ffi("FutureResult")
 class FutureResult {}
 
 #resource
+#ffi("FutureGetOrSetResult")
 class FutureGetOrSetResult {}
 
 #resource
+#ffi("Vacancy")
 class Vacancy {}
 
 Variant
 
-function
+micro get(
 
-function
+micro exists(
 
-function
+micro set(
 
-function
+micro get_or_set(
 
-function
+micro delete(
 
-function
+Type: Some("bucket") Id(Id { idx: 348 })
+Type: Some("error") Id(Id { idx: 347 })
+Type: Some("key") Id(Id { idx: 349 })
+Type: Some("incoming-value") Id(Id { idx: 353 })
+Type: Some("outgoing-value") Id(Id { idx: 350 })
+micro get_many(
 
-function
+micro keys(
 
-function
+micro set_many(
 
-function
+micro delete_many(
 
-function
+Type: Some("bucket") Id(Id { idx: 348 })
+Type: Some("error") Id(Id { idx: 347 })
+Type: Some("incoming-value") Id(Id { idx: 353 })
+Type: Some("key") Id(Id { idx: 349 })
+Type: Some("outgoing-value") Id(Id { idx: 350 })
+micro get(
 
-function
+micro set(
 
-function
+micro delete(
 
-function
+micro exists(
 
-function
+Type: Some("bucket") Id(Id { idx: 348 })
+Type: Some("key") Id(Id { idx: 349 })
+Type: Some("incoming-value") Id(Id { idx: 353 })
+micro on_set(
 
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-function
-
-function
+micro on_delete(
 

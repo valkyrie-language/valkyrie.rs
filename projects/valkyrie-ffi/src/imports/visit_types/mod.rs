@@ -39,8 +39,8 @@ impl ValkyrieFFI {
             TypeDefKind::Stream(_) => {
                 file.write(b"Stream\n\n")?;
             }
-            TypeDefKind::Type(_) => {
-                file.write(b"Type\n\n")?;
+            TypeDefKind::Type(v) => {
+                writeln!(file, "Type: {:?} {:?}", ty.name, v)?;
             }
             TypeDefKind::Unknown => {
                 file.write(b"Unknown\n\n")?;

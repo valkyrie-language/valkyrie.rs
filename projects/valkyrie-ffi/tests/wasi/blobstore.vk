@@ -1,17 +1,10 @@
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
+Type: Some("input-stream") Id(Id { idx: 10 })
+Type: Some("output-stream") Id(Id { idx: 11 })
+Type: Some("container-name") String
+Type: Some("object-name") String
+Type: Some("timestamp") U64
+Type: Some("object-size") U64
+Type: Some("error") String
 Record
 
 Record
@@ -19,88 +12,45 @@ Record
 Record
 
 #resource
+#ffi("OutgoingValue")
 class OutgoingValue {}
 
 #resource
+#ffi("IncomingValue")
 class IncomingValue {}
 
-Type
-
+Type: Some("incoming-value-async-body") Id(Id { idx: 19 })
 List
 
-function
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
+Type: Some("input-stream") Id(Id { idx: 10 })
+Type: Some("output-stream") Id(Id { idx: 11 })
+Type: Some("container-metadata") Id(Id { idx: 26 })
+Type: Some("error") Id(Id { idx: 25 })
+Type: Some("incoming-value") Id(Id { idx: 30 })
+Type: Some("object-metadata") Id(Id { idx: 27 })
+Type: Some("object-name") Id(Id { idx: 22 })
+Type: Some("outgoing-value") Id(Id { idx: 29 })
 #resource
+#ffi("Container")
 class Container {}
 
 #resource
+#ffi("StreamObjectNames")
 class StreamObjectNames {}
 
-function
+Type: Some("container") Id(Id { idx: 48 })
+Type: Some("error") Id(Id { idx: 25 })
+Type: Some("container-name") Id(Id { idx: 21 })
+Type: Some("object-id") Id(Id { idx: 28 })
+micro create_container(
 
-function
+micro get_container(
 
-function
+micro delete_container(
 
-function
+micro container_exists(
 
-function
+micro copy_object(
 
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
+micro move_object(
 

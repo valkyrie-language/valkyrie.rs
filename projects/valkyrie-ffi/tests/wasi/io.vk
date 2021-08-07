@@ -1,56 +1,22 @@
 #resource
+#ffi("Error")
 class Error {}
 
-function
-
 #resource
+#ffi("Pollable")
 class Pollable {}
 
-function
+micro poll(
 
-function
-
-function
-
-Type
-
-Type
-
+Type: Some("error") Id(Id { idx: 0 })
+Type: Some("pollable") Id(Id { idx: 2 })
 Variant
 
 #resource
+#ffi("InputStream")
 class InputStream {}
 
 #resource
+#ffi("OutputStream")
 class OutputStream {}
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
 

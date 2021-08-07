@@ -3,29 +3,22 @@ Variant
 Record
 
 #resource
+#ffi("Statement")
 class Statement {}
 
 #resource
+#ffi("Error")
 class Error {}
 
 #resource
+#ffi("Connection")
 class Connection {}
 
-function
+Type: Some("statement") Id(Id { idx: 492 })
+Type: Some("row") Id(Id { idx: 491 })
+Type: Some("error") Id(Id { idx: 493 })
+Type: Some("connection") Id(Id { idx: 494 })
+micro query(
 
-function
-
-function
-
-Type
-
-Type
-
-Type
-
-Type
-
-function
-
-function
+micro exec(
 

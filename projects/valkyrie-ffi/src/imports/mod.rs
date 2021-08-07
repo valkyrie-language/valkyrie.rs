@@ -1,6 +1,6 @@
 use convert_case::{Case, Casing};
 use std::{fs::File, io::Write, path::Path};
-use wit_parser::{Function, Interface, Package, Resolve, SourceMap, TypeDef, TypeDefKind, UnresolvedPackage};
+use wit_parser::{Function, FunctionKind, Interface, Package, Resolve, SourceMap, TypeDef, TypeDefKind, UnresolvedPackage};
 
 mod visit_types;
 
@@ -52,6 +52,9 @@ impl ValkyrieFFI {
             }
         }
         for (_, item) in interface.functions.iter() {
+            if item.kind != FunctionKind::Freestanding {
+                continue;
+            }
             if let Err(e) = self.export_functions(item, file) {
                 tracing::error!("error exporting function: {:?}", e)
             }

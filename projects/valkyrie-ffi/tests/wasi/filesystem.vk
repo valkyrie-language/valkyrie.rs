@@ -1,13 +1,8 @@
-Type
-
-Type
-
-Type
-
-Type
-
-Type
-
+Type: Some("input-stream") Id(Id { idx: 10 })
+Type: Some("output-stream") Id(Id { idx: 11 })
+Type: Some("error") Id(Id { idx: 6 })
+Type: Some("datetime") Id(Id { idx: 79 })
+Type: Some("filesize") U64
 Enum
 
 Flags
@@ -16,8 +11,7 @@ Flags
 
 Flags
 
-Type
-
+Type: Some("link-count") U64
 Record
 
 Variant
@@ -31,70 +25,15 @@ Enum
 Record
 
 #resource
+#ffi("Descriptor")
 class Descriptor {}
 
 #resource
+#ffi("DirectoryEntryStream")
 class DirectoryEntryStream {}
 
-function
+micro filesystem_error_code(
 
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-function
-
-Type
-
-function
+Type: Some("descriptor") Id(Id { idx: 98 })
+micro get_directories(
 

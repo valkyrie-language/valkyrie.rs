@@ -1,10 +1,10 @@
-function
+micro insecure_seed(
 
-function
+micro get_insecure_random_bytes(
 
-function
+micro get_insecure_random_u_64(
 
-function
+micro get_random_bytes(
 
-function
+micro get_random_u_64(
 
