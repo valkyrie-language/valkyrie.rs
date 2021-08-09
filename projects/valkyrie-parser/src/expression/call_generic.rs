@@ -30,7 +30,12 @@ impl crate::GenericTermsNode {
 }
 impl crate::GenericPairNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ArgumentTerm> {
-        Ok(ArgumentTerm { modifiers: Default::default(), key: self.get_key(ctx), value: self.type_expression.build(ctx)? })
+        Ok(ArgumentTerm {
+            modifiers: Default::default(),
+            key: self.get_key(ctx),
+            value: self.type_expression.build(ctx)?,
+            span: ctx.file.with_range(self.span.clone()),
+        })
     }
     fn get_key(&self, ctx: &mut ProgramState) -> ArgumentKey {
         match &self.identifier {

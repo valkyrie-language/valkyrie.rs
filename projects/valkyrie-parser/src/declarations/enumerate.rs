@@ -23,9 +23,10 @@ impl crate::DefineEnumerateNode {
 
 impl crate::KwFlagsNode {
     pub(crate) fn build(&self) -> FlagKind {
-        match self {
-            Self::Enum => FlagKind::Enumerate,
-            Self::Flags => FlagKind::Flags,
+        match self.text.as_str() {
+            "enumerate" | "enum" => FlagKind::Enumerate,
+            "flags" => FlagKind::Flags,
+            _ => unreachable!(),
         }
     }
 }

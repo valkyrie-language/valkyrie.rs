@@ -1,0 +1,11 @@
+namespace package.random;
+
+#import("wasi:random/random", "get-random-u64")
+micro safe_random_seed() -> u64 {
+
+}
+
+#import("wasi:random/insecure", "get-insecure-random-bytes")
+micro fast_random_seed() -> u64 {
+
+}

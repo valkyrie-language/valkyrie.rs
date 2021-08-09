@@ -1,0 +1,29 @@
+[package]
+name = "nyar_valkyrie"
+version = "0.1.0"
+authors = ["Aster <192607617@qq.com>"]
+description = "..."
+repository = "https://github.com/nyar-vm/valkyrie.rs"
+documentation = "https://docs.rs/nyar_valkyrie"
+readme = "Readme.md"
+license = "MPL-2.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.36.0", features = ["full"] }
+nyar-runtime = "0.0.2"
+clap = { version = "4.5.2", features = ["derive", "unicode", "error-context"] }
+
+[dependencies.valkyrie-types]
+path = "../valkyrie-types"
+version = "0.0.8"
+
+[[bin]]
+path = "src/main.rs"
+name = "nyar-valkyrie"
+
+
+[dev-dependencies]
+
+[features]
+default = []

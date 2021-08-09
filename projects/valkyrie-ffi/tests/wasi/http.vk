@@ -1,8 +1,13 @@
 Type: Some("duration") Id(Id { idx: 78 })
+
 Type: Some("input-stream") Id(Id { idx: 10 })
+
 Type: Some("output-stream") Id(Id { idx: 11 })
+
 Type: Some("io-error") Id(Id { idx: 0 })
+
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Variant
 
 Variant
@@ -18,6 +23,7 @@ Variant
 Variant
 
 Type: Some("field-key") String
+
 List
 
 #resource
@@ -25,7 +31,9 @@ List
 class Fields {}
 
 Type: Some("headers") Id(Id { idx: 269 })
+
 Type: Some("trailers") Id(Id { idx: 269 })
+
 #resource
 #ffi("IncomingRequest")
 class IncomingRequest {}
@@ -43,6 +51,7 @@ class RequestOptions {}
 class ResponseOutparam {}
 
 Type: Some("status-code") U16
+
 #resource
 #ffi("IncomingResponse")
 class IncomingResponse {}
@@ -67,15 +76,24 @@ class OutgoingBody {}
 #ffi("FutureIncomingResponse")
 class FutureIncomingResponse {}
 
+ffi("wasi:http/types", "http-error-code")
 micro http_error_code(
 
 Type: Some("incoming-request") Id(Id { idx: 272 })
+
 Type: Some("response-outparam") Id(Id { idx: 275 })
+
+ffi("wasi:http/incoming-handler", "handle")
 micro handle(
 
 Type: Some("outgoing-request") Id(Id { idx: 273 })
+
 Type: Some("request-options") Id(Id { idx: 274 })
+
 Type: Some("future-incoming-response") Id(Id { idx: 282 })
+
 Type: Some("error-code") Id(Id { idx: 265 })
+
+ffi("wasi:http/outgoing-handler", "handle")
 micro handle(
 

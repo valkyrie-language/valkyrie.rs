@@ -1,7 +1,7 @@
 use super::*;
 use crate::SignNode;
 use nyar_error::NyarError;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use valkyrie_ast::NullNode;
 
 // A number literal.
@@ -25,7 +25,7 @@ impl crate::NumberNode {
 impl crate::DecimalNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut n = NumberLiteralNode::new(10);
-        n.set_span(ctx.file.with_range(self.get_range()));
+        n.set_span(ctx.file.with_range(self.span.clone()));
         n.set_integer(&self.lhs.text, ctx.file, self.lhs.span.start as usize)?;
         if let Some(s) = &self.rhs {
             n.set_decimal(&s.text, ctx.file, s.span.start as usize)?
@@ -47,7 +47,7 @@ impl crate::DecimalNode {
 impl crate::DecimalXNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut n = NumberLiteralNode::new(self.base.as_base(ctx)?);
-        n.set_span(ctx.file.with_range(self.get_range()));
+        n.set_span(ctx.file.with_range(self.span.clone()));
         n.set_integer(&self.lhs.text, ctx.file, self.lhs.span.start as usize)?;
         if let Some(s) = &self.rhs {
             n.set_decimal(&s.text, ctx.file, s.span.start as usize)?
@@ -71,11 +71,11 @@ impl crate::IntegerNode {
     //     NumberLiteralNode::new(10, self.span.clone())
     // }
     pub(crate) fn as_identifier(&self, ctx: &mut ProgramState) -> IdentifierNode {
-        let text = self.text.chars().filter(|c| c.is_digit(10)).collect();
-        IdentifierNode { name: text, span: ctx.file.with_range(self.get_range()) }
+        let text: String = self.text.chars().filter(|c| c.is_digit(10)).collect();
+        IdentifierNode { name: Arc::from(text), span: ctx.file.with_range(self.span.clone()) }
     }
     pub(crate) fn as_base(&self, ctx: &mut ProgramState) -> Result<u32> {
-        let span = ctx.file.with_range(self.get_range());
+        let span = ctx.file.with_range(self.span.clone());
         match u32::from_str(&self.text) {
             Ok(o) if o >= 2 && o <= 36 => Ok(o),
             Ok(_) => Err(NyarError::syntax_error(format!("Currently only `2 ⩽ base ⩽ 36` is supported"), span)),
@@ -87,7 +87,7 @@ impl crate::IntegerNode {
         T: FromStr,
         <T as FromStr>::Err: std::error::Error,
     {
-        let span = ctx.file.with_range(self.get_range());
+        let span = ctx.file.with_range(self.span.clone());
         match T::from_str(&self.text) {
             Ok(o) => Ok(o),
             Err(e) => Err(NyarError::syntax_error(e.to_string(), span)),

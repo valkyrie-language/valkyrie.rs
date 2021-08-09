@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie-parser"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["192608617@qq.com"]
 description = "The hand write parser of valkyrie language"
 repository = "https://github.com/nyar-lang/NyarNative"
@@ -22,9 +22,9 @@ version = "0.0.16"
 #path = 'C:\Users\Dell\CLionProjects\yggdrasil.rs\projects\ygg-rt'
 
 [dependencies.nyar-error]
-version = "0.1.12"
+version = "0.1.*"
 features = ["pratt", "yggdrasil-rt", "dashu"]
-#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
+path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
 
 
 [dev-dependencies]

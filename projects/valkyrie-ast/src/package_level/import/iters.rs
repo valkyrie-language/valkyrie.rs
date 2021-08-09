@@ -6,7 +6,7 @@ impl Default for ImportTermNode {
     }
 }
 // impl ValkyrieNode for ImportTermNode {
-//     fn get_range(&self) -> Range<usize> {
+//     fn get_range(&self) -> Range<u32> {
 //         match self {
 //             Self::Group(v) => {v.get_range()}
 //             Self::All(v) => {v.get_range()}
@@ -15,13 +15,13 @@ impl Default for ImportTermNode {
 //     }
 // }
 impl ValkyrieNode for ImportAllNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.clone()
     }
 }
 impl ValkyrieNode for ImportAliasNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.clone()
     }
 }
 impl FromIterator<IdentifierNode> for ImportGroupNode {

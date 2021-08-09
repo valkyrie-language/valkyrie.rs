@@ -1,4 +1,5 @@
 use super::*;
+use nyar_error::SourceSpan;
 
 mod display;
 
@@ -8,9 +9,9 @@ mod iters;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ClassKind {
-    /// A function that lazy evaluate the arguments
+    /// A class with reference types, type erasure
     Class,
-    /// A function that eager evaluate the arguments
+    /// A class with value type, specialized type
     Structure,
 }
 
@@ -115,7 +116,7 @@ pub struct FieldDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MethodDeclaration {
     /// The method name which may associated with a trait.
-    pub name: NamePathNode,
+    pub name: IdentifierNode,
     /// The modifiers of the node.
     pub annotations: AnnotationNode,
     /// Thy type parameters of this function
@@ -137,10 +138,10 @@ impl Debug for MethodDeclaration {
             w.field("annotations", &self.annotations);
         }
         w.field("name", &WrapDisplay::new(&self.name));
-        if !self.generics.terms.is_empty() {
+        if self.generics.terms().count() != 0 {
             w.field("generics", &self.generics);
         }
-        if !self.parameters.terms.is_empty() {
+        if self.parameters.terms().count() != 0 {
             w.field("parameters", &self.parameters);
         }
         if let Some(s) = &self.returns.typing {
@@ -167,8 +168,8 @@ pub struct DomainDeclaration {
 }
 
 impl ValkyrieNode for ConstructObjectNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.clone()
     }
 }
 
@@ -191,7 +192,7 @@ impl ValkyrieNode for ConstructObjectNode {
 //     pub fn mut_statement(&mut self) -> &mut Vec<ValkyrieASTNode> {
 //         &mut self.statements
 //     }
-//     pub fn to_node(self, file: FileID, range: &Range<usize>) -> ValkyrieASTNode {
+//     pub fn to_node(self, file: SourceID, range: &Range<usize>) -> ValkyrieASTNode {
 //         ValkyrieASTKind::Class(box self).to_node(file, range)
 //     }
 // }

@@ -1,6 +1,7 @@
 use super::*;
 
 impl AttributeTerm {
+    /// Interpreted as an external function call
     pub fn as_asm(&self) -> Result<&str, NyarError> {
         let code = match self.arguments.terms.get(0) {
             Some(s) => match &s.value {

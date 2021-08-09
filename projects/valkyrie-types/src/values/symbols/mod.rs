@@ -4,7 +4,7 @@ use std::fmt::Display;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieSymbol {
     pub(crate) path: Vec<Arc<str>>,
-    pub(crate) span: FileSpan,
+    pub(crate) span: SourceSpan,
 }
 
 impl Display for ValkyrieSymbol {
@@ -56,7 +56,7 @@ impl ValkyrieSymbol {
     pub fn new<S: AsSymbol>(id: S) -> Self {
         id.as_symbol()
     }
-    pub fn with_span(self, span: FileSpan) -> Self {
+    pub fn with_span(self, span: SourceSpan) -> Self {
         Self { span, ..self }
     }
 }

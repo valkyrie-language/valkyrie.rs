@@ -138,9 +138,9 @@ union ClassTerm {
     | EOS_FREE
 }
 @style(keyword)
-union KW_CLASS {
-    | 'class'     #Class
-    | 'structure' #Structure
+@railway(false)
+text class KW_CLASS {
+    'class' | 'structure'
 }
 // === field/method/domain === -----------------------------------------------------------------------------------------
 class DefineField {
@@ -151,7 +151,7 @@ class ParameterDefault {
     ('=' MainExpression)?
 }
 class DefineMethod {
-    AnnotationMix Namepath FunctionMiddle Continuation?
+    AnnotationMix Identifier FunctionMiddle Continuation?
 }
 class DefineDomain {
     AnnotationMix
@@ -186,9 +186,8 @@ class FlagField {
 }
 @style(keyword)
 @railway(false)
-union KW_FLAGS {
-    | 'enumerate' #Enum
-    | 'flags'     #Flags
+text class KW_FLAGS {
+    'enumerate' | 'flags'
 }
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineUnion {
@@ -237,7 +236,7 @@ union KW_TRAIT {
 }
 // === def function === ------------------------------------------------------------------------------------------------
 class DefineFunction {
-    AnnotationHead KW_FUNCTION Namepath FunctionMiddle Continuation
+    AnnotationHead KW_FUNCTION Identifier FunctionMiddle Continuation
 }
 class DefineLambda {
     AnnotationTerm*
@@ -259,11 +258,11 @@ atomic class FunctionParameters {
     (ParameterItem (HIDE ^COMMA ~ ParameterItem)* (HIDE ^COMMA)?)?
 }
 union ParameterItem {
-    | '<' #LMark
-    | '>' #RMark
+    | ParameterItemControl
     | ParameterPair
-    | '...' #OmitDict
-    | '..'  #OmitList
+}
+text class ParameterItemControl {
+    /[<「」>]|\.{2,3}/
 }
 class ParameterPair {
     ModifierAhead* ParameterHint?
@@ -276,9 +275,9 @@ class Continuation {
     '{' Statement* '}'
 }
 @style(keyword)
-union KW_FUNCTION {
-    | /micro|function/ #Micro
-    | /macro/          #Macro
+@railway(false)
+text class KW_FUNCTION {
+    /micro|macro|function|func|fun|fn/
 }
 // === let variable === ------------------------------------------------------------------------------------------------
 class DefineVariable {
@@ -475,6 +474,7 @@ text class MainInfix ^ {
     | [∈∊∉∋∍∌]
     | (not\s+)?in
     | is(\s+not)?
+    | as[*!?]?
     # map, apply
     | \/@ | [⇴⨵⊕⟴] | @{2,3}
     /

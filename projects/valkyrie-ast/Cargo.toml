@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie-ast"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["Aster <192607617@qq.com>"]
 description = "Strong typed abstract syntax tree of valkyrie language"
 repository = "https://github.com/nyar-vm/valkyrie.rs"
@@ -17,9 +17,9 @@ deriver = "0.0.0"
 serde = { version = "1.0.196", default-features = false, optional = true }
 
 [dependencies.nyar-error]
-version = "0.1.12"
+version = "0.1.*"
 features = ["pratt"]
-#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
+path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
 
 [dependencies.pretty-print]
 version = "0.1.9"

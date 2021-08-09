@@ -1,4 +1,4 @@
-use nyar_error::{third_party::Url, FileID};
+use nyar_error::{third_party::Url, SourceID};
 use std::path::PathBuf;
 use valkyrie_ast::{helper::StringInterpreter, ProgramRoot, StringTextNode};
 use valkyrie_parser::{ProgramContext, RangeLiteralNode, StringFormatterBuilder};
@@ -9,7 +9,7 @@ fn debug_literal(input: &str) -> std::io::Result<()> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").canonicalize()?;
     let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::Program).unwrap();
     println!("Short Form:\n{}", cst);
-    let mut cache = FileCache::default();
+    let mut cache = SourceCache::default();
     let file = cache.load_text(input, "debug.v");
     let parsed = ProgramContext { file }.parse(&mut cache);
     match parsed {
@@ -43,7 +43,7 @@ fn debug() {
 
 #[test]
 fn debug_formatter() {
-    let mut cache = FileCache::default();
+    let mut cache = SourceCache::default();
     let text = r#"abcde
 {{\n\r}}
 \u{123} \u{AZ} \u{12345678}

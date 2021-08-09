@@ -49,8 +49,8 @@ pub struct GuardStatement {
     pub span: Range<u32>,
 }
 impl ValkyrieNode for GuardStatement {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.clone()
     }
 }
 /// `guard <CONDITION> then { ... } else { ... }`

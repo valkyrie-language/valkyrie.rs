@@ -1,117 +1,164 @@
 use crate::{
-    values::symbols::AsSymbol, FileCache, FileID, ValkyrieExternalFunction, ValkyrieFunction, ValkyrieStructure, ValkyrieSymbol,
+    helpers::{Hir2Mir, Mir2Lir},
+    structures::ValkyrieClass,
+    ValkyrieFunction, ValkyrieUnion,
 };
+use convert_case::{Case, Casing};
+use im::{hashmap::Entry, HashMap};
 use indexmap::IndexMap;
-use nyar_error::{Failure, NyarError, Result, Success};
+use nyar_error::{DuplicateError, Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
+use nyar_wasm::{CanonicalWasi, DependentGraph, Identifier, WasiImport, WasiModule};
 use std::{
     fmt::{Debug, Formatter},
+    hash::RandomState,
     mem::take,
+    path::Path,
+    str::FromStr,
+    sync::Arc,
 };
-use valkyrie_ast::{NamespaceDeclaration, ProgramRoot, StatementKind};
+use valkyrie_ast::{AnnotationNode, ArgumentTerm, IdentifierNode, NamespaceDeclaration, ProgramRoot, StatementKind};
 use valkyrie_parser::{ProgramContext, StatementNode};
+
+mod codegen;
+mod display;
+mod parser;
 
 pub struct ValkyrieModule {}
 
 /// Convert file to module
-#[derive(Debug, Default)]
-pub struct ModuleResolver {
-    /// The declared namespace
-    pub(crate) namespace: Option<ValkyrieSymbol>,
-    /// main function of the file
-    pub(crate) main: Vec<StatementNode>,
+pub struct ResolveContext {
+    pub(crate) package: Arc<str>,
+    /// The current namespace
+    pub(crate) namespace: Vec<Arc<str>>,
+    /// The document buffer
+    pub(crate) document: String,
+    /// Mapping local name to global name
+    pub(crate) name_mapping: HashMap<Vec<Arc<str>>, ModuleImportsMap>,
     /// The declared items in file
-    pub(crate) items: IndexMap<String, ModuleItem>,
+    pub(crate) items: IndexMap<Identifier, ModuleItem>,
     /// Collect errors
-    pub(crate) errors: Vec<NyarError>,
+    errors: Vec<NyarError>,
+    /// Collect spread statements
+    pub(crate) main_function: Vec<StatementNode>,
+    sources: SourceCache,
+}
+
+#[derive(Clone, Default)]
+pub struct ModuleImportsMap {
+    using: HashMap<Identifier, Identifier>,
+    local: HashMap<Identifier, Identifier>,
 }
 
 pub enum ModuleItem {
-    External(ValkyrieExternalFunction),
-    Imported(ValkyrieSymbol),
     Function(ValkyrieFunction),
-    Structure(ValkyrieStructure),
+    // Imported(ValkyrieSymbol),
+    // Function(ValkyrieFunction),
+    Structure(ValkyrieClass),
+    Variant(ValkyrieUnion),
 }
 
-impl Debug for ModuleItem {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::External(v) => Debug::fmt(v, f),
-            Self::Imported(v) => Debug::fmt(v, f),
-            Self::Structure(v) => Debug::fmt(v, f),
-            Self::Function(v) => Debug::fmt(v, f),
+impl ResolveContext {
+    pub fn new<S: Into<Arc<str>>>(package: S) -> Self {
+        Self {
+            package: package.into(),
+            namespace: vec![],
+            document: "".to_string(),
+            name_mapping: Default::default(),
+            items: Default::default(),
+            errors: vec![],
+            main_function: vec![],
+            sources: Default::default(),
         }
     }
 }
 
-pub(crate) trait Hir2Mir {
-    type Output = ();
-    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output>;
-}
-
-impl Hir2Mir for ProgramRoot {
-    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        for statement in self.statements {
-            statement.to_mir(ctx)?
-        }
-        Ok(())
+impl ResolveContext {
+    pub fn reset_namespace(&mut self) {
+        self.namespace = vec![];
     }
 }
 
-impl Hir2Mir for StatementKind {
-    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        match self {
-            Self::Nothing => {}
-            Self::Document(_) => {}
-            Self::Annotation(_) => {}
-            Self::Namespace(v) => v.to_mir(ctx)?,
-            Self::Import(_) => {}
-            Self::Class(v) => v.to_mir(ctx)?,
-            Self::Union(_) => {}
-            Self::Enumerate(_) => {}
-            Self::Trait(_) => {}
-            Self::Extends(_) => {}
-            Self::Function(f) => f.to_mir(ctx)?,
-            Self::Variable(_) => {}
-            Self::Guard(_) => {}
-            Self::While(_) => {}
-            Self::For(_) => {}
-            Self::Control(_) => {}
-            Self::Expression(_) => {}
-        }
-        Ok(())
-    }
-}
-
-impl Hir2Mir for NamespaceDeclaration {
-    fn to_mir(self, ctx: &mut ModuleResolver) -> Result<Self::Output> {
-        ctx.namespace = Some(self.path.as_symbol());
-        Ok(())
-    }
-}
-impl ModuleResolver {
-    pub fn parse(&mut self, file: FileID, cache: &mut FileCache) -> Vec<NyarError> {
-        let root = ProgramContext { file }.parse(cache);
-        let mut errors = vec![];
-        match root {
-            Success { value, diagnostics } => {
-                errors.extend(diagnostics);
-                errors.extend(self.visit(value))
+impl ResolveContext {
+    /// Get the full name path based on package name and namespace, then register the name to local namespace.
+    pub fn register_item(&mut self, symbol: &IdentifierNode) -> Identifier {
+        let key = Identifier { namespace: vec![], name: symbol.name.clone() };
+        let value = Identifier { namespace: self.namespace.clone(), name: symbol.name.clone() };
+        match self.name_mapping.entry(self.namespace.clone()) {
+            Entry::Occupied(v) => {
+                v.into_mut().local.insert(key, value.clone());
             }
-            Failure { fatal, diagnostics } => {
-                errors.extend(diagnostics);
-                errors.extend_one(fatal);
+            Entry::Vacant(v) => {
+                let mut map = ModuleImportsMap::default();
+                map.using.insert(key, value.clone());
+                v.insert(map);
             }
         }
-        errors
+        value
+    }
+    pub fn get_foreign_module(
+        &mut self,
+        info: &AnnotationNode,
+        kind: &'static str,
+        hint: &'static str,
+        keyword: SourceSpan,
+    ) -> Option<(WasiModule, Arc<str>)> {
+        let ffi = info.attributes.get("import")?;
+        if !hint.is_empty() {
+            if !info.modifiers.contains(hint) {
+                self.push_error(ForeignInterfaceError::MissingForeignFlag { kind, hint, span: keyword });
+            }
+        }
+        match ffi.get_ffi_modules() {
+            Ok((module, name)) => match WasiModule::from_str(&module.text) {
+                Ok(o) => return Some((o, name)),
+                Err(e) => self.push_error(e.with_span(module.span.clone())),
+            },
+            Err(e) => self.push_error(e),
+        }
+        return None;
+    }
+    /// Get the full name path based on package name and namespace
+    pub fn export_field(&self, symbol: &IdentifierNode, alias: &AnnotationNode) -> Result<(Arc<str>, Arc<str>)> {
+        let wasi_alias = match alias.attributes.get("export").and_then(|x| x.arguments.terms.first()) {
+            Some(s) => match s.value.as_text() {
+                Some(s) => Arc::from(s.text.as_str()),
+                None => Err(NyarError::custom("missing wasi alias"))?,
+            },
+            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+        };
+        Ok((symbol.name.clone(), wasi_alias))
     }
 
-    pub fn visit(&mut self, root: ProgramRoot) -> Vec<NyarError> {
-        let progress = root.to_mir(self);
-        let mut errors = take(&mut self.errors);
-        match progress {
-            Ok(_) => {}
-            Err(e) => errors.push(e),
+    /// Get the full name path based on package name and namespace
+    pub fn wasi_import_module_name(&mut self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Option<WasiImport> {
+        let import = alias.attributes.get("import")?;
+        let module = self.find_wasi_module(import.arguments.terms.get(0), import.span)?;
+        let name: Arc<str> = match import.arguments.terms.get(1) {
+            Some(term) => match term.value.as_text() {
+                Some(node) => Arc::from(node.text.as_str()),
+                None => {
+                    self.push_error(ForeignInterfaceError::InvalidForeignName { span: term.span });
+                    return None;
+                }
+            },
+            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+        };
+        Some(WasiImport { module, name })
+    }
+
+    fn find_wasi_module(&mut self, term: Option<&ArgumentTerm>, span: SourceSpan) -> Option<WasiModule> {
+        match term.and_then(|x| x.value.as_text()) {
+            Some(text) => match WasiModule::from_str(&text.text) {
+                Ok(o) => Some(o),
+                Err(e) => {
+                    self.push_error(e.with_span(text.span.clone()));
+                    None
+                }
+            },
+            None => {
+                self.push_error(ForeignInterfaceError::InvalidForeignModule { span });
+                None
+            }
         }
-        errors
     }
 }

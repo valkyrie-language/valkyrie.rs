@@ -22,18 +22,6 @@ pub struct UnionDeclaration {
     pub span: Range<u32>,
 }
 
-/// A valid term in the union declaration.
-#[derive(Clone, PartialEq, Eq, Hash, From)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum UnionTerm {
-    /// `@procedural`
-    Macro(ProceduralNode),
-    /// `Variant { }`
-    Variant(VariantDeclaration),
-    /// `method()`
-    Method(MethodDeclaration),
-}
-
 /// `Variant { }`
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -46,4 +34,16 @@ pub struct VariantDeclaration {
     pub body: Vec<ClassTerm>,
     /// The range of the node
     pub span: Range<u32>,
+}
+
+/// A valid term in the union declaration.
+#[derive(Clone, PartialEq, Eq, Hash, From)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum UnionTerm {
+    /// `@procedural`
+    Macro(ProceduralNode),
+    /// `Variant { }`
+    Variant(VariantDeclaration),
+    /// `method()`
+    Method(MethodDeclaration),
 }

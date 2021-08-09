@@ -1,5 +1,7 @@
 use super::*;
 use crate::helper::WrapDisplay;
+use alloc::sync::Arc;
+use nyar_error::ForeignInterfaceError;
 
 mod builtin;
 mod display;
@@ -31,7 +33,7 @@ pub struct ProceduralNode {
     /// The capture of this attribute.
     pub domain: Option<StatementBlock>,
     /// The range of the node
-    pub span: Range<u32>,
+    pub span: SourceSpan,
 }
 
 impl From<ProceduralNode> for AttributeTerm {
@@ -48,8 +50,8 @@ impl From<ProceduralNode> for AttributeTerm {
 }
 
 impl ValkyrieNode for ProceduralNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.get_range()
     }
 }
 
@@ -88,7 +90,24 @@ pub struct AttributeTerm {
     /// The dsl part of the attribute
     pub domain: Option<StatementBlock>,
     /// The range of the node
-    pub span: Range<u32>,
+    pub span: SourceSpan,
+}
+
+impl PartialEq<str> for AttributeTerm {
+    fn eq(&self, other: &str) -> bool {
+        if cfg!(debug_assertions) {
+            if other.contains(":") {
+                panic!("don't use id")
+            }
+        }
+        if !self.variant.is_empty() {
+            return false;
+        }
+        match self.path.path.as_slice() {
+            [single] => other.eq(single.name.as_ref()),
+            _ => false,
+        }
+    }
 }
 
 /// `public static final synchronized class Main {}`
@@ -125,6 +144,7 @@ impl AnnotationNode {
         self.documents.is_empty() && self.attributes.is_empty() && self.modifiers.is_empty()
     }
 }
+
 impl From<AttributeList> for AnnotationNode {
     fn from(value: AttributeList) -> Self {
         Self { documents: Default::default(), attributes: value, modifiers: Default::default() }
@@ -141,7 +161,50 @@ impl AttributeKind {
     }
 }
 
-impl AttributeTerm {}
+impl AttributeTerm {
+    /// Get the ffi module and name form attribute
+    ///
+    /// ```vk
+    /// #ffi("module", "name")
+    /// resource class A {}
+    /// ```
+    pub fn get_ffi_modules(&self) -> Result<(&StringTextNode, Arc<str>), ForeignInterfaceError> {
+        match self.arguments.terms.as_slice() {
+            [module, name] => {
+                let module = match module.value.as_text() {
+                    Some(s) => s,
+                    None => Err(ForeignInterfaceError::InvalidForeignModule { span: self.span.clone() })?,
+                };
+                let name = match name.value.as_text() {
+                    Some(s) => s.text.as_str(),
+                    None => Err(ForeignInterfaceError::InvalidForeignName { span: self.span.clone() })?,
+                };
+                Ok((module, Arc::from(name)))
+            }
+            _ => Err(ForeignInterfaceError::InvalidForeignModule { span: self.span.clone() })?,
+        }
+    }
+    /// Get the ffi rename
+    ///
+    /// ```vk
+    /// class A {
+    ///     #ffi("rename")
+    ///     field: u32
+    /// }
+    /// ```
+    pub fn get_ffi_rename(&self) -> Result<&StringTextNode, ForeignInterfaceError> {
+        match self.arguments.terms.as_slice() {
+            [rename] => {
+                let name = match rename.value.as_text() {
+                    Some(s) => s,
+                    None => Err(ForeignInterfaceError::InvalidForeignName { span: self.span.clone() })?,
+                };
+                Ok(name)
+            }
+            _ => Err(ForeignInterfaceError::InvalidForeignModule { span: self.span.clone() })?,
+        }
+    }
+}
 
 impl AttributeList {
     /// Create a new modifier list.
@@ -153,6 +216,14 @@ impl AttributeList {
     pub fn is_empty(&self) -> bool {
         self.terms.is_empty()
     }
+    /// Get the attribute by name.
+    pub fn get<T>(&self, attribute: &T) -> Option<&AttributeTerm>
+    where
+        T: ?Sized,
+        AttributeTerm: PartialEq<T>,
+    {
+        self.terms.iter().filter(|&x| x.eq(attribute)).next()
+    }
 }
 
 impl ModifierList {
@@ -163,6 +234,6 @@ impl ModifierList {
 
     /// Check if the modifier is present.
     pub fn contains(&self, modifier: &str) -> bool {
-        self.terms.iter().any(|x| x.name.eq(modifier))
+        self.terms.iter().any(|x| modifier.eq(x.name.as_ref()))
     }
 }

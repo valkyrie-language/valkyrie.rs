@@ -6,10 +6,13 @@ class Error {}
 #ffi("Pollable")
 class Pollable {}
 
+ffi("wasi:io/poll", "poll")
 micro poll(
 
 Type: Some("error") Id(Id { idx: 0 })
+
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Variant
 
 #resource

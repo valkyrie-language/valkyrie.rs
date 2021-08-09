@@ -7,7 +7,7 @@ impl crate::ProceduralCallNode {
             path: self.namepath.build(ctx),
             arguments: Default::default(),
             domain: None,
-            span: self.span.clone(),
+            span: ctx.file.with_range(self.span.clone()),
         }
     }
 }

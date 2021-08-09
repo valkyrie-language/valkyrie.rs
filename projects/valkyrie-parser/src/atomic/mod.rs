@@ -2,7 +2,6 @@ use crate::{helpers::ProgramState, utils::build_annotation_terms};
 use nyar_error::{Result, SyntaxError};
 use std::num::NonZeroU64;
 use valkyrie_ast::*;
-use yggdrasil_rt::YggdrasilNode;
 
 mod bytes;
 mod create_lambda;

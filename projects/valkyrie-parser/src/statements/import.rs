@@ -1,7 +1,5 @@
 use super::*;
 
-use yggdrasil_rt::YggdrasilNode;
-
 impl crate::DefineImportNode {
     #[allow(unused_imports)]
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ImportStatement> {
@@ -10,7 +8,7 @@ impl crate::DefineImportNode {
             annotation: Default::default(),
             kind: ImportKind::Shared,
             term: self.term(ctx),
-            span: ctx.file.with_range(self.get_range()),
+            span: ctx.file.with_range(self.span.clone()),
         };
 
         // for resolved in imported.flatten() {

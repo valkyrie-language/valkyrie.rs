@@ -1,0 +1,6 @@
+namespace package.io
+
+trait Write {
+    write_unicode(mut self, value: char) -> Result< (), StreamError >;
+    write_utf8(mut self, string: str) -> Result< (), StreamError >;
+}

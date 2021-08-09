@@ -56,6 +56,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::TypeEffect => parse_type_effect(state),
         ValkyrieRule::FunctionParameters => parse_function_parameters(state),
         ValkyrieRule::ParameterItem => parse_parameter_item(state),
+        ValkyrieRule::ParameterItemControl => parse_parameter_item_control(state),
         ValkyrieRule::ParameterPair => parse_parameter_pair(state),
         ValkyrieRule::ParameterHint => parse_parameter_hint(state),
         ValkyrieRule::Continuation => parse_continuation(state),
@@ -750,9 +751,7 @@ fn parse_class_term(state: Input) -> Output {
 #[inline]
 fn parse_kw_class(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_CLASS, |s| {
-        Err(s)
-            .or_else(|s| builtin_text(s, "class", false).and_then(|s| s.tag_node("class")))
-            .or_else(|s| builtin_text(s, "structure", false).and_then(|s| s.tag_node("structure")))
+        Err(s).or_else(|s| builtin_text(s, "class", false)).or_else(|s| builtin_text(s, "structure", false))
     })
 }
 #[inline]
@@ -790,7 +789,7 @@ fn parse_define_method(state: Input) -> Output {
             Ok(s)
                 .and_then(|s| parse_annotation_mix(s).and_then(|s| s.tag_node("annotation_mix")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_namepath(s).and_then(|s| s.tag_node("namepath")))
+                .and_then(|s| parse_identifier(s).and_then(|s| s.tag_node("identifier")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_function_middle(s).and_then(|s| s.tag_node("function_middle")))
                 .and_then(|s| builtin_ignore(s))
@@ -949,9 +948,7 @@ fn parse_flag_field(state: Input) -> Output {
 #[inline]
 fn parse_kw_flags(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_FLAGS, |s| {
-        Err(s)
-            .or_else(|s| builtin_text(s, "enumerate", false).and_then(|s| s.tag_node("enum")))
-            .or_else(|s| builtin_text(s, "flags", false).and_then(|s| s.tag_node("flags")))
+        Err(s).or_else(|s| builtin_text(s, "enumerate", false)).or_else(|s| builtin_text(s, "flags", false))
     })
 }
 #[inline]
@@ -1118,7 +1115,7 @@ fn parse_define_function(state: Input) -> Output {
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_kw_function(s).and_then(|s| s.tag_node("kw_function")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_namepath(s).and_then(|s| s.tag_node("namepath")))
+                .and_then(|s| parse_identifier(s).and_then(|s| s.tag_node("identifier")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_function_middle(s).and_then(|s| s.tag_node("function_middle")))
                 .and_then(|s| builtin_ignore(s))
@@ -1231,11 +1228,17 @@ fn parse_function_parameters(state: Input) -> Output {
 fn parse_parameter_item(state: Input) -> Output {
     state.rule(ValkyrieRule::ParameterItem, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "<", false).and_then(|s| s.tag_node("l_mark")))
-            .or_else(|s| builtin_text(s, ">", false).and_then(|s| s.tag_node("r_mark")))
+            .or_else(|s| parse_parameter_item_control(s).and_then(|s| s.tag_node("parameter_item_control")))
             .or_else(|s| parse_parameter_pair(s).and_then(|s| s.tag_node("parameter_pair")))
-            .or_else(|s| builtin_text(s, "...", false).and_then(|s| s.tag_node("omit_dict")))
-            .or_else(|s| builtin_text(s, "..", false).and_then(|s| s.tag_node("omit_list")))
+    })
+}
+#[inline]
+fn parse_parameter_item_control(state: Input) -> Output {
+    state.rule(ValkyrieRule::ParameterItemControl, |s| {
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)([<「」>]|\\.{2,3})").unwrap())
+        })
     })
 }
 #[inline]
@@ -1268,7 +1271,7 @@ fn parse_parameter_hint(state: Input) -> Output {
     state.rule(ValkyrieRule::ParameterHint, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([.]{2,3}|[~^])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^(?x)([.]{2,3}|[%^])").unwrap())
         })
     })
 }
@@ -1296,21 +1299,10 @@ fn parse_continuation(state: Input) -> Output {
 #[inline]
 fn parse_kw_function(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_FUNCTION, |s| {
-        Err(s)
-            .or_else(|s| {
-                builtin_regex(s, {
-                    static REGEX: OnceLock<Regex> = OnceLock::new();
-                    REGEX.get_or_init(|| Regex::new("^(?x)(micro|function)").unwrap())
-                })
-                .and_then(|s| s.tag_node("micro"))
-            })
-            .or_else(|s| {
-                builtin_regex(s, {
-                    static REGEX: OnceLock<Regex> = OnceLock::new();
-                    REGEX.get_or_init(|| Regex::new("^(?x)(macro)").unwrap())
-                })
-                .and_then(|s| s.tag_node("macro"))
-            })
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)(micro|macro|function|func|fun|fn)").unwrap())
+        })
     })
 }
 #[inline]
@@ -2061,7 +2053,7 @@ fn parse_type_prefix(state: Input) -> Output {
             REGEX.get_or_init(|| {
                 Regex::new(
                     "^(?x)([-+¬]
-    | [~&])",
+    | [&^])",
                 )
                 .unwrap()
             })
@@ -2093,6 +2085,7 @@ fn parse_main_infix(state: Input) -> Output {
     | [∈∊∉∋∍∌]
     | (not\\s+)?in
     | is(\\s+not)?
+    | as[*!?]?
     # map, apply
     | /@ | [⇴⨵⊕⟴] | @{2,3})",
                 )
@@ -3891,7 +3884,18 @@ fn parse_skip_space(state: Input) -> Output {
 fn parse_comment(state: Input) -> Output {
     state.rule(ValkyrieRule::Comment, |s| {
         Err(s)
-            .or_else(|s| s.sequence(|s| Ok(s).and_then(|s| builtin_text(s, "//", false)).and_then(|s| s.rest_of_line())))
+            .or_else(|s| {
+                s.sequence(|s| {
+                    Ok(s)
+                        .and_then(|s| {
+                            builtin_regex(s, {
+                                static REGEX: OnceLock<Regex> = OnceLock::new();
+                                REGEX.get_or_init(|| Regex::new("^(?x)([~⍝🗨])").unwrap())
+                            })
+                        })
+                        .and_then(|s| s.rest_of_line())
+                })
+            })
             .or_else(|s| {
                 s.sequence(|s| Ok(s).and_then(|s| builtin_text(s, "/*", false)).and_then(|s| builtin_text(s, "*/", false)))
             })

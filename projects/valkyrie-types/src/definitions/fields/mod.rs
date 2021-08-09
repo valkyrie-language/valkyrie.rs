@@ -10,7 +10,7 @@ pub struct ValkyrieField {
     readonly: bool,
     pub(crate) optional: bool,
     access: AccessType,
-    pub(crate) span: FileSpan,
+    pub(crate) span: SourceSpan,
 }
 
 impl ValkyrieField {
@@ -45,10 +45,10 @@ impl ValkyrieField {
     pub fn set_optional(&mut self, optional: bool) {
         self.optional = optional;
     }
-    pub fn get_span(&self) -> FileSpan {
+    pub fn get_span(&self) -> SourceSpan {
         self.span
     }
-    pub fn set_span(&mut self, span: FileSpan) {
+    pub fn set_span(&mut self, span: SourceSpan) {
         self.span = span;
     }
 }

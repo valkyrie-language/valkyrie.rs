@@ -1,16 +1,16 @@
 #![allow(unused)]
 
 use crate::ProgramNode;
-use nyar_error::{Failure, FileCache, FileID, NyarError, Success, Validation};
+use nyar_error::{Failure, NyarError, SourceCache, SourceID, Success, Validation};
 use std::{ops::AddAssign, str::FromStr};
 use valkyrie_ast::ProgramRoot;
 
 pub struct ProgramContext {
-    pub file: FileID,
+    pub file: SourceID,
 }
 
 pub(crate) struct ProgramState {
-    pub file: FileID,
+    pub file: SourceID,
     errors: Vec<NyarError>,
 }
 
@@ -26,7 +26,7 @@ pub(crate) struct LooperState {
 }
 
 impl ProgramState {
-    pub fn new(file: FileID) -> Self {
+    pub fn new(file: SourceID) -> Self {
         Self { file, errors: vec![] }
     }
     pub fn add_error<E>(&mut self, error: E)
@@ -38,8 +38,8 @@ impl ProgramState {
 }
 
 impl ProgramContext {
-    pub fn parse(&self, cache: &mut FileCache) -> Validation<ProgramRoot> {
-        let text = cache.fetch(&self.file)?.to_string();
+    pub fn parse(&self, cache: &mut SourceCache) -> Validation<ProgramRoot> {
+        let text = cache.fetch(&self.file)?.text();
         let mut state = ProgramState::new(self.file);
         match ProgramNode::from_str(&text) {
             Ok(o) => match o.build(&mut state) {

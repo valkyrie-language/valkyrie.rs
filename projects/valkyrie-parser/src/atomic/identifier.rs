@@ -1,25 +1,28 @@
 use super::*;
-use nyar_error::FileID;
+use nyar_error::SourceID;
+use std::sync::Arc;
 
 impl crate::NamepathNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {
         NamePathNode::from_iter(self.identifier.iter().map(|v| v.build(ctx.file)))
-            .with_span(ctx.file.with_range(self.get_range()))
+            .with_span(ctx.file.with_range(self.span.clone()))
     }
 }
 
 impl crate::NamepathFreeNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {
         NamePathNode::from_iter(self.identifier.iter().map(|v| v.build(ctx.file)))
-            .with_span(ctx.file.with_range(self.get_range()))
+            .with_span(ctx.file.with_range(self.span.clone()))
     }
 }
 impl crate::IdentifierNode {
-    pub fn build(&self, file: FileID) -> IdentifierNode {
+    pub fn build(&self, file: SourceID) -> IdentifierNode {
         match self {
-            Self::IdentifierBare(v) => IdentifierNode { name: v.text.to_string(), span: file.with_range(v.get_range()) },
+            Self::IdentifierBare(v) => {
+                IdentifierNode { name: Arc::from(v.text.as_str()), span: file.with_range(v.span.clone()) }
+            }
             Self::IdentifierRaw(v) => {
-                IdentifierNode { name: v.identifier_raw_text.text.to_string(), span: file.with_range(v.get_range()) }
+                IdentifierNode { name: Arc::from(v.identifier_raw_text.text.as_str()), span: file.with_range(v.span.clone()) }
             }
         }
     }

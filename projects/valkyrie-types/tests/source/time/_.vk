@@ -1,0 +1,7 @@
+namespace package.time;
+
+#import("wasi:clock/monotonic-clock", "now")
+micro now() -> u64 {
+
+}
+

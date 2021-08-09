@@ -1,0 +1,7 @@
+namespace package.io
+
+trait WriteBuffer {
+    write_buffer(mut self, contents: Array< u8 >) -> Result< (), StreamError >;
+
+
+}

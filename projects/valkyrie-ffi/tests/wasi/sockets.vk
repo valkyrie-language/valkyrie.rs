@@ -19,26 +19,41 @@ Record
 Variant
 
 Type: Some("network") Id(Id { idx: 128 })
+
+ffi("wasi:sockets/instance-network", "instance-network")
 micro instance_network(
 
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Type: Some("network") Id(Id { idx: 128 })
+
 Type: Some("error-code") Id(Id { idx: 129 })
+
 Type: Some("ip-address") Id(Id { idx: 133 })
+
 #resource
 #ffi("ResolveAddressStream")
 class ResolveAddressStream {}
 
+ffi("wasi:sockets/ip-name-lookup", "resolve-addresses")
 micro resolve_addresses(
 
 Type: Some("input-stream") Id(Id { idx: 10 })
+
 Type: Some("output-stream") Id(Id { idx: 11 })
+
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Type: Some("duration") Id(Id { idx: 78 })
+
 Type: Some("network") Id(Id { idx: 128 })
+
 Type: Some("error-code") Id(Id { idx: 129 })
+
 Type: Some("ip-socket-address") Id(Id { idx: 136 })
+
 Type: Some("ip-address-family") Id(Id { idx: 130 })
+
 Enum
 
 #resource
@@ -46,16 +61,26 @@ Enum
 class TcpSocket {}
 
 Type: Some("network") Id(Id { idx: 128 })
+
 Type: Some("error-code") Id(Id { idx: 129 })
+
 Type: Some("ip-address-family") Id(Id { idx: 130 })
+
 Type: Some("tcp-socket") Id(Id { idx: 158 })
+
+ffi("wasi:sockets/tcp-create-socket", "create-tcp-socket")
 micro create_tcp_socket(
 
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Type: Some("network") Id(Id { idx: 128 })
+
 Type: Some("error-code") Id(Id { idx: 129 })
+
 Type: Some("ip-socket-address") Id(Id { idx: 136 })
+
 Type: Some("ip-address-family") Id(Id { idx: 130 })
+
 Record
 
 Record
@@ -73,8 +98,13 @@ class IncomingDatagramStream {}
 class OutgoingDatagramStream {}
 
 Type: Some("network") Id(Id { idx: 128 })
+
 Type: Some("error-code") Id(Id { idx: 129 })
+
 Type: Some("ip-address-family") Id(Id { idx: 130 })
+
 Type: Some("udp-socket") Id(Id { idx: 190 })
+
+ffi("wasi:sockets/udp-create-socket", "create-udp-socket")
 micro create_udp_socket(
 

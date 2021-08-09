@@ -56,7 +56,7 @@ impl NamespaceDeclaration {
 //     pub fn push_name(&mut self, name: impl Into<String>) {
 //         self.name.push(name.into());
 //     }
-//     pub fn to_node(self, file: FileID, range: &Range<usize>) -> ValkyrieASTNode {
+//     pub fn to_node(self, file: SourceID, range: &Range<usize>) -> ValkyrieASTNode {
 //         ValkyrieASTKind::Namespace(box self).to_node(file, range)
 //     }
 // }

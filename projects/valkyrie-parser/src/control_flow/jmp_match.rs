@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 
 impl crate::MatchExpressionNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<MatchStatement> {
@@ -104,7 +105,7 @@ impl crate::CasePatternNode {
         match self {
             Self::Namepath(v) => Ok(PatternNode::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: "".to_string(), span: Default::default() },
+                identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             }))),
             Self::StandardPattern(v) => v.build(ctx),
         }

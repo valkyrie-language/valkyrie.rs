@@ -7,13 +7,13 @@ mod codegen;
 pub struct FunctionDefinition {
     symbol: Vec<Arc<str>>,
     parameters: IndexMap<String, ParameterDefinition>,
-    span: FileSpan,
+    span: SourceSpan,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParameterDefinition {
     symbol: Arc<str>,
-    span: FileSpan,
+    span: SourceSpan,
 }
 
 impl FunctionDefinition {
@@ -37,7 +37,7 @@ impl FunctionDefinition {
     pub fn get_parameter(&self, name: &str) -> Option<&ParameterDefinition> {
         self.parameters.get(name)
     }
-    pub fn get_span(&self) -> FileSpan {
+    pub fn get_span(&self) -> SourceSpan {
         self.span
     }
 }

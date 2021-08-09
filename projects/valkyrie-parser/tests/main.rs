@@ -1,6 +1,6 @@
 #![allow(unused, dead_code)]
 
-use nyar_error::{third_party::Url, Failure, FileCache, Success, Validation};
+use nyar_error::{third_party::Url, Failure, SourceCache, Success, Validation};
 use std::{
     ffi::OsStr,
     fs::File,
@@ -64,7 +64,7 @@ fn reexport_all() {
 }
 
 fn find_all(dir: &str, debug: bool) -> anyhow::Result<()> {
-    let mut cache = FileCache::default();
+    let mut cache = SourceCache::default();
     let path = here().join(dir).canonicalize()?;
     if !path.is_dir() {
         panic!("{} must a directory", path.display())

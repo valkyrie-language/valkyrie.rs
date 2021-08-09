@@ -39,7 +39,7 @@ pub use crate::{
         lambda::{ClosureCallNode, LambdaNode},
         number::NumberLiteralNode,
         operators::{BinaryNode, LogicMatrix, OperatorNode, UnaryNode, ValkyrieOperator},
-        parameter::{ParameterKind, ParameterTerm, ParametersList},
+        parameter::{ParameterKind, ParameterMixed, ParameterTerm, ParametersList},
         range::{RangeKind, RangeNode, RangeTermNode},
         symbol::{BooleanNode, IdentifierNode, LambdaSlotItem, LambdaSlotNode, NamePathNode, NullNode, OutputNode},
         tuple::{TupleKind, TupleNode},

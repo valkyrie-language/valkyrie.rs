@@ -3,18 +3,23 @@
 class Error {}
 
 Type: Some("input-stream") Id(Id { idx: 10 })
+
 Type: Some("output-stream") Id(Id { idx: 11 })
+
 Type: Some("error") Id(Id { idx: 343 })
+
 #resource
 #ffi("Bucket")
 class Bucket {}
 
 Type: Some("key") String
+
 #resource
 #ffi("OutgoingValue")
 class OutgoingValue {}
 
 Type: Some("outgoing-value-body-async") Id(Id { idx: 346 })
+
 List
 
 #resource
@@ -22,20 +27,31 @@ List
 class IncomingValue {}
 
 Type: Some("incoming-value-async-body") Id(Id { idx: 345 })
+
 List
 
 Type: Some("bucket") Id(Id { idx: 348 })
+
 Type: Some("error") Id(Id { idx: 347 })
+
 Type: Some("key") Id(Id { idx: 349 })
+
+ffi("wasi:keyvalue/atomic", "increment")
 micro increment(
 
+ffi("wasi:keyvalue/atomic", "compare-and-swap")
 micro compare_and_swap(
 
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Type: Some("key") Id(Id { idx: 349 })
+
 Type: Some("incoming-value") Id(Id { idx: 353 })
+
 Type: Some("outgoing-value") Id(Id { idx: 350 })
+
 Type: Some("error") Id(Id { idx: 347 })
+
 #resource
 #ffi("FutureGetResult")
 class FutureGetResult {}
@@ -58,46 +74,74 @@ class Vacancy {}
 
 Variant
 
+ffi("wasi:keyvalue/cache", "get")
 micro get(
 
+ffi("wasi:keyvalue/cache", "exists")
 micro exists(
 
+ffi("wasi:keyvalue/cache", "set")
 micro set(
 
+ffi("wasi:keyvalue/cache", "get-or-set")
 micro get_or_set(
 
+ffi("wasi:keyvalue/cache", "delete")
 micro delete(
 
 Type: Some("bucket") Id(Id { idx: 348 })
+
 Type: Some("error") Id(Id { idx: 347 })
+
 Type: Some("key") Id(Id { idx: 349 })
+
 Type: Some("incoming-value") Id(Id { idx: 353 })
+
 Type: Some("outgoing-value") Id(Id { idx: 350 })
+
+ffi("wasi:keyvalue/eventual-batch", "get-many")
 micro get_many(
 
+ffi("wasi:keyvalue/eventual-batch", "keys")
 micro keys(
 
+ffi("wasi:keyvalue/eventual-batch", "set-many")
 micro set_many(
 
+ffi("wasi:keyvalue/eventual-batch", "delete-many")
 micro delete_many(
 
 Type: Some("bucket") Id(Id { idx: 348 })
+
 Type: Some("error") Id(Id { idx: 347 })
+
 Type: Some("incoming-value") Id(Id { idx: 353 })
+
 Type: Some("key") Id(Id { idx: 349 })
+
 Type: Some("outgoing-value") Id(Id { idx: 350 })
+
+ffi("wasi:keyvalue/eventual", "get")
 micro get(
 
+ffi("wasi:keyvalue/eventual", "set")
 micro set(
 
+ffi("wasi:keyvalue/eventual", "delete")
 micro delete(
 
+ffi("wasi:keyvalue/eventual", "exists")
 micro exists(
 
 Type: Some("bucket") Id(Id { idx: 348 })
+
 Type: Some("key") Id(Id { idx: 349 })
+
 Type: Some("incoming-value") Id(Id { idx: 353 })
+
+ffi("wasi:keyvalue/handle-watch", "on-set")
 micro on_set(
 
+ffi("wasi:keyvalue/handle-watch", "on-delete")
 micro on_delete(
 

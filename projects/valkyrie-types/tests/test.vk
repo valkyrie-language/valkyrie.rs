@@ -1,68 +1,16 @@
-namespace core.memory;
-
-
-
-structure MemoryArea {
-    offset: usize,
-    length: usize,
-    construct(x: offset, y: length) {
-        self.offset = x;
-        self.length = y;
-    }
-}
-
-namespace engine64;
-
-structure vec2 {
+structure v2 {
     x: f64,
     y: f64,
-    construct(x: f64, y: f64) {
+    constructor(x: f64, y: f64) {
         self.x = x;
         self.y = y;
     }
 }
 
-extends vec2 {
+extends v2 {
     sum(self): f64 {
         js::print_f32(self.x)
         js::print_f32(self.y)
         add(self.x, self.y)
     }
-}
-
-
-namespace js;
-
-#ffi("js", "print_i32")
-function print_i32(n: i32) {
-    // external function
-}
-
-#ffi("js", "print_i64")
-function print_i64(n: i64) {
-    // external function
-}
-
-#ffi("js", "print_f64")
-function print_f32(n: f32) {
-    // external function
-}
-
-#ffi("js", "print_f32")
-function print_f64(n: f64) {
-    // external function
-}
-
-#ffi("js", "print_char")
-function print_char(n: char) {
-    // external function
-}
-
-#ffi("js", "print_str")
-function print_str(offset: usize, length: usize) {
-    // external function
-}
-
-function print_mem(memory: core::memory::MemoryArea) {
-    print_str(memory.offset, memory.length)
 }

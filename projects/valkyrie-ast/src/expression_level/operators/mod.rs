@@ -78,6 +78,12 @@ pub enum ValkyrieOperator {
         /// inclusive operator: `..=`
         equal: bool,
     },
+
+    /// binary operator: `as, as?, as!`
+    As {
+        /// `as?`
+        r#try: bool,
+    },
     /// binary operator: `⊑, ⋢, is, is not`
     Is {
         /// negative operator: `⋢, is not`
@@ -193,6 +199,7 @@ impl ValkyrieOperator {
             Self::Placeholder => 0,
             //
             Self::Concat => 14000,
+            Self::As { .. } => 14000,
             Self::Is { .. } => 14000,
             Self::In { .. } => 14000,
             Self::Contains { .. } => 14000,
@@ -292,6 +299,10 @@ impl ValkyrieOperator {
             },
             Self::MuchLess => "≪",
             Self::VeryMuchLess => "⋘",
+            Self::As { r#try } => match r#try {
+                true => "as?",
+                false => "as",
+            },
             Self::Is { negative } => match negative {
                 true => "⋢",
                 false => "⊑",
@@ -393,12 +404,12 @@ pub struct OperatorNode {
     pub span: Range<u32>,
 }
 impl ValkyrieNode for UnaryNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.operator.span.start as usize, end: self.base.get_end() }
+    fn get_range(&self) -> Range<u32> {
+        Range { start: self.operator.span.start, end: self.base.get_end() }
     }
 }
 impl ValkyrieNode for BinaryNode {
-    fn get_range(&self) -> Range<usize> {
+    fn get_range(&self) -> Range<u32> {
         let head = self.lhs.get_range().start;
         let tail = self.rhs.get_range().end;
         head..tail

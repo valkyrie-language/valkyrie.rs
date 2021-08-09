@@ -1,10 +1,15 @@
+ffi("wasi:random/insecure-seed", "insecure-seed")
 micro insecure_seed(
 
+ffi("wasi:random/insecure", "get-insecure-random-bytes")
 micro get_insecure_random_bytes(
 
+ffi("wasi:random/insecure", "get-insecure-random-u64")
 micro get_insecure_random_u_64(
 
+ffi("wasi:random/random", "get-random-bytes")
 micro get_random_bytes(
 
+ffi("wasi:random/random", "get-random-u64")
 micro get_random_u_64(
 

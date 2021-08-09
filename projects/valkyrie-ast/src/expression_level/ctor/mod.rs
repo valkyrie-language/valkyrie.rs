@@ -57,7 +57,7 @@ impl Debug for CollectorTerm {
 }
 
 impl ValkyrieNode for ConstructNewNode {
-    fn get_range(&self) -> Range<usize> {
-        Range { start: self.span.start as usize, end: self.span.end as usize }
+    fn get_range(&self) -> Range<u32> {
+        self.span.clone()
     }
 }

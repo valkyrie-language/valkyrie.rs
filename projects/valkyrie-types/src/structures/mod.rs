@@ -1,78 +1,99 @@
 use crate::{
-    backends::ConvertTo, modules::Hir2Mir, types::method_type::MethodDefinition, values::symbols::AsSymbol, ModuleItem,
-    ModuleResolver, ValkyrieField, ValkyrieSymbol,
+    helpers::Hir2Mir,
+    modules::{ModuleItem, ResolveContext},
 };
-use indexmap::{
-    map::{Entry, Values},
-    IndexMap,
-};
-use nyar_error::{NyarError, Result};
-use nyar_wasm::StructureType;
+use indexmap::IndexMap;
+use nyar_error::Result;
+use nyar_wasm::{Identifier, WasiExport, WasiImport, WasiResource};
 use std::{
     fmt::{Debug, Formatter},
+    hash::{Hash, Hasher},
     ops::AddAssign,
+    sync::Arc,
 };
-use valkyrie_ast::{helper::WrapDisplay, ClassDeclaration, ClassTerm, IdentifierNode, NamePathNode};
+use valkyrie_ast::{helper::WrapDisplay, ClassDeclaration, ClassTerm, FieldDeclaration, MethodDeclaration};
 
-mod codegen;
-mod parser;
+mod display;
+mod stage1_mir;
+mod stage2_lir;
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct ValkyrieStructure {
-    pub(crate) symbol: ValkyrieSymbol,
-    pub(crate) fields: IndexMap<String, ValkyrieField>,
-    pub(crate) methods: IndexMap<String, MethodDefinition>,
+pub struct ValkyrieClass {
+    pub(crate) symbol: Identifier,
+    /// The wasi import/export name
+    pub wasi_import: Option<WasiImport>,
+    pub(crate) fields: IndexMap<Arc<str>, ValkyrieField>,
+    pub(crate) methods: IndexMap<Arc<str>, ValkyrieMethod>,
 }
 
-impl Debug for ValkyrieStructure {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Structure")
-            .field("symbol", &WrapDisplay::new(&self.symbol))
-            .field("fields", &self.fields.values())
-            .field("methods", &self.methods.values())
-            .finish()
+impl Hash for ValkyrieClass {
+    /// ```wat
+    /// $type-id = package::module::name
+    ///          + Generic Types
+    /// ```
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.symbol.hash(state);
     }
 }
 
-impl AddAssign<ValkyrieField> for ValkyrieStructure {
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValkyrieField {
+    /// The name of the field
+    pub field_name: Arc<str>,
+    /// The WASI name of the field
+    pub wasi_alias: Arc<str>,
+}
+
+/// A method belongs to a class or a trait
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ValkyrieMethod {
+    /// The name of the method
+    pub method_name: Arc<str>,
+    /// The WASI import symbol if exists
+    pub wasi_import: Option<WasiImport>,
+    /// The WASI export symbol if exists
+    pub wasi_export: Option<WasiExport>,
+}
+
+impl AddAssign<ValkyrieField> for ValkyrieClass {
     fn add_assign(&mut self, rhs: ValkyrieField) {
-        self.fields.insert(rhs.name(), rhs);
+        self.fields.insert(rhs.field_name.clone(), rhs);
     }
 }
 
-impl AddAssign<MethodDefinition> for ValkyrieStructure {
-    fn add_assign(&mut self, rhs: MethodDefinition) {
-        self.methods.insert(rhs.name(), rhs);
+impl AddAssign<ValkyrieMethod> for ValkyrieClass {
+    fn add_assign(&mut self, rhs: ValkyrieMethod) {
+        self.methods.insert(rhs.method_name.clone(), rhs);
     }
 }
 
-impl ValkyrieStructure {
-    pub fn new(space: &NamePathNode, name: &IdentifierNode) -> Self {
-        todo!()
+impl ValkyrieClass {
+    pub fn new(symbol: Identifier) -> Self {
+        Self { symbol, wasi_import: None, fields: Default::default(), methods: Default::default() }
     }
-    pub fn name(&self) -> String {
+    pub fn get_name(&self) -> String {
         self.symbol.to_string()
     }
-    pub fn get_field(&self, name: &str) -> Option<&ValkyrieField> {
-        self.fields.get(name)
-    }
-    pub fn add_field(&mut self, field: ValkyrieField) -> Result<()> {
-        let name = field.name();
-        let span = field.get_span();
-        match self.fields.insert(field.name(), field) {
-            Some(old) => Err(NyarError::duplicate_key(name, old.get_span(), span)),
-            None => Ok(()),
-        }
-    }
-    pub fn get_fields(&self) -> Values<String, ValkyrieField> {
-        self.fields.values()
-    }
-    pub fn add_method(&mut self, method: MethodDefinition) -> Result<()> {
-        let name = method.name();
-        let span = method.get_span();
-        match self.methods.insert(method.name(), method) {
-            Some(old) => Err(NyarError::duplicate_key(name, old.get_span(), span)),
-            None => Ok(()),
-        }
-    }
+    // pub fn get_field(&self, name: &str) -> Option<&ValkyrieField> {
+    //     self.fields.get(name)
+    // }
+    // pub fn add_field(&mut self, field: ValkyrieField) -> Result<()> {
+    //     let name = field.name();
+    //     let span = field.get_span();
+    //     match self.fields.insert(field.name(), field) {
+    //         Some(old) => Err(NyarError::duplicate_key(name, old.get_span(), span)),
+    //         None => Ok(()),
+    //     }
+    // }
+    // pub fn get_fields(&self) -> Values<String, ValkyrieField> {
+    //     self.fields.values()
+    // }
+    // pub fn add_method(&mut self, method: MethodDefinition) -> Result<()> {
+    //     let name = method.name();
+    //     let span = method.get_span();
+    //     match self.methods.insert(method.name(), method) {
+    //         Some(old) => Err(NyarError::duplicate_key(name, old.get_span(), span)),
+    //         None => Ok(()),
+    //     }
+    // }
 }

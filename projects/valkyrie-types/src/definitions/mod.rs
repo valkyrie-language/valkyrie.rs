@@ -3,7 +3,7 @@ use crate::{
     types::{atomic_type::ValkyrieDocument, ValkyrieMetaType},
     InitializeType, ValkyrieEnumerate, ValkyrieError, ValkyrieID, ValkyrieString,
 };
-use nyar_error::{FileSpan, Success, Validation};
+use nyar_error::{SourceSpan, Success, Validation};
 use nyar_wasm::FieldType;
 use std::{
     collections::BTreeMap,

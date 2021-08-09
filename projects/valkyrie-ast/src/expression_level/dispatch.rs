@@ -60,7 +60,7 @@ impl PrettyPrint for PostfixCallPart {
 }
 
 impl ValkyrieNode for ExpressionKind {
-    fn get_range(&self) -> Range<usize> {
+    fn get_range(&self) -> Range<u32> {
         match self {
             Self::Placeholder => unreachable!(),
             Self::Null(node) => node.get_range(),

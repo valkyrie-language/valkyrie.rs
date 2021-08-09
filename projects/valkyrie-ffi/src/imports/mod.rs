@@ -34,13 +34,20 @@ impl ValkyrieFFI {
         let mut file = std::fs::File::create(file)?;
         for (name, ty) in package.interfaces.iter() {
             match self.cache.interfaces.get(*ty) {
-                Some(s) => self.export_interface(s, &mut file)?,
+                Some(s) => self.export_interface(s, package, &mut file)?,
                 None => tracing::error!("interface not found: {:?}", name),
             }
         }
         Ok(())
     }
-    fn export_interface(&self, interface: &Interface, file: &mut File) -> std::io::Result<()> {
+    fn export_interface(&self, interface: &Interface, package: &Package, file: &mut File) -> std::io::Result<()> {
+        let name = match interface.name.as_ref() {
+            Some(s) => s,
+            None => Err(std::io::Error::new(std::io::ErrorKind::Other, "missing name"))?,
+        };
+        let org = package.name.namespace.as_str();
+        let pkg = package.name.name.as_str();
+        let namespace = format!("{}:{}/{}", org, pkg, name);
         for (name, item) in interface.types.iter() {
             match self.cache.types.get(*item) {
                 Some(s) => {
@@ -55,7 +62,7 @@ impl ValkyrieFFI {
             if item.kind != FunctionKind::Freestanding {
                 continue;
             }
-            if let Err(e) = self.export_functions(item, file) {
+            if let Err(e) = self.export_functions(item, &namespace, file) {
                 tracing::error!("error exporting function: {:?}", e)
             }
         }

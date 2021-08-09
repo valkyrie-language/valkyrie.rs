@@ -1,11 +1,13 @@
 use super::*;
+use nyar_error::{NyarError, ReportKind, SourceSpan, SyntaxError};
 
 impl crate::DefineFunctionNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FunctionDeclaration> {
         Ok(FunctionDeclaration {
-            kind: self.kw_function.build(),
+            keyword: self.kw_function.get_span(ctx),
+            kind: self.kw_function.build(ctx),
             annotations: self.annotation_head.annotations(ctx),
-            name: self.namepath.build(ctx),
+            name: self.identifier.build(ctx.file),
             generics: self.function_middle.generics(ctx),
             parameters: self.function_middle.parameters(ctx),
             returns: self.function_middle.returns(ctx)?,
@@ -15,11 +17,24 @@ impl crate::DefineFunctionNode {
 }
 
 impl crate::KwFunctionNode {
-    pub(crate) fn build(&self) -> FunctionKind {
-        match self {
-            Self::Micro => FunctionKind::Micro,
-            Self::Macro => FunctionKind::Macro,
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> FunctionKind {
+        match self.text.as_str() {
+            "macro" => FunctionKind::Macro,
+            "micro" => FunctionKind::Micro,
+            deprecated @ ("function" | "func" | "fun" | "fn") => {
+                ctx.add_error(
+                    SyntaxError::new(format!("Using `{deprecated}` to declare micro functions has been deprecated"))
+                        .with_hint("use `micro` instead")
+                        .with_span(ctx.file.with_range(self.span.clone()))
+                        .as_error(ReportKind::Alert),
+                );
+                FunctionKind::Micro
+            }
+            _ => unreachable!(),
         }
+    }
+    pub(crate) fn get_span(&self, ctx: &mut ProgramState) -> SourceSpan {
+        ctx.file.with_range(self.span.clone())
     }
 }
 
@@ -44,6 +59,7 @@ impl crate::FunctionMiddleNode {
         self.function_parameters.build(ctx)
     }
     pub(crate) fn generics(&self, ctx: &mut ProgramState) -> ParametersList {
+        let mut list = ParametersList::new(ParameterKind::Generic);
         let mut terms = vec![];
         match &self.define_generic {
             Some(s) => {
@@ -56,32 +72,37 @@ impl crate::FunctionMiddleNode {
             }
             None => {}
         }
-        ParametersList { kind: ParameterKind::Generic, terms }
+        list.resolve(terms).into_iter().for_each(|e| ctx.add_error(e));
+        list
     }
 }
 
 impl crate::FunctionParametersNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> ParametersList {
-        let mut list = ParametersList::new(self.parameter_item.len(), ParameterKind::Expression);
+        let mut list = ParametersList::new(ParameterKind::Expression);
+        let mut terms = vec![];
         for term in &self.parameter_item {
             match term.build(ctx) {
-                Ok(s) => list.terms.push(s),
+                Ok(s) => terms.push(s),
                 Err(e) => ctx.add_error(e),
             }
         }
+        list.resolve(terms).into_iter().for_each(|e| ctx.add_error(e));
         list
     }
 }
 
 impl crate::GenericParameterNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> ParametersList {
-        let mut list = ParametersList::new(self.generic_parameter_pair.len(), ParameterKind::Generic);
+        let mut list = ParametersList::new(ParameterKind::Generic);
+        let mut terms = vec![];
         for term in &self.generic_parameter_pair {
             match term.build(ctx) {
-                Ok(s) => list.terms.push(s),
+                Ok(s) => terms.push(s),
                 Err(e) => ctx.add_error(e),
             }
         }
+        list.resolve(terms).into_iter().for_each(|e| ctx.add_error(e));
         list
     }
 }
@@ -93,14 +114,15 @@ impl crate::DefineGenericNode {
 }
 
 impl crate::GenericParameterPairNode {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterTerm> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterMixed> {
         let key = self.identifier.build(ctx.file);
-        Ok(ParameterTerm::Single {
+        Ok(ParameterMixed::Term(ParameterTerm {
             annotations: Default::default(),
+            unpack: 0,
             key,
             bound: self.build_bound(ctx),
             default: self.build_default(ctx),
-        })
+        }))
     }
     fn build_bound(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
         match self.bound.as_ref()?.build(ctx) {
@@ -122,27 +144,37 @@ impl crate::GenericParameterPairNode {
     }
 }
 impl crate::ParameterItemNode {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterTerm> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterMixed> {
         let value = match self {
-            Self::LMark => ParameterTerm::LMark,
-            Self::OmitDict => ParameterTerm::LMark,
-            Self::OmitList => ParameterTerm::LMark,
             Self::ParameterPair(v) => v.build(ctx)?,
-            Self::RMark => ParameterTerm::RMark,
+            Self::ParameterItemControl(v) => match v.text.as_str() {
+                "「" | "<" => ParameterMixed::LMark(ctx.file.with_range(v.span.clone())),
+                "」" | ">" => ParameterMixed::RMark(ctx.file.with_range(v.span.clone())),
+                ".." => {
+                    todo!()
+                }
+                "..." => {
+                    todo!()
+                }
+                _ => {
+                    todo!()
+                }
+            },
         };
         Ok(value)
     }
 }
 
 impl crate::ParameterPairNode {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterTerm> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterMixed> {
         let key = self.identifier.build(ctx.file);
-        Ok(ParameterTerm::Single {
+        Ok(ParameterMixed::Term(ParameterTerm {
             annotations: self.annotations(ctx),
+            unpack: 0,
             key,
             bound: self.type_hint.build(ctx),
             default: self.parameter_default.build(ctx),
-        })
+        }))
     }
     fn annotations(&self, ctx: &mut ProgramState) -> AnnotationNode {
         let mut out = AnnotationNode::default();

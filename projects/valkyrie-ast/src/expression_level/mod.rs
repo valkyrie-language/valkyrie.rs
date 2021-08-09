@@ -35,7 +35,7 @@ use deriver::From;
 use lispify::{Lisp, Lispify};
 use nyar_error::{
     third_party::{Associativity, Precedence},
-    FileID, FileSpan, NyarError, ReportKind, SyntaxError,
+    NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
 };
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
@@ -180,5 +180,19 @@ impl ExpressionKind {
     /// Build a new suffix expression
     pub fn suffix(o: OperatorNode, lhs: Self) -> Self {
         Self::Unary(Box::new(UnaryNode { operator: o, base: lhs }))
+    }
+}
+
+impl ExpressionKind {
+    /// Try to convert this expression into a text node
+    pub fn as_text(&self) -> Option<&StringTextNode> {
+        match self {
+            ExpressionKind::Text(v) => Some(v),
+            ExpressionKind::String(v) => match v.handler {
+                None => Some(&v.literal),
+                Some(_) => None,
+            },
+            _ => None,
+        }
     }
 }

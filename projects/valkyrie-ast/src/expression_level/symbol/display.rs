@@ -15,7 +15,7 @@ impl Debug for IdentifierNode {
 
 impl Display for IdentifierNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_str(self.name.as_str())
+        f.write_str(self.name.as_ref())
     }
 }
 impl Debug for NamePathNode {

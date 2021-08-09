@@ -1,4 +1,5 @@
 use super::*;
+use valkyrie_ast::helper::ValkyrieNode;
 
 impl crate::RangeLiteralNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeNode> {
@@ -39,7 +40,7 @@ impl crate::SubscriptAxisNode {
 
 impl crate::SubscriptOnlyNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeTermNode> {
-        self.index.build(ctx).map(|v| RangeTermNode::Index { index: v })
+        self.index.build(ctx).map(|v| RangeTermNode::Index { span: ctx.file.with_range(v.get_range()), index: v })
     }
 }
 

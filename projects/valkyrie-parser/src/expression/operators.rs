@@ -39,11 +39,12 @@ impl crate::MainInfixNode {
         let o = match self.text.as_str() {
             s if s.starts_with("is") => Is { negative: s.ends_with("not") },
             s if s.ends_with("in") => In { negative: s.ends_with("not") },
+            "as" => As { r#try: false },
+            "as?" => As { r#try: true },
             "∈" | "∊" => In { negative: false },
             "∉" => In { negative: true },
             "∋" => Contains { negative: false },
             "∌" => Contains { negative: true },
-
             "+" => Plus,
             "+=" => PlusAssign,
             "-" => Minus,
@@ -82,6 +83,7 @@ impl crate::MainInfixNode {
             "..=" => RangeTo { equal: true },
             // list operator
             "⇴" | "⨵" | "⊕" | "⟴" => Map,
+
             _ => unimplemented!("{} is a unknown infix operator", self.text),
         };
         OperatorNode { kind: o, span: self.span.clone() }

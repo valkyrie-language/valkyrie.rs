@@ -15,10 +15,16 @@ class Error {}
 class Connection {}
 
 Type: Some("statement") Id(Id { idx: 492 })
+
 Type: Some("row") Id(Id { idx: 491 })
+
 Type: Some("error") Id(Id { idx: 493 })
+
 Type: Some("connection") Id(Id { idx: 494 })
+
+ffi("wasi:sql/readwrite", "query")
 micro query(
 
+ffi("wasi:sql/readwrite", "exec")
 micro exec(
 

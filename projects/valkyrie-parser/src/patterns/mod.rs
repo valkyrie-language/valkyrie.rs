@@ -1,5 +1,6 @@
 use crate::helpers::ProgramState;
 use nyar_error::Result;
+use std::sync::Arc;
 use valkyrie_ast::*;
 
 impl crate::LetPatternNode {
@@ -58,11 +59,11 @@ impl crate::PatternItemNode {
         let value = match self {
             Self::OmitDict => PatternNode::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: "".to_string(), span: Default::default() },
+                identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             })),
             Self::OmitList => PatternNode::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: "".to_string(), span: Default::default() },
+                identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             })),
             Self::TuplePatternItem(v) => v.build(ctx)?,
         };

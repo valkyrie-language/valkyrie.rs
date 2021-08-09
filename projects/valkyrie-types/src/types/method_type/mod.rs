@@ -4,7 +4,7 @@ use super::*;
 pub struct MethodDefinition {
     symbol: Vec<Arc<str>>,
     typing: Option<ExpressionKind>,
-    span: FileSpan,
+    span: SourceSpan,
 }
 
 impl MethodDefinition {
@@ -20,7 +20,7 @@ impl MethodDefinition {
     pub fn get_type(&self) -> Option<&ExpressionKind> {
         self.typing.as_ref()
     }
-    pub fn get_span(&self) -> FileSpan {
+    pub fn get_span(&self) -> SourceSpan {
         self.span
     }
 }

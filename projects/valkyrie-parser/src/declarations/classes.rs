@@ -46,9 +46,10 @@ impl crate::ClassTermNode {
 
 impl crate::KwClassNode {
     pub(crate) fn build(&self) -> ClassKind {
-        match self {
-            Self::Class => ClassKind::Class,
-            Self::Structure => ClassKind::Structure,
+        match self.text.as_str() {
+            "class" => ClassKind::Class,
+            "structure" => ClassKind::Structure,
+            _ => unreachable!(),
         }
     }
 }
@@ -72,7 +73,7 @@ impl crate::DefineMethodNode {
         let annotations = self.annotation_mix.annotations(ctx)?;
         Ok(MethodDeclaration {
             annotations,
-            name: self.namepath.build(ctx),
+            name: self.identifier.build(ctx.file),
             generics: self.function_middle.generics(ctx),
             parameters: self.function_middle.parameters(ctx),
             returns,

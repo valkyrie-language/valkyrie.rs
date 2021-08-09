@@ -51,7 +51,12 @@ impl crate::TuplePairNode {
             Some(v) => v.build(ctx),
             None => ArgumentKey::Nothing,
         };
-        Ok(ArgumentTerm { modifiers: Default::default(), key, value: self.main_expression.build(ctx)? })
+        Ok(ArgumentTerm {
+            modifiers: Default::default(),
+            key,
+            value: self.main_expression.build(ctx)?,
+            span: ctx.file.with_range(self.span.clone()),
+        })
     }
 }
 

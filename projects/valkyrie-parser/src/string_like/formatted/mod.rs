@@ -1,8 +1,7 @@
 use crate::{helpers::ProgramState, StringInterpolationsNode};
-use nyar_error::{Failure, FileID, NyarError, Result, Success, SyntaxError, Validation};
+use nyar_error::{Failure, NyarError, Result, SourceID, Success, SyntaxError, Validation};
 use std::{mem::take, ops::Range, str::FromStr};
 use valkyrie_ast::{helper::StringInterpreter, FormatterNode, FormatterTerm, StringTextNode};
-use yggdrasil_rt::YggdrasilNode;
 
 /// Build a formatted string
 ///
@@ -17,7 +16,7 @@ use yggdrasil_rt::YggdrasilNode;
 /// """
 /// ```
 pub struct StringFormatterBuilder {
-    file: FileID,
+    file: SourceID,
     buffer: StringTextNode,
     terms: Vec<FormatterTerm>,
     errors: Vec<NyarError>,
@@ -25,14 +24,16 @@ pub struct StringFormatterBuilder {
 
 impl StringFormatterBuilder {
     /// Create a new string formatter builder
-    pub fn new(file: FileID) -> Self {
+    pub fn new(file: SourceID) -> Self {
         Self { file, buffer: Default::default(), terms: vec![], errors: vec![] }
     }
     fn extend_buffer(&mut self, range: &Range<u32>) {
+        let mut new = self.buffer.span.get_range();
         if self.buffer.text.is_empty() {
-            self.buffer.span.start = range.start;
+            new.start = range.start;
         }
-        self.buffer.span.end = range.end;
+        new.end = range.end;
+        self.buffer.span.set_range(new)
     }
     fn push_buffer(&mut self) {
         if !self.buffer.text.is_empty() {
@@ -101,7 +102,7 @@ impl crate::EscapeCharacterNode {
                 }
                 Ok(())
             }
-            None => Err(SyntaxError::new("Invalid escape sequence").with_span(ctx.file.with_range(self.get_range())))?,
+            None => Err(SyntaxError::new("Invalid escape sequence").with_span(ctx.file.with_range(self.span.clone())))?,
         }
     }
 }
@@ -117,11 +118,11 @@ impl crate::EscapeUnicodeNode {
                 }
                 None => Err(SyntaxError::new("unicode codepoint out of range")
                     .with_hint("The valid range is from `\\u{000000}` to `\\u{10FFFF}`")
-                    .with_span(ctx.file.with_range(self.get_range())))?,
+                    .with_span(ctx.file.with_range(self.span.clone())))?,
             },
             Err(_) => Err(SyntaxError::new("invalid character found in unicode codepoint")
                 .with_hint("Expect hex digits in [0-9a-fA-F]")
-                .with_span(ctx.file.with_range(self.get_range())))?,
+                .with_span(ctx.file.with_range(self.span.clone())))?,
         }
     }
 }
@@ -136,8 +137,9 @@ impl crate::StringInterpolationSimpleNode {
     }
 }
 impl crate::StringFormatterNode {
-    fn build(&self, _: &mut StringFormatterBuilder) -> StringTextNode {
-        StringTextNode { text: self.text.trim().to_string(), span: self.span.clone() }
+    fn build(&self, sb: &mut StringFormatterBuilder) -> StringTextNode {
+        let span = sb.file.with_range(self.span.clone());
+        StringTextNode { text: self.text.trim().to_string(), span }
     }
 }
 impl crate::StringInterpolationComplexNode {

@@ -1,0 +1,6 @@
+namespace package.io
+
+enumerate Endian {
+    Big,
+    Little,
+}

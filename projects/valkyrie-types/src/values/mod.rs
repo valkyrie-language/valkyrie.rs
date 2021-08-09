@@ -1,4 +1,4 @@
-use nyar_error::FileSpan;
+use nyar_error::SourceSpan;
 use shredder::{marker::GcSafe, Gc, Scan, Scanner};
 use std::{
     fmt::{Debug, Formatter},

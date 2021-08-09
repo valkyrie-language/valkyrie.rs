@@ -1,17 +1,26 @@
 Type: Some("pollable") Id(Id { idx: 2 })
+
 Type: Some("instant") U64
+
 Type: Some("duration") U64
+
+ffi("wasi:clocks/monotonic-clock", "now")
 micro now(
 
+ffi("wasi:clocks/monotonic-clock", "resolution")
 micro resolution(
 
+ffi("wasi:clocks/monotonic-clock", "subscribe-instant")
 micro subscribe_instant(
 
+ffi("wasi:clocks/monotonic-clock", "subscribe-duration")
 micro subscribe_duration(
 
 Record
 
+ffi("wasi:clocks/wall-clock", "now")
 micro now(
 
+ffi("wasi:clocks/wall-clock", "resolution")
 micro resolution(
 
