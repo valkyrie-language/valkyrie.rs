@@ -1,5 +1,4 @@
-(component $root
-    (core module $MockMemory
+(component $root(core module $MockMemory
         (func $realloc (export "realloc") (param i32 i32 i32 i32) (result i32)
             (i32.const 0)
         )
@@ -159,22 +158,12 @@
         string-encoding=utf8
     ))
     (core module $Main
-        
-        
-        
-        
         (import "wasi:cli/stderr" "get-stderr" (func $std::io::standard_error))
-        
         (import "wasi:cli/stdin" "get-stdin" (func $std::io::standard_input))
-        
         (import "wasi:cli/stdout" "get-stdout" (func $std::io::standard_output))
-        
         (import "wasi:random/insecure" "get-insecure-random-bytes" (func $std::random::fast_random_seed))
-        
         (import "wasi:random/random" "get-random-u64" (func $std::random::safe_random_seed))
-        
         (import "wasi:clock/monotonic-clock" "now" (func $std::time::now))
-        
         (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool))
         (import "unstable:debugger/print" "print-char" (func $std::time::print_char))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i16))
@@ -185,6 +174,10 @@
         (import "unstable:debugger/print" "print-u32" (func $std::time::print_u32))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_u64))
         (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8))
+        
+        
+        
+        
     )
     (core instance $main (instantiate $Main
         (with "wasi:io/streams" (instance

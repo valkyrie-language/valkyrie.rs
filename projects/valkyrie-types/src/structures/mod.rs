@@ -1,6 +1,6 @@
 use crate::{
     helpers::Hir2Mir,
-    modules::{ModuleItem, ResolveContext},
+    modules::{ModuleItem, ResolveState},
 };
 use indexmap::IndexMap;
 use nyar_error::Result;

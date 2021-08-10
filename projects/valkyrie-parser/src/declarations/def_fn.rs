@@ -1,5 +1,5 @@
 use super::*;
-use nyar_error::{NyarError, ReportKind, SourceSpan, SyntaxError};
+use nyar_error::{ReportKind, SourceSpan, SyntaxError};
 
 impl crate::DefineFunctionNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FunctionDeclaration> {

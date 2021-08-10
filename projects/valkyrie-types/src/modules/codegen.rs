@@ -1,21 +1,24 @@
 use super::*;
 
-impl ResolveContext {
+impl ResolveState {
     pub fn resolve(&self) -> Result<CanonicalWasi> {
         let mut output = DependentGraph::default();
         for item in self.items.values() {
-            item.to_lir(self, &mut output)?
+            item.to_lir(&mut output, self)?
         }
         Ok(CanonicalWasi::new(output)?)
     }
 }
 
 impl Mir2Lir for ModuleItem {
-    fn to_lir(&self, ctx: &ResolveContext, graph: &mut DependentGraph) -> Result<Self::Output> {
+    type Output = ();
+    type Context = ResolveState;
+
+    fn to_lir(&self, graph: &mut DependentGraph, context: &Self::Context) -> Result<Self::Output> {
         match self {
-            ModuleItem::Structure(s) => s.to_lir(ctx, graph),
+            ModuleItem::Structure(s) => s.to_lir(graph, context),
             ModuleItem::Variant(_) => Ok(()),
-            ModuleItem::Function(s) => s.to_lir(ctx, graph),
+            ModuleItem::Function(s) => s.to_lir(graph, context),
         }
     }
 }

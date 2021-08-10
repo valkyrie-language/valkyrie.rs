@@ -10,7 +10,7 @@ mod variants;
 
 pub use crate::{
     functions::ValkyrieFunction,
-    modules::{ModuleItem, ResolveContext, ValkyrieModule},
+    modules::{ModuleItem, ResolveState, ValkyrieModule},
     structures::{ValkyrieClass, ValkyrieField, ValkyrieMethod},
     types::ValkyrieType,
     variants::{ValkyrieUnion, ValkyrieUnionItem},

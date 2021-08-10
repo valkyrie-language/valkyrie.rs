@@ -84,9 +84,6 @@ impl ParametersList {
         let mut pass_left = true;
         let mut pass_right = false;
         let mut errors = vec![];
-        let mut positional = vec![];
-        let mut mixed = vec![];
-        let mut named = vec![];
         // if has left, start with position only, otherwise mixed
         for item in unsolved.iter() {
             match item {
@@ -126,13 +123,13 @@ impl ParametersList {
                     }
 
                     if pass_right {
-                        named.push(term);
+                        self.named.push(term);
                     }
                     else if pass_left {
-                        mixed.push(term);
+                        self.mixed.push(term);
                     }
                     else {
-                        positional.push(term);
+                        self.positional.push(term);
                     }
                 }
             }

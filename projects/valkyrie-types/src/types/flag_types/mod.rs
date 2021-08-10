@@ -4,8 +4,9 @@ pub struct FlagTypes {}
 
 impl Hir2Mir for FlagDeclaration {
     type Output = ();
+    type Context = ();
 
-    fn to_mir(self, ctx: &mut ResolveContext) -> nyar_error::Result<Self::Output> {
+    fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> nyar_error::Result<Self::Output> {
         Ok(())
     }
 }

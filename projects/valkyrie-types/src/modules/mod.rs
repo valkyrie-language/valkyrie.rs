@@ -6,11 +6,10 @@ use crate::{
 use convert_case::{Case, Casing};
 use im::{hashmap::Entry, HashMap};
 use indexmap::IndexMap;
-use nyar_error::{DuplicateError, Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
+use nyar_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
 use nyar_wasm::{CanonicalWasi, DependentGraph, Identifier, WasiImport, WasiModule};
 use std::{
     fmt::{Debug, Formatter},
-    hash::RandomState,
     mem::take,
     path::Path,
     str::FromStr,
@@ -26,7 +25,7 @@ mod parser;
 pub struct ValkyrieModule {}
 
 /// Convert file to module
-pub struct ResolveContext {
+pub struct ResolveState {
     pub(crate) package: Arc<str>,
     /// The current namespace
     pub(crate) namespace: Vec<Arc<str>>,
@@ -57,7 +56,7 @@ pub enum ModuleItem {
     Variant(ValkyrieUnion),
 }
 
-impl ResolveContext {
+impl ResolveState {
     pub fn new<S: Into<Arc<str>>>(package: S) -> Self {
         Self {
             package: package.into(),
@@ -72,13 +71,13 @@ impl ResolveContext {
     }
 }
 
-impl ResolveContext {
+impl ResolveState {
     pub fn reset_namespace(&mut self) {
         self.namespace = vec![];
     }
 }
 
-impl ResolveContext {
+impl ResolveState {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
     pub fn register_item(&mut self, symbol: &IdentifierNode) -> Identifier {
         let key = Identifier { namespace: vec![], name: symbol.name.clone() };

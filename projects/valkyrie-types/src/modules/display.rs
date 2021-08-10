@@ -1,7 +1,6 @@
 use super::*;
-use std::collections::BTreeMap;
 
-impl Debug for ResolveContext {
+impl Debug for ResolveState {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResolveContext")
             .field("namespace", &self.namespace.join("∷"))

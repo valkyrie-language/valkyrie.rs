@@ -1,9 +1,10 @@
 use crate::{
     helpers::{Hir2Mir, Mir2Lir},
-    ModuleItem, ResolveContext, ValkyrieType,
+    ModuleItem, ResolveState, ValkyrieType,
 };
+use indexmap::IndexMap;
 use nyar_wasm::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
-use std::ops::AddAssign;
+use std::{ops::AddAssign, sync::Arc};
 use valkyrie_ast::FunctionDeclaration;
 mod arithmetic;
 mod stage1_mir;
@@ -21,8 +22,16 @@ pub struct ValkyrieFunction {
     pub signature: FunctionSignature,
 }
 
+#[derive(Clone, Debug)]
+pub struct FunctionParameter {
+    pub name: Arc<str>,
+    pub r#type: ValkyrieType,
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct FunctionSignature {
-    pub inputs: Vec<ValkyrieType>,
+    pub positional: IndexMap<Arc<str>, FunctionParameter>,
+    pub mixed: IndexMap<Arc<str>, FunctionParameter>,
+    pub named: IndexMap<Arc<str>, FunctionParameter>,
     pub output: Vec<ValkyrieType>,
 }

@@ -1,4 +1,4 @@
-use crate::{helpers::Hir2Mir, ResolveContext, ValkyrieFunction};
+use crate::{helpers::Hir2Mir, ResolveState, ValkyrieFunction};
 use nyar_wasm::Identifier;
 use std::sync::{Arc, Mutex};
 use valkyrie_ast::{FlagDeclaration, TraitDeclaration};

@@ -1,4 +1,4 @@
-use crate::{helpers::Hir2Mir, ModuleItem, ResolveContext, ValkyrieField};
+use crate::{helpers::Hir2Mir, ModuleItem, ResolveState, ValkyrieField};
 use indexmap::IndexMap;
 use nyar_wasm::Identifier;
 use std::{
@@ -18,7 +18,7 @@ pub struct ValkyrieUnion {
     variants: IndexMap<Arc<str>, ValkyrieUnionItem>,
 }
 
-impl AddAssign<ValkyrieUnion> for ResolveContext {
+impl AddAssign<ValkyrieUnion> for ResolveState {
     fn add_assign(&mut self, rhs: ValkyrieUnion) {
         self.items.insert(rhs.union_name.clone(), ModuleItem::Variant(rhs));
     }
