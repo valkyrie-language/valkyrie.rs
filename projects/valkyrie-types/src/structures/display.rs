@@ -21,3 +21,9 @@ impl Debug for ValkyrieField {
         f.debug_struct("Field").field("name", &self.field_name).field("wasi", &self.wasi_alias).finish()
     }
 }
+
+impl AddAssign<ValkyrieClass> for ResolveState {
+    fn add_assign(&mut self, rhs: ValkyrieClass) {
+        self.items.insert(rhs.symbol.clone(), ModuleItem::Structure(rhs));
+    }
+}

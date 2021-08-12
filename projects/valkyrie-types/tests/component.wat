@@ -8,9 +8,21 @@
     (import "wasi:io/streams" (instance $wasi:io/streams
         (export $std::io::InputStream "input-stream" (type (sub resource)))
         (export $std::io::OutputStream "output-stream" (type (sub resource)))
+        (export "[method]input-stream.read" (func
+        ))
+        (export "[method]output-stream.blocking-write-and-flush" (func
+        ))
+        (export "[method]flush" (func
+        ))
+        (export "[method]output-stream.write" (func
+        ))
     ))
     (alias export $wasi:io/streams "input-stream" (type $std::io::InputStream))
     (alias export $wasi:io/streams "output-stream" (type $std::io::OutputStream))
+    (alias export $wasi:io/streams "[method]input-stream.read" (func $std::io::InputStream::read))
+    (alias export $wasi:io/streams "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush))
+    (alias export $wasi:io/streams "[method]flush" (func $std::io::OutputStream::flush))
+    (alias export $wasi:io/streams "[method]output-stream.write" (func $std::io::OutputStream::write))
     (import "wasi:io/error" (instance $wasi:io/error
         (export $std::io::IoError "error" (type (sub resource)))
     ))
@@ -77,6 +89,26 @@
     (alias export $unstable:debugger/print "print-u32" (func $std::time::print_u32))
     (alias export $unstable:debugger/print "print-i64" (func $std::time::print_u64))
     (alias export $unstable:debugger/print "print-u8" (func $std::time::print_u8))
+    (core func $std::io::InputStream::read (canon lower
+        (func $wasi:io/streams "[method]input-stream.read")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::io::OutputStream::blocking_write_and_flush (canon lower
+        (func $wasi:io/streams "[method]output-stream.blocking-write-and-flush")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::io::OutputStream::flush (canon lower
+        (func $wasi:io/streams "[method]flush")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::io::OutputStream::write (canon lower
+        (func $wasi:io/streams "[method]output-stream.write")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
     (core func $std::io::standard_error (canon lower
         (func $wasi:cli/stderr "get-stderr")
         (memory $memory "memory")(realloc (func $memory "realloc"))
@@ -158,29 +190,53 @@
         string-encoding=utf8
     ))
     (core module $Main
-        (import "wasi:cli/stderr" "get-stderr" (func $std::io::standard_error))
-        (import "wasi:cli/stdin" "get-stdin" (func $std::io::standard_input))
-        (import "wasi:cli/stdout" "get-stdout" (func $std::io::standard_output))
-        (import "wasi:random/insecure" "get-insecure-random-bytes" (func $std::random::fast_random_seed))
-        (import "wasi:random/random" "get-random-u64" (func $std::random::safe_random_seed))
-        (import "wasi:clock/monotonic-clock" "now" (func $std::time::now))
-        (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool))
-        (import "unstable:debugger/print" "print-char" (func $std::time::print_char))
-        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i16))
-        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i32))
-        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i64))
-        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i8))
-        (import "unstable:debugger/print" "print-u16" (func $std::time::print_u16))
-        (import "unstable:debugger/print" "print-u32" (func $std::time::print_u32))
-        (import "unstable:debugger/print" "print-i64" (func $std::time::print_u64))
-        (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8))
-        
-        
-        
-        
+        (import "wasi:io/streams" "[method]input-stream.read" (func $std::io::InputStream::read
+        ))
+        (import "wasi:io/streams" "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush
+        ))
+        (import "wasi:io/streams" "[method]flush" (func $std::io::OutputStream::flush
+        ))
+        (import "wasi:io/streams" "[method]output-stream.write" (func $std::io::OutputStream::write
+        ))
+        (import "wasi:cli/stderr" "get-stderr" (func $std::io::standard_error
+        ))
+        (import "wasi:cli/stdin" "get-stdin" (func $std::io::standard_input
+        ))
+        (import "wasi:cli/stdout" "get-stdout" (func $std::io::standard_output
+        ))
+        (import "wasi:random/insecure" "get-insecure-random-bytes" (func $std::random::fast_random_seed
+        ))
+        (import "wasi:random/random" "get-random-u64" (func $std::random::safe_random_seed
+        ))
+        (import "wasi:clock/monotonic-clock" "now" (func $std::time::now
+        ))
+        (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool
+        ))
+        (import "unstable:debugger/print" "print-char" (func $std::time::print_char
+        ))
+        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i16
+        ))
+        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i32
+        ))
+        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i64
+        ))
+        (import "unstable:debugger/print" "print-i64" (func $std::time::print_i8
+        ))
+        (import "unstable:debugger/print" "print-u16" (func $std::time::print_u16
+        ))
+        (import "unstable:debugger/print" "print-u32" (func $std::time::print_u32
+        ))
+        (import "unstable:debugger/print" "print-i64" (func $std::time::print_u64
+        ))
+        (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8
+        ))
     )
     (core instance $main (instantiate $Main
         (with "wasi:io/streams" (instance
+            (export "[method]input-stream.read" (func $std::io::InputStream::read))
+            (export "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush))
+            (export "[method]flush" (func $std::io::OutputStream::flush))
+            (export "[method]output-stream.write" (func $std::io::OutputStream::write))
         ))
         (with "wasi:io/error" (instance
         ))

@@ -2,13 +2,13 @@ namespace package.io
 
 #import("wasi:io/streams", "output-stream")
 class OutputStream {
-    #ffi("wasi:io/streams", "[method]output-stream.write")
+    #import("wasi:io/streams", "[method]output-stream.write")
     write(mut self, contents: List< u8 >) -> Result< (), StreamError >;
 
-    #ffi("wasi:io/streams", "[method]flush")
+    #import("wasi:io/streams", "[method]flush")
     flush(mut self) -> Result< (), StreamError >;
 
-    #ffi("wasi:io/streams", "[method]output-stream.blocking-write-and-flush")
+    #import("wasi:io/streams", "[method]output-stream.blocking-write-and-flush")
     blocking_write_and_flush(self, contents: List< u8 >) -> Result< (), StreamError >;
 }
 

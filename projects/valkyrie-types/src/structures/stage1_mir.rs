@@ -42,12 +42,6 @@ impl Hir2Mir for ClassDeclaration {
     }
 }
 
-impl AddAssign<ValkyrieClass> for ResolveState {
-    fn add_assign(&mut self, rhs: ValkyrieClass) {
-        self.items.insert(rhs.symbol.clone(), ModuleItem::Structure(rhs));
-    }
-}
-
 impl Hir2Mir for FieldDeclaration {
     type Output = ValkyrieField;
     type Context = ();

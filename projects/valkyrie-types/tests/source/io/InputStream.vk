@@ -2,7 +2,7 @@ namespace package.io
 
 #import("wasi:io/streams", "input-stream")
 class InputStream {
-    #ffi("wasi:io/streams", "[method]input-stream.read")
+    #import("wasi:io/streams", "[method]input-stream.read")
     read(self, len: u64) -> Result< Array< i8 >, StreamError >;
 }
 
