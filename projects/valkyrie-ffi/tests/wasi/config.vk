@@ -1,8 +1,0 @@
-Variant
-
-ffi("wasi:config/runtime", "get")
-micro get(
-
-ffi("wasi:config/runtime", "get-all")
-micro get_all(
-

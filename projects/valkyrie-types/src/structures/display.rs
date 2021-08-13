@@ -16,6 +16,7 @@ impl Debug for ValkyrieClass {
         }
     }
 }
+
 impl Debug for ValkyrieField {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Field").field("name", &self.field_name).field("wasi", &self.wasi_alias).finish()
