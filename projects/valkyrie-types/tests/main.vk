@@ -1,3 +1,11 @@
-main micro test_random() : u64 {
+
+
+
+main micro let_us_random() : u64 {
     random_seed_safe() + random_seed_fast()
+}
+
+
+test micro test() {
+
 }

@@ -5,6 +5,10 @@
         (memory $memory (export "memory") 15)
     )
     (core instance $memory (instantiate $MockMemory))
+    (import "wasi:filesystem/types" (instance $wasi:filesystem/types
+        (export $std::fs::Descriptor "descriptor" (type (sub resource)))
+    ))
+    (alias export $wasi:filesystem/types "descriptor" (type $std::fs::Descriptor))
     (import "wasi:io/streams" (instance $wasi:io/streams
         (export $std::io::InputStream "input-stream" (type (sub resource)))
         (export $std::io::OutputStream "output-stream" (type (sub resource)))
@@ -52,11 +56,14 @@
         ))
     ))
     (alias export $wasi:random/random "get-random-u64" (func $std::random::safe_random_seed))
-    (import "wasi:clock/monotonic-clock" (instance $wasi:clock/monotonic-clock
+    (import "wasi:clocks/monotonic-clock" (instance $wasi:clocks/monotonic-clock
         (export "now" (func
         ))
+        (export "resolution" (func
+        ))
     ))
-    (alias export $wasi:clock/monotonic-clock "now" (func $std::time::now))
+    (alias export $wasi:clocks/monotonic-clock "now" (func $std::time::now))
+    (alias export $wasi:clocks/monotonic-clock "resolution" (func $std::time::resolution))
     (import "unstable:debugger/print" (instance $unstable:debugger/print
         (export "print-bool" (func
         ))
@@ -89,6 +96,14 @@
     (alias export $unstable:debugger/print "print-u32" (func $std::time::print_u32))
     (alias export $unstable:debugger/print "print-i64" (func $std::time::print_u64))
     (alias export $unstable:debugger/print "print-u8" (func $std::time::print_u8))
+    (import "wasi:clocks/wall-clock" (instance $wasi:clocks/wall-clock
+        (export "resolution" (func
+        ))
+        (export "now" (func
+        ))
+    ))
+    (alias export $wasi:clocks/wall-clock "resolution" (func $std::time::unix_resolution))
+    (alias export $wasi:clocks/wall-clock "now" (func $std::time::unix_time))
     (core func $std::io::InputStream::read (canon lower
         (func $wasi:io/streams "[method]input-stream.read")
         (memory $memory "memory")(realloc (func $memory "realloc"))
@@ -135,7 +150,12 @@
         string-encoding=utf8
     ))
     (core func $std::time::now (canon lower
-        (func $wasi:clock/monotonic-clock "now")
+        (func $wasi:clocks/monotonic-clock "now")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::time::resolution (canon lower
+        (func $wasi:clocks/monotonic-clock "resolution")
         (memory $memory "memory")(realloc (func $memory "realloc"))
         string-encoding=utf8
     ))
@@ -189,6 +209,16 @@
         (memory $memory "memory")(realloc (func $memory "realloc"))
         string-encoding=utf8
     ))
+    (core func $std::time::unix_resolution (canon lower
+        (func $wasi:clocks/wall-clock "resolution")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::time::unix_time (canon lower
+        (func $wasi:clocks/wall-clock "now")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
     (core module $Main
         (import "wasi:io/streams" "[method]input-stream.read" (func $std::io::InputStream::read
         ))
@@ -208,7 +238,9 @@
         ))
         (import "wasi:random/random" "get-random-u64" (func $std::random::safe_random_seed
         ))
-        (import "wasi:clock/monotonic-clock" "now" (func $std::time::now
+        (import "wasi:clocks/monotonic-clock" "now" (func $std::time::now
+        ))
+        (import "wasi:clocks/monotonic-clock" "resolution" (func $std::time::resolution
         ))
         (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool
         ))
@@ -230,8 +262,14 @@
         ))
         (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8
         ))
+        (import "wasi:clocks/wall-clock" "resolution" (func $std::time::unix_resolution
+        ))
+        (import "wasi:clocks/wall-clock" "now" (func $std::time::unix_time
+        ))
     )
     (core instance $main (instantiate $Main
+        (with "wasi:filesystem/types" (instance
+        ))
         (with "wasi:io/streams" (instance
             (export "[method]input-stream.read" (func $std::io::InputStream::read))
             (export "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush))
@@ -255,8 +293,9 @@
         (with "wasi:random/random" (instance
             (export "get-random-u64" (func $std::random::safe_random_seed))
         ))
-        (with "wasi:clock/monotonic-clock" (instance
+        (with "wasi:clocks/monotonic-clock" (instance
             (export "now" (func $std::time::now))
+            (export "resolution" (func $std::time::resolution))
         ))
         (with "unstable:debugger/print" (instance
             (export "print-bool" (func $std::time::print_bool))
@@ -269,6 +308,10 @@
             (export "print-u32" (func $std::time::print_u32))
             (export "print-i64" (func $std::time::print_u64))
             (export "print-u8" (func $std::time::print_u8))
+        ))
+        (with "wasi:clocks/wall-clock" (instance
+            (export "resolution" (func $std::time::unix_resolution))
+            (export "now" (func $std::time::unix_time))
         ))
     ))
 )
