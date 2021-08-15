@@ -10,7 +10,7 @@ fn ready() {
 fn test_hello_world() -> nyar_error::Result<()> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut context = ResolveState::new("std");
-    context.resolve_package(here.join("source"))?;
+    context.resolve_package(r#"C:\Users\Dell\CLionProjects\valkyrie-std\projects\valkyrie-std\library"#)?;
     context.resolve_file(here.join("main.vk"))?;
     context.show_errors();
     let mut wat = File::create(here.join("component.wat"))?;

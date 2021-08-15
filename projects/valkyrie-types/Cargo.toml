@@ -12,6 +12,7 @@ edition = "2021"
 [dependencies]
 serde = "1.0.196"
 im = "15.1.0"
+ordered-float = "4.2.0"
 xxhash-rust = { version = "0.8.10", features = ["xxh3", "const_xxh3"] }
 smallvec = "2.0.0-alpha.3"
 dashmap = "5.5.3"

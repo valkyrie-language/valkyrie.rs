@@ -9,7 +9,7 @@ mod types;
 mod variants;
 
 pub use crate::{
-    functions::ValkyrieFunction,
+    functions::{ValkyrieImportFunction, ValkyrieNativeFunction},
     modules::{ModuleItem, ResolveState, ValkyrieModule},
     structures::{ValkyrieClass, ValkyrieField, ValkyrieMethod},
     types::ValkyrieType,

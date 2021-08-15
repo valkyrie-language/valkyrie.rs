@@ -5,6 +5,35 @@
         (memory $memory (export "memory") 15)
     )
     (core instance $memory (instantiate $MockMemory))
+    (import "wasi:cli/terminal-input" (instance $wasi:cli/terminal-input
+        (export $std::cli::TerminalInput "terminal-input" (type (sub resource)))
+    ))
+    (alias export $wasi:cli/terminal-input "terminal-input" (type $std::cli::TerminalInput))
+    (import "wasi:cli/terminal-output" (instance $wasi:cli/terminal-output
+        (export $std::cli::TerminalOutput "terminal-output" (type (sub resource)))
+    ))
+    (alias export $wasi:cli/terminal-output "terminal-output" (type $std::cli::TerminalOutput))
+    (import "wasi:cli/exit" (instance $wasi:cli/exit
+        (export "exit" (func
+        ))
+    ))
+    (alias export $wasi:cli/exit "exit" (func $std::env::exit))
+    (import "wasi:cli/environment" (instance $wasi:cli/environment
+        (export "get-arguments" (func
+        ))
+        (export "get-environment" (func
+        ))
+        (export "initial-cwd" (func
+        ))
+    ))
+    (alias export $wasi:cli/environment "get-arguments" (func $std::env::get_arguments))
+    (alias export $wasi:cli/environment "get-environment" (func $std::env::get_environment))
+    (alias export $wasi:cli/environment "initial-cwd" (func $std::env::initial_working_directory))
+    (import "wasi:cli/run" (instance $wasi:cli/run
+        (export "run" (func
+        ))
+    ))
+    (alias export $wasi:cli/run "run" (func $std::env::run))
     (import "wasi:filesystem/types" (instance $wasi:filesystem/types
         (export $std::fs::Descriptor "descriptor" (type (sub resource)))
     ))
@@ -50,12 +79,12 @@
         (export "get-insecure-random-bytes" (func
         ))
     ))
-    (alias export $wasi:random/insecure "get-insecure-random-bytes" (func $std::random::fast_random_seed))
+    (alias export $wasi:random/insecure "get-insecure-random-bytes" (func $std::rand::fast_random_seed))
     (import "wasi:random/random" (instance $wasi:random/random
         (export "get-random-u64" (func
         ))
     ))
-    (alias export $wasi:random/random "get-random-u64" (func $std::random::safe_random_seed))
+    (alias export $wasi:random/random "get-random-u64" (func $std::rand::safe_random_seed))
     (import "wasi:clocks/monotonic-clock" (instance $wasi:clocks/monotonic-clock
         (export "now" (func
         ))
@@ -104,6 +133,31 @@
     ))
     (alias export $wasi:clocks/wall-clock "resolution" (func $std::time::unix_resolution))
     (alias export $wasi:clocks/wall-clock "now" (func $std::time::unix_time))
+    (core func $std::env::exit (canon lower
+        (func $wasi:cli/exit "exit")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::env::get_arguments (canon lower
+        (func $wasi:cli/environment "get-arguments")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::env::get_environment (canon lower
+        (func $wasi:cli/environment "get-environment")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::env::initial_working_directory (canon lower
+        (func $wasi:cli/environment "initial-cwd")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
+    (core func $std::env::run (canon lower
+        (func $wasi:cli/run "run")
+        (memory $memory "memory")(realloc (func $memory "realloc"))
+        string-encoding=utf8
+    ))
     (core func $std::io::InputStream::read (canon lower
         (func $wasi:io/streams "[method]input-stream.read")
         (memory $memory "memory")(realloc (func $memory "realloc"))
@@ -139,12 +193,12 @@
         (memory $memory "memory")(realloc (func $memory "realloc"))
         string-encoding=utf8
     ))
-    (core func $std::random::fast_random_seed (canon lower
+    (core func $std::rand::fast_random_seed (canon lower
         (func $wasi:random/insecure "get-insecure-random-bytes")
         (memory $memory "memory")(realloc (func $memory "realloc"))
         string-encoding=utf8
     ))
-    (core func $std::random::safe_random_seed (canon lower
+    (core func $std::rand::safe_random_seed (canon lower
         (func $wasi:random/random "get-random-u64")
         (memory $memory "memory")(realloc (func $memory "realloc"))
         string-encoding=utf8
@@ -220,6 +274,16 @@
         string-encoding=utf8
     ))
     (core module $Main
+        (import "wasi:cli/exit" "exit" (func $std::env::exit
+        ))
+        (import "wasi:cli/environment" "get-arguments" (func $std::env::get_arguments
+        ))
+        (import "wasi:cli/environment" "get-environment" (func $std::env::get_environment
+        ))
+        (import "wasi:cli/environment" "initial-cwd" (func $std::env::initial_working_directory
+        ))
+        (import "wasi:cli/run" "run" (func $std::env::run
+        ))
         (import "wasi:io/streams" "[method]input-stream.read" (func $std::io::InputStream::read
         ))
         (import "wasi:io/streams" "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush
@@ -234,9 +298,9 @@
         ))
         (import "wasi:cli/stdout" "get-stdout" (func $std::io::standard_output
         ))
-        (import "wasi:random/insecure" "get-insecure-random-bytes" (func $std::random::fast_random_seed
+        (import "wasi:random/insecure" "get-insecure-random-bytes" (func $std::rand::fast_random_seed
         ))
-        (import "wasi:random/random" "get-random-u64" (func $std::random::safe_random_seed
+        (import "wasi:random/random" "get-random-u64" (func $std::rand::safe_random_seed
         ))
         (import "wasi:clocks/monotonic-clock" "now" (func $std::time::now
         ))
@@ -268,6 +332,21 @@
         ))
     )
     (core instance $main (instantiate $Main
+        (with "wasi:cli/terminal-input" (instance
+        ))
+        (with "wasi:cli/terminal-output" (instance
+        ))
+        (with "wasi:cli/exit" (instance
+            (export "exit" (func $std::env::exit))
+        ))
+        (with "wasi:cli/environment" (instance
+            (export "get-arguments" (func $std::env::get_arguments))
+            (export "get-environment" (func $std::env::get_environment))
+            (export "initial-cwd" (func $std::env::initial_working_directory))
+        ))
+        (with "wasi:cli/run" (instance
+            (export "run" (func $std::env::run))
+        ))
         (with "wasi:filesystem/types" (instance
         ))
         (with "wasi:io/streams" (instance
@@ -288,10 +367,10 @@
             (export "get-stdout" (func $std::io::standard_output))
         ))
         (with "wasi:random/insecure" (instance
-            (export "get-insecure-random-bytes" (func $std::random::fast_random_seed))
+            (export "get-insecure-random-bytes" (func $std::rand::fast_random_seed))
         ))
         (with "wasi:random/random" (instance
-            (export "get-random-u64" (func $std::random::safe_random_seed))
+            (export "get-random-u64" (func $std::rand::safe_random_seed))
         ))
         (with "wasi:clocks/monotonic-clock" (instance
             (export "now" (func $std::time::now))
