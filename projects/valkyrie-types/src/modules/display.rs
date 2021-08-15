@@ -14,11 +14,11 @@ impl Debug for ResolveState {
 impl Debug for ModuleItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::External(v) => Debug::fmt(v, f),
             Self::Function(v) => Debug::fmt(v, f),
             // Self::Imported(v) => Debug::fmt(v, f),
             Self::Structure(v) => Debug::fmt(v, f),
             Self::Variant(v) => Debug::fmt(v, f),
-            // Self::Function(v) => Debug::fmt(v, f),
         }
     }
 }

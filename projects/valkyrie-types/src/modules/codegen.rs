@@ -19,6 +19,7 @@ impl Mir2Lir for ModuleItem {
             ModuleItem::Structure(s) => s.to_lir(graph, context),
             ModuleItem::Variant(_) => Ok(()),
             ModuleItem::Function(s) => s.to_lir(graph, context),
+            ModuleItem::External(s) => s.to_lir(graph, context),
         }
     }
 }
