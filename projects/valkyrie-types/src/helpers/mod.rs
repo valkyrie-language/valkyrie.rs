@@ -9,6 +9,6 @@ pub(crate) trait Hir2Mir {
 
 pub(crate) trait Mir2Lir {
     type Output;
-    type Context;
-    fn to_lir(&self, graph: &mut DependentGraph, context: &Self::Context) -> nyar_error::Result<Self::Output>;
+    type Context<'a>;
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output>;
 }

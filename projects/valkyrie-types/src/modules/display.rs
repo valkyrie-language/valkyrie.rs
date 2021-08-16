@@ -16,7 +16,7 @@ impl Debug for ModuleItem {
         match self {
             Self::External(v) => Debug::fmt(v, f),
             Self::Function(v) => Debug::fmt(v, f),
-            // Self::Imported(v) => Debug::fmt(v, f),
+            Self::Resource(v) => Debug::fmt(v, f),
             Self::Structure(v) => Debug::fmt(v, f),
             Self::Variant(v) => Debug::fmt(v, f),
         }

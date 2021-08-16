@@ -18,12 +18,18 @@ mod stage1_mir;
 mod stage2_lir;
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct ValkyrieClass {
-    pub(crate) symbol: Identifier,
+pub struct ValkyrieResource {
+    pub resource_name: Identifier,
     /// The wasi import/export name
-    pub wasi_import: Option<WasiImport>,
-    pub(crate) fields: IndexMap<Arc<str>, ValkyrieField>,
-    pub(crate) methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub wasi_import: WasiImport,
+    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValkyrieClass {
+    pub class_name: Identifier,
+    pub fields: IndexMap<Arc<str>, ValkyrieField>,
+    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
 }
 
 impl Hash for ValkyrieClass {
@@ -32,7 +38,7 @@ impl Hash for ValkyrieClass {
     ///          + Generic Types
     /// ```
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.symbol.hash(state);
+        self.class_name.hash(state);
     }
 }
 
@@ -68,11 +74,8 @@ impl AddAssign<ValkyrieMethod> for ValkyrieClass {
 }
 
 impl ValkyrieClass {
-    pub fn new(symbol: Identifier) -> Self {
-        Self { symbol, wasi_import: None, fields: Default::default(), methods: Default::default() }
-    }
     pub fn get_name(&self) -> String {
-        self.symbol.to_string()
+        self.class_name.to_string()
     }
     // pub fn get_field(&self, name: &str) -> Option<&ValkyrieField> {
     //     self.fields.get(name)

@@ -6,8 +6,9 @@ impl Hir2Mir for ClassDeclaration {
 
     fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> Result<Self::Output> {
         let symbol = store.register_item(&self.name);
-        let mut class = ValkyrieClass::new(symbol);
-        class.wasi_import = store.wasi_import_module_name(&self.annotations, &self.name);
+        let mut methods = IndexMap::default();
+        let mut fields = IndexMap::default();
+
         for x in self.terms {
             match x {
                 ClassTerm::Macro(_) => {
@@ -15,7 +16,7 @@ impl Hir2Mir for ClassDeclaration {
                 }
                 ClassTerm::Field(v) => {
                     let field = v.to_mir(store, &())?;
-                    match class.fields.insert(field.field_name.clone(), field) {
+                    match fields.insert(field.field_name.clone(), field) {
                         Some(s) => {
                             unimplemented!()
                         }
@@ -24,7 +25,7 @@ impl Hir2Mir for ClassDeclaration {
                 }
                 ClassTerm::Method(v) => {
                     let method = v.to_mir(store, &())?;
-                    match class.methods.insert(method.method_name.clone(), method) {
+                    match methods.insert(method.method_name.clone(), method) {
                         Some(s) => {
                             unimplemented!()
                         }
@@ -36,7 +37,13 @@ impl Hir2Mir for ClassDeclaration {
                 }
             }
         }
-        *store += class;
+
+        match store.wasi_import_module_name(&self.annotations, &self.name) {
+            Some(wasi_import) => {
+                *store += ValkyrieResource { resource_name: symbol, wasi_import, methods };
+            }
+            None => *store += ValkyrieClass { class_name: symbol, fields, methods },
+        }
 
         Ok(())
     }

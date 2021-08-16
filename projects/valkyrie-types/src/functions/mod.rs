@@ -24,6 +24,7 @@ pub struct ValkyrieImportFunction {
     pub wasi_import: WasiImport,
     pub signature: FunctionSignature,
 }
+
 /// The [function](), [`external` function](), [`extension` function](), [`overload` function] in valkyrie language
 #[derive(Debug)]
 pub struct ValkyrieNativeFunction {

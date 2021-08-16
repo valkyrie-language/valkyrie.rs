@@ -1,6 +1,6 @@
 use crate::{
     helpers::{Hir2Mir, Mir2Lir},
-    structures::ValkyrieClass,
+    structures::{ValkyrieClass, ValkyrieResource},
     ValkyrieImportFunction, ValkyrieNativeFunction, ValkyrieUnion,
 };
 use convert_case::{Case, Casing};
@@ -52,7 +52,7 @@ pub enum ModuleItem {
     External(ValkyrieImportFunction),
     Function(ValkyrieNativeFunction),
     // Imported(ValkyrieSymbol),
-    // Function(ValkyrieFunction),
+    Resource(ValkyrieResource),
     Structure(ValkyrieClass),
     Variant(ValkyrieUnion),
 }
