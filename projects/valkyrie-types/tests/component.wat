@@ -15,6 +15,7 @@
     (alias export $wasi:cli/terminal-output "terminal-output" (type $std::cli::TerminalOutput))
     (import "wasi:cli/exit" (instance $wasi:cli/exit
         (export "exit" (func
+            (param "status" bool)
         ))
     ))
     (alias export $wasi:cli/exit "exit" (func $std::env::exit))
@@ -95,24 +96,34 @@
     (alias export $wasi:clocks/monotonic-clock "resolution" (func $std::time::resolution))
     (import "unstable:debugger/print" (instance $unstable:debugger/print
         (export "print-bool" (func
+            (param "value" bool)
         ))
         (export "print-char" (func
+            (param "value" bool)
         ))
         (export "print-i64" (func
+            (param "value" bool)
         ))
         (export "print-i64" (func
+            (param "value" bool)
         ))
         (export "print-i64" (func
+            (param "value" bool)
         ))
         (export "print-i64" (func
+            (param "value" bool)
         ))
         (export "print-u16" (func
+            (param "value" bool)
         ))
         (export "print-u32" (func
+            (param "value" bool)
         ))
         (export "print-i64" (func
+            (param "value" bool)
         ))
         (export "print-u8" (func
+            (param "value" bool)
         ))
     ))
     (alias export $unstable:debugger/print "print-bool" (func $std::time::print_bool))
@@ -275,6 +286,7 @@
     ))
     (core module $Main
         (import "wasi:cli/exit" "exit" (func $std::env::exit
+            (param $status )
         ))
         (import "wasi:cli/environment" "get-arguments" (func $std::env::get_arguments
         ))
@@ -307,29 +319,43 @@
         (import "wasi:clocks/monotonic-clock" "resolution" (func $std::time::resolution
         ))
         (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-char" (func $std::time::print_char
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i16
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i32
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i64
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i8
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-u16" (func $std::time::print_u16
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-u32" (func $std::time::print_u32
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_u64
+            (param $value )
         ))
         (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8
+            (param $value )
         ))
         (import "wasi:clocks/wall-clock" "resolution" (func $std::time::unix_resolution
         ))
         (import "wasi:clocks/wall-clock" "now" (func $std::time::unix_time
         ))
+        (func $std::time::let_us_random
+        )
+        (func $std::time::test
+        )
     )
     (core instance $main (instantiate $Main
         (with "wasi:cli/terminal-input" (instance

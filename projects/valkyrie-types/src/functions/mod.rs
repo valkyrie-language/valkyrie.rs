@@ -7,6 +7,7 @@ use indexmap::IndexMap;
 use nyar_wasm::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
 use ordered_float::NotNan;
 use std::{
+    collections::BTreeMap,
     hash::{Hash, Hasher},
     ops::AddAssign,
     sync::Arc,
@@ -33,12 +34,14 @@ pub struct ValkyrieNativeFunction {
     /// The WASI export symbol if exists
     pub wasi_export: Option<WasiExport>,
     /// The input output signature of the function
-    pub overloads: HashMap<NotNan<f64>, FunctionSignature>,
+    pub overloads: BTreeMap<NotNan<f64>, FunctionSignature>,
 }
 
 #[derive(Clone, Debug, Hash)]
 pub struct FunctionParameter {
+    /// The parameter name of the function
     pub name: Arc<str>,
+    /// The type hint of the function
     pub r#type: ValkyrieType,
 }
 
@@ -46,7 +49,7 @@ pub struct FunctionParameter {
 pub struct FunctionSignature {
     pub positional: IndexMap<Arc<str>, FunctionParameter>,
     pub mixed: IndexMap<Arc<str>, FunctionParameter>,
-    pub named: IndexMap<Arc<str>, FunctionParameter>,
+    pub named: BTreeMap<Arc<str>, FunctionParameter>,
     pub output: Vec<FunctionParameter>,
 }
 

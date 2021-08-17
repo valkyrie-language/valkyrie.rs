@@ -38,7 +38,11 @@ impl Hir2Mir for FunctionDeclaration {
                 *store += ValkyrieImportFunction { function_name, wasi_import, signature };
             }
             None => {
-                println!("FunctionDeclaration: {:?}", self.name);
+                let mut overloads = BTreeMap::default();
+                unsafe {
+                    overloads.insert(NotNan::new_unchecked(0.0), signature);
+                }
+                *store += ValkyrieNativeFunction { function_name, wasi_export: None, overloads };
             }
         }
 
