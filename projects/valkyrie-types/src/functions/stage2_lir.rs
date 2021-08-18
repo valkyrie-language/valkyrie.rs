@@ -1,4 +1,5 @@
 use super::*;
+use nyar_error::SyntaxError;
 use nyar_wasm::{WasiFunctionBody, WasiParameter, WasiType};
 use std::mem::transmute;
 
@@ -68,6 +69,40 @@ impl Mir2Lir for FunctionParameter {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        Ok(WasiParameter { name: self.name.clone(), wasi_name: self.name.clone(), r#type: WasiType::Boolean })
+        let typing = self.r#type.to_lir(graph, context)?;
+        Ok(WasiParameter { name: self.name.clone(), wasi_name: self.name.clone(), r#type: typing })
+    }
+}
+
+impl Mir2Lir for ValkyrieType {
+    type Output = WasiType;
+    type Context<'a> = &'a ResolveState;
+
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+        let wasi_ty = match self {
+            ValkyrieType::Boolean => WasiType::Boolean,
+            ValkyrieType::Integer { bits } => match bits {
+                8 => WasiType::Integer8 { signed: true },
+                16 => WasiType::Integer16 { signed: true },
+                32 => WasiType::Integer32 { signed: true },
+                64 => WasiType::Integer64 { signed: true },
+                bits => Err(SyntaxError::new(format!("Unsupported integer type with {} bits", bits)))?,
+            },
+            ValkyrieType::Unsigned { bits } => match bits {
+                8 => WasiType::Integer8 { signed: false },
+                16 => WasiType::Integer16 { signed: false },
+                32 => WasiType::Integer32 { signed: false },
+                64 => WasiType::Integer64 { signed: false },
+                bits => Err(SyntaxError::new(format!("Unsupported unsigned type with {} bits", bits)))?,
+            },
+            ValkyrieType::Float { bits } => match bits {
+                32 => WasiType::Float32,
+                64 => WasiType::Float64,
+                bits => Err(SyntaxError::new(format!("Unsupported float type with {} bits", bits)))?,
+            },
+            ValkyrieType::Unicode => WasiType::Unicode,
+            ValkyrieType::Unsolved(v) => Err(SyntaxError::new(format!("{v}")))?,
+        };
+        Ok(wasi_ty)
     }
 }

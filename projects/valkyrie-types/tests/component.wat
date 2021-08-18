@@ -13,28 +13,6 @@
         (export $std::cli::TerminalOutput "terminal-output" (type (sub resource)))
     ))
     (alias export $wasi:cli/terminal-output "terminal-output" (type $std::cli::TerminalOutput))
-    (import "wasi:cli/exit" (instance $wasi:cli/exit
-        (export "exit" (func
-            (param "status" bool)
-        ))
-    ))
-    (alias export $wasi:cli/exit "exit" (func $std::env::exit))
-    (import "wasi:cli/environment" (instance $wasi:cli/environment
-        (export "get-arguments" (func
-        ))
-        (export "get-environment" (func
-        ))
-        (export "initial-cwd" (func
-        ))
-    ))
-    (alias export $wasi:cli/environment "get-arguments" (func $std::env::get_arguments))
-    (alias export $wasi:cli/environment "get-environment" (func $std::env::get_environment))
-    (alias export $wasi:cli/environment "initial-cwd" (func $std::env::initial_working_directory))
-    (import "wasi:cli/run" (instance $wasi:cli/run
-        (export "run" (func
-        ))
-    ))
-    (alias export $wasi:cli/run "run" (func $std::env::run))
     (import "wasi:filesystem/types" (instance $wasi:filesystem/types
         (export $std::fs::Descriptor "descriptor" (type (sub resource)))
     ))
@@ -99,31 +77,31 @@
             (param "value" bool)
         ))
         (export "print-char" (func
-            (param "value" bool)
+            (param "value" char)
         ))
         (export "print-i64" (func
-            (param "value" bool)
+            (param "value" s16)
         ))
         (export "print-i64" (func
-            (param "value" bool)
+            (param "value" s32)
         ))
         (export "print-i64" (func
-            (param "value" bool)
+            (param "value" s64)
         ))
         (export "print-i64" (func
-            (param "value" bool)
+            (param "value" s8)
         ))
         (export "print-u16" (func
-            (param "value" bool)
+            (param "value" u16)
         ))
         (export "print-u32" (func
-            (param "value" bool)
+            (param "value" u32)
         ))
         (export "print-i64" (func
-            (param "value" bool)
+            (param "value" u64)
         ))
         (export "print-u8" (func
-            (param "value" bool)
+            (param "value" u8)
         ))
     ))
     (alias export $unstable:debugger/print "print-bool" (func $std::time::print_bool))
@@ -144,31 +122,6 @@
     ))
     (alias export $wasi:clocks/wall-clock "resolution" (func $std::time::unix_resolution))
     (alias export $wasi:clocks/wall-clock "now" (func $std::time::unix_time))
-    (core func $std::env::exit (canon lower
-        (func $wasi:cli/exit "exit")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
-    ))
-    (core func $std::env::get_arguments (canon lower
-        (func $wasi:cli/environment "get-arguments")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
-    ))
-    (core func $std::env::get_environment (canon lower
-        (func $wasi:cli/environment "get-environment")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
-    ))
-    (core func $std::env::initial_working_directory (canon lower
-        (func $wasi:cli/environment "initial-cwd")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
-    ))
-    (core func $std::env::run (canon lower
-        (func $wasi:cli/run "run")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
-    ))
     (core func $std::io::InputStream::read (canon lower
         (func $wasi:io/streams "[method]input-stream.read")
         (memory $memory "memory")(realloc (func $memory "realloc"))
@@ -285,17 +238,6 @@
         string-encoding=utf8
     ))
     (core module $Main
-        (import "wasi:cli/exit" "exit" (func $std::env::exit
-            (param $status )
-        ))
-        (import "wasi:cli/environment" "get-arguments" (func $std::env::get_arguments
-        ))
-        (import "wasi:cli/environment" "get-environment" (func $std::env::get_environment
-        ))
-        (import "wasi:cli/environment" "initial-cwd" (func $std::env::initial_working_directory
-        ))
-        (import "wasi:cli/run" "run" (func $std::env::run
-        ))
         (import "wasi:io/streams" "[method]input-stream.read" (func $std::io::InputStream::read
         ))
         (import "wasi:io/streams" "[method]output-stream.blocking-write-and-flush" (func $std::io::OutputStream::blocking_write_and_flush
@@ -319,34 +261,34 @@
         (import "wasi:clocks/monotonic-clock" "resolution" (func $std::time::resolution
         ))
         (import "unstable:debugger/print" "print-bool" (func $std::time::print_bool
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-char" (func $std::time::print_char
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i16
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i32
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i64
-            (param $value )
+            (param $value i64)
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_i8
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-u16" (func $std::time::print_u16
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-u32" (func $std::time::print_u32
-            (param $value )
+            (param $value i32)
         ))
         (import "unstable:debugger/print" "print-i64" (func $std::time::print_u64
-            (param $value )
+            (param $value i64)
         ))
         (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8
-            (param $value )
+            (param $value i32)
         ))
         (import "wasi:clocks/wall-clock" "resolution" (func $std::time::unix_resolution
         ))
@@ -361,17 +303,6 @@
         (with "wasi:cli/terminal-input" (instance
         ))
         (with "wasi:cli/terminal-output" (instance
-        ))
-        (with "wasi:cli/exit" (instance
-            (export "exit" (func $std::env::exit))
-        ))
-        (with "wasi:cli/environment" (instance
-            (export "get-arguments" (func $std::env::get_arguments))
-            (export "get-environment" (func $std::env::get_environment))
-            (export "initial-cwd" (func $std::env::initial_working_directory))
-        ))
-        (with "wasi:cli/run" (instance
-            (export "run" (func $std::env::run))
         ))
         (with "wasi:filesystem/types" (instance
         ))

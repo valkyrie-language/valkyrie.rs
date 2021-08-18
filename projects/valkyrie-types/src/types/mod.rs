@@ -9,6 +9,9 @@ pub mod trait_types;
 #[derive(Clone, Debug, Hash)]
 pub enum ValkyrieType {
     Boolean,
-    Integer,
+    Integer { bits: usize },
+    Unsigned { bits: usize },
+    Float { bits: usize },
+    Unicode,
     Unsolved(Identifier),
 }
