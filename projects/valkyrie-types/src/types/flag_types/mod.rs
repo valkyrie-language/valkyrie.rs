@@ -1,12 +1,11 @@
 use super::*;
 
-pub struct FlagTypes {}
-
-impl Hir2Mir for FlagDeclaration {
-    type Output = ();
-    type Context = ();
-
-    fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> nyar_error::Result<Self::Output> {
-        Ok(())
+pub struct ValkyrieFlags {
+    pub flags_name: Identifier,
+    pub flags: IndexMap<Arc<str>, ValkyrieSemanticNumbers>,
+}
+impl AddAssign<ValkyrieFlags> for ResolveState {
+    fn add_assign(&mut self, rhs: ValkyrieFlags) {
+        self.items.insert(rhs.flags_name.clone(), ModuleItem::Resource(rhs));
     }
 }

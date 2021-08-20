@@ -6,7 +6,7 @@ impl Hir2Mir for UnionDeclaration {
 
     fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> nyar_error::Result<Self::Output> {
         let name = store.register_item(&self.name);
-        let mut output = ValkyrieUnion { union_name: name, variants: Default::default() };
+        let mut output = ValkyrieUnite { union_name: name, variants: Default::default() };
         for item in self.body {
             match item {
                 UnionTerm::Macro(_) => {

@@ -1,4 +1,44 @@
-use super::*;
+use crate::{
+    helpers::Hir2Mir, structures::ValkyrieResource, ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField,
+    ValkyrieFlags, ValkyrieMethod,
+};
+use indexmap::IndexMap;
+use nyar_error::Result;
+use valkyrie_ast::{ClassDeclaration, ClassTerm, FieldDeclaration, FlagDeclaration, FlagKind, FlagTerm, MethodDeclaration};
+
+impl Hir2Mir for FlagDeclaration {
+    type Output = ();
+    type Context = ();
+
+    fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> Result<Self::Output> {
+        let name = store.register_item(&self.name);
+
+        // let mut terms = vec![];
+
+        for term in self.body.into_iter() {
+            match term.to_mir(store, context) {
+                Ok(o) => {}
+                Err(e) => store.push_error(e),
+            }
+        }
+
+        match self.kind {
+            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, indexes: Default::default() },
+            FlagKind::Flags => *store += ValkyrieFlags { flags_name: name, flags: Default::default() },
+        }
+
+        Ok(())
+    }
+}
+
+impl Hir2Mir for FlagTerm {
+    type Output = ();
+    type Context = ();
+
+    fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> Result<Self::Output> {
+        todo!()
+    }
+}
 
 impl Hir2Mir for ClassDeclaration {
     type Output = ();

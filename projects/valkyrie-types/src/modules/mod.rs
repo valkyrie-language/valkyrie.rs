@@ -1,7 +1,7 @@
 use crate::{
     helpers::{Hir2Mir, Mir2Lir},
     structures::{ValkyrieClass, ValkyrieResource},
-    ValkyrieImportFunction, ValkyrieNativeFunction, ValkyrieUnion,
+    ValkyrieImportFunction, ValkyrieNativeFunction, ValkyrieUnite,
 };
 use convert_case::{Case, Casing};
 use im::{hashmap::Entry, HashMap};
@@ -54,7 +54,7 @@ pub enum ModuleItem {
     // Imported(ValkyrieSymbol),
     Resource(ValkyrieResource),
     Structure(ValkyrieClass),
-    Variant(ValkyrieUnion),
+    Variant(ValkyrieUnite),
 }
 
 impl ResolveState {

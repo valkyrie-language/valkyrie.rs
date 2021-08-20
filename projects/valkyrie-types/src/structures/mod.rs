@@ -14,7 +14,6 @@ use std::{
 use valkyrie_ast::{helper::WrapDisplay, ClassDeclaration, ClassTerm, FieldDeclaration, MethodDeclaration};
 
 mod display;
-mod stage1_mir;
 mod stage2_lir;
 
 #[derive(Clone, Eq, PartialEq)]

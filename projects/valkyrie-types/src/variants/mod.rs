@@ -9,22 +9,22 @@ use std::{
 use valkyrie_ast::{ClassTerm, UnionDeclaration, UnionTerm, VariantDeclaration};
 
 mod codegen;
-mod parser;
 
+/// abstract class with closed childrens
 #[derive(Clone)]
-pub struct ValkyrieUnion {
+pub struct ValkyrieUnite {
     /// The full name path of the union
     union_name: Identifier,
     variants: IndexMap<Arc<str>, ValkyrieUnionItem>,
 }
 
-impl AddAssign<ValkyrieUnion> for ResolveState {
-    fn add_assign(&mut self, rhs: ValkyrieUnion) {
+impl AddAssign<ValkyrieUnite> for ResolveState {
+    fn add_assign(&mut self, rhs: ValkyrieUnite) {
         self.items.insert(rhs.union_name.clone(), ModuleItem::Variant(rhs));
     }
 }
 
-impl ValkyrieUnion {
+impl ValkyrieUnite {
     pub fn new(name: Identifier) -> Self {
         Self { union_name: name, variants: Default::default() }
     }
@@ -41,7 +41,7 @@ pub struct ValkyrieUnionItem {
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
 }
 
-impl Debug for ValkyrieUnion {
+impl Debug for ValkyrieUnite {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Union").field("name", &self.union_name).field("variants", &self.variants.values()).finish()
     }

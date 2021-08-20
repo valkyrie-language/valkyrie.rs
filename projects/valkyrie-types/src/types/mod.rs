@@ -1,8 +1,10 @@
-use crate::{helpers::Hir2Mir, ResolveState};
+use crate::{helpers::Hir2Mir, ModuleItem, ResolveState, ValkyrieSemanticNumbers};
+use indexmap::IndexMap;
 use nyar_wasm::Identifier;
-use std::sync::{Arc, Mutex};
-use valkyrie_ast::{FlagDeclaration, TraitDeclaration};
+use std::{ops::AddAssign, sync::Arc};
+use valkyrie_ast::TraitDeclaration;
 
+pub mod enumeration_types;
 pub mod flag_types;
 pub mod trait_types;
 
@@ -15,3 +17,5 @@ pub enum ValkyrieType {
     Unicode,
     Unsolved(Identifier),
 }
+
+impl ValkyrieType {}

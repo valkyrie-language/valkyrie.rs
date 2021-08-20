@@ -124,118 +124,72 @@
     (alias export $wasi:clocks/wall-clock "now" (func $std::time::unix_time))
     (core func $std::io::InputStream::read (canon lower
         (func $wasi:io/streams "[method]input-stream.read")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::OutputStream::blocking_write_and_flush (canon lower
         (func $wasi:io/streams "[method]output-stream.blocking-write-and-flush")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::OutputStream::flush (canon lower
         (func $wasi:io/streams "[method]flush")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::OutputStream::write (canon lower
         (func $wasi:io/streams "[method]output-stream.write")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::standard_error (canon lower
         (func $wasi:cli/stderr "get-stderr")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::standard_input (canon lower
         (func $wasi:cli/stdin "get-stdin")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::io::standard_output (canon lower
         (func $wasi:cli/stdout "get-stdout")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::rand::fast_random_seed (canon lower
         (func $wasi:random/insecure "get-insecure-random-bytes")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::rand::safe_random_seed (canon lower
         (func $wasi:random/random "get-random-u64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::now (canon lower
         (func $wasi:clocks/monotonic-clock "now")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::resolution (canon lower
         (func $wasi:clocks/monotonic-clock "resolution")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_bool (canon lower
         (func $unstable:debugger/print "print-bool")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_char (canon lower
         (func $unstable:debugger/print "print-char")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_i16 (canon lower
         (func $unstable:debugger/print "print-i64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_i32 (canon lower
         (func $unstable:debugger/print "print-i64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_i64 (canon lower
         (func $unstable:debugger/print "print-i64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_i8 (canon lower
         (func $unstable:debugger/print "print-i64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_u16 (canon lower
         (func $unstable:debugger/print "print-u16")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_u32 (canon lower
         (func $unstable:debugger/print "print-u32")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_u64 (canon lower
         (func $unstable:debugger/print "print-i64")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::print_u8 (canon lower
         (func $unstable:debugger/print "print-u8")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::unix_resolution (canon lower
         (func $wasi:clocks/wall-clock "resolution")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core func $std::time::unix_time (canon lower
         (func $wasi:clocks/wall-clock "now")
-        (memory $memory "memory")(realloc (func $memory "realloc"))
-        string-encoding=utf8
     ))
     (core module $Main
         (import "wasi:io/streams" "[method]input-stream.read" (func $std::io::InputStream::read

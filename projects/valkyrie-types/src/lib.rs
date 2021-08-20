@@ -1,6 +1,7 @@
 #![feature(associated_type_defaults)]
 #![feature(extend_one)]
 
+mod frontends;
 mod functions;
 mod helpers;
 mod modules;
@@ -12,6 +13,10 @@ pub use crate::{
     functions::{ValkyrieImportFunction, ValkyrieNativeFunction},
     modules::{ModuleItem, ResolveState, ValkyrieModule},
     structures::{ValkyrieClass, ValkyrieField, ValkyrieMethod},
-    types::ValkyrieType,
-    variants::{ValkyrieUnion, ValkyrieUnionItem},
+    types::{
+        enumeration_types::{ValkyrieEnumeration, ValkyrieSemanticNumbers},
+        flag_types::ValkyrieFlags,
+        ValkyrieType,
+    },
+    variants::{ValkyrieUnionItem, ValkyrieUnite},
 };
