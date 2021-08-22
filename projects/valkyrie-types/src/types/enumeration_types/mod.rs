@@ -1,6 +1,6 @@
 use super::*;
 use crate::helpers::Mir2Lir;
-use nyar_wasm::{DependentGraph, WasiEnumeration};
+use nyar_wasm::{DependentGraph, WasiEnumeration, WasiSemanticIndex};
 
 #[derive(Debug)]
 pub struct ValkyrieEnumeration {
@@ -27,5 +27,13 @@ impl Mir2Lir for ValkyrieEnumeration {
         *graph += WasiEnumeration { symbol: self.enumeration_name.clone(), variants: Default::default() };
 
         Ok(())
+    }
+}
+impl Mir2Lir for ValkyrieSemanticNumber {
+    type Output = WasiSemanticIndex;
+    type Context<'a> = &'a ResolveState;
+
+    fn to_lir<'a>(&self, _: &mut DependentGraph, _: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+        Ok(WasiSemanticIndex { name: self.number_name.clone(), wasi_name: self.number_name.clone() })
     }
 }

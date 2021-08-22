@@ -53,7 +53,7 @@ impl Mir2Lir for ValkyrieMethod {
                     symbol,
                     inputs: vec![],
                     output: vec![],
-                    body: WasiFunctionBody::Normal { bytecodes: vec![] },
+                    body: WasiFunctionBody::Native { bytecodes: vec![] },
                 }
             }
         }

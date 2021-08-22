@@ -76,19 +76,22 @@ impl Hir2Mir for FlagDeclaration {
     fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> Result<Self::Output> {
         let name = store.register_item(&self.name);
 
-        // let mut terms = vec![];
+        let mut terms = IndexMap::default();
 
         for term in self.body.into_iter() {
             match term {
                 FlagTerm::Macro(_) => {}
-                FlagTerm::Encode(v) => {}
+                FlagTerm::Encode(v) => {
+                    let term = v.to_mir(store, &())?;
+                    terms.insert(term.number_name.clone(), term);
+                }
                 FlagTerm::Method(_) => {}
             }
         }
 
         match self.kind {
-            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, indexes: Default::default() },
-            FlagKind::Flags => *store += ValkyrieFlagation { flags_name: name, flags: Default::default() },
+            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, indexes: terms },
+            FlagKind::Flags => *store += ValkyrieFlagation { flags_name: name, flags: terms },
         }
 
         Ok(())

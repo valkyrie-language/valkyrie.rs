@@ -38,7 +38,7 @@ impl Mir2Lir for ValkyrieNativeFunction {
             };
             let inputs = f.to_lir(graph, context)?;
             *graph +=
-                WasiFunction { symbol: name, inputs, output: vec![], body: WasiFunctionBody::Normal { bytecodes: vec![] } };
+                WasiFunction { symbol: name, inputs, output: vec![], body: WasiFunctionBody::Native { bytecodes: vec![] } };
         }
 
         Ok(())

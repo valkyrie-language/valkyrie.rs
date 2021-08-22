@@ -13,8 +13,8 @@ use std::{
 };
 use valkyrie_ast::{helper::WrapDisplay, ClassDeclaration, ClassTerm, FieldDeclaration, MethodDeclaration};
 
+mod codegen;
 mod display;
-mod stage2_lir;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieResource {
