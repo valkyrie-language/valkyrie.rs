@@ -18,6 +18,8 @@ impl Debug for ModuleItem {
             Self::Function(v) => Debug::fmt(v, f),
             Self::Resource(v) => Debug::fmt(v, f),
             Self::Structure(v) => Debug::fmt(v, f),
+            Self::Flags(v) => Debug::fmt(v, f),
+            Self::Enums(v) => Debug::fmt(v, f),
             Self::Variant(v) => Debug::fmt(v, f),
         }
     }

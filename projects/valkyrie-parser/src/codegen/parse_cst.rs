@@ -939,6 +939,16 @@ fn parse_flag_field(state: Input) -> Output {
     state.rule(ValkyrieRule::FlagField, |s| {
         s.sequence(|s| {
             Ok(s)
+                .and_then(|s| {
+                    s.repeat(0..4294967295, |s| {
+                        s.sequence(|s| {
+                            Ok(s)
+                                .and_then(|s| builtin_ignore(s))
+                                .and_then(|s| parse_annotation_term(s).and_then(|s| s.tag_node("annotation_term")))
+                        })
+                    })
+                })
+                .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_identifier(s).and_then(|s| s.tag_node("identifier")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_parameter_default(s).and_then(|s| s.tag_node("parameter_default")))
@@ -3890,14 +3900,14 @@ fn parse_comment(state: Input) -> Output {
                         .and_then(|s| {
                             builtin_regex(s, {
                                 static REGEX: OnceLock<Regex> = OnceLock::new();
-                                REGEX.get_or_init(|| Regex::new("^(?x)([~⍝🗨])").unwrap())
+                                REGEX.get_or_init(|| Regex::new("^(?x)([⍝🗨]|\\{2})").unwrap())
                             })
                         })
                         .and_then(|s| s.rest_of_line())
                 })
             })
             .or_else(|s| {
-                s.sequence(|s| Ok(s).and_then(|s| builtin_text(s, "/*", false)).and_then(|s| builtin_text(s, "*/", false)))
+                s.sequence(|s| Ok(s).and_then(|s| builtin_text(s, "🗨🗨🗨", false)).and_then(|s| builtin_text(s, "🗩🗩🗩", false)))
             })
     })
 }

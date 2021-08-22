@@ -795,6 +795,7 @@ pub enum FlagTermNode {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FlagFieldNode {
+    pub annotation_term: Vec<AnnotationTermNode>,
     pub identifier: IdentifierNode,
     pub parameter_default: ParameterDefaultNode,
     pub span: Range<u32>,

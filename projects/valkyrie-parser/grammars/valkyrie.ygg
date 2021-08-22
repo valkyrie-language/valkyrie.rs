@@ -182,7 +182,7 @@ union FlagTerm {
     | EOS_FREE
 }
 class FlagField {
-    Identifier ParameterDefault
+    AnnotationTerm* Identifier ParameterDefault
 }
 @style(keyword)
 @railway(false)

@@ -986,6 +986,9 @@ impl YggdrasilNode for FlagFieldNode {
     fn from_pair(pair: TokenPair<Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
         let _span = pair.get_span();
         Ok(Self {
+            annotation_term: pair
+                .take_tagged_items::<AnnotationTermNode>(Cow::Borrowed("annotation_term"))
+                .collect::<Result<Vec<_>, _>>()?,
             identifier: pair.take_tagged_one::<IdentifierNode>(Cow::Borrowed("identifier"))?,
             parameter_default: pair.take_tagged_one::<ParameterDefaultNode>(Cow::Borrowed("parameter_default"))?,
             span: Range { start: _span.start() as u32, end: _span.end() as u32 },

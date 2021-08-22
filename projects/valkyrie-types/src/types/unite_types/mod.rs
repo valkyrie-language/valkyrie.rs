@@ -1,6 +1,9 @@
-use crate::{helpers::Hir2Mir, ModuleItem, ResolveState, ValkyrieField};
+use crate::{
+    helpers::{Hir2Mir, Mir2Lir},
+    ModuleItem, ResolveState, ValkyrieField,
+};
 use indexmap::IndexMap;
-use nyar_wasm::Identifier;
+use nyar_wasm::{DependentGraph, Identifier};
 use std::{
     fmt::{Debug, Formatter},
     ops::AddAssign,
@@ -14,24 +17,18 @@ mod codegen;
 #[derive(Clone)]
 pub struct ValkyrieUnite {
     /// The full name path of the union
-    union_name: Identifier,
-    variants: IndexMap<Arc<str>, ValkyrieUnionItem>,
-}
-
-impl AddAssign<ValkyrieUnite> for ResolveState {
-    fn add_assign(&mut self, rhs: ValkyrieUnite) {
-        self.items.insert(rhs.union_name.clone(), ModuleItem::Variant(rhs));
-    }
+    pub unite_name: Identifier,
+    pub variants: IndexMap<Arc<str>, ValkyrieUniteItem>,
 }
 
 impl ValkyrieUnite {
     pub fn new(name: Identifier) -> Self {
-        Self { union_name: name, variants: Default::default() }
+        Self { unite_name: name, variants: Default::default() }
     }
 }
 
 #[derive(Clone)]
-pub struct ValkyrieUnionItem {
+pub struct ValkyrieUniteItem {
     /// The full name path of the variant item
     pub variant_name: Arc<str>,
     /// The alias name in wasi
@@ -43,11 +40,11 @@ pub struct ValkyrieUnionItem {
 
 impl Debug for ValkyrieUnite {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Union").field("name", &self.union_name).field("variants", &self.variants.values()).finish()
+        f.debug_struct("Union").field("name", &self.unite_name).field("variants", &self.variants.values()).finish()
     }
 }
 
-impl Debug for ValkyrieUnionItem {
+impl Debug for ValkyrieUniteItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Variant")
             .field("name", &self.variant_name)
