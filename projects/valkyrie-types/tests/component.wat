@@ -73,9 +73,15 @@
     (alias export $unstable:debugger/print "print-u32" (func $std::time::print_u32))
     (alias export $unstable:debugger/print "print-i64" (func $std::time::print_u64))
     (alias export $unstable:debugger/print "print-u8" (func $std::time::print_u8))
+    (flags "std∷fs∷DescriptorFlags" 
+    (enum "std∷fs∷DescriptorType" 
+    (flags "std∷fs∷OpenFlags" 
+    (flags "std∷fs∷PathFlags" 
+    (enum "std∷io∷Endian" 
     ;; variant std∷io∷StreamError
     (type $std::io::StreamError (variant
     ))
+    (enum "std∷meth∷Comparison" 
     (core func $std::rand::fast_random_seed (canon lower
         (func $wasi:random/insecure "get-insecure-random-bytes")
     ))
@@ -147,6 +153,12 @@
         (import "unstable:debugger/print" "print-u8" (func $std::time::print_u8
             (param $value i32)
         ))
+        
+        
+        
+        
+        
+        
         
         (func $std::time::let_us_random
         )

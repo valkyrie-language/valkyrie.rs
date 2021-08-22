@@ -19,8 +19,8 @@ impl Mir2Lir for ValkyrieFlagation {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        *graph += WasiFlags { name: self.flags_name.clone(), variants: Default::default() };
-
+        println!("Flag: {}", self.flags_name);
+        *graph += WasiFlags { symbol: self.flags_name.clone(), variants: Default::default() };
         Ok(())
     }
 }

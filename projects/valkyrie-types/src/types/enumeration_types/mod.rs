@@ -24,7 +24,7 @@ impl Mir2Lir for ValkyrieEnumeration {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        *graph += WasiEnumeration { name: self.enumeration_name.clone(), variants: Default::default() };
+        *graph += WasiEnumeration { symbol: self.enumeration_name.clone(), variants: Default::default() };
 
         Ok(())
     }
