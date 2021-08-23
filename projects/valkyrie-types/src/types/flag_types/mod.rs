@@ -1,6 +1,4 @@
 use super::*;
-use crate::helpers::Mir2Lir;
-use nyar_wasm::{DependentGraph, WasiFlags};
 
 mod codegen;
 

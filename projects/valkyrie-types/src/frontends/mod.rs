@@ -1,6 +1,6 @@
 use crate::{
     helpers::Hir2Mir, structures::ValkyrieResource, ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField,
-    ValkyrieFlagation, ValkyrieMethod, ValkyrieSemanticNumber, ValkyrieUnite, ValkyrieUniteItem,
+    ValkyrieFlagation, ValkyrieMethod, ValkyrieSemanticNumber, ValkyrieUnite, ValkyrieVariant,
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
@@ -41,13 +41,13 @@ impl Hir2Mir for UnionDeclaration {
 }
 
 impl Hir2Mir for VariantDeclaration {
-    type Output = ValkyrieUniteItem;
+    type Output = ValkyrieVariant;
     type Context = ();
 
     fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> nyar_error::Result<Self::Output> {
         let (variant_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
         let mut output =
-            ValkyrieUniteItem { variant_name, wasi_alias, type_alias: Default::default(), fields: Default::default() };
+            ValkyrieVariant { variant_name, wasi_alias, type_alias: Default::default(), fields: Default::default() };
         for item in self.body {
             match item {
                 ClassTerm::Macro(_) => {
@@ -90,7 +90,7 @@ impl Hir2Mir for FlagDeclaration {
         }
 
         match self.kind {
-            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, indexes: terms },
+            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, enumerations: terms },
             FlagKind::Flags => *store += ValkyrieFlagation { flags_name: name, flags: terms },
         }
 

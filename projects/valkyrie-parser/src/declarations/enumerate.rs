@@ -44,8 +44,14 @@ impl crate::FlagTermNode {
 
 impl crate::FlagFieldNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<EncodeDeclaration> {
+        let mut attributes = AttributeList::new(self.annotation_term.len());
+        for x in self.annotation_term.iter() {
+            attributes.terms.extend(x.build(ctx).terms)
+        }
+        let annotations = AnnotationNode { documents: Default::default(), attributes, modifiers: Default::default() };
+
         Ok(EncodeDeclaration {
-            annotations: Default::default(),
+            annotations,
             name: self.identifier.build(ctx.file),
             value: self.parameter_default.build(ctx),
             span: self.span.clone(),

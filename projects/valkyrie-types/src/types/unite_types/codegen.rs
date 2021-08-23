@@ -12,8 +12,11 @@ impl Mir2Lir for ValkyrieUnite {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        *graph += WasiVariantType { symbol: self.unite_name.clone(), wasi_name: "".to_string(), variants: Default::default() };
-
+        let mut variants = Vec::with_capacity(self.variants.len());
+        for x in self.variants.values() {
+            variants.push(x.to_lir(graph, context)?)
+        }
+        *graph += WasiVariantType { symbol: self.unite_name.clone(), variants };
         Ok(())
     }
 }

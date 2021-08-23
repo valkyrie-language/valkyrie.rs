@@ -13,9 +13,7 @@ pub use crate::{
     modules::{ModuleItem, ResolveState, ValkyrieModule},
     structures::{ValkyrieClass, ValkyrieField, ValkyrieMethod},
     types::{
-        enumeration_types::{ValkyrieEnumeration, ValkyrieSemanticNumber},
-        flag_types::ValkyrieFlagation,
-        unite_types::{ValkyrieUnite, ValkyrieUniteItem},
-        ValkyrieType,
+        encoding_type::ValkyrieSemanticNumber, enumeration_types::ValkyrieEnumeration, flag_types::ValkyrieFlagation,
+        unite_types::ValkyrieUnite, variant_type::ValkyrieVariant, ValkyrieType,
     },
 };

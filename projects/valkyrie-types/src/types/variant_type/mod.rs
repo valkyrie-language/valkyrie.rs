@@ -1,32 +1,24 @@
 use super::*;
-use shredder::Scanner;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ValkyrieVariantType {
-    namepath: ValkyrieID,
-    generics: Vec<Gc<ValkyrieMetaType>>,
-    variants: Vec<ValkyrieStructure>,
+mod codegen;
+
+#[derive(Clone)]
+pub struct ValkyrieVariant {
+    /// The full name path of the variant item
+    pub variant_name: Arc<str>,
+    /// The alias name in wasi
+    pub wasi_alias: Arc<str>,
+    /// The following fields belonging to an independent type
+    pub type_alias: Identifier,
+    pub fields: IndexMap<Arc<str>, ValkyrieField>,
 }
 
-unsafe impl GcSafe for ValkyrieVariantType {}
-
-unsafe impl Scan for ValkyrieVariantType {
-    fn scan(&self, scanner: &mut Scanner<'_>) {
-        todo!()
-    }
-}
-
-impl ValkyrieVariantType {
-    pub fn new(namepath: &str) -> Self {
-        todo!()
-    }
-    pub fn mut_generics(&mut self) -> &mut Vec<Gc<ValkyrieMetaType>> {
-        &mut self.generics
-    }
-}
-
-impl Default for ValkyrieVariantType {
-    fn default() -> Self {
-        todo!()
+impl Debug for ValkyrieVariant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Variant")
+            .field("name", &self.variant_name)
+            .field("wasi", &self.wasi_alias)
+            .field("fields", &self.fields.values())
+            .finish()
     }
 }

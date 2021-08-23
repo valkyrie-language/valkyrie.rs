@@ -76,12 +76,20 @@
     (type $std::fs::DescriptorFlags (flags
         "read" ;; 0
         "write" ;; 1
-        "file-integrity" ;; 2
-        "data-integrity" ;; 3
-        "requested-write" ;; 4
+        "file-integrity-sync" ;; 2
+        "data-integrity-sync" ;; 3
+        "requested-write-sync" ;; 4
         "mutate-directory" ;; 5
     ))
     (type $std::fs::DescriptorType (enum
+        "unknown" ;; 0
+        "block-device" ;; 1
+        "character-device" ;; 2
+        "directory" ;; 3
+        "fifo" ;; 4
+        "symbolic-link" ;; 5
+        "regular-file" ;; 6
+        "socket" ;; 7
     ))
     (type $std::fs::OpenFlags (flags
         "create" ;; 0
@@ -90,14 +98,24 @@
         "truncate" ;; 3
     ))
     (type $std::fs::PathFlags (flags
-        "follow-symbolic-link" ;; 0
+        "symlink-follow" ;; 0
     ))
     (type $std::io::Endian (enum
+        "big" ;; 0
+        "little" ;; 1
     ))
     ;; variant std∷io∷StreamError
     (type $std::io::StreamError (variant
+        ;; LastOperationFailed
+        (case "last-operation-failed")
+        ;; Closed
+        (case "closed")
     ))
     (type $std::meth::Comparison (enum
+        "incomparable" ;; 0
+        "lesser" ;; 1
+        "equal" ;; 2
+        "greater" ;; 3
     ))
     
     

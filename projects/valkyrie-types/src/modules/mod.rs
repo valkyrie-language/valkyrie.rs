@@ -155,8 +155,8 @@ impl ResolveState {
         }
     }
     fn try_wasi_alias<'a>(&self, alias: &'a AnnotationNode) -> Option<&'a str> {
-        let import = alias.attributes.get("import")?;
-        let first = import.arguments.terms.get(1)?;
+        let import = alias.attributes.get("export")?;
+        let first = import.arguments.terms.get(0)?;
         let text = first.value.as_text()?;
         Some(&text.text)
     }

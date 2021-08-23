@@ -1,17 +1,9 @@
 use super::*;
-use crate::helpers::Mir2Lir;
-use nyar_wasm::{DependentGraph, WasiEnumeration, WasiSemanticIndex};
 
 #[derive(Debug)]
 pub struct ValkyrieEnumeration {
     pub enumeration_name: Identifier,
-    pub indexes: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
-}
-
-#[derive(Debug)]
-pub struct ValkyrieSemanticNumber {
-    pub number_name: Arc<str>,
-    pub wasm_alias: Arc<str>,
+    pub enumerations: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
 }
 
 impl AddAssign<ValkyrieEnumeration> for ResolveState {
@@ -25,16 +17,12 @@ impl Mir2Lir for ValkyrieEnumeration {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        *graph += WasiEnumeration { symbol: self.enumeration_name.clone(), variants: Default::default() };
+        let mut enumerations = Vec::with_capacity(self.enumerations.len());
+        for value in self.enumerations.values() {
+            enumerations.push(value.to_lir(graph, context)?);
+        }
+        *graph += WasiEnumeration { symbol: self.enumeration_name.clone(), enumerations };
 
         Ok(())
-    }
-}
-impl Mir2Lir for ValkyrieSemanticNumber {
-    type Output = WasiSemanticIndex;
-    type Context<'a> = &'a ResolveState;
-
-    fn to_lir<'a>(&self, _: &mut DependentGraph, _: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        Ok(WasiSemanticIndex { name: self.number_name.clone(), wasi_name: self.wasm_alias.clone() })
     }
 }
