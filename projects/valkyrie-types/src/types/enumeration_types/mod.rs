@@ -11,6 +11,7 @@ pub struct ValkyrieEnumeration {
 #[derive(Debug)]
 pub struct ValkyrieSemanticNumber {
     pub number_name: Arc<str>,
+    pub wasm_alias: Arc<str>,
 }
 
 impl AddAssign<ValkyrieEnumeration> for ResolveState {
@@ -34,6 +35,6 @@ impl Mir2Lir for ValkyrieSemanticNumber {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, _: &mut DependentGraph, _: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        Ok(WasiSemanticIndex { name: self.number_name.clone(), wasi_name: self.number_name.clone() })
+        Ok(WasiSemanticIndex { name: self.number_name.clone(), wasi_name: self.wasm_alias.clone() })
     }
 }

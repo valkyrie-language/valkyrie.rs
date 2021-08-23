@@ -15,7 +15,9 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
-use valkyrie_ast::{AnnotationNode, ArgumentTerm, IdentifierNode, NamespaceDeclaration, ProgramRoot, StatementKind};
+use valkyrie_ast::{
+    AnnotationNode, ArgumentTerm, AttributeTerm, IdentifierNode, NamespaceDeclaration, ProgramRoot, StatementKind,
+};
 use valkyrie_parser::{ProgramContext, StatementNode};
 
 mod codegen;
@@ -145,6 +147,18 @@ impl ResolveState {
             None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
         };
         Some(WasiImport { module, name })
+    }
+    pub fn find_wasi_alias(&self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Arc<str> {
+        match self.try_wasi_alias(alias) {
+            Some(s) => Arc::from(s),
+            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+        }
+    }
+    fn try_wasi_alias<'a>(&self, alias: &'a AnnotationNode) -> Option<&'a str> {
+        let import = alias.attributes.get("import")?;
+        let first = import.arguments.terms.get(1)?;
+        let text = first.value.as_text()?;
+        Some(&text.text)
     }
 
     fn find_wasi_module(&mut self, term: Option<&ArgumentTerm>, span: SourceSpan) -> Option<WasiModule> {

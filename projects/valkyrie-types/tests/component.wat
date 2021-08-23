@@ -76,10 +76,10 @@
     (type $std::fs::DescriptorFlags (flags
         "read" ;; 0
         "write" ;; 1
-        "file_integrity" ;; 2
-        "data_integrity" ;; 3
-        "requested_write" ;; 4
-        "mutate_directory" ;; 5
+        "file-integrity" ;; 2
+        "data-integrity" ;; 3
+        "requested-write" ;; 4
+        "mutate-directory" ;; 5
     ))
     (type $std::fs::DescriptorType (enum
     ))
@@ -90,7 +90,7 @@
         "truncate" ;; 3
     ))
     (type $std::fs::PathFlags (flags
-        "follow_symbolic_link" ;; 0
+        "follow-symbolic-link" ;; 0
     ))
     (type $std::io::Endian (enum
     ))

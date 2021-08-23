@@ -11,12 +11,11 @@ impl Mir2Lir for ValkyrieFlagation {
     type Context<'a> = &'a ResolveState;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
-        let mut variants = IndexMap::with_capacity(self.flags.len());
-        for (key, value) in self.flags.iter() {
-            variants.insert(key.clone(), value.to_lir(graph, context)?);
+        let mut flags = Vec::with_capacity(self.flags.len());
+        for value in self.flags.values() {
+            flags.push(value.to_lir(graph, context)?);
         }
-
-        *graph += WasiFlags { symbol: self.flags_name.clone(), variants };
+        *graph += WasiFlags { symbol: self.flags_name.clone(), flags };
         Ok(())
     }
 }

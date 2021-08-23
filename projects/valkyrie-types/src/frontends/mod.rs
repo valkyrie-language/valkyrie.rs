@@ -103,7 +103,8 @@ impl Hir2Mir for EncodeDeclaration {
     type Context = ();
 
     fn to_mir(self, store: &mut ResolveState, context: &Self::Context) -> Result<Self::Output> {
-        Ok(ValkyrieSemanticNumber { number_name: self.name.name.clone() })
+        let wasm_alias = store.find_wasi_alias(&self.annotations, &self.name);
+        Ok(ValkyrieSemanticNumber { number_name: self.name.name.clone(), wasm_alias })
     }
 }
 
