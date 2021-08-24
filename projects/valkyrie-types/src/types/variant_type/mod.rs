@@ -1,4 +1,5 @@
 use super::*;
+use nyar_error::SourceSpan;
 
 mod codegen;
 
@@ -11,6 +12,7 @@ pub struct ValkyrieVariant {
     /// The following fields belonging to an independent type
     pub type_alias: Identifier,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
+    pub source: SourceSpan,
 }
 
 impl Debug for ValkyrieVariant {

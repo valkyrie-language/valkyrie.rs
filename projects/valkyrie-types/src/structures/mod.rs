@@ -1,6 +1,7 @@
 use crate::{
     helpers::Hir2Mir,
     modules::{ModuleItem, ResolveState},
+    ValkyrieImportFunction, ValkyrieNativeFunction,
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
@@ -21,14 +22,15 @@ pub struct ValkyrieResource {
     pub resource_name: Identifier,
     /// The wasi import/export name
     pub wasi_import: WasiImport,
-    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieClass {
     pub class_name: Identifier,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
-    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
+    pub methods: IndexMap<Arc<str>, ValkyrieNativeFunction>,
 }
 
 impl Hash for ValkyrieClass {
@@ -49,26 +51,9 @@ pub struct ValkyrieField {
     pub wasi_alias: Arc<str>,
 }
 
-/// A method belongs to a class or a trait
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ValkyrieMethod {
-    /// The name of the method
-    pub method_name: Arc<str>,
-    /// The WASI import symbol if exists
-    pub wasi_import: Option<WasiImport>,
-    /// The WASI export symbol if exists
-    pub wasi_export: Option<WasiExport>,
-}
-
 impl AddAssign<ValkyrieField> for ValkyrieClass {
     fn add_assign(&mut self, rhs: ValkyrieField) {
         self.fields.insert(rhs.field_name.clone(), rhs);
-    }
-}
-
-impl AddAssign<ValkyrieMethod> for ValkyrieClass {
-    fn add_assign(&mut self, rhs: ValkyrieMethod) {
-        self.methods.insert(rhs.method_name.clone(), rhs);
     }
 }
 

@@ -1,4 +1,5 @@
 use super::*;
+use nyar_error::SourceSpan;
 
 mod codegen;
 
@@ -8,11 +9,12 @@ pub struct ValkyrieUnite {
     /// The full name path of the union
     pub unite_name: Identifier,
     pub variants: IndexMap<Arc<str>, ValkyrieVariant>,
+    pub source: SourceSpan,
 }
 
 impl ValkyrieUnite {
     pub fn new(name: Identifier) -> Self {
-        Self { unite_name: name, variants: Default::default() }
+        Self { unite_name: name, variants: Default::default(), source: Default::default() }
     }
 }
 

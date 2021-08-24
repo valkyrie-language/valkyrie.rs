@@ -18,7 +18,7 @@ mod stage1_mir;
 mod stage2_lir;
 
 /// The [function](), [`external` function](), [`extension` function](), [`overload` function] in valkyrie language
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieImportFunction {
     /// The unique identifier of the function
     pub function_name: Identifier,
@@ -27,7 +27,7 @@ pub struct ValkyrieImportFunction {
 }
 
 /// The [function](), [`external` function](), [`extension` function](), [`overload` function] in valkyrie language
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieNativeFunction {
     /// The unique identifier of the function
     pub function_name: Identifier,
@@ -71,3 +71,11 @@ impl Hash for FunctionSignature {
         }
     }
 }
+
+impl PartialEq<Self> for FunctionSignature {
+    fn eq(&self, other: &Self) -> bool {
+        return false;
+    }
+}
+
+impl Eq for FunctionSignature {}
