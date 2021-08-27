@@ -9,7 +9,7 @@ impl<'i> crate::DefineLambdaNode<'i> {
             parameters: self.function_middle().parameters(ctx),
             returns,
             body: self.continuation().build(ctx),
-            span: self.span().clone(),
+            span: self.get_range32(),
         })
     }
 }

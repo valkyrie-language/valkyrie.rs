@@ -1,7 +1,4 @@
 use super::*;
-use nyar_error::SourceID;
-use std::sync::Arc;
-use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::NamepathNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {
@@ -19,11 +16,9 @@ impl<'i> crate::NamepathFreeNode<'i> {
 impl<'i> crate::IdentifierNode<'i> {
     pub fn build(&self, file: SourceID) -> IdentifierNode {
         match self {
-            Self::IdentifierBare(v) => {
-                IdentifierNode { name: Arc::from(v.get_text().as_str()), span: file.with_range(v.get_range32().clone()) }
-            }
+            Self::IdentifierBare(v) => IdentifierNode { name: Arc::from(v.get_str()), span: file.with_range(v.get_range32()) },
             Self::IdentifierRaw(v) => IdentifierNode {
-                name: Arc::from(v.identifier_raw_text().get_text().as_str()),
+                name: Arc::from(v.identifier_raw_text().get_str()),
                 span: file.with_range(v.get_range32().clone()),
             },
         }
@@ -32,7 +27,7 @@ impl<'i> crate::IdentifierNode<'i> {
 
 impl<'i> crate::SlotNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LambdaSlotNode> {
-        Ok(LambdaSlotNode { level: self.op_slot().get_range32(), item: self.item(ctx)?, span: self.get_range32() })
+        Ok(LambdaSlotNode { level: self.op_slot().get_str().len(), item: self.item(ctx)?, span: self.get_range32() })
     }
     fn item(&self, ctx: &mut ProgramState) -> Result<LambdaSlotItem> {
         match &self.slot_item() {

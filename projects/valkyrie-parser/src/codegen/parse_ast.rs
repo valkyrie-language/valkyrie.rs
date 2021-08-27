@@ -15,7 +15,7 @@ impl<'i> YggdrasilNode<'i> for ProgramNode<'i> {
         ValkyrieRule::Program
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -89,22 +89,22 @@ impl<'i> YggdrasilNode<'i> for StatementNode<'i> {
         ValkyrieRule::Statement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::DefineNamespace(s) => s.get_text(),
-            Self::DefineClass(s) => s.get_text(),
-            Self::DefineUnion(s) => s.get_text(),
-            Self::DefineEnumerate(s) => s.get_text(),
-            Self::DefineTrait(s) => s.get_text(),
-            Self::DefineExtends(s) => s.get_text(),
-            Self::DefineFunction(s) => s.get_text(),
-            Self::DefineVariable(s) => s.get_text(),
-            Self::DefineImport(s) => s.get_text(),
-            Self::ControlFlow(s) => s.get_text(),
-            Self::WhileStatement(s) => s.get_text(),
-            Self::ForStatement(s) => s.get_text(),
-            Self::ExpressionRoot(s) => s.get_text(),
-            Self::EOS(s) => s.get_text(),
+            Self::DefineNamespace(s) => s.get_str(),
+            Self::DefineClass(s) => s.get_str(),
+            Self::DefineUnion(s) => s.get_str(),
+            Self::DefineEnumerate(s) => s.get_str(),
+            Self::DefineTrait(s) => s.get_str(),
+            Self::DefineExtends(s) => s.get_str(),
+            Self::DefineFunction(s) => s.get_str(),
+            Self::DefineVariable(s) => s.get_str(),
+            Self::DefineImport(s) => s.get_str(),
+            Self::ControlFlow(s) => s.get_str(),
+            Self::WhileStatement(s) => s.get_str(),
+            Self::ForStatement(s) => s.get_str(),
+            Self::ExpressionRoot(s) => s.get_str(),
+            Self::EOS(s) => s.get_str(),
         }
     }
 
@@ -142,7 +142,7 @@ impl<'i> YggdrasilNode<'i> for OmitNode<'i> {
         ValkyrieRule::Omit
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -166,7 +166,7 @@ impl<'i> YggdrasilNode<'i> for ShowNode<'i> {
         ValkyrieRule::Show
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -197,10 +197,10 @@ impl<'i> YggdrasilNode<'i> for EosNode<'i> {
         ValkyrieRule::EOS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Omit(s) => s.get_text(),
-            Self::Show(s) => s.get_text(),
+            Self::Omit(s) => s.get_str(),
+            Self::Show(s) => s.get_str(),
         }
     }
 
@@ -226,7 +226,7 @@ impl<'i> YggdrasilNode<'i> for EosFreeNode<'i> {
         ValkyrieRule::EOS_FREE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -250,7 +250,7 @@ impl<'i> YggdrasilNode<'i> for DefineNamespaceNode<'i> {
         ValkyrieRule::DefineNamespace
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -281,7 +281,7 @@ impl<'i> YggdrasilNode<'i> for MainNode<'i> {
         ValkyrieRule::Main
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -305,7 +305,7 @@ impl<'i> YggdrasilNode<'i> for TestNode<'i> {
         ValkyrieRule::Test
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -329,7 +329,7 @@ impl<'i> YggdrasilNode<'i> for HideNode<'i> {
         ValkyrieRule::Hide
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -363,11 +363,11 @@ impl<'i> YggdrasilNode<'i> for OpNamespaceNode<'i> {
         ValkyrieRule::OP_NAMESPACE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Main(s) => s.get_text(),
-            Self::Test(s) => s.get_text(),
-            Self::Hide(s) => s.get_text(),
+            Self::Main(s) => s.get_str(),
+            Self::Test(s) => s.get_str(),
+            Self::Hide(s) => s.get_str(),
         }
     }
 
@@ -394,7 +394,7 @@ impl<'i> YggdrasilNode<'i> for DefineImportNode<'i> {
         ValkyrieRule::DefineImport
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -431,7 +431,7 @@ impl<'i> YggdrasilNode<'i> for ImportBlockNode<'i> {
         ValkyrieRule::ImportBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -472,12 +472,12 @@ impl<'i> YggdrasilNode<'i> for ImportTermNode<'i> {
         ValkyrieRule::ImportTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ImportAll(s) => s.get_text(),
-            Self::ImportSpace(s) => s.get_text(),
-            Self::ImportName(s) => s.get_text(),
-            Self::EOS_FREE(s) => s.get_text(),
+            Self::ImportAll(s) => s.get_str(),
+            Self::ImportSpace(s) => s.get_str(),
+            Self::ImportName(s) => s.get_str(),
+            Self::EOS_FREE(s) => s.get_str(),
         }
     }
 
@@ -505,7 +505,7 @@ impl<'i> YggdrasilNode<'i> for ImportAllNode<'i> {
         ValkyrieRule::ImportAll
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -533,7 +533,7 @@ impl<'i> YggdrasilNode<'i> for ImportSpaceNode<'i> {
         ValkyrieRule::ImportSpace
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -564,7 +564,7 @@ impl<'i> YggdrasilNode<'i> for ImportNameNode<'i> {
         ValkyrieRule::ImportName
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -598,7 +598,7 @@ impl<'i> YggdrasilNode<'i> for ImportAsNode<'i> {
         ValkyrieRule::ImportAs
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -636,11 +636,11 @@ impl<'i> YggdrasilNode<'i> for ImportNameItemNode<'i> {
         ValkyrieRule::ImportNameItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralName(s) => s.get_text(),
-            Self::AttributeName(s) => s.get_text(),
-            Self::Identifier(s) => s.get_text(),
+            Self::ProceduralName(s) => s.get_str(),
+            Self::AttributeName(s) => s.get_str(),
+            Self::Identifier(s) => s.get_str(),
         }
     }
 
@@ -667,7 +667,7 @@ impl<'i> YggdrasilNode<'i> for DefineConstraintNode<'i> {
         ValkyrieRule::DefineConstraint
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -704,7 +704,7 @@ impl<'i> YggdrasilNode<'i> for ConstraintParametersNode<'i> {
         ValkyrieRule::ConstraintParameters
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -732,7 +732,7 @@ impl<'i> YggdrasilNode<'i> for ConstraintBlockNode<'i> {
         ValkyrieRule::ConstraintBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -766,7 +766,7 @@ impl<'i> YggdrasilNode<'i> for ConstraintStatementNode<'i> {
         ValkyrieRule::ConstraintStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -794,7 +794,7 @@ impl<'i> YggdrasilNode<'i> for ConstraintImplementsNode<'i> {
         ValkyrieRule::ConstraintImplements
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -822,7 +822,7 @@ impl<'i> YggdrasilNode<'i> for WhereBlockNode<'i> {
         ValkyrieRule::WhereBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -853,7 +853,7 @@ impl<'i> YggdrasilNode<'i> for WhereBoundNode<'i> {
         ValkyrieRule::WhereBound
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -881,7 +881,7 @@ impl<'i> YggdrasilNode<'i> for DefineClassNode<'i> {
         ValkyrieRule::DefineClass
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -930,7 +930,7 @@ impl<'i> YggdrasilNode<'i> for ClassBlockNode<'i> {
         ValkyrieRule::ClassBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -974,13 +974,13 @@ impl<'i> YggdrasilNode<'i> for ClassTermNode<'i> {
         ValkyrieRule::ClassTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralCall(s) => s.get_text(),
-            Self::DefineMethod(s) => s.get_text(),
-            Self::DefineDomain(s) => s.get_text(),
-            Self::DefineField(s) => s.get_text(),
-            Self::EOS_FREE(s) => s.get_text(),
+            Self::ProceduralCall(s) => s.get_str(),
+            Self::DefineMethod(s) => s.get_str(),
+            Self::DefineDomain(s) => s.get_str(),
+            Self::DefineField(s) => s.get_str(),
+            Self::EOS_FREE(s) => s.get_str(),
         }
     }
 
@@ -1009,7 +1009,7 @@ impl<'i> YggdrasilNode<'i> for KwClassNode<'i> {
         ValkyrieRule::KW_CLASS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1033,7 +1033,7 @@ impl<'i> YggdrasilNode<'i> for DefineFieldNode<'i> {
         ValkyrieRule::DefineField
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1070,7 +1070,7 @@ impl<'i> YggdrasilNode<'i> for ParameterDefaultNode<'i> {
         ValkyrieRule::ParameterDefault
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1098,7 +1098,7 @@ impl<'i> YggdrasilNode<'i> for DefineMethodNode<'i> {
         ValkyrieRule::DefineMethod
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1135,7 +1135,7 @@ impl<'i> YggdrasilNode<'i> for DefineDomainNode<'i> {
         ValkyrieRule::DefineDomain
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1173,9 +1173,9 @@ impl<'i> YggdrasilNode<'i> for DomainTermNode<'i> {
         ValkyrieRule::DomainTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Identifier(s) => s.get_text(),
+            Self::Identifier(s) => s.get_str(),
         }
     }
 
@@ -1200,7 +1200,7 @@ impl<'i> YggdrasilNode<'i> for DefineInheritNode<'i> {
         ValkyrieRule::DefineInherit
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1228,7 +1228,7 @@ impl<'i> YggdrasilNode<'i> for InheritTermNode<'i> {
         ValkyrieRule::InheritTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1259,7 +1259,7 @@ impl<'i> YggdrasilNode<'i> for ObjectStatementNode<'i> {
         ValkyrieRule::ObjectStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1296,7 +1296,7 @@ impl<'i> YggdrasilNode<'i> for DefineEnumerateNode<'i> {
         ValkyrieRule::DefineEnumerate
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1352,12 +1352,12 @@ impl<'i> YggdrasilNode<'i> for FlagTermNode<'i> {
         ValkyrieRule::FlagTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralCall(s) => s.get_text(),
-            Self::DefineMethod(s) => s.get_text(),
-            Self::FlagField(s) => s.get_text(),
-            Self::EOS_FREE(s) => s.get_text(),
+            Self::ProceduralCall(s) => s.get_str(),
+            Self::DefineMethod(s) => s.get_str(),
+            Self::FlagField(s) => s.get_str(),
+            Self::EOS_FREE(s) => s.get_str(),
         }
     }
 
@@ -1385,7 +1385,7 @@ impl<'i> YggdrasilNode<'i> for FlagFieldNode<'i> {
         ValkyrieRule::FlagField
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1419,7 +1419,7 @@ impl<'i> YggdrasilNode<'i> for KwFlagsNode<'i> {
         ValkyrieRule::KW_FLAGS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1443,7 +1443,7 @@ impl<'i> YggdrasilNode<'i> for DefineUnionNode<'i> {
         ValkyrieRule::DefineUnion
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1505,12 +1505,12 @@ impl<'i> YggdrasilNode<'i> for UnionTermNode<'i> {
         ValkyrieRule::UnionTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralCall(s) => s.get_text(),
-            Self::DefineMethod(s) => s.get_text(),
-            Self::DefineVariant(s) => s.get_text(),
-            Self::EOS_FREE(s) => s.get_text(),
+            Self::ProceduralCall(s) => s.get_str(),
+            Self::DefineMethod(s) => s.get_str(),
+            Self::DefineVariant(s) => s.get_str(),
+            Self::EOS_FREE(s) => s.get_str(),
         }
     }
 
@@ -1538,7 +1538,7 @@ impl<'i> YggdrasilNode<'i> for DefineVariantNode<'i> {
         ValkyrieRule::DefineVariant
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1572,7 +1572,7 @@ impl<'i> YggdrasilNode<'i> for KwUnionNode<'i> {
         ValkyrieRule::KW_UNION
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1596,7 +1596,7 @@ impl<'i> YggdrasilNode<'i> for DefineTraitNode<'i> {
         ValkyrieRule::DefineTrait
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1645,7 +1645,7 @@ impl<'i> YggdrasilNode<'i> for DefineExtendsNode<'i> {
         ValkyrieRule::DefineExtends
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1688,7 +1688,7 @@ impl<'i> YggdrasilNode<'i> for TraitBlockNode<'i> {
         ValkyrieRule::TraitBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1729,12 +1729,12 @@ impl<'i> YggdrasilNode<'i> for TraitTermNode<'i> {
         ValkyrieRule::TraitTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralCall(s) => s.get_text(),
-            Self::DefineMethod(s) => s.get_text(),
-            Self::DefineField(s) => s.get_text(),
-            Self::EOS_FREE(s) => s.get_text(),
+            Self::ProceduralCall(s) => s.get_str(),
+            Self::DefineMethod(s) => s.get_str(),
+            Self::DefineField(s) => s.get_str(),
+            Self::EOS_FREE(s) => s.get_str(),
         }
     }
 
@@ -1762,7 +1762,7 @@ impl<'i> YggdrasilNode<'i> for TraitNode<'i> {
         ValkyrieRule::Trait
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1786,7 +1786,7 @@ impl<'i> YggdrasilNode<'i> for InterfaceNode<'i> {
         ValkyrieRule::Interface
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1817,10 +1817,10 @@ impl<'i> YggdrasilNode<'i> for KwTraitNode<'i> {
         ValkyrieRule::KW_TRAIT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Trait(s) => s.get_text(),
-            Self::Interface(s) => s.get_text(),
+            Self::Trait(s) => s.get_str(),
+            Self::Interface(s) => s.get_str(),
         }
     }
 
@@ -1846,7 +1846,7 @@ impl<'i> YggdrasilNode<'i> for DefineFunctionNode<'i> {
         ValkyrieRule::DefineFunction
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1886,7 +1886,7 @@ impl<'i> YggdrasilNode<'i> for DefineLambdaNode<'i> {
         ValkyrieRule::DefineLambda
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1923,7 +1923,7 @@ impl<'i> YggdrasilNode<'i> for FunctionMiddleNode<'i> {
         ValkyrieRule::FunctionMiddle
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1960,7 +1960,7 @@ impl<'i> YggdrasilNode<'i> for TypeHintNode<'i> {
         ValkyrieRule::TypeHint
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -1988,7 +1988,7 @@ impl<'i> YggdrasilNode<'i> for TypeReturnNode<'i> {
         ValkyrieRule::TypeReturn
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2019,7 +2019,7 @@ impl<'i> YggdrasilNode<'i> for TypeEffectNode<'i> {
         ValkyrieRule::TypeEffect
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2047,7 +2047,7 @@ impl<'i> YggdrasilNode<'i> for FunctionParametersNode<'i> {
         ValkyrieRule::FunctionParameters
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2082,10 +2082,10 @@ impl<'i> YggdrasilNode<'i> for ParameterItemNode<'i> {
         ValkyrieRule::ParameterItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ParameterItemControl(s) => s.get_text(),
-            Self::ParameterPair(s) => s.get_text(),
+            Self::ParameterItemControl(s) => s.get_str(),
+            Self::ParameterPair(s) => s.get_str(),
         }
     }
 
@@ -2111,7 +2111,7 @@ impl<'i> YggdrasilNode<'i> for ParameterItemControlNode<'i> {
         ValkyrieRule::ParameterItemControl
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2135,7 +2135,7 @@ impl<'i> YggdrasilNode<'i> for ParameterPairNode<'i> {
         ValkyrieRule::ParameterPair
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2175,7 +2175,7 @@ impl<'i> YggdrasilNode<'i> for ParameterHintNode<'i> {
         ValkyrieRule::ParameterHint
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2199,7 +2199,7 @@ impl<'i> YggdrasilNode<'i> for ContinuationNode<'i> {
         ValkyrieRule::Continuation
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2227,7 +2227,7 @@ impl<'i> YggdrasilNode<'i> for KwFunctionNode<'i> {
         ValkyrieRule::KW_FUNCTION
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2251,7 +2251,7 @@ impl<'i> YggdrasilNode<'i> for DefineVariableNode<'i> {
         ValkyrieRule::DefineVariable
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2298,10 +2298,10 @@ impl<'i> YggdrasilNode<'i> for LetPatternNode<'i> {
         ValkyrieRule::LetPattern
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::StandardPattern(s) => s.get_text(),
-            Self::BarePattern(s) => s.get_text(),
+            Self::StandardPattern(s) => s.get_str(),
+            Self::BarePattern(s) => s.get_str(),
         }
     }
 
@@ -2331,9 +2331,9 @@ impl<'i> YggdrasilNode<'i> for StandardPatternNode<'i> {
         ValkyrieRule::StandardPattern
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::TuplePattern(s) => s.get_text(),
+            Self::TuplePattern(s) => s.get_str(),
         }
     }
 
@@ -2358,7 +2358,7 @@ impl<'i> YggdrasilNode<'i> for BarePatternNode<'i> {
         ValkyrieRule::BarePattern
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2386,7 +2386,7 @@ impl<'i> YggdrasilNode<'i> for BarePatternItemNode<'i> {
         ValkyrieRule::BarePatternItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2417,7 +2417,7 @@ impl<'i> YggdrasilNode<'i> for TuplePatternNode<'i> {
         ValkyrieRule::TuplePattern
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2448,7 +2448,7 @@ impl<'i> YggdrasilNode<'i> for OmitDictNode<'i> {
         ValkyrieRule::OmitDict
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2472,7 +2472,7 @@ impl<'i> YggdrasilNode<'i> for OmitListNode<'i> {
         ValkyrieRule::OmitList
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2506,11 +2506,11 @@ impl<'i> YggdrasilNode<'i> for PatternItemNode<'i> {
         ValkyrieRule::PatternItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::TuplePatternItem(s) => s.get_text(),
-            Self::OmitDict(s) => s.get_text(),
-            Self::OmitList(s) => s.get_text(),
+            Self::TuplePatternItem(s) => s.get_str(),
+            Self::OmitDict(s) => s.get_str(),
+            Self::OmitList(s) => s.get_str(),
         }
     }
 
@@ -2537,7 +2537,7 @@ impl<'i> YggdrasilNode<'i> for TuplePatternItemNode<'i> {
         ValkyrieRule::TuplePatternItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2577,7 +2577,7 @@ impl<'i> YggdrasilNode<'i> for WhileStatementNode<'i> {
         ValkyrieRule::WhileStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2611,7 +2611,7 @@ impl<'i> YggdrasilNode<'i> for WhileNode<'i> {
         ValkyrieRule::While
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2635,7 +2635,7 @@ impl<'i> YggdrasilNode<'i> for UntilNode<'i> {
         ValkyrieRule::Until
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2666,10 +2666,10 @@ impl<'i> YggdrasilNode<'i> for KwWhileNode<'i> {
         ValkyrieRule::KW_WHILE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::While(s) => s.get_text(),
-            Self::Until(s) => s.get_text(),
+            Self::While(s) => s.get_str(),
+            Self::Until(s) => s.get_str(),
         }
     }
 
@@ -2695,7 +2695,7 @@ impl<'i> YggdrasilNode<'i> for ForStatementNode<'i> {
         ValkyrieRule::ForStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2738,7 +2738,7 @@ impl<'i> YggdrasilNode<'i> for IfGuardNode<'i> {
         ValkyrieRule::IfGuard
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2766,7 +2766,7 @@ impl<'i> YggdrasilNode<'i> for ControlFlowNode<'i> {
         ValkyrieRule::ControlFlow
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2803,7 +2803,7 @@ impl<'i> YggdrasilNode<'i> for JumpLabelNode<'i> {
         ValkyrieRule::JumpLabel
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2831,7 +2831,7 @@ impl<'i> YggdrasilNode<'i> for ExpressionRootNode<'i> {
         ValkyrieRule::ExpressionRoot
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2868,7 +2868,7 @@ impl<'i> YggdrasilNode<'i> for MatchExpressionNode<'i> {
         ValkyrieRule::MatchExpression
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2911,7 +2911,7 @@ impl<'i> YggdrasilNode<'i> for SwitchStatementNode<'i> {
         ValkyrieRule::SwitchStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2942,7 +2942,7 @@ impl<'i> YggdrasilNode<'i> for MatchBlockNode<'i> {
         ValkyrieRule::MatchBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -2986,13 +2986,13 @@ impl<'i> YggdrasilNode<'i> for MatchTermsNode<'i> {
         ValkyrieRule::MatchTerms
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::MatchType(s) => s.get_text(),
-            Self::MatchCase(s) => s.get_text(),
-            Self::MatchWhen(s) => s.get_text(),
-            Self::MatchElse(s) => s.get_text(),
-            Self::COMMA(s) => s.get_text(),
+            Self::MatchType(s) => s.get_str(),
+            Self::MatchCase(s) => s.get_str(),
+            Self::MatchWhen(s) => s.get_str(),
+            Self::MatchElse(s) => s.get_str(),
+            Self::COMMA(s) => s.get_str(),
         }
     }
 
@@ -3021,7 +3021,7 @@ impl<'i> YggdrasilNode<'i> for MatchTypeNode<'i> {
         ValkyrieRule::MatchType
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3058,7 +3058,7 @@ impl<'i> YggdrasilNode<'i> for MatchCaseNode<'i> {
         ValkyrieRule::MatchCase
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3102,10 +3102,10 @@ impl<'i> YggdrasilNode<'i> for CasePatternNode<'i> {
         ValkyrieRule::CasePattern
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::StandardPattern(s) => s.get_text(),
-            Self::Namepath(s) => s.get_text(),
+            Self::StandardPattern(s) => s.get_str(),
+            Self::Namepath(s) => s.get_str(),
         }
     }
 
@@ -3131,7 +3131,7 @@ impl<'i> YggdrasilNode<'i> for MatchWhenNode<'i> {
         ValkyrieRule::MatchWhen
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3165,7 +3165,7 @@ impl<'i> YggdrasilNode<'i> for MatchElseNode<'i> {
         ValkyrieRule::MatchElse
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3196,7 +3196,7 @@ impl<'i> YggdrasilNode<'i> for MatchStatementNode<'i> {
         ValkyrieRule::MatchStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3224,7 +3224,7 @@ impl<'i> YggdrasilNode<'i> for MatchNode<'i> {
         ValkyrieRule::Match
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3248,7 +3248,7 @@ impl<'i> YggdrasilNode<'i> for CatchNode<'i> {
         ValkyrieRule::Catch
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3279,10 +3279,10 @@ impl<'i> YggdrasilNode<'i> for KwMatchNode<'i> {
         ValkyrieRule::KW_MATCH
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Match(s) => s.get_text(),
-            Self::Catch(s) => s.get_text(),
+            Self::Match(s) => s.get_str(),
+            Self::Catch(s) => s.get_str(),
         }
     }
 
@@ -3308,7 +3308,7 @@ impl<'i> YggdrasilNode<'i> for BindLNode<'i> {
         ValkyrieRule::BIND_L
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3332,7 +3332,7 @@ impl<'i> YggdrasilNode<'i> for BindRNode<'i> {
         ValkyrieRule::BIND_R
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3356,7 +3356,7 @@ impl<'i> YggdrasilNode<'i> for DotMatchCallNode<'i> {
         ValkyrieRule::DotMatchCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3380,7 +3380,7 @@ impl<'i> YggdrasilNode<'i> for MainExpressionNode<'i> {
         ValkyrieRule::MainExpression
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3411,7 +3411,7 @@ impl<'i> YggdrasilNode<'i> for MainTermNode<'i> {
         ValkyrieRule::MainTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3470,16 +3470,16 @@ impl<'i> YggdrasilNode<'i> for MainFactorNode<'i> {
         ValkyrieRule::MainFactor
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::SwitchStatement(s) => s.get_text(),
-            Self::TryStatement(s) => s.get_text(),
-            Self::MatchExpression(s) => s.get_text(),
-            Self::DefineLambda(s) => s.get_text(),
-            Self::ObjectStatement(s) => s.get_text(),
-            Self::NewStatement(s) => s.get_text(),
-            Self::GroupFactor(s) => s.get_text(),
-            Self::Leading(s) => s.get_text(),
+            Self::SwitchStatement(s) => s.get_str(),
+            Self::TryStatement(s) => s.get_str(),
+            Self::MatchExpression(s) => s.get_str(),
+            Self::DefineLambda(s) => s.get_str(),
+            Self::ObjectStatement(s) => s.get_str(),
+            Self::NewStatement(s) => s.get_str(),
+            Self::GroupFactor(s) => s.get_str(),
+            Self::Leading(s) => s.get_str(),
         }
     }
 
@@ -3511,7 +3511,7 @@ impl<'i> YggdrasilNode<'i> for GroupFactorNode<'i> {
         ValkyrieRule::GroupFactor
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3564,16 +3564,16 @@ impl<'i> YggdrasilNode<'i> for LeadingNode<'i> {
         ValkyrieRule::Leading
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ProceduralCall(s) => s.get_text(),
-            Self::TupleLiteralStrict(s) => s.get_text(),
-            Self::RangeLiteral(s) => s.get_text(),
-            Self::TextLiteral(s) => s.get_text(),
-            Self::Slot(s) => s.get_text(),
-            Self::Number(s) => s.get_text(),
-            Self::Special(s) => s.get_text(),
-            Self::Namepath(s) => s.get_text(),
+            Self::ProceduralCall(s) => s.get_str(),
+            Self::TupleLiteralStrict(s) => s.get_str(),
+            Self::RangeLiteral(s) => s.get_str(),
+            Self::TextLiteral(s) => s.get_str(),
+            Self::Slot(s) => s.get_str(),
+            Self::Number(s) => s.get_str(),
+            Self::Special(s) => s.get_str(),
+            Self::Namepath(s) => s.get_str(),
         }
     }
 
@@ -3605,7 +3605,7 @@ impl<'i> YggdrasilNode<'i> for DotClosureCallNode<'i> {
         ValkyrieRule::DotClosureCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3649,12 +3649,12 @@ impl<'i> YggdrasilNode<'i> for MainSuffixTermNode<'i> {
         ValkyrieRule::MainSuffixTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::DotMatchCall(s) => s.get_text(),
-            Self::DotClosureCall(s) => s.get_text(),
-            Self::TupleCall(s) => s.get_text(),
-            Self::InlineSuffixTerm(s) => s.get_text(),
+            Self::DotMatchCall(s) => s.get_str(),
+            Self::DotClosureCall(s) => s.get_str(),
+            Self::TupleCall(s) => s.get_str(),
+            Self::InlineSuffixTerm(s) => s.get_str(),
         }
     }
 
@@ -3682,7 +3682,7 @@ impl<'i> YggdrasilNode<'i> for MainPrefixNode<'i> {
         ValkyrieRule::MainPrefix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3706,7 +3706,7 @@ impl<'i> YggdrasilNode<'i> for TypePrefixNode<'i> {
         ValkyrieRule::TypePrefix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3730,7 +3730,7 @@ impl<'i> YggdrasilNode<'i> for MainInfixNode<'i> {
         ValkyrieRule::MainInfix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3754,7 +3754,7 @@ impl<'i> YggdrasilNode<'i> for TypeInfixNode<'i> {
         ValkyrieRule::TypeInfix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3778,7 +3778,7 @@ impl<'i> YggdrasilNode<'i> for MainSuffixNode<'i> {
         ValkyrieRule::MainSuffix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3802,7 +3802,7 @@ impl<'i> YggdrasilNode<'i> for TypeSuffixNode<'i> {
         ValkyrieRule::TypeSuffix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3826,7 +3826,7 @@ impl<'i> YggdrasilNode<'i> for InlineExpressionNode<'i> {
         ValkyrieRule::InlineExpression
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3857,7 +3857,7 @@ impl<'i> YggdrasilNode<'i> for InlineTermNode<'i> {
         ValkyrieRule::InlineTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3891,7 +3891,7 @@ impl<'i> YggdrasilNode<'i> for DotCallNode<'i> {
         ValkyrieRule::DotCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3938,13 +3938,13 @@ impl<'i> YggdrasilNode<'i> for InlineSuffixTermNode<'i> {
         ValkyrieRule::InlineSuffixTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::MainSuffix(s) => s.get_text(),
-            Self::DotCall(s) => s.get_text(),
-            Self::InlineTupleCall(s) => s.get_text(),
-            Self::RangeCall(s) => s.get_text(),
-            Self::GenericCall(s) => s.get_text(),
+            Self::MainSuffix(s) => s.get_str(),
+            Self::DotCall(s) => s.get_str(),
+            Self::InlineTupleCall(s) => s.get_str(),
+            Self::RangeCall(s) => s.get_str(),
+            Self::GenericCall(s) => s.get_str(),
         }
     }
 
@@ -3973,7 +3973,7 @@ impl<'i> YggdrasilNode<'i> for TypeExpressionNode<'i> {
         ValkyrieRule::TypeExpression
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -3997,7 +3997,7 @@ impl<'i> YggdrasilNode<'i> for TypeTermNode<'i> {
         ValkyrieRule::TypeTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4038,10 +4038,10 @@ impl<'i> YggdrasilNode<'i> for TypeFactorNode<'i> {
         ValkyrieRule::TypeFactor
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::TypeExpression(s) => s.get_text(),
-            Self::Leading(s) => s.get_text(),
+            Self::TypeExpression(s) => s.get_str(),
+            Self::Leading(s) => s.get_str(),
         }
     }
 
@@ -4074,10 +4074,10 @@ impl<'i> YggdrasilNode<'i> for TypeSuffixTermNode<'i> {
         ValkyrieRule::TypeSuffixTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::GenericHide(s) => s.get_text(),
-            Self::TypeSuffix(s) => s.get_text(),
+            Self::GenericHide(s) => s.get_str(),
+            Self::TypeSuffix(s) => s.get_str(),
         }
     }
 
@@ -4103,7 +4103,7 @@ impl<'i> YggdrasilNode<'i> for TryStatementNode<'i> {
         ValkyrieRule::TryStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4137,7 +4137,7 @@ impl<'i> YggdrasilNode<'i> for NewStatementNode<'i> {
         ValkyrieRule::NewStatement
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4180,7 +4180,7 @@ impl<'i> YggdrasilNode<'i> for NewBlockNode<'i> {
         ValkyrieRule::NewBlock
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4211,7 +4211,7 @@ impl<'i> YggdrasilNode<'i> for NewPairNode<'i> {
         ValkyrieRule::NewPair
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4255,11 +4255,11 @@ impl<'i> YggdrasilNode<'i> for NewPairKeyNode<'i> {
         ValkyrieRule::NewPairKey
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Identifier(s) => s.get_text(),
-            Self::TextRaw(s) => s.get_text(),
-            Self::RangeLiteral(s) => s.get_text(),
+            Self::Identifier(s) => s.get_str(),
+            Self::TextRaw(s) => s.get_str(),
+            Self::RangeLiteral(s) => s.get_str(),
         }
     }
 
@@ -4293,10 +4293,10 @@ impl<'i> YggdrasilNode<'i> for DotCallItemNode<'i> {
         ValkyrieRule::DotCallItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Namepath(s) => s.get_text(),
-            Self::Integer(s) => s.get_text(),
+            Self::Namepath(s) => s.get_str(),
+            Self::Integer(s) => s.get_str(),
         }
     }
 
@@ -4322,7 +4322,7 @@ impl<'i> YggdrasilNode<'i> for InlineTupleCallNode<'i> {
         ValkyrieRule::InlineTupleCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4353,7 +4353,7 @@ impl<'i> YggdrasilNode<'i> for TupleCallNode<'i> {
         ValkyrieRule::TupleCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4387,7 +4387,7 @@ impl<'i> YggdrasilNode<'i> for TupleLiteralNode<'i> {
         ValkyrieRule::TupleLiteral
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4415,7 +4415,7 @@ impl<'i> YggdrasilNode<'i> for TupleLiteralStrictNode<'i> {
         ValkyrieRule::TupleLiteralStrict
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4443,7 +4443,7 @@ impl<'i> YggdrasilNode<'i> for TupleTermsNode<'i> {
         ValkyrieRule::TupleTerms
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4471,7 +4471,7 @@ impl<'i> YggdrasilNode<'i> for TuplePairNode<'i> {
         ValkyrieRule::TuplePair
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4515,11 +4515,11 @@ impl<'i> YggdrasilNode<'i> for TupleKeyNode<'i> {
         ValkyrieRule::TupleKey
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Identifier(s) => s.get_text(),
-            Self::Integer(s) => s.get_text(),
-            Self::TextRaw(s) => s.get_text(),
+            Self::Identifier(s) => s.get_str(),
+            Self::Integer(s) => s.get_str(),
+            Self::TextRaw(s) => s.get_str(),
         }
     }
 
@@ -4546,7 +4546,7 @@ impl<'i> YggdrasilNode<'i> for RangeCallNode<'i> {
         ValkyrieRule::RangeCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4584,10 +4584,10 @@ impl<'i> YggdrasilNode<'i> for RangeLiteralNode<'i> {
         ValkyrieRule::RangeLiteral
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::RangeLiteralIndex0(s) => s.get_text(),
-            Self::RangeLiteralIndex1(s) => s.get_text(),
+            Self::RangeLiteralIndex0(s) => s.get_str(),
+            Self::RangeLiteralIndex1(s) => s.get_str(),
         }
     }
 
@@ -4613,7 +4613,7 @@ impl<'i> YggdrasilNode<'i> for RangeLiteralIndex0Node<'i> {
         ValkyrieRule::RangeLiteralIndex0
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4641,7 +4641,7 @@ impl<'i> YggdrasilNode<'i> for RangeLiteralIndex1Node<'i> {
         ValkyrieRule::RangeLiteralIndex1
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4676,10 +4676,10 @@ impl<'i> YggdrasilNode<'i> for SubscriptAxisNode<'i> {
         ValkyrieRule::SubscriptAxis
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::SubscriptRange(s) => s.get_text(),
-            Self::SubscriptOnly(s) => s.get_text(),
+            Self::SubscriptRange(s) => s.get_str(),
+            Self::SubscriptOnly(s) => s.get_str(),
         }
     }
 
@@ -4705,7 +4705,7 @@ impl<'i> YggdrasilNode<'i> for SubscriptOnlyNode<'i> {
         ValkyrieRule::SubscriptOnly
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4733,7 +4733,7 @@ impl<'i> YggdrasilNode<'i> for SubscriptRangeNode<'i> {
         ValkyrieRule::SubscriptRange
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4767,7 +4767,7 @@ impl<'i> YggdrasilNode<'i> for RangeOmitNode<'i> {
         ValkyrieRule::RangeOmit
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4798,7 +4798,7 @@ impl<'i> YggdrasilNode<'i> for DefineGenericNode<'i> {
         ValkyrieRule::DefineGeneric
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4829,7 +4829,7 @@ impl<'i> YggdrasilNode<'i> for GenericParameterNode<'i> {
         ValkyrieRule::GenericParameter
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4857,7 +4857,7 @@ impl<'i> YggdrasilNode<'i> for GenericParameterPairNode<'i> {
         ValkyrieRule::GenericParameterPair
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4891,7 +4891,7 @@ impl<'i> YggdrasilNode<'i> for GenericCallNode<'i> {
         ValkyrieRule::GenericCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4928,7 +4928,7 @@ impl<'i> YggdrasilNode<'i> for GenericHideNode<'i> {
         ValkyrieRule::GenericHide
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4959,7 +4959,7 @@ impl<'i> YggdrasilNode<'i> for GenericTermsNode<'i> {
         ValkyrieRule::GenericTerms
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -4987,7 +4987,7 @@ impl<'i> YggdrasilNode<'i> for GenericPairNode<'i> {
         ValkyrieRule::GenericPair
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5021,7 +5021,7 @@ impl<'i> YggdrasilNode<'i> for AnnotationHeadNode<'i> {
         ValkyrieRule::AnnotationHead
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5052,7 +5052,7 @@ impl<'i> YggdrasilNode<'i> for AnnotationMixNode<'i> {
         ValkyrieRule::AnnotationMix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5090,10 +5090,10 @@ impl<'i> YggdrasilNode<'i> for AnnotationTermNode<'i> {
         ValkyrieRule::AnnotationTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::AttributeList(s) => s.get_text(),
-            Self::AttributeCall(s) => s.get_text(),
+            Self::AttributeList(s) => s.get_str(),
+            Self::AttributeCall(s) => s.get_str(),
         }
     }
 
@@ -5129,11 +5129,11 @@ impl<'i> YggdrasilNode<'i> for AnnotationTermMixNode<'i> {
         ValkyrieRule::AnnotationTermMix
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::AttributeList(s) => s.get_text(),
-            Self::AttributeCall(s) => s.get_text(),
-            Self::ProceduralCall(s) => s.get_text(),
+            Self::AttributeList(s) => s.get_str(),
+            Self::AttributeCall(s) => s.get_str(),
+            Self::ProceduralCall(s) => s.get_str(),
         }
     }
 
@@ -5160,7 +5160,7 @@ impl<'i> YggdrasilNode<'i> for AttributeListNode<'i> {
         ValkyrieRule::AttributeList
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5188,7 +5188,7 @@ impl<'i> YggdrasilNode<'i> for AttributeCallNode<'i> {
         ValkyrieRule::AttributeCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5216,7 +5216,7 @@ impl<'i> YggdrasilNode<'i> for AttributeItemNode<'i> {
         ValkyrieRule::AttributeItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5253,7 +5253,7 @@ impl<'i> YggdrasilNode<'i> for AttributeNameNode<'i> {
         ValkyrieRule::AttributeName
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5281,7 +5281,7 @@ impl<'i> YggdrasilNode<'i> for ProceduralCallNode<'i> {
         ValkyrieRule::ProceduralCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5315,7 +5315,7 @@ impl<'i> YggdrasilNode<'i> for ProceduralNameNode<'i> {
         ValkyrieRule::ProceduralName
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5343,7 +5343,7 @@ impl<'i> YggdrasilNode<'i> for TextLiteralNode<'i> {
         ValkyrieRule::TextLiteral
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5374,7 +5374,7 @@ impl<'i> YggdrasilNode<'i> for TextRawNode<'i> {
         ValkyrieRule::TextRaw
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5417,7 +5417,7 @@ impl<'i> YggdrasilNode<'i> for TextLNode<'i> {
         ValkyrieRule::Text_L
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5441,7 +5441,7 @@ impl<'i> YggdrasilNode<'i> for TextRNode<'i> {
         ValkyrieRule::Text_R
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5465,7 +5465,7 @@ impl<'i> YggdrasilNode<'i> for TextXNode<'i> {
         ValkyrieRule::Text_X
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5489,7 +5489,7 @@ impl<'i> YggdrasilNode<'i> for TextContent1Node<'i> {
         ValkyrieRule::TEXT_CONTENT1
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5513,7 +5513,7 @@ impl<'i> YggdrasilNode<'i> for TextContent2Node<'i> {
         ValkyrieRule::TEXT_CONTENT2
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5537,7 +5537,7 @@ impl<'i> YggdrasilNode<'i> for TextContent3Node<'i> {
         ValkyrieRule::TEXT_CONTENT3
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5561,7 +5561,7 @@ impl<'i> YggdrasilNode<'i> for TextContent4Node<'i> {
         ValkyrieRule::TEXT_CONTENT4
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5585,7 +5585,7 @@ impl<'i> YggdrasilNode<'i> for TextContent5Node<'i> {
         ValkyrieRule::TEXT_CONTENT5
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5609,7 +5609,7 @@ impl<'i> YggdrasilNode<'i> for TextContent6Node<'i> {
         ValkyrieRule::TEXT_CONTENT6
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5633,7 +5633,7 @@ impl<'i> YggdrasilNode<'i> for ModifierCallNode<'i> {
         ValkyrieRule::ModifierCall
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5661,7 +5661,7 @@ impl<'i> YggdrasilNode<'i> for ModifierAheadNode<'i> {
         ValkyrieRule::ModifierAhead
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5689,7 +5689,7 @@ impl<'i> YggdrasilNode<'i> for KeywordsStopNode<'i> {
         ValkyrieRule::KEYWORDS_STOP
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5713,7 +5713,7 @@ impl<'i> YggdrasilNode<'i> for IdentifierStopNode<'i> {
         ValkyrieRule::IDENTIFIER_STOP
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5741,7 +5741,7 @@ impl<'i> YggdrasilNode<'i> for SlotNode<'i> {
         ValkyrieRule::Slot
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5779,10 +5779,10 @@ impl<'i> YggdrasilNode<'i> for SlotItemNode<'i> {
         ValkyrieRule::SlotItem
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Integer(s) => s.get_text(),
-            Self::Identifier(s) => s.get_text(),
+            Self::Integer(s) => s.get_str(),
+            Self::Identifier(s) => s.get_str(),
         }
     }
 
@@ -5808,7 +5808,7 @@ impl<'i> YggdrasilNode<'i> for NamepathFreeNode<'i> {
         ValkyrieRule::NamepathFree
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5836,7 +5836,7 @@ impl<'i> YggdrasilNode<'i> for NamepathNode<'i> {
         ValkyrieRule::Namepath
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5871,10 +5871,10 @@ impl<'i> YggdrasilNode<'i> for IdentifierNode<'i> {
         ValkyrieRule::Identifier
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::IdentifierBare(s) => s.get_text(),
-            Self::IdentifierRaw(s) => s.get_text(),
+            Self::IdentifierBare(s) => s.get_str(),
+            Self::IdentifierRaw(s) => s.get_str(),
         }
     }
 
@@ -5900,7 +5900,7 @@ impl<'i> YggdrasilNode<'i> for IdentifierBareNode<'i> {
         ValkyrieRule::IdentifierBare
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5924,7 +5924,7 @@ impl<'i> YggdrasilNode<'i> for IdentifierRawNode<'i> {
         ValkyrieRule::IdentifierRaw
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5952,7 +5952,7 @@ impl<'i> YggdrasilNode<'i> for IdentifierRawTextNode<'i> {
         ValkyrieRule::IdentifierRawText
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -5976,7 +5976,7 @@ impl<'i> YggdrasilNode<'i> for SpecialNode<'i> {
         ValkyrieRule::Special
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6007,10 +6007,10 @@ impl<'i> YggdrasilNode<'i> for NumberNode<'i> {
         ValkyrieRule::Number
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::DecimalX(s) => s.get_text(),
-            Self::Decimal(s) => s.get_text(),
+            Self::DecimalX(s) => s.get_str(),
+            Self::Decimal(s) => s.get_str(),
         }
     }
 
@@ -6036,7 +6036,7 @@ impl<'i> YggdrasilNode<'i> for PositiveNode<'i> {
         ValkyrieRule::Positive
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6060,7 +6060,7 @@ impl<'i> YggdrasilNode<'i> for NetativeNode<'i> {
         ValkyrieRule::Netative
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6091,10 +6091,10 @@ impl<'i> YggdrasilNode<'i> for SignNode<'i> {
         ValkyrieRule::Sign
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::Positive(s) => s.get_text(),
-            Self::Netative(s) => s.get_text(),
+            Self::Positive(s) => s.get_str(),
+            Self::Netative(s) => s.get_str(),
         }
     }
 
@@ -6120,7 +6120,7 @@ impl<'i> YggdrasilNode<'i> for IntegerNode<'i> {
         ValkyrieRule::Integer
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6144,7 +6144,7 @@ impl<'i> YggdrasilNode<'i> for DigitsXNode<'i> {
         ValkyrieRule::DigitsX
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6168,7 +6168,7 @@ impl<'i> YggdrasilNode<'i> for DecimalNode<'i> {
         ValkyrieRule::Decimal
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6211,7 +6211,7 @@ impl<'i> YggdrasilNode<'i> for DecimalXNode<'i> {
         ValkyrieRule::DecimalX
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6257,7 +6257,7 @@ impl<'i> YggdrasilNode<'i> for ProportionNode<'i> {
         ValkyrieRule::PROPORTION
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6281,7 +6281,7 @@ impl<'i> YggdrasilNode<'i> for NsConcatNode<'i> {
         ValkyrieRule::NS_CONCAT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6305,7 +6305,7 @@ impl<'i> YggdrasilNode<'i> for ColonNode<'i> {
         ValkyrieRule::COLON
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6329,7 +6329,7 @@ impl<'i> YggdrasilNode<'i> for Arrow1Node<'i> {
         ValkyrieRule::ARROW1
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6353,7 +6353,7 @@ impl<'i> YggdrasilNode<'i> for CommaNode<'i> {
         ValkyrieRule::COMMA
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6377,7 +6377,7 @@ impl<'i> YggdrasilNode<'i> for DotNode<'i> {
         ValkyrieRule::DOT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6401,7 +6401,7 @@ impl<'i> YggdrasilNode<'i> for OpSlotNode<'i> {
         ValkyrieRule::OP_SLOT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6425,7 +6425,7 @@ impl<'i> YggdrasilNode<'i> for OffsetLNode<'i> {
         ValkyrieRule::OFFSET_L
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6449,7 +6449,7 @@ impl<'i> YggdrasilNode<'i> for OffsetRNode<'i> {
         ValkyrieRule::OFFSET_R
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6473,7 +6473,7 @@ impl<'i> YggdrasilNode<'i> for Proportion2Node<'i> {
         ValkyrieRule::PROPORTION2
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6497,7 +6497,7 @@ impl<'i> YggdrasilNode<'i> for OpImportAllNode<'i> {
         ValkyrieRule::OP_IMPORT_ALL
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6521,7 +6521,7 @@ impl<'i> YggdrasilNode<'i> for OpAndThenNode<'i> {
         ValkyrieRule::OP_AND_THEN
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6545,7 +6545,7 @@ impl<'i> YggdrasilNode<'i> for OpBindNode<'i> {
         ValkyrieRule::OP_BIND
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6569,7 +6569,7 @@ impl<'i> YggdrasilNode<'i> for KwControlNode<'i> {
         ValkyrieRule::KW_CONTROL
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6593,7 +6593,7 @@ impl<'i> YggdrasilNode<'i> for KwNamespaceNode<'i> {
         ValkyrieRule::KW_NAMESPACE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6617,7 +6617,7 @@ impl<'i> YggdrasilNode<'i> for KwImportNode<'i> {
         ValkyrieRule::KW_IMPORT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6641,7 +6641,7 @@ impl<'i> YggdrasilNode<'i> for KwConstraintNode<'i> {
         ValkyrieRule::KW_CONSTRAINT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6665,7 +6665,7 @@ impl<'i> YggdrasilNode<'i> for KwWhereNode<'i> {
         ValkyrieRule::KW_WHERE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6689,7 +6689,7 @@ impl<'i> YggdrasilNode<'i> for KwImplementsNode<'i> {
         ValkyrieRule::KW_IMPLEMENTS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6713,7 +6713,7 @@ impl<'i> YggdrasilNode<'i> for KwExtendsNode<'i> {
         ValkyrieRule::KW_EXTENDS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6737,7 +6737,7 @@ impl<'i> YggdrasilNode<'i> for KwInheritsNode<'i> {
         ValkyrieRule::KW_INHERITS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6761,7 +6761,7 @@ impl<'i> YggdrasilNode<'i> for KwForNode<'i> {
         ValkyrieRule::KW_FOR
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6785,7 +6785,7 @@ impl<'i> YggdrasilNode<'i> for KwEndNode<'i> {
         ValkyrieRule::KW_END
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6809,7 +6809,7 @@ impl<'i> YggdrasilNode<'i> for KwLetNode<'i> {
         ValkyrieRule::KW_LET
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6833,7 +6833,7 @@ impl<'i> YggdrasilNode<'i> for KwNewNode<'i> {
         ValkyrieRule::KW_NEW
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6857,7 +6857,7 @@ impl<'i> YggdrasilNode<'i> for KwObjectNode<'i> {
         ValkyrieRule::KW_OBJECT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6881,7 +6881,7 @@ impl<'i> YggdrasilNode<'i> for KwLambdaNode<'i> {
         ValkyrieRule::KW_LAMBDA
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6905,7 +6905,7 @@ impl<'i> YggdrasilNode<'i> for KwIfNode<'i> {
         ValkyrieRule::KW_IF
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6929,7 +6929,7 @@ impl<'i> YggdrasilNode<'i> for KwSwitchNode<'i> {
         ValkyrieRule::KW_SWITCH
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6953,7 +6953,7 @@ impl<'i> YggdrasilNode<'i> for KwTryNode<'i> {
         ValkyrieRule::KW_TRY
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -6977,7 +6977,7 @@ impl<'i> YggdrasilNode<'i> for KwTypeNode<'i> {
         ValkyrieRule::KW_TYPE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7001,7 +7001,7 @@ impl<'i> YggdrasilNode<'i> for KwCaseNode<'i> {
         ValkyrieRule::KW_CASE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7025,7 +7025,7 @@ impl<'i> YggdrasilNode<'i> for KwWhenNode<'i> {
         ValkyrieRule::KW_WHEN
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7049,7 +7049,7 @@ impl<'i> YggdrasilNode<'i> for KwElseNode<'i> {
         ValkyrieRule::KW_ELSE
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7073,7 +7073,7 @@ impl<'i> YggdrasilNode<'i> for KwNotNode<'i> {
         ValkyrieRule::KW_NOT
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7097,7 +7097,7 @@ impl<'i> YggdrasilNode<'i> for KwInNode<'i> {
         ValkyrieRule::KW_IN
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7121,7 +7121,7 @@ impl<'i> YggdrasilNode<'i> for KwIsNode<'i> {
         ValkyrieRule::KW_IS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7145,7 +7145,7 @@ impl<'i> YggdrasilNode<'i> for KwAsNode<'i> {
         ValkyrieRule::KW_AS
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7169,7 +7169,7 @@ impl<'i> YggdrasilNode<'i> for ShebangNode<'i> {
         ValkyrieRule::Shebang
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7193,7 +7193,7 @@ impl<'i> YggdrasilNode<'i> for WhiteSpaceNode<'i> {
         ValkyrieRule::WhiteSpace
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7217,7 +7217,7 @@ impl<'i> YggdrasilNode<'i> for SkipSpaceNode<'i> {
         ValkyrieRule::SkipSpace
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7241,7 +7241,7 @@ impl<'i> YggdrasilNode<'i> for CommentNode<'i> {
         ValkyrieRule::Comment
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7265,7 +7265,7 @@ impl<'i> YggdrasilNode<'i> for StringInterpolationsNode<'i> {
         ValkyrieRule::StringInterpolations
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7309,13 +7309,13 @@ impl<'i> YggdrasilNode<'i> for StringInterpolationTermNode<'i> {
         ValkyrieRule::StringInterpolationTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::EscapeUnicode(s) => s.get_text(),
-            Self::EscapeCharacter(s) => s.get_text(),
-            Self::StringInterpolationSimple(s) => s.get_text(),
-            Self::StringInterpolationComplex(s) => s.get_text(),
-            Self::StringInterpolationText(s) => s.get_text(),
+            Self::EscapeUnicode(s) => s.get_str(),
+            Self::EscapeCharacter(s) => s.get_str(),
+            Self::StringInterpolationSimple(s) => s.get_str(),
+            Self::StringInterpolationComplex(s) => s.get_str(),
+            Self::StringInterpolationText(s) => s.get_str(),
         }
     }
 
@@ -7344,7 +7344,7 @@ impl<'i> YggdrasilNode<'i> for EscapeCharacterNode<'i> {
         ValkyrieRule::EscapeCharacter
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7368,7 +7368,7 @@ impl<'i> YggdrasilNode<'i> for EscapeUnicodeNode<'i> {
         ValkyrieRule::EscapeUnicode
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7396,7 +7396,7 @@ impl<'i> YggdrasilNode<'i> for EscapeUnicodeCodeNode<'i> {
         ValkyrieRule::EscapeUnicodeCode
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7420,7 +7420,7 @@ impl<'i> YggdrasilNode<'i> for StringInterpolationSimpleNode<'i> {
         ValkyrieRule::StringInterpolationSimple
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7451,7 +7451,7 @@ impl<'i> YggdrasilNode<'i> for StringInterpolationTextNode<'i> {
         ValkyrieRule::StringInterpolationText
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7475,7 +7475,7 @@ impl<'i> YggdrasilNode<'i> for StringFormatterNode<'i> {
         ValkyrieRule::StringFormatter
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7499,7 +7499,7 @@ impl<'i> YggdrasilNode<'i> for StringInterpolationComplexNode<'i> {
         ValkyrieRule::StringInterpolationComplex
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7530,7 +7530,7 @@ impl<'i> YggdrasilNode<'i> for StringTemplatesNode<'i> {
         ValkyrieRule::StringTemplates
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7565,10 +7565,10 @@ impl<'i> YggdrasilNode<'i> for StringTemplateTermNode<'i> {
         ValkyrieRule::StringTemplateTerm
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         match self {
-            Self::ForTemplate(s) => s.get_text(),
-            Self::ExpressionTemplate(s) => s.get_text(),
+            Self::ForTemplate(s) => s.get_str(),
+            Self::ExpressionTemplate(s) => s.get_str(),
         }
     }
 
@@ -7594,7 +7594,7 @@ impl<'i> YggdrasilNode<'i> for ExpressionTemplateNode<'i> {
         ValkyrieRule::ExpressionTemplate
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7628,7 +7628,7 @@ impl<'i> YggdrasilNode<'i> for ForTemplateNode<'i> {
         ValkyrieRule::ForTemplate
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7662,7 +7662,7 @@ impl<'i> YggdrasilNode<'i> for ForTemplateBeginNode<'i> {
         ValkyrieRule::ForTemplateBegin
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7708,7 +7708,7 @@ impl<'i> YggdrasilNode<'i> for ForTemplateElseNode<'i> {
         ValkyrieRule::ForTemplateElse
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7742,7 +7742,7 @@ impl<'i> YggdrasilNode<'i> for ForTemplateEndNode<'i> {
         ValkyrieRule::ForTemplateEnd
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7779,7 +7779,7 @@ impl<'i> YggdrasilNode<'i> for TemplateSNode<'i> {
         ValkyrieRule::TEMPLATE_S
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7807,7 +7807,7 @@ impl<'i> YggdrasilNode<'i> for TemplateENode<'i> {
         ValkyrieRule::TEMPLATE_E
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7835,7 +7835,7 @@ impl<'i> YggdrasilNode<'i> for TemplateLNode<'i> {
         ValkyrieRule::TEMPLATE_L
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7859,7 +7859,7 @@ impl<'i> YggdrasilNode<'i> for TemplateRNode<'i> {
         ValkyrieRule::TEMPLATE_R
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 
@@ -7883,7 +7883,7 @@ impl<'i> YggdrasilNode<'i> for TemplateMNode<'i> {
         ValkyrieRule::TEMPLATE_M
     }
 
-    fn get_text(&self) -> &str {
+    fn get_str(&self) -> &'i str {
         self.pair.get_span().as_str()
     }
 

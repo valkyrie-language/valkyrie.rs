@@ -1,4 +1,5 @@
 use super::*;
+use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineEnumerateNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FlagDeclaration> {
@@ -23,7 +24,7 @@ impl<'i> crate::DefineEnumerateNode<'i> {
 
 impl<'i> crate::KwFlagsNode<'i> {
     pub(crate) fn build(&self) -> FlagKind {
-        match self.text.as_str() {
+        match self.get_str() {
             "enumerate" | "enum" => FlagKind::Enumerate,
             "flags" => FlagKind::Flags,
             _ => unreachable!(),
@@ -36,7 +37,7 @@ impl<'i> crate::FlagTermNode<'i> {
             Self::ProceduralCall(v) => v.build(ctx).into(),
             Self::DefineMethod(v) => v.build(ctx)?.into(),
             Self::FlagField(v) => v.build(ctx)?.into(),
-            Self::EosFree(_) => return Ok(None),
+            Self::EOS_FREE(_) => return Ok(None),
         };
         Ok(Some(value))
     }

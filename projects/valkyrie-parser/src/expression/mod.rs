@@ -1,8 +1,10 @@
-use crate::helpers::ProgramState;
+use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension};
 use nyar_error::{NyarError, Result, SourceID};
 use pratt::{Affix, PrattParser, Precedence};
 use std::str::FromStr;
 use valkyrie_ast::*;
+use yggdrasil_rt::YggdrasilNode;
+
 mod call_dot;
 mod call_dot_closure;
 mod call_dot_match;
@@ -10,21 +12,21 @@ mod call_generic;
 mod control_flow;
 mod operators;
 
-impl crate::ExpressionRootNode {
+impl<'i> crate::ExpressionRootNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<StatementKind> {
-        let expr = self.main_expression.build(ctx)?;
-        let eos = self.eos.is_some();
+        let expr = self.main_expression().build(ctx)?;
+        let eos = self.eos().is_some();
         let ex = ExpressionNode { omit: eos, body: expr, span: self.get_range32() };
         Ok(StatementKind::Expression(Box::new(ex)))
     }
 }
 
-impl crate::MainExpressionNode {
+impl<'i> crate::MainExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.main_term.split_first().expect("at least one term");
+        let (head, rest) = self.main_term().split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
-        for (infix, rhs) in self.main_infix.iter().zip(rest.iter()) {
+        for (infix, rhs) in self.main_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));
             rhs.push_tokens(&mut stream, ctx)?;
         }
@@ -33,12 +35,12 @@ impl crate::MainExpressionNode {
         Ok(expr)
     }
 }
-impl crate::InlineExpressionNode {
+impl<'i> crate::InlineExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.inline_term.split_first().expect("at least one term");
+        let (head, rest) = self.inline_term().split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
-        for (infix, rhs) in self.main_infix.iter().zip(rest.iter()) {
+        for (infix, rhs) in self.main_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));
             rhs.push_tokens(&mut stream, ctx)?;
         }
@@ -47,16 +49,16 @@ impl crate::InlineExpressionNode {
         Ok(expr)
     }
 }
-impl crate::TypeExpressionNode {
+impl<'i> crate::TypeExpressionNode<'i> {
     pub fn build_external(&self, file: SourceID) -> Result<ExpressionKind> {
         let mut stream = ProgramState::new(file);
         self.build(&mut stream)
     }
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.type_term.split_first().expect("at least one term");
+        let (head, rest) = self.type_term().split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
-        for (infix, rhs) in self.type_infix.iter().zip(rest.iter()) {
+        for (infix, rhs) in self.type_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));
             rhs.push_tokens(&mut stream, ctx)?;
         }
@@ -66,40 +68,40 @@ impl crate::TypeExpressionNode {
     }
 }
 
-impl crate::MainTermNode {
+impl<'i> crate::MainTermNode<'i> {
     fn push_tokens(&self, stream: &mut Vec<TokenStream>, ctx: &mut ProgramState) -> Result<()> {
-        for i in &self.main_prefix {
+        for i in &self.main_prefix() {
             stream.push(TokenStream::Prefix(i.as_operator()))
         }
-        let main = self.main_factor.build(ctx)?;
+        let main = self.main_factor().build(ctx)?;
         stream.push(TokenStream::Term(main));
-        for i in &self.main_suffix_term {
+        for i in &self.main_suffix_term() {
             stream.push(i.as_token(ctx)?)
         }
         Ok(())
     }
 }
-impl crate::InlineTermNode {
+impl<'i> crate::InlineTermNode<'i> {
     fn push_tokens(&self, stream: &mut Vec<TokenStream>, ctx: &mut ProgramState) -> Result<()> {
-        for i in &self.main_prefix {
+        for i in &self.main_prefix() {
             stream.push(TokenStream::Prefix(i.as_operator()))
         }
-        let main = self.main_factor.build(ctx)?;
+        let main = self.main_factor().build(ctx)?;
         stream.push(TokenStream::Term(main));
-        for i in &self.inline_suffix_term {
+        for i in &self.inline_suffix_term() {
             stream.push(i.as_token(ctx)?)
         }
         Ok(())
     }
 }
-impl crate::TypeTermNode {
+impl<'i> crate::TypeTermNode<'i> {
     fn push_tokens(&self, stream: &mut Vec<TokenStream>, ctx: &mut ProgramState) -> Result<()> {
-        for i in &self.type_prefix {
+        for i in &self.type_prefix() {
             stream.push(TokenStream::Prefix(i.as_operator()))
         }
-        let main = self.main_factor.build(ctx)?;
+        let main = self.main_factor().build(ctx)?;
         stream.push(TokenStream::Term(main));
-        for i in &self.type_suffix_term {
+        for i in &self.type_suffix_term() {
             stream.push(i.as_token(ctx)?)
         }
         Ok(())
@@ -176,11 +178,11 @@ where
     }
 }
 
-impl crate::MainFactorNode {
+impl<'i> crate::MainFactorNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         match self {
             Self::Leading(v) => v.build(ctx),
-            Self::GroupFactor(v) => v.main_expression.build(ctx),
+            Self::GroupFactor(v) => v.main_expression().build(ctx),
             Self::NewStatement(v) => v.build(ctx).map(Into::into),
             Self::ObjectStatement(v) => v.build(ctx).map(Into::into),
             Self::DefineLambda(v) => v.build(ctx).map(Into::into),
@@ -190,7 +192,7 @@ impl crate::MainFactorNode {
         }
     }
 }
-impl crate::TypeFactorNode {
+impl<'i> crate::TypeFactorNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         match self {
             Self::Leading(v) => v.build(ctx),
@@ -199,7 +201,7 @@ impl crate::TypeFactorNode {
     }
 }
 
-impl crate::MainSuffixTermNode {
+impl<'i> crate::MainSuffixTermNode<'i> {
     fn as_token(&self, ctx: &mut ProgramState) -> Result<TokenStream> {
         let token = match self {
             Self::InlineSuffixTerm(v) => v.as_token(ctx)?,
@@ -211,7 +213,7 @@ impl crate::MainSuffixTermNode {
     }
 }
 
-impl crate::InlineSuffixTermNode {
+impl<'i> crate::InlineSuffixTermNode<'i> {
     fn as_token(&self, ctx: &mut ProgramState) -> Result<TokenStream> {
         let token = match self {
             Self::MainSuffix(v) => TokenStream::Postfix(v.as_operator()),
@@ -224,7 +226,7 @@ impl crate::InlineSuffixTermNode {
     }
 }
 
-impl crate::TypeSuffixTermNode {
+impl<'i> crate::TypeSuffixTermNode<'i> {
     fn as_token(&self, ctx: &mut ProgramState) -> Result<TokenStream> {
         let token = match self {
             Self::GenericHide(v) => TokenStream::Generic(v.build_call(ctx)?),

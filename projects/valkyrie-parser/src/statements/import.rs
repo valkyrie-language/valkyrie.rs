@@ -51,7 +51,7 @@ impl<'i> crate::ImportTermNode<'i> {
             Self::ImportAll(v) => Some(v.build(ctx).into()),
             Self::ImportSpace(v) => Some(v.build(ctx).into()),
             Self::ImportName(v) => Some(v.build(ctx).into()),
-            Self::EosFree(_) => None,
+            Self::EOS_FREE(_) => None,
         }
     }
 }
@@ -79,13 +79,13 @@ impl<'i> crate::ImportNameNode<'i> {
     }
 }
 
-impl crate::ImportAsNode {
+impl<'i> crate::ImportAsNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ImportAliasItem> {
         Some(self.alias().as_ref()?.build(ctx))
     }
 }
 
-impl crate::ImportNameItemNode {
+impl<'i> crate::ImportNameItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> ImportAliasItem {
         match self {
             Self::ProceduralName(v) => ImportAliasItem::Procedural(v.identifier().build(ctx.file)),

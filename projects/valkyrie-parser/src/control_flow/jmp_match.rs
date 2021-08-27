@@ -18,7 +18,7 @@ impl<'i> crate::MatchExpressionNode<'i> {
 
 impl<'i> crate::MatchBlockNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> PatternsList {
-        let mut list = PatternsList::new(self.match_terms().len(), &self.span());
+        let mut list = PatternsList::new(self.match_terms().len(), &self.get_range32());
         for term in &self.match_terms() {
             match term.build(ctx) {
                 Ok(o) => list.branches.extend(o),
@@ -32,8 +32,8 @@ impl<'i> crate::MatchBlockNode<'i> {
 impl<'i> crate::KwMatchNode<'i> {
     pub(crate) fn build(&self) -> MatchKind {
         match self {
-            Self::Match => MatchKind::Typing,
-            Self::Catch => MatchKind::Effect,
+            Self::Match(_) => MatchKind::Typing,
+            Self::Catch(_) => MatchKind::Effect,
         }
     }
 }
@@ -45,7 +45,7 @@ impl<'i> crate::MatchTermsNode<'i> {
             Self::MatchElse(v) => v.build(ctx)?,
             Self::MatchType(v) => v.build(ctx)?,
             Self::MatchWhen(v) => v.build(ctx)?,
-            Self::Comma(_) => return Ok(None),
+            Self::COMMA(_) => return Ok(None),
         };
         Ok(Some(value))
     }

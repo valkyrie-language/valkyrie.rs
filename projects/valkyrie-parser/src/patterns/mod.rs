@@ -3,7 +3,7 @@ use nyar_error::Result;
 use std::sync::Arc;
 use valkyrie_ast::*;
 
-impl crate::LetPatternNode {
+impl<'i> crate::LetPatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         match self {
             Self::BarePattern(v) => v.build(ctx),
@@ -11,7 +11,7 @@ impl crate::LetPatternNode {
         }
     }
 }
-impl crate::StandardPatternNode {
+impl<'i> crate::StandardPatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         match self {
             Self::TuplePattern(v) => v.build(ctx),
@@ -19,10 +19,10 @@ impl crate::StandardPatternNode {
     }
 }
 
-impl crate::BarePatternNode {
+impl<'i> crate::BarePatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         let mut terms = vec![];
-        for node in &self.bare_pattern_item {
+        for node in &self.bare_pattern_item() {
             match node.build(ctx) {
                 Ok(o) => terms.push(o),
                 Err(e) => ctx.add_error(e),
@@ -33,18 +33,18 @@ impl crate::BarePatternNode {
     }
 }
 
-impl crate::BarePatternItemNode {
+impl<'i> crate::BarePatternItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
-        let identifier = self.identifier.build(ctx.file);
+        let identifier = self.identifier().build(ctx.file);
         let id = IdentifierPattern { modifiers: Default::default(), identifier };
         Ok(PatternNode::Atom(Box::new(id)))
     }
 }
 
-impl crate::TuplePatternNode {
+impl<'i> crate::TuplePatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         let mut terms = vec![];
-        for node in &self.pattern_item {
+        for node in &self.pattern_item() {
             match node.build(ctx) {
                 Ok(o) => terms.push(o),
                 Err(e) => return Err(e),
@@ -54,14 +54,14 @@ impl crate::TuplePatternNode {
         Ok(PatternNode::Tuple(Box::new(tuple)))
     }
 }
-impl crate::PatternItemNode {
+impl<'i> crate::PatternItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         let value = match self {
-            Self::OmitDict => PatternNode::Atom(Box::new(IdentifierPattern {
+            Self::OmitDict(_) => PatternNode::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
                 identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             })),
-            Self::OmitList => PatternNode::Atom(Box::new(IdentifierPattern {
+            Self::OmitList(_) => PatternNode::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
                 identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             })),
@@ -71,9 +71,9 @@ impl crate::PatternItemNode {
     }
 }
 
-impl crate::TuplePatternItemNode {
+impl<'i> crate::TuplePatternItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
-        let identifier = self.identifier.build(ctx.file);
+        let identifier = self.identifier().build(ctx.file);
         let id = IdentifierPattern { modifiers: Default::default(), identifier };
         Ok(PatternNode::Atom(Box::new(id)))
     }

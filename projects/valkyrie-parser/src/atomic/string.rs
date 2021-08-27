@@ -15,22 +15,22 @@ impl<'i> crate::TextRawNode<'i> {
     pub(crate) fn build(&self, file: SourceID) -> StringTextNode {
         let mut buffer = String::new();
         if let Some(s) = &self.text_content_1() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         if let Some(s) = &self.text_content_2() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         if let Some(s) = &self.text_content_3() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         if let Some(s) = &self.text_content_4() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         if let Some(s) = &self.text_content_5() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         if let Some(s) = &self.text_content_6() {
-            buffer.push_str(&s.get_text())
+            buffer.push_str(s.get_str())
         }
         StringTextNode { text: buffer, span: file.with_range(self.get_range32()) }
     }

@@ -205,7 +205,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "⁏|;;",
+                        raw: "/⁏|;;/",
                         span: 873..881,
                     },
                 },
@@ -5307,7 +5307,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[<「」>]|\\.{2,3}",
+                        raw: "/[<「」>]|\\.{2,3}/",
                         span: 6827..6847,
                     },
                 },
@@ -5473,7 +5473,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[.]{2,3}|[%^]",
+                        raw: "/[.]{2,3}|[%^]/",
                         span: 6980..6995,
                     },
                 },
@@ -5599,7 +5599,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "micro|macro|function|func|fun|fn",
+                        raw: "/micro|macro|function|func|fun|fn/",
                         span: 7105..7139,
                     },
                 },
@@ -8422,7 +8422,7 @@ GrammarInfo {
                                         tag: None,
                                         remark: false,
                                         body: YggdrasilRegex {
-                                            raw: "type|case|when|else|[,，]",
+                                            raw: "/type|case|when|else|[,，]/",
                                             span: 10038..10066,
                                         },
                                     },
@@ -8561,7 +8561,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "≔|:=",
+                        raw: "/≔|:=/",
                         span: 10197..10205,
                     },
                 },
@@ -8593,7 +8593,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "≕|=:",
+                        raw: "/≕|=:/",
                         span: 10218..10226,
                     },
                 },
@@ -9119,7 +9119,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[¬!+]\n    | [-]\n    | [.]{2,3}\n    | [⅟]\n    | [√∛∜]\n    | [&*]",
+                        raw: "/ [¬!+]\n    | [-]\n    | [.]{2,3}\n    | [⅟]\n    | [√∛∜]\n    | [&*]\n    /",
                         span: 11510..11590,
                     },
                 },
@@ -9151,7 +9151,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[-+¬]\n    | [&^]",
+                        raw: "/ [-+¬]\n    | [&^]\n    /",
                         span: 11654..11679,
                     },
                 },
@@ -9183,7 +9183,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[+\\-*٪⁒÷/%]=?\n    | /%=? | %%=?\n    | [√^]\n    # start with ?, !, =\n    | [?]=\n    | !==|=!=|===|==|!=|=|[!≢≠≡]\n    # start with `<, >`\n    | <<<|<<=|<<|<=|[⋘≪⩽≤<]\n    | >>>|>>=|>>|>=|[⋙≫⩾≥>]\n    # start with &, |\n    | [&|]{1,3}\n    | [∧⊼⩟∨⊽⊻]\n    # start with .\n    | [.]{1,2}[<=]\n    | [.]=\n    | [∈∊∉∋∍∌]\n    | (not\\s+)?in\n    | is(\\s+not)?\n    | as[*!?]?\n    # map, apply\n    | /@ | [⇴⨵⊕⟴] | @{2,3}",
+                        raw: "/ [+\\\\-*٪⁒÷\\/%]=?\n    | \\/%=? | %%=?\n    | [√^]\n    # start with ?, !, =\n    | [?]=\n    | !==|=!=|===|==|!=|=|[!≢≠≡]\n    # start with `<, >`\n    | <<<|<<=|<<|<=|[⋘≪⩽≤<]\n    | >>>|>>=|>>|>=|[⋙≫⩾≥>]\n    # start with &, |\n    | [&|]{1,3}\n    | [∧⊼⩟∨⊽⊻]\n    # start with .\n    | [.]{1,2}[<=]\n    | [.]=\n    | [∈∊∉∋∍∌]\n    | (not\\s+)?in\n    | is(\\s+not)?\n    | as[*!?]?\n    # map, apply\n    | \\/@ | [⇴⨵⊕⟴] | @{2,3}\n    /",
                         span: 11744..12219,
                     },
                 },
@@ -9215,7 +9215,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[⟶]\n    | ->\n    | [-+&|∧∨]",
+                        raw: "/ [⟶]\n    | ->\n    | [-+&|∧∨]\n    /",
                         span: 12282..12323,
                     },
                 },
@@ -9296,7 +9296,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[!?]",
+                        raw: "/[!?]/",
                         span: 12519..12525,
                     },
                 },
@@ -15024,7 +15024,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "template | generic | constraint\n    | class | structure\n    | enumerate | flags | union\n    | function | micro | macro\n    | trait | interface\n    | extends?",
+                        raw: "/ template | generic | constraint\n    | class | structure\n    | enumerate | flags | union\n    | function | micro | macro\n    | trait | interface\n    | extends?\n    /",
                         span: 19009..19174,
                     },
                 },
@@ -15073,7 +15073,7 @@ GrammarInfo {
                                 tag: None,
                                 remark: false,
                                 body: YggdrasilRegex {
-                                    raw: "[\\[\\](){}<>⟨:∷,.;∈=]|in|is",
+                                    raw: "/[\\[\\](){}<>⟨:∷,.;∈=]|in|is/",
                                     span: 19241..19275,
                                 },
                             },
@@ -15398,7 +15398,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[_\\p{XID_start}]\\p{XID_continue}*",
+                        raw: "/[_\\p{XID_start}]\\p{XID_continue}*/",
                         span: 19748..19783,
                     },
                 },
@@ -15542,7 +15542,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[∅∞]|true|false|[?]{3}",
+                        raw: "/[∅∞]|true|false|[?]{3}/",
                         span: 19915..19943,
                     },
                 },
@@ -15686,7 +15686,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[0-9](_*[0-9])*",
+                        raw: "/[0-9](_*[0-9])*/",
                         span: 20193..20210,
                     },
                 },
@@ -15716,7 +15716,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[0-9a-zA-Z](_*[0-9a-zA-Z])*",
+                        raw: "/[0-9a-zA-Z](_*[0-9a-zA-Z])*/",
                         span: 20238..20267,
                     },
                 },
@@ -15814,7 +15814,7 @@ GrammarInfo {
                                                                 tag: None,
                                                                 remark: false,
                                                                 body: YggdrasilRegex {
-                                                                    raw: "[⁑]|[*]{2}",
+                                                                    raw: "/[⁑]|[*]{2}/",
                                                                     span: 20341..20355,
                                                                 },
                                                             },
@@ -15879,7 +15879,7 @@ GrammarInfo {
                                                     tag: None,
                                                     remark: false,
                                                     body: YggdrasilRegex {
-                                                        raw: "[_]*",
+                                                        raw: "/[_]*/",
                                                         span: 20390..20396,
                                                     },
                                                 },
@@ -15953,7 +15953,7 @@ GrammarInfo {
                                             tag: None,
                                             remark: false,
                                             body: YggdrasilRegex {
-                                                raw: "[⁂]|[*]{3}",
+                                                raw: "/[⁂]|[*]{3}/",
                                                 span: 20460..20474,
                                             },
                                         },
@@ -16022,7 +16022,7 @@ GrammarInfo {
                                                     tag: None,
                                                     remark: false,
                                                     body: YggdrasilRegex {
-                                                        raw: "[⁑]|[*]{2}",
+                                                        raw: "/[⁑]|[*]{2}/",
                                                         span: 20521..20535,
                                                     },
                                                 },
@@ -16081,7 +16081,7 @@ GrammarInfo {
                                                                                                 tag: None,
                                                                                                 remark: false,
                                                                                                 body: YggdrasilRegex {
-                                                                                                    raw: "[_]*",
+                                                                                                    raw: "/[_]*/",
                                                                                                     span: 20576..20582,
                                                                                                 },
                                                                                             },
@@ -16164,7 +16164,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "∷|::",
+                        raw: "/∷|::/",
                         span: 20805..20813,
                     },
                 },
@@ -16194,7 +16194,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[.∷]|::",
+                        raw: "/[.∷]|::/",
                         span: 20829..20840,
                     },
                 },
@@ -16254,7 +16254,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[:：⟶]|->",
+                        raw: "/[:：⟶]|->/",
                         span: 20871..20885,
                     },
                 },
@@ -16344,7 +16344,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[$]{1,3}",
+                        raw: "/[$]{1,3}/",
                         span: 20935..20945,
                     },
                 },
@@ -16436,7 +16436,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[.．∷]|::",
+                        raw: "/[.．∷]|::/",
                         span: 21042..21056,
                     },
                 },
@@ -16534,7 +16534,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "≔|:=",
+                        raw: "/≔|:=/",
                         span: 21156..21164,
                     },
                 },
@@ -16566,7 +16566,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "continue\n    | break\n    | fallthrough!?\n    | raise | throw\n    | return\n    | resume\n    | yield\\s+break\n    | yield\\s+from\n    | yield\\s+wait\n    | yield(\\s+return)?",
+                        raw: "/ continue\n    | break\n    | fallthrough!?\n    | raise | throw\n    | return\n    | resume\n    | yield\\s+break\n    | yield\\s+from\n    | yield\\s+wait\n    | yield(\\s+return)?\n    /",
                         span: 21227..21403,
                     },
                 },
@@ -16664,7 +16664,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "template|generic|constraint|∀",
+                        raw: "/template|generic|constraint|∀/",
                         span: 21639..21672,
                     },
                 },
@@ -16729,7 +16729,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "implements?",
+                        raw: "/implements?/",
                         span: 21714..21727,
                     },
                 },
@@ -16761,7 +16761,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "extends?",
+                        raw: "/extends?/",
                         span: 21744..21754,
                     },
                 },
@@ -16793,7 +16793,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "inherits?",
+                        raw: "/inherits?/",
                         span: 21772..21783,
                     },
                 },
@@ -17287,7 +17287,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "in|∈",
+                        raw: "/in|∈/",
                         span: 22555..22563,
                     },
                 },
@@ -17427,7 +17427,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[^\\S\\r\\n]+",
+                        raw: "/[^\\\\S\\r\\n]+/",
                         span: 22796..22809,
                     },
                 },
@@ -17457,7 +17457,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "\\p{White_Space}+",
+                        raw: "/\\p{White_Space}+/",
                         span: 22855..22873,
                     },
                 },
@@ -17499,7 +17499,7 @@ GrammarInfo {
                                             tag: None,
                                             remark: false,
                                             body: YggdrasilRegex {
-                                                raw: "[⍝🗨]|\\{2}",
+                                                raw: "/[⍝🗨]|\\\\{2}/",
                                                 span: 22919..22936,
                                             },
                                         },
@@ -17653,7 +17653,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "\\\\.|\\{\\{|\\}\\}",
+                        raw: "/\\\\\\\\.|\\{\\{|\\}\\}/",
                         span: 23624..23641,
                     },
                 },
@@ -17767,7 +17767,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[0-9a-zA-Z]*",
+                        raw: "/[0-9a-zA-Z]*/",
                         span: 23754..23768,
                     },
                 },
@@ -17914,7 +17914,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[^{}\\\\]+",
+                        raw: "/[^{}\\\\\\\\]+/",
                         span: 23901..23913,
                     },
                 },
@@ -17944,7 +17944,7 @@ GrammarInfo {
                     tag: None,
                     remark: false,
                     body: YggdrasilRegex {
-                        raw: "[^}]+",
+                        raw: "/[^}]+/",
                         span: 23949..23956,
                     },
                 },

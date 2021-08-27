@@ -8,30 +8,30 @@ use super::*;
 //     | [⁑⁂]
 // )"#;
 
-impl crate::AnnotationMixNode {
+impl<'i> crate::AnnotationMixNode<'i> {
     pub(crate) fn annotations(&self, ctx: &mut ProgramState) -> Result<AnnotationNode> {
-        let attributes = build_annotation_terms_mix(&self.annotation_term_mix, ctx)?;
-        let modifiers = ModifierList { terms: self.modifier_ahead.iter().map(|s| s.identifier.build(ctx.file)).collect() };
+        let attributes = build_annotation_terms_mix(&self.annotation_term_mix(), ctx)?;
+        let modifiers = ModifierList { terms: self.modifier_ahead().iter().map(|s| s.identifier().build(ctx.file)).collect() };
         Ok(AnnotationNode { documents: DocumentationList { terms: vec![] }, attributes, modifiers })
     }
 }
 
-impl crate::AnnotationHeadNode {
+impl<'i> crate::AnnotationHeadNode<'i> {
     pub(crate) fn annotations(&self, ctx: &mut ProgramState) -> AnnotationNode {
-        let modifiers = ModifierList { terms: self.modifier_call.iter().map(|s| s.identifier.build(ctx.file)).collect() };
+        let modifiers = ModifierList { terms: self.modifier_call().iter().map(|s| s.identifier().build(ctx.file)).collect() };
         AnnotationNode {
             documents: DocumentationList { terms: vec![] },
-            attributes: build_annotation_terms(&self.annotation_term, ctx),
+            attributes: build_annotation_terms(&self.annotation_term(), ctx),
             modifiers,
         }
     }
 }
 
-impl crate::AttributeItemNode {
+impl<'i> crate::AttributeItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeTerm {
         AttributeTerm {
             kind: Default::default(),
-            path: self.namepath.build(ctx),
+            path: self.namepath().build(ctx),
             variant: vec![],
             arguments: self.arguments(ctx),
             domain: self.domain(ctx),
@@ -39,39 +39,39 @@ impl crate::AttributeItemNode {
         }
     }
     fn domain(&self, ctx: &mut ProgramState) -> Option<StatementBlock> {
-        Some(self.continuation.as_ref()?.build(ctx))
+        Some(self.continuation().as_ref()?.build(ctx))
     }
     fn arguments(&self, ctx: &mut ProgramState) -> ArgumentsList {
-        match &self.tuple_literal {
+        match &self.tuple_literal() {
             Some(s) => s.to_hir(ctx),
             None => ArgumentsList::default(),
         }
     }
 }
 
-impl crate::AnnotationTermNode {
+impl<'i> crate::AnnotationTermNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeList {
         let terms = match self {
-            Self::AttributeCall(v) => vec![v.attribute_item.build(ctx)],
-            Self::AttributeList(v) => v.attribute_item.iter().map(|v| v.build(ctx)).collect(),
+            Self::AttributeCall(v) => vec![v.attribute_item().build(ctx)],
+            Self::AttributeList(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
         };
         AttributeList { terms }
     }
 }
 
-impl crate::AnnotationTermMixNode {
+impl<'i> crate::AnnotationTermMixNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeList {
         let terms = match self {
-            Self::AttributeCall(v) => vec![v.attribute_item.build(ctx)],
+            Self::AttributeCall(v) => vec![v.attribute_item().build(ctx)],
             Self::ProceduralCall(v) => vec![v.build(ctx).into()],
-            Self::AttributeList(v) => v.attribute_item.iter().map(|v| v.build(ctx)).collect(),
+            Self::AttributeList(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
         };
         AttributeList { terms }
     }
 }
 
-impl crate::ModifierAheadNode {
+impl<'i> crate::ModifierAheadNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> IdentifierNode {
-        self.identifier.build(ctx.file)
+        self.identifier().build(ctx.file)
     }
 }

@@ -48,24 +48,24 @@ use super::*;
 //     | [↻↺⇆↹⇄⇋⇌⇅]
 // )"#
 
-impl crate::ControlFlowNode {
+impl<'i> crate::ControlFlowNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ControlNode> {
-        let expression = match &self.main_expression {
+        let expression = match &self.main_expression() {
             Some(s) => Some(s.build(ctx)?),
             None => None,
         };
         Ok(ControlNode {
-            kind: self.kw_control.build(ctx),
-            label: self.jump_label.build(ctx),
+            kind: self.kw_control().build(ctx),
+            label: self.jump_label().build(ctx),
             expression,
             span: self.get_range32(),
         })
     }
 }
 
-impl crate::KwControlNode {
+impl<'i> crate::KwControlNode<'i> {
     pub(crate) fn build(&self, _: &mut ProgramState) -> ControlKind {
-        match self.text.as_str() {
+        match self.get_str() {
             "break" => ControlKind::Break,
             "continue" => ControlKind::Continue,
             "fallthrough" => ControlKind::Fallthrough,
@@ -88,7 +88,7 @@ impl crate::KwControlNode {
                     ControlKind::YieldReturn
                 }
             }
-            _ => unreachable!("Invalid control flow keyword `{}`", self.text),
+            _ => unreachable!("Invalid control flow keyword `{}`", self.get_str()),
         }
     }
 }

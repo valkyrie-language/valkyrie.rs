@@ -1,5 +1,6 @@
 use super::*;
 use nyar_error::{ReportKind, SourceSpan, SyntaxError};
+use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineFunctionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FunctionDeclaration> {
@@ -18,7 +19,7 @@ impl<'i> crate::DefineFunctionNode<'i> {
 
 impl<'i> crate::KwFunctionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> FunctionKind {
-        match self.text.as_str() {
+        match self.get_str() {
             "macro" => FunctionKind::Macro,
             "micro" => FunctionKind::Micro,
             deprecated @ ("function" | "func" | "fun" | "fn") => {
@@ -41,7 +42,7 @@ impl<'i> crate::KwFunctionNode<'i> {
 impl<'i> crate::FunctionMiddleNode<'i> {
     pub(crate) fn returns(&self, ctx: &mut ProgramState) -> Result<FunctionReturnNode> {
         let typing = match &self.type_return() {
-            Some(s) => Some(s.type_expression.build(ctx)?),
+            Some(s) => Some(s.type_expression().build(ctx)?),
             None => None,
         };
         let effect = match &self.type_effect() {
@@ -63,7 +64,7 @@ impl<'i> crate::FunctionMiddleNode<'i> {
         let mut terms = vec![];
         match &self.define_generic() {
             Some(s) => {
-                for term in &s.generic_parameter.generic_parameter_pair {
+                for term in &s.generic_parameter().generic_parameter_pair() {
                     match term.build(ctx) {
                         Ok(s) => terms.push(s),
                         Err(e) => ctx.add_error(e),
@@ -147,9 +148,9 @@ impl<'i> crate::ParameterItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ParameterMixed> {
         let value = match self {
             Self::ParameterPair(v) => v.build(ctx)?,
-            Self::ParameterItemControl(v) => match v.text.as_str() {
-                "「" | "<" => ParameterMixed::LMark(ctx.file.with_range(v.span().clone())),
-                "」" | ">" => ParameterMixed::RMark(ctx.file.with_range(v.span().clone())),
+            Self::ParameterItemControl(v) => match v.get_str() {
+                "「" | "<" => ParameterMixed::LMark(ctx.file.with_range(v.get_range32())),
+                "」" | ">" => ParameterMixed::RMark(ctx.file.with_range(v.get_range32())),
                 ".." => {
                     todo!()
                 }
@@ -184,7 +185,7 @@ impl<'i> crate::ParameterPairNode<'i> {
 }
 impl<'i> crate::ParameterDefaultNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
-        let expr = self.main_expression().as_ref()?;
+        let expr = self.main_expression()?;
         match expr.build(ctx) {
             Ok(o) => Some(o),
             Err(e) => {
@@ -197,7 +198,7 @@ impl<'i> crate::ParameterDefaultNode<'i> {
 
 impl<'i> crate::ContinuationNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> StatementBlock {
-        let mut out = StatementBlock::new(self.statement().len(), &self.span());
+        let mut out = StatementBlock::new(self.statement().len(), &self.get_range32());
         for term in &self.statement() {
             match term.build(ctx) {
                 Ok(s) => out.terms.extend(s),
@@ -209,7 +210,7 @@ impl<'i> crate::ContinuationNode<'i> {
 }
 impl<'i> crate::TypeHintNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
-        let hint = self.hint().as_ref()?;
+        let hint = self.hint()?;
         match hint.build(ctx) {
             Ok(o) => Some(o),
             Err(e) => {

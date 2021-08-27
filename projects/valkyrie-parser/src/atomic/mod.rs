@@ -1,7 +1,12 @@
-use crate::{helpers::ProgramState, utils::build_annotation_terms};
-use nyar_error::{Result, SyntaxError};
-use std::num::NonZeroU64;
+use crate::{
+    helpers::ProgramState,
+    traits::YggdrasilNodeExtension,
+    utils::{build_annotation_terms, Ast2Hir},
+};
+use nyar_error::{Result, SourceID, SyntaxError};
+use std::{num::NonZeroU64, sync::Arc};
 use valkyrie_ast::*;
+use yggdrasil_rt::YggdrasilNode;
 
 mod bytes;
 mod create_lambda;

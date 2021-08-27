@@ -1,6 +1,4 @@
 use super::*;
-use crate::utils::Ast2Hir;
-use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::NewStatementNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ConstructNewNode> {
@@ -15,12 +13,12 @@ impl<'i> crate::NewStatementNode<'i> {
             generics,
             arguments: self.tuple_literal().as_ref().map(|s| s.tuple_terms().to_hir(ctx)).unwrap_or_default(),
             body: self.new_block().as_ref().map(|s| s.build(ctx)).unwrap_or_default(),
-            span: self.get_range(),
+            span: self.get_range32(),
         })
     }
     fn annotations(&self, ctx: &mut ProgramState) -> AnnotationNode {
         let mut out = AnnotationNode::default();
-        for term in &self.modifier_ahead {
+        for term in &self.modifier_ahead() {
             out.modifiers.terms.push(term.build(ctx))
         }
         out

@@ -1,5 +1,5 @@
 use super::*;
-use crate::SignNode;
+use crate::{traits::YggdrasilNodeExtension, SignNode};
 use nyar_error::NyarError;
 use std::{str::FromStr, sync::Arc};
 use valkyrie_ast::NullNode;
@@ -27,16 +27,16 @@ impl<'i> crate::DecimalNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut n = NumberLiteralNode::new(10);
         n.set_span(ctx.file.with_range(self.get_range32()));
-        n.set_integer(&self.lhs().text, ctx.file, self.lhs().span.start as usize)?;
+        n.set_integer(&self.lhs().get_str(), ctx.file, self.lhs().get_range().start)?;
         if let Some(s) = &self.rhs() {
-            n.set_decimal(&s.text, ctx.file, s.span.start as usize)?
+            n.set_decimal(s.get_str(), ctx.file, s.get_range().start)?
         }
         if let Some(s) = &self.unit() {
             n.unit = Some(s.build(ctx.file))
         }
         if let Some(s) = &self.shift() {
             match &self.sign() {
-                Some(SignNode::Netative) => n.shift = -s.parse::<isize>(ctx)?,
+                Some(SignNode::Netative(_)) => n.shift = -s.parse::<isize>(ctx)?,
                 _ => n.shift = s.parse::<isize>(ctx)?,
             }
         }
@@ -49,16 +49,16 @@ impl<'i> crate::DecimalXNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut n = NumberLiteralNode::new(self.base().as_base(ctx)?);
         n.set_span(ctx.file.with_range(self.get_range32()));
-        n.set_integer(&self.lhs().text, ctx.file, self.lhs().span.start as usize)?;
+        n.set_integer(self.lhs().get_str(), ctx.file, self.lhs().get_range().start as usize)?;
         if let Some(s) = &self.rhs() {
-            n.set_decimal(&s.text, ctx.file, s.span.start as usize)?
+            n.set_decimal(s.get_str(), ctx.file, s.get_range().start as usize)?
         }
         if let Some(s) = &self.unit() {
             n.unit = Some(s.build(ctx.file))
         }
         if let Some(s) = &self.shift() {
             match &self.sign() {
-                Some(SignNode::Netative) => n.shift = -s.parse::<isize>(ctx)?,
+                Some(SignNode::Netative(_)) => n.shift = -s.parse::<isize>(ctx)?,
                 _ => n.shift = s.parse::<isize>(ctx)?,
             }
         }
@@ -72,12 +72,12 @@ impl<'i> crate::IntegerNode<'i> {
     //     NumberLiteralNode::new(10, self.get_range32())
     // }
     pub(crate) fn as_identifier(&self, ctx: &mut ProgramState) -> IdentifierNode {
-        let text: String = self.get_text().chars().filter(|c| c.is_digit(10)).collect();
+        let text: String = self.get_chars().filter(|c| c.is_digit(10)).collect();
         IdentifierNode { name: Arc::from(text), span: ctx.file.with_range(self.get_range32()) }
     }
     pub(crate) fn as_base(&self, ctx: &mut ProgramState) -> Result<u32> {
         let span = ctx.file.with_range(self.get_range32());
-        match u32::from_str(&self.get_text()) {
+        match u32::from_str(self.get_str()) {
             Ok(o) if o >= 2 && o <= 36 => Ok(o),
             Ok(_) => Err(NyarError::syntax_error(format!("Currently only `2 ⩽ base ⩽ 36` is supported"), span)),
             Err(e) => Err(NyarError::syntax_error(e.to_string(), span)),
@@ -89,7 +89,7 @@ impl<'i> crate::IntegerNode<'i> {
         <T as FromStr>::Err: std::error::Error,
     {
         let span = ctx.file.with_range(self.get_range32());
-        match T::from_str(&self.text) {
+        match T::from_str(self.get_str()) {
             Ok(o) => Ok(o),
             Err(e) => Err(NyarError::syntax_error(e.to_string(), span)),
         }
@@ -98,12 +98,12 @@ impl<'i> crate::IntegerNode<'i> {
 
 impl<'i> crate::SpecialNode<'i> {
     pub(crate) fn build(&self) -> ExpressionKind {
-        match self.get_text().as_str() {
+        match self.get_str() {
             "false" => BooleanNode { value: false, span: self.get_range32() }.into(),
             "true" => BooleanNode { value: true, span: self.get_range32() }.into(),
             "∞" => NullNode { nil: true, span: self.get_range32() }.into(),
             "∅" | "nil" => NullNode { nil: true, span: self.get_range32() }.into(),
-            _ => unimplemented!("Unknown special value: {}", self.text),
+            _ => unimplemented!("Unknown special value: {}", self.get_str()),
         }
     }
 }

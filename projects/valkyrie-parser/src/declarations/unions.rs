@@ -39,7 +39,7 @@ impl<'i> crate::UnionTermNode<'i> {
             Self::ProceduralCall(v) => v.build(ctx).into(),
             Self::DefineVariant(v) => v.build(ctx)?.into(),
             Self::DefineMethod(v) => v.build(ctx)?.into(),
-            Self::EosFree(_) => return Ok(None),
+            Self::EOS_FREE(_) => return Ok(None),
         };
         Ok(Some(value))
     }

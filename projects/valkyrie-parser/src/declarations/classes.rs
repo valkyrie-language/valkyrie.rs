@@ -1,4 +1,5 @@
 use super::*;
+use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineClassNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ClassDeclaration> {
@@ -39,14 +40,14 @@ impl<'i> crate::ClassTermNode<'i> {
             Self::DefineDomain(v) => Ok(Some(ClassTerm::Domain(v.build(ctx)?))),
             Self::DefineField(v) => Ok(Some(ClassTerm::Field(v.build(ctx)?))),
             Self::DefineMethod(v) => Ok(Some(ClassTerm::Method(v.build(ctx)?))),
-            Self::EosFree(_) => Ok(None),
+            Self::EOS_FREE(_) => Ok(None),
         }
     }
 }
 
 impl<'i> crate::KwClassNode<'i> {
     pub(crate) fn build(&self) -> ClassKind {
-        match self.text.as_str() {
+        match self.get_str() {
             "class" => ClassKind::Class,
             "structure" => ClassKind::Structure,
             _ => unreachable!(),

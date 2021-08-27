@@ -38,7 +38,7 @@ impl<'i> crate::StatementNode<'i> {
             Self::ForStatement(v) => v.build(ctx)?.into(),
             Self::WhileStatement(v) => v.build(ctx)?.into(),
             Self::ExpressionRoot(v) => v.build(ctx)?.into(),
-            Self::Eos(_) => return Ok(None),
+            Self::EOS(_) => return Ok(None),
         };
         Ok(Some(value))
     }

@@ -12,7 +12,7 @@ impl<'i> crate::RangeLiteralNode<'i> {
                         Err(e) => ctx.add_error(e),
                     }
                 }
-                value.span = v.span().clone()
+                value.span = v.get_range32()
             }
             Self::RangeLiteralIndex1(v) => {
                 value.kind = RangeKind::Offset;
@@ -22,7 +22,7 @@ impl<'i> crate::RangeLiteralNode<'i> {
                         Err(e) => ctx.add_error(e),
                     }
                 }
-                value.span = v.span().clone()
+                value.span = v.get_range32()
             }
         }
         Ok(value)

@@ -576,7 +576,7 @@ pub enum StatementNode<'i> {
     WhileStatement(WhileStatementNode<'i>),
     ForStatement(ForStatementNode<'i>),
     ExpressionRoot(ExpressionRootNode<'i>),
-    EOS(EOSNode<'i>),
+    EOS(EosNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -642,7 +642,7 @@ pub enum ImportTermNode<'i> {
     ImportAll(ImportAllNode<'i>),
     ImportSpace(ImportSpaceNode<'i>),
     ImportName(ImportNameNode<'i>),
-    EOS_FREE(EOS_FREENode<'i>),
+    EOS_FREE(EosFreeNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -723,7 +723,7 @@ pub enum ClassTermNode<'i> {
     DefineMethod(DefineMethodNode<'i>),
     DefineDomain(DefineDomainNode<'i>),
     DefineField(DefineFieldNode<'i>),
-    EOS_FREE(EOS_FREENode<'i>),
+    EOS_FREE(EosFreeNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -781,7 +781,7 @@ pub enum FlagTermNode<'i> {
     ProceduralCall(ProceduralCallNode<'i>),
     DefineMethod(DefineMethodNode<'i>),
     FlagField(FlagFieldNode<'i>),
-    EOS_FREE(EOS_FREENode<'i>),
+    EOS_FREE(EosFreeNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -804,7 +804,7 @@ pub enum UnionTermNode<'i> {
     ProceduralCall(ProceduralCallNode<'i>),
     DefineMethod(DefineMethodNode<'i>),
     DefineVariant(DefineVariantNode<'i>),
-    EOS_FREE(EOS_FREENode<'i>),
+    EOS_FREE(EosFreeNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -837,7 +837,7 @@ pub enum TraitTermNode<'i> {
     ProceduralCall(ProceduralCallNode<'i>),
     DefineMethod(DefineMethodNode<'i>),
     DefineField(DefineFieldNode<'i>),
-    EOS_FREE(EOS_FREENode<'i>),
+    EOS_FREE(EosNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1042,7 +1042,7 @@ pub enum MatchTermsNode<'i> {
     MatchCase(MatchCaseNode<'i>),
     MatchWhen(MatchWhenNode<'i>),
     MatchElse(MatchElseNode<'i>),
-    COMMA(COMMANode<'i>),
+    COMMA(CommaNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

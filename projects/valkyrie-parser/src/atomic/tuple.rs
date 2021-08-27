@@ -54,7 +54,7 @@ impl<'i> crate::TuplePairNode<'i> {
         Ok(ArgumentTerm {
             modifiers: Default::default(),
             key,
-            value: self.main_expression.build(ctx)?,
+            value: self.main_expression().build(ctx)?,
             span: ctx.file.with_range(self.get_range32()),
         })
     }
