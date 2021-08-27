@@ -4,9 +4,14 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
     state(input, |state| match rule {
         ValkyrieRule::Program => parse_program(state),
         ValkyrieRule::Statement => parse_statement(state),
+        ValkyrieRule::Omit => parse_omit(state),
+        ValkyrieRule::Show => parse_show(state),
         ValkyrieRule::EOS => parse_eos(state),
         ValkyrieRule::EOS_FREE => parse_eos_free(state),
         ValkyrieRule::DefineNamespace => parse_define_namespace(state),
+        ValkyrieRule::Main => parse_main(state),
+        ValkyrieRule::Test => parse_test(state),
+        ValkyrieRule::Hide => parse_hide(state),
         ValkyrieRule::OP_NAMESPACE => parse_op_namespace(state),
         ValkyrieRule::DefineImport => parse_define_import(state),
         ValkyrieRule::ImportBlock => parse_import_block(state),
@@ -47,6 +52,8 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::DefineExtends => parse_define_extends(state),
         ValkyrieRule::TraitBlock => parse_trait_block(state),
         ValkyrieRule::TraitTerm => parse_trait_term(state),
+        ValkyrieRule::Trait => parse_trait(state),
+        ValkyrieRule::Interface => parse_interface(state),
         ValkyrieRule::KW_TRAIT => parse_kw_trait(state),
         ValkyrieRule::DefineFunction => parse_define_function(state),
         ValkyrieRule::DefineLambda => parse_define_lambda(state),
@@ -67,9 +74,13 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::BarePattern => parse_bare_pattern(state),
         ValkyrieRule::BarePatternItem => parse_bare_pattern_item(state),
         ValkyrieRule::TuplePattern => parse_tuple_pattern(state),
+        ValkyrieRule::OmitDict => parse_omit_dict(state),
+        ValkyrieRule::OmitList => parse_omit_list(state),
         ValkyrieRule::PatternItem => parse_pattern_item(state),
         ValkyrieRule::TuplePatternItem => parse_tuple_pattern_item(state),
         ValkyrieRule::WhileStatement => parse_while_statement(state),
+        ValkyrieRule::While => parse_while(state),
+        ValkyrieRule::Until => parse_until(state),
         ValkyrieRule::KW_WHILE => parse_kw_while(state),
         ValkyrieRule::ForStatement => parse_for_statement(state),
         ValkyrieRule::IfGuard => parse_if_guard(state),
@@ -86,6 +97,8 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::MatchWhen => parse_match_when(state),
         ValkyrieRule::MatchElse => parse_match_else(state),
         ValkyrieRule::MatchStatement => parse_match_statement(state),
+        ValkyrieRule::Match => parse_match(state),
+        ValkyrieRule::Catch => parse_catch(state),
         ValkyrieRule::KW_MATCH => parse_kw_match(state),
         ValkyrieRule::BIND_L => parse_bind_l(state),
         ValkyrieRule::BIND_R => parse_bind_r(state),
@@ -95,6 +108,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::MainFactor => parse_main_factor(state),
         ValkyrieRule::GroupFactor => parse_group_factor(state),
         ValkyrieRule::Leading => parse_leading(state),
+        ValkyrieRule::DotClosureCall => parse_dot_closure_call(state),
         ValkyrieRule::MainSuffixTerm => parse_main_suffix_term(state),
         ValkyrieRule::MainPrefix => parse_main_prefix(state),
         ValkyrieRule::TypePrefix => parse_type_prefix(state),
@@ -104,6 +118,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::TypeSuffix => parse_type_suffix(state),
         ValkyrieRule::InlineExpression => parse_inline_expression(state),
         ValkyrieRule::InlineTerm => parse_inline_term(state),
+        ValkyrieRule::DotCall => parse_dot_call(state),
         ValkyrieRule::InlineSuffixTerm => parse_inline_suffix_term(state),
         ValkyrieRule::TypeExpression => parse_type_expression(state),
         ValkyrieRule::TypeTerm => parse_type_term(state),
@@ -114,9 +129,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::NewBlock => parse_new_block(state),
         ValkyrieRule::NewPair => parse_new_pair(state),
         ValkyrieRule::NewPairKey => parse_new_pair_key(state),
-        ValkyrieRule::DotCall => parse_dot_call(state),
         ValkyrieRule::DotCallItem => parse_dot_call_item(state),
-        ValkyrieRule::DotClosureCall => parse_dot_closure_call(state),
         ValkyrieRule::InlineTupleCall => parse_inline_tuple_call(state),
         ValkyrieRule::TupleCall => parse_tuple_call(state),
         ValkyrieRule::TupleLiteral => parse_tuple_literal(state),
@@ -174,6 +187,8 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::IdentifierRawText => parse_identifier_raw_text(state),
         ValkyrieRule::Special => parse_special(state),
         ValkyrieRule::Number => parse_number(state),
+        ValkyrieRule::Positive => parse_positive(state),
+        ValkyrieRule::Netative => parse_netative(state),
         ValkyrieRule::Sign => parse_sign(state),
         ValkyrieRule::Integer => parse_integer(state),
         ValkyrieRule::DigitsX => parse_digits_x(state),
@@ -288,23 +303,29 @@ fn parse_statement(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_omit(state: Input) -> Output {
+    state.rule(ValkyrieRule::Omit, |s| {
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)([;；])").unwrap())
+        })
+    })
+}
+#[inline]
+fn parse_show(state: Input) -> Output {
+    state.rule(ValkyrieRule::Show, |s| {
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)(⁏|;;)").unwrap())
+        })
+    })
+}
+#[inline]
 fn parse_eos(state: Input) -> Output {
     state.rule(ValkyrieRule::EOS, |s| {
         Err(s)
-            .or_else(|s| {
-                builtin_regex(s, {
-                    static REGEX: OnceLock<Regex> = OnceLock::new();
-                    REGEX.get_or_init(|| Regex::new("^(?x)([;；])").unwrap())
-                })
-                .and_then(|s| s.tag_node("omit"))
-            })
-            .or_else(|s| {
-                builtin_regex(s, {
-                    static REGEX: OnceLock<Regex> = OnceLock::new();
-                    REGEX.get_or_init(|| Regex::new("^(?x)(⁏|;;)").unwrap())
-                })
-                .and_then(|s| s.tag_node("show"))
-            })
+            .or_else(|s| parse_omit(s).and_then(|s| s.tag_node("omit")))
+            .or_else(|s| parse_show(s).and_then(|s| s.tag_node("show")))
     })
 }
 #[inline]
@@ -332,12 +353,24 @@ fn parse_define_namespace(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_main(state: Input) -> Output {
+    state.rule(ValkyrieRule::Main, |s| s.match_string("!", false))
+}
+#[inline]
+fn parse_test(state: Input) -> Output {
+    state.rule(ValkyrieRule::Test, |s| s.match_string("?", false))
+}
+#[inline]
+fn parse_hide(state: Input) -> Output {
+    state.rule(ValkyrieRule::Hide, |s| s.match_string("*", false))
+}
+#[inline]
 fn parse_op_namespace(state: Input) -> Output {
     state.rule(ValkyrieRule::OP_NAMESPACE, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "!", false).and_then(|s| s.tag_node("main")))
-            .or_else(|s| builtin_text(s, "?", false).and_then(|s| s.tag_node("test")))
-            .or_else(|s| builtin_text(s, "*", false).and_then(|s| s.tag_node("hide")))
+            .or_else(|s| parse_main(s).and_then(|s| s.tag_node("main")))
+            .or_else(|s| parse_test(s).and_then(|s| s.tag_node("test")))
+            .or_else(|s| parse_hide(s).and_then(|s| s.tag_node("hide")))
     })
 }
 #[inline]
@@ -1109,11 +1142,19 @@ fn parse_trait_term(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_trait(state: Input) -> Output {
+    state.rule(ValkyrieRule::Trait, |s| s.match_string("trait", false))
+}
+#[inline]
+fn parse_interface(state: Input) -> Output {
+    state.rule(ValkyrieRule::Interface, |s| s.match_string("interface", false))
+}
+#[inline]
 fn parse_kw_trait(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_TRAIT, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "trait", false).and_then(|s| s.tag_node("trait")))
-            .or_else(|s| builtin_text(s, "interface", false).and_then(|s| s.tag_node("interface")))
+            .or_else(|s| parse_trait(s).and_then(|s| s.tag_node("trait")))
+            .or_else(|s| parse_interface(s).and_then(|s| s.tag_node("interface")))
     })
 }
 #[inline]
@@ -1523,12 +1564,20 @@ fn parse_tuple_pattern(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_omit_dict(state: Input) -> Output {
+    state.rule(ValkyrieRule::OmitDict, |s| s.match_string("...", false))
+}
+#[inline]
+fn parse_omit_list(state: Input) -> Output {
+    state.rule(ValkyrieRule::OmitList, |s| s.match_string("..", false))
+}
+#[inline]
 fn parse_pattern_item(state: Input) -> Output {
     state.rule(ValkyrieRule::PatternItem, |s| {
         Err(s)
             .or_else(|s| parse_tuple_pattern_item(s).and_then(|s| s.tag_node("tuple_pattern_item")))
-            .or_else(|s| builtin_text(s, "...", false).and_then(|s| s.tag_node("omit_dict")))
-            .or_else(|s| builtin_text(s, "..", false).and_then(|s| s.tag_node("omit_list")))
+            .or_else(|s| parse_omit_dict(s).and_then(|s| s.tag_node("omit_dict")))
+            .or_else(|s| parse_omit_list(s).and_then(|s| s.tag_node("omit_list")))
     })
 }
 #[inline]
@@ -1571,11 +1620,19 @@ fn parse_while_statement(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_while(state: Input) -> Output {
+    state.rule(ValkyrieRule::While, |s| s.match_string("while", false))
+}
+#[inline]
+fn parse_until(state: Input) -> Output {
+    state.rule(ValkyrieRule::Until, |s| s.match_string("until", false))
+}
+#[inline]
 fn parse_kw_while(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_WHILE, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "while", false).and_then(|s| s.tag_node("while")))
-            .or_else(|s| builtin_text(s, "until", false).and_then(|s| s.tag_node("until")))
+            .or_else(|s| parse_while(s).and_then(|s| s.tag_node("while")))
+            .or_else(|s| parse_until(s).and_then(|s| s.tag_node("until")))
     })
 }
 #[inline]
@@ -1881,11 +1938,19 @@ fn parse_match_statement(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_match(state: Input) -> Output {
+    state.rule(ValkyrieRule::Match, |s| s.match_string("match", false))
+}
+#[inline]
+fn parse_catch(state: Input) -> Output {
+    state.rule(ValkyrieRule::Catch, |s| s.match_string("catch", false))
+}
+#[inline]
 fn parse_kw_match(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_MATCH, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "match", false).and_then(|s| s.tag_node("match")))
-            .or_else(|s| builtin_text(s, "catch", false).and_then(|s| s.tag_node("catch")))
+            .or_else(|s| parse_match(s).and_then(|s| s.tag_node("match")))
+            .or_else(|s| parse_catch(s).and_then(|s| s.tag_node("catch")))
     })
 }
 #[inline]
@@ -1910,25 +1975,7 @@ fn parse_bind_r(state: Input) -> Output {
 fn parse_dot_match_call(state: Input) -> Output {
     state.rule(ValkyrieRule::DotMatchCall, |s| {
         s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| s.optional(|s| parse_op_and_then(s).and_then(|s| s.tag_node("op_and_then"))))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_dot(s))
-                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                .and_then(|s| parse_kw_match(s).and_then(|s| s.tag_node("kw_match")))
-                .and_then(|s| {
-                    s.optional(|s| {
-                        s.sequence(|s| {
-                            Ok(s)
-                                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                                .and_then(|s| parse_bind_r(s).and_then(|s| s.tag_node("bind_r")))
-                                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                                .and_then(|s| parse_identifier(s).and_then(|s| s.tag_node("identifier")))
-                        })
-                    })
-                })
-                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                .and_then(|s| parse_match_block(s).and_then(|s| s.tag_node("match_block")))
+            Ok(s).and_then(|s| builtin_ignore(s)).and_then(|s| builtin_ignore(s)).and_then(|s| parse_dot_match_call(s))
         })
     })
 }
@@ -2013,25 +2060,24 @@ fn parse_leading(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_dot_closure_call(state: Input) -> Output {
+    state.rule(ValkyrieRule::DotClosureCall, |s| {
+        s.sequence(|s| {
+            Ok(s)
+                .and_then(|s| s.optional(|s| parse_op_and_then(s).and_then(|s| s.tag_node("op_and_then"))))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_dot(s))
+                .and_then(|s| s.optional(|s| parse_white_space(s)))
+                .and_then(|s| parse_continuation(s).and_then(|s| s.tag_node("continuation")))
+        })
+    })
+}
+#[inline]
 fn parse_main_suffix_term(state: Input) -> Output {
     state.rule(ValkyrieRule::MainSuffixTerm, |s| {
         Err(s)
-            .or_else(|s| {
-                s.sequence(|s| {
-                    Ok(s)
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| parse_dot_match_call(s).and_then(|s| s.tag_node("dot_match_call")))
-                })
-                .and_then(|s| s.tag_node("dot_match_call"))
-            })
-            .or_else(|s| {
-                s.sequence(|s| {
-                    Ok(s)
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| parse_dot_closure_call(s).and_then(|s| s.tag_node("dot_closure_call")))
-                })
-                .and_then(|s| s.tag_node("dot_closure_call"))
-            })
+            .or_else(|s| parse_dot_match_call(s).and_then(|s| s.tag_node("dot_match_call")))
+            .or_else(|s| parse_dot_closure_call(s).and_then(|s| s.tag_node("dot_closure_call")))
             .or_else(|s| parse_tuple_call(s).and_then(|s| s.tag_node("tuple_call")))
             .or_else(|s| parse_inline_suffix_term(s).and_then(|s| s.tag_node("inline_suffix_term")))
     })
@@ -2123,18 +2169,7 @@ fn parse_type_infix(state: Input) -> Output {
 #[inline]
 fn parse_main_suffix(state: Input) -> Output {
     state.rule(ValkyrieRule::MainSuffix, |s| {
-        s.match_regex({
-            static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| {
-                Regex::new(
-                    "^(?x)([!]
-    | [٪⁒%‰‱]
-    | [′″‴⁗]
-    | [℃℉])",
-                )
-                .unwrap()
-            })
-        })
+        s.sequence(|s| Ok(s).and_then(|s| builtin_ignore(s)).and_then(|s| builtin_ignore(s)).and_then(|s| parse_main_suffix(s)))
     })
 }
 #[inline]
@@ -2186,27 +2221,24 @@ fn parse_inline_term(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_dot_call(state: Input) -> Output {
+    state.rule(ValkyrieRule::DotCall, |s| {
+        s.sequence(|s| {
+            Ok(s)
+                .and_then(|s| s.optional(|s| parse_op_and_then(s).and_then(|s| s.tag_node("op_and_then"))))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_dot(s))
+                .and_then(|s| s.optional(|s| parse_white_space(s)))
+                .and_then(|s| parse_dot_call_item(s).and_then(|s| s.tag_node("dot_call_item")))
+        })
+    })
+}
+#[inline]
 fn parse_inline_suffix_term(state: Input) -> Output {
     state.rule(ValkyrieRule::InlineSuffixTerm, |s| {
         Err(s)
-            .or_else(|s| {
-                s.sequence(|s| {
-                    Ok(s)
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| parse_main_suffix(s).and_then(|s| s.tag_node("main_suffix")))
-                })
-                .and_then(|s| s.tag_node("main_suffix"))
-            })
-            .or_else(|s| {
-                s.sequence(|s| {
-                    Ok(s)
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| parse_dot_call(s).and_then(|s| s.tag_node("dot_call")))
-                })
-                .and_then(|s| s.tag_node("dot_call"))
-            })
+            .or_else(|s| parse_main_suffix(s).and_then(|s| s.tag_node("main_suffix")))
+            .or_else(|s| parse_dot_call(s).and_then(|s| s.tag_node("dot_call")))
             .or_else(|s| parse_inline_tuple_call(s).and_then(|s| s.tag_node("inline_tuple_call")))
             .or_else(|s| parse_range_call(s).and_then(|s| s.tag_node("range_call")))
             .or_else(|s| parse_generic_call(s).and_then(|s| s.tag_node("generic_call")))
@@ -2216,17 +2248,16 @@ fn parse_inline_suffix_term(state: Input) -> Output {
 fn parse_type_expression(state: Input) -> Output {
     state.rule(ValkyrieRule::TypeExpression, |s| {
         s.sequence(|s| {
-            Ok(s).and_then(|s| parse_type_term(s).and_then(|s| s.tag_node("type_term"))).and_then(|s| {
-                s.repeat(0..4294967295, |s| {
-                    s.sequence(|s| {
-                        Ok(s)
-                            .and_then(|s| builtin_ignore(s))
-                            .and_then(|s| parse_type_infix(s).and_then(|s| s.tag_node("type_infix")))
-                            .and_then(|s| builtin_ignore(s))
-                            .and_then(|s| parse_type_term(s).and_then(|s| s.tag_node("type_term")))
-                    })
-                })
-            })
+            Ok(s)
+                .and_then(|s| builtin_text(s, "(", false))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_type_expression(s))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| builtin_text(s, ")", false))
         })
     })
 }
@@ -2255,17 +2286,7 @@ fn parse_type_term(state: Input) -> Output {
 fn parse_type_factor(state: Input) -> Output {
     state.rule(ValkyrieRule::TypeFactor, |s| {
         Err(s)
-            .or_else(|s| {
-                s.sequence(|s| {
-                    Ok(s)
-                        .and_then(|s| builtin_text(s, "(", false))
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| parse_type_expression(s).and_then(|s| s.tag_node("type_expression")))
-                        .and_then(|s| builtin_ignore(s))
-                        .and_then(|s| builtin_text(s, ")", false))
-                })
-                .and_then(|s| s.tag_node("type_expression"))
-            })
+            .or_else(|s| parse_type_expression(s).and_then(|s| s.tag_node("type_expression")))
             .or_else(|s| parse_leading(s).and_then(|s| s.tag_node("leading")))
     })
 }
@@ -2386,37 +2407,11 @@ fn parse_new_pair_key(state: Input) -> Output {
     })
 }
 #[inline]
-fn parse_dot_call(state: Input) -> Output {
-    state.rule(ValkyrieRule::DotCall, |s| {
-        s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| s.optional(|s| parse_op_and_then(s).and_then(|s| s.tag_node("op_and_then"))))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_dot(s))
-                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                .and_then(|s| parse_dot_call_item(s).and_then(|s| s.tag_node("dot_call_item")))
-        })
-    })
-}
-#[inline]
 fn parse_dot_call_item(state: Input) -> Output {
     state.rule(ValkyrieRule::DotCallItem, |s| {
         Err(s)
             .or_else(|s| parse_namepath(s).and_then(|s| s.tag_node("namepath")))
             .or_else(|s| parse_integer(s).and_then(|s| s.tag_node("integer")))
-    })
-}
-#[inline]
-fn parse_dot_closure_call(state: Input) -> Output {
-    state.rule(ValkyrieRule::DotClosureCall, |s| {
-        s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| s.optional(|s| parse_op_and_then(s).and_then(|s| s.tag_node("op_and_then"))))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_dot(s))
-                .and_then(|s| s.optional(|s| parse_white_space(s)))
-                .and_then(|s| parse_continuation(s).and_then(|s| s.tag_node("continuation")))
-        })
     })
 }
 #[inline]
@@ -3476,11 +3471,19 @@ fn parse_number(state: Input) -> Output {
     })
 }
 #[inline]
+fn parse_positive(state: Input) -> Output {
+    state.rule(ValkyrieRule::Positive, |s| s.match_string("+", false))
+}
+#[inline]
+fn parse_netative(state: Input) -> Output {
+    state.rule(ValkyrieRule::Netative, |s| s.match_string("-", false))
+}
+#[inline]
 fn parse_sign(state: Input) -> Output {
     state.rule(ValkyrieRule::Sign, |s| {
         Err(s)
-            .or_else(|s| builtin_text(s, "+", false).and_then(|s| s.tag_node("positive")))
-            .or_else(|s| builtin_text(s, "-", false).and_then(|s| s.tag_node("netative")))
+            .or_else(|s| parse_positive(s).and_then(|s| s.tag_node("positive")))
+            .or_else(|s| parse_netative(s).and_then(|s| s.tag_node("netative")))
     })
 }
 #[inline]

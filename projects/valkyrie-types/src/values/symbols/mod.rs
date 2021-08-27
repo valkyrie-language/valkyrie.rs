@@ -21,7 +21,7 @@ pub(crate) trait AsSymbol {
 impl AsSymbol for NamePathNode {
     fn as_symbol(&self) -> ValkyrieSymbol {
         let path = self.path.iter().map(|s| Arc::from(s.name.as_str())).collect();
-        ValkyrieSymbol { path, span: self.span.clone() }
+        ValkyrieSymbol { path, span: self.get_range32() }
     }
 
     fn as_namespace_symbol(&self, space: &Option<ValkyrieSymbol>) -> ValkyrieSymbol {
@@ -30,7 +30,7 @@ impl AsSymbol for NamePathNode {
             Some(s) => {
                 let mut path = s.path.clone();
                 path.extend(self.path.iter().map(|s| Arc::from(s.name.as_str())));
-                ValkyrieSymbol { path, span: self.span.clone() }
+                ValkyrieSymbol { path, span: self.get_range32() }
             }
         }
     }
@@ -38,7 +38,7 @@ impl AsSymbol for NamePathNode {
 impl AsSymbol for valkyrie_ast::IdentifierNode {
     fn as_symbol(&self) -> ValkyrieSymbol {
         let path = vec![Arc::from(self.name.as_str())];
-        ValkyrieSymbol { path, span: self.span.clone() }
+        ValkyrieSymbol { path, span: self.get_range32() }
     }
 
     fn as_namespace_symbol(&self, space: &Option<ValkyrieSymbol>) -> ValkyrieSymbol {
@@ -47,7 +47,7 @@ impl AsSymbol for valkyrie_ast::IdentifierNode {
             Some(s) => {
                 let mut path = s.path.clone();
                 path.extend_one(Arc::from(self.name.as_str()));
-                ValkyrieSymbol { path, span: self.span.clone() }
+                ValkyrieSymbol { path, span: self.get_range32() }
             }
         }
     }

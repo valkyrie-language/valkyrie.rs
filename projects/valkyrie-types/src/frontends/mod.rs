@@ -33,11 +33,9 @@ impl Hir2Mir for StatementKind {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir(self, store: &mut ResolveState, context: Self::Context<'_>) -> Result<Self::Output> {
         match self {
-            Self::Nothing => {
-                todo!()
-            }
+            Self::Nothing => {}
             Self::Document(_) => {
                 todo!()
             }
