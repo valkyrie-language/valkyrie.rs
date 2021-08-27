@@ -1,46 +1,48 @@
 use super::*;
 use nyar_error::SourceID;
 use std::sync::Arc;
+use yggdrasil_rt::YggdrasilNode;
 
-impl crate::NamepathNode {
+impl<'i> crate::NamepathNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {
-        NamePathNode::from_iter(self.identifier.iter().map(|v| v.build(ctx.file)))
-            .with_span(ctx.file.with_range(self.span.clone()))
+        NamePathNode::from_iter(self.identifier().iter().map(|v| v.build(ctx.file)))
+            .with_span(ctx.file.with_range(self.get_range32()))
     }
 }
 
-impl crate::NamepathFreeNode {
+impl<'i> crate::NamepathFreeNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {
-        NamePathNode::from_iter(self.identifier.iter().map(|v| v.build(ctx.file)))
-            .with_span(ctx.file.with_range(self.span.clone()))
+        NamePathNode::from_iter(self.identifier().iter().map(|v| v.build(ctx.file)))
+            .with_span(ctx.file.with_range(self.get_range32()))
     }
 }
-impl crate::IdentifierNode {
+impl<'i> crate::IdentifierNode<'i> {
     pub fn build(&self, file: SourceID) -> IdentifierNode {
         match self {
             Self::IdentifierBare(v) => {
-                IdentifierNode { name: Arc::from(v.text.as_str()), span: file.with_range(v.span.clone()) }
+                IdentifierNode { name: Arc::from(v.get_text().as_str()), span: file.with_range(v.get_range32().clone()) }
             }
-            Self::IdentifierRaw(v) => {
-                IdentifierNode { name: Arc::from(v.identifier_raw_text.text.as_str()), span: file.with_range(v.span.clone()) }
-            }
+            Self::IdentifierRaw(v) => IdentifierNode {
+                name: Arc::from(v.identifier_raw_text().get_text().as_str()),
+                span: file.with_range(v.get_range32().clone()),
+            },
         }
     }
 }
 
-impl crate::SlotNode {
+impl<'i> crate::SlotNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LambdaSlotNode> {
-        Ok(LambdaSlotNode { level: self.op_slot.span.len(), item: self.item(ctx)?, span: self.span.clone() })
+        Ok(LambdaSlotNode { level: self.op_slot().get_range32(), item: self.item(ctx)?, span: self.get_range32() })
     }
     fn item(&self, ctx: &mut ProgramState) -> Result<LambdaSlotItem> {
-        match &self.slot_item {
+        match &self.slot_item() {
             Some(s) => s.build(ctx),
             None => return Ok(LambdaSlotItem::SelfType),
         }
     }
 }
 
-impl crate::SlotItemNode {
+impl<'i> crate::SlotItemNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LambdaSlotItem> {
         let value = match self {
             Self::Identifier(v) => LambdaSlotItem::Named(v.build(ctx.file)),

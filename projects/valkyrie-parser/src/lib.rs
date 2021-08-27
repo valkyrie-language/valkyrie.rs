@@ -1,6 +1,8 @@
 #![feature(lazy_cell)]
 #![feature(const_trait_impl)]
 
+extern crate core;
+
 mod codegen;
 
 pub use crate::{codegen::*, helpers::ProgramContext};
@@ -16,7 +18,7 @@ mod statements;
 mod string_like;
 mod utils;
 // mod table;
-// mod traits;
+mod traits;
 // mod helpers;
 // mod validation;
 //

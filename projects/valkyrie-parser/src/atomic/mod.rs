@@ -15,7 +15,7 @@ mod range;
 mod string;
 mod tuple;
 
-impl crate::LeadingNode {
+impl<'i> crate::LeadingNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let value = match self {
             Self::Special(v) => v.build(),

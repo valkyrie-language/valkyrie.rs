@@ -1,8 +1,8 @@
 use super::*;
 
-impl crate::JumpLabelNode {
+impl<'i> crate::JumpLabelNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> LabelNode {
-        match &self.identifier {
+        match &self.identifier() {
             Some(s) => LabelNode::Named(s.build(ctx.file)),
             None => LabelNode::Nearest,
         }

@@ -1,25 +1,25 @@
 use super::*;
 use std::sync::Arc;
 
-impl crate::MatchExpressionNode {
+impl<'i> crate::MatchExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<MatchStatement> {
         Ok(MatchStatement {
-            kind: self.kw_match.build(),
+            kind: self.kw_match().build(),
             bind: self.get_bind(ctx),
-            main: self.inline_expression.build(ctx)?,
-            patterns: self.match_block.build(ctx),
-            span: self.span.clone(),
+            main: self.inline_expression().build(ctx)?,
+            patterns: self.match_block().build(ctx),
+            span: self.get_range32(),
         })
     }
     fn get_bind(&self, ctx: &mut ProgramState) -> Option<IdentifierNode> {
-        Some(self.identifier.as_ref()?.build(ctx.file))
+        Some(self.identifier().as_ref()?.build(ctx.file))
     }
 }
 
-impl crate::MatchBlockNode {
+impl<'i> crate::MatchBlockNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> PatternsList {
-        let mut list = PatternsList::new(self.match_terms.len(), &self.span);
-        for term in &self.match_terms {
+        let mut list = PatternsList::new(self.match_terms().len(), &self.span());
+        for term in &self.match_terms() {
             match term.build(ctx) {
                 Ok(o) => list.branches.extend(o),
                 Err(e) => ctx.add_error(e),
@@ -29,7 +29,7 @@ impl crate::MatchBlockNode {
     }
 }
 
-impl crate::KwMatchNode {
+impl<'i> crate::KwMatchNode<'i> {
     pub(crate) fn build(&self) -> MatchKind {
         match self {
             Self::Match => MatchKind::Typing,
@@ -38,7 +38,7 @@ impl crate::KwMatchNode {
     }
 }
 
-impl crate::MatchTermsNode {
+impl<'i> crate::MatchTermsNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<Option<PatternBranch>> {
         let value = match self {
             Self::MatchCase(v) => v.build(ctx)?,
@@ -51,56 +51,60 @@ impl crate::MatchTermsNode {
     }
 }
 
-impl crate::MatchCaseNode {
+impl<'i> crate::MatchCaseNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternBranch> {
         Ok(PatternBranch {
             condition: PatternCondition::Case(self.build_node(ctx)?),
-            continuation: match_statements(&self.match_statement, ctx),
-            span: self.span.clone(),
+            continuation: match_statements(&self.match_statement(), ctx),
+            span: self.get_range32(),
         })
     }
     fn build_node(&self, ctx: &mut ProgramState) -> Result<PatternCaseNode> {
-        Ok(PatternCaseNode { pattern: self.case_pattern.build(ctx)?, guard: self.if_guard.build(ctx), span: self.span.clone() })
+        Ok(PatternCaseNode {
+            pattern: self.case_pattern().build(ctx)?,
+            guard: self.if_guard().build(ctx),
+            span: self.get_range32(),
+        })
     }
 }
 
-impl crate::MatchTypeNode {
+impl<'i> crate::MatchTypeNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternBranch> {
         // avoid block by condition
-        let continuation = match_statements(&self.match_statement, ctx);
-        Ok(PatternBranch { condition: PatternCondition::Type(self.build_node(ctx)?), continuation, span: self.span.clone() })
+        let continuation = match_statements(&self.match_statement(), ctx);
+        Ok(PatternBranch { condition: PatternCondition::Type(self.build_node(ctx)?), continuation, span: self.get_range32() })
     }
     fn build_node(&self, ctx: &mut ProgramState) -> Result<PatternTypeNode> {
         Ok(PatternTypeNode {
-            typing: self.type_expression.build(ctx)?,
-            guard: self.if_guard.build(ctx),
-            span: self.span.clone(),
+            typing: self.type_expression().build(ctx)?,
+            guard: self.if_guard().build(ctx),
+            span: self.get_range32(),
         })
     }
 }
 
-impl crate::MatchWhenNode {
+impl<'i> crate::MatchWhenNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternBranch> {
         // avoid block by condition
-        let continuation = match_statements(&self.match_statement, ctx);
-        Ok(PatternBranch { condition: PatternCondition::When(self.build_node(ctx)?), continuation, span: self.span.clone() })
+        let continuation = match_statements(&self.match_statement(), ctx);
+        Ok(PatternBranch { condition: PatternCondition::When(self.build_node(ctx)?), continuation, span: self.get_range32() })
     }
     fn build_node(&self, ctx: &mut ProgramState) -> Result<PatternWhenNode> {
-        Ok(PatternWhenNode { guard: self.inline_expression.build(ctx)?, span: self.span.clone() })
+        Ok(PatternWhenNode { guard: self.inline_expression().build(ctx)?, span: self.get_range32() })
     }
 }
 
-impl crate::MatchElseNode {
+impl<'i> crate::MatchElseNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternBranch> {
         Ok(PatternBranch {
             condition: PatternCondition::Else,
-            continuation: match_statements(&self.match_statement, ctx),
-            span: self.span.clone(),
+            continuation: match_statements(&self.match_statement(), ctx),
+            span: self.get_range32(),
         })
     }
 }
 
-impl crate::CasePatternNode {
+impl<'i> crate::CasePatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
         match self {
             Self::Namepath(v) => Ok(PatternNode::Atom(Box::new(IdentifierPattern {
@@ -115,7 +119,7 @@ impl crate::CasePatternNode {
 fn match_statements(statements: &[crate::MatchStatementNode], ctx: &mut ProgramState) -> StatementBlock {
     let mut list = StatementBlock::new(statements.len(), &Default::default());
     for term in statements {
-        match term.statement.build(ctx) {
+        match term.statement().build(ctx) {
             Ok(o) => list.terms.extend(o),
             Err(e) => ctx.add_error(e),
         }

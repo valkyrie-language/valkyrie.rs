@@ -58,7 +58,7 @@ impl crate::ControlFlowNode {
             kind: self.kw_control.build(ctx),
             label: self.jump_label.build(ctx),
             expression,
-            span: self.span.clone(),
+            span: self.get_range32(),
         })
     }
 }

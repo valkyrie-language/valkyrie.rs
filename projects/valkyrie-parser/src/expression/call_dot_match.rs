@@ -9,7 +9,7 @@ impl crate::DotMatchCallNode {
             base: Default::default(),
             kind: self.kw_match.build(),
             patterns: self.match_block.build(ctx),
-            span: self.span.clone(),
+            span: self.get_range32(),
         })
     }
 }

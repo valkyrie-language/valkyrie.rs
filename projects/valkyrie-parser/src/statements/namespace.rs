@@ -6,7 +6,7 @@ impl crate::DefineNamespaceNode {
             Some(s) => s.build(),
             None => NamespaceKind::Standalone,
         };
-        NamespaceDeclaration { kind, path: self.namepath_free.build(ctx), span: self.span.clone() }
+        NamespaceDeclaration { kind, path: self.namepath_free.build(ctx), span: self.get_range32() }
     }
 }
 

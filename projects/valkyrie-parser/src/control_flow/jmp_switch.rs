@@ -1,7 +1,8 @@
 use super::*;
+use crate::traits::YggdrasilNodeExtension;
 
-impl crate::SwitchStatementNode {
+impl<'i> crate::SwitchStatementNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<SwitchStatement> {
-        Ok(SwitchStatement { patterns: self.match_block.build(ctx), span: self.span.clone() })
+        Ok(SwitchStatement { patterns: self.match_block().build(ctx), span: self.get_range32() })
     }
 }

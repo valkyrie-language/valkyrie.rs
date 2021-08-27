@@ -11,7 +11,7 @@ impl crate::DefineVariableNode {
             })),
             type_hint: self.type_hint.build(ctx),
             body: self.parameter_default.build(ctx),
-            span: self.span.clone(),
+            span: self.get_range32(),
         })
     }
 }

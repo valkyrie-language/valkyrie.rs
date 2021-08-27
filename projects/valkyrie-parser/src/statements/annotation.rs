@@ -35,7 +35,7 @@ impl crate::AttributeItemNode {
             variant: vec![],
             arguments: self.arguments(ctx),
             domain: self.domain(ctx),
-            span: ctx.file.with_range(self.span.clone()),
+            span: ctx.file.with_range(self.get_range32()),
         }
     }
     fn domain(&self, ctx: &mut ProgramState) -> Option<StatementBlock> {

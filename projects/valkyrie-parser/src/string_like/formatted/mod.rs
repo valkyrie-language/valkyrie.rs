@@ -1,4 +1,4 @@
-use crate::{helpers::ProgramState, StringInterpolationsNode};
+use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension, StringInterpolationsNode};
 use nyar_error::{Failure, NyarError, Result, SourceID, Success, SyntaxError, Validation};
 use std::{mem::take, ops::Range, str::FromStr};
 use valkyrie_ast::{helper::StringInterpreter, FormatterNode, FormatterTerm, StringTextNode};
@@ -59,8 +59,8 @@ impl StringInterpreter for StringFormatterBuilder {
 
 impl crate::StringInterpolationsNode {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> FormatterNode {
-        let mut list = FormatterNode::new(self.string_interpolation_term.len(), &self.span);
-        for x in self.string_interpolation_term.iter() {
+        let mut list = FormatterNode::new(self.string_interpolation_term().len(), &self.span());
+        for x in self.string_interpolation_term().iter() {
             if let Err(e) = x.build(ctx) {
                 ctx.errors.push(e)
             }
@@ -84,7 +84,7 @@ impl crate::StringInterpolationTermNode {
 }
 impl crate::StringInterpolationTextNode {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> Result<()> {
-        ctx.extend_buffer(&self.span);
+        ctx.extend_buffer(&self.span());
         ctx.buffer.text.push_str(&self.text);
         Ok(())
     }
@@ -94,7 +94,7 @@ impl crate::EscapeCharacterNode {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> Result<()> {
         match self.text.chars().last() {
             Some(c) => {
-                ctx.extend_buffer(&self.span);
+                ctx.extend_buffer(&self.span());
                 match c {
                     'n' => ctx.buffer.text.push('\n'),
                     'r' => ctx.buffer.text.push('\r'),
@@ -102,53 +102,53 @@ impl crate::EscapeCharacterNode {
                 }
                 Ok(())
             }
-            None => Err(SyntaxError::new("Invalid escape sequence").with_span(ctx.file.with_range(self.span.clone())))?,
+            None => Err(SyntaxError::new("Invalid escape sequence").with_span(ctx.file.with_range(self.get_range32())))?,
         }
     }
 }
 
-impl crate::EscapeUnicodeNode {
+impl<'i> crate::EscapeUnicodeNode<'i> {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> Result<()> {
-        match u32::from_str_radix(&self.code.text, 16) {
+        match u32::from_str_radix(&self.code().text, 16) {
             Ok(o) => match char::from_u32(o) {
                 Some(s) => {
-                    ctx.extend_buffer(&self.span);
+                    ctx.extend_buffer(&self.span());
                     ctx.buffer.text.push(s);
                     Ok(())
                 }
                 None => Err(SyntaxError::new("unicode codepoint out of range")
                     .with_hint("The valid range is from `\\u{000000}` to `\\u{10FFFF}`")
-                    .with_span(ctx.file.with_range(self.span.clone())))?,
+                    .with_span(ctx.file.with_range(self.get_range32())))?,
             },
             Err(_) => Err(SyntaxError::new("invalid character found in unicode codepoint")
                 .with_hint("Expect hex digits in [0-9a-fA-F]")
-                .with_span(ctx.file.with_range(self.span.clone())))?,
+                .with_span(ctx.file.with_range(self.get_range32())))?,
         }
     }
 }
 
-impl crate::StringInterpolationSimpleNode {
+impl<'i> crate::StringInterpolationSimpleNode<'i> {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> Result<()> {
         ctx.push_buffer();
-        let argument = self.main_expression.build(&mut ProgramState::new(ctx.file))?;
-        let formatter = self.string_formatter.as_ref().map(|v| v.build(ctx));
+        let argument = self.main_expression().build(&mut ProgramState::new(ctx.file))?;
+        let formatter = self.string_formatter().as_ref().map(|v| v.build(ctx));
         ctx.terms.push(FormatterTerm::Simple { argument, formatter });
         Ok(())
     }
 }
-impl crate::StringFormatterNode {
+impl<'i> crate::StringFormatterNode<'i> {
     fn build(&self, sb: &mut StringFormatterBuilder) -> StringTextNode {
-        let span = sb.file.with_range(self.span.clone());
+        let span = sb.file.with_range(self.get_range32());
         StringTextNode { text: self.text.trim().to_string(), span }
     }
 }
-impl crate::StringInterpolationComplexNode {
+impl<'i> crate::StringInterpolationComplexNode<'i> {
     fn build(&self, ctx: &mut StringFormatterBuilder) -> Result<()> {
         ctx.push_buffer();
-        self.main_expression.build(&mut ProgramState::new(ctx.file))?;
-        let argument = self.main_expression.build(&mut ProgramState::new(ctx.file))?;
-        let mut formatters = Vec::with_capacity(self.tuple_pair.len());
-        for x in self.tuple_pair.iter() {
+        self.main_expression().build(&mut ProgramState::new(ctx.file))?;
+        let argument = self.main_expression().build(&mut ProgramState::new(ctx.file))?;
+        let mut formatters = Vec::with_capacity(self.tuple_pair().len());
+        for x in self.tuple_pair().iter() {
             match x.to_hir(&mut ProgramState::new(ctx.file)) {
                 Ok(o) => formatters.push(o),
                 Err(e) => ctx.errors.push(e),

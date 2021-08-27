@@ -1,5 +1,6 @@
 use crate::{
     helpers::ProgramState,
+    traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
 };
 use nyar_error::Result;
@@ -8,10 +9,10 @@ mod annotation;
 mod import;
 mod namespace;
 
-impl crate::ProgramNode {
+impl<'i> crate::ProgramNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ProgramRoot> {
         let mut statements = vec![];
-        for node in &self.statement {
+        for node in &self.statement() {
             match node.build(ctx) {
                 Ok(o) => statements.extend(o),
                 Err(e) => ctx.add_error(e),
@@ -21,7 +22,7 @@ impl crate::ProgramNode {
     }
 }
 
-impl crate::StatementNode {
+impl<'i> crate::StatementNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<Option<StatementKind>> {
         let value = match self {
             Self::DefineNamespace(v) => v.build(ctx).into(),

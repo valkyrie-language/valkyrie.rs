@@ -6,7 +6,7 @@ impl crate::DotClosureCallNode {
             monadic,
             base: Default::default(),
             trailing: self.continuation.build(ctx),
-            span: self.span.clone(),
+            span: self.get_range32(),
         })
     }
 }

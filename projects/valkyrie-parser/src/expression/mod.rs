@@ -14,7 +14,7 @@ impl crate::ExpressionRootNode {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<StatementKind> {
         let expr = self.main_expression.build(ctx)?;
         let eos = self.eos.is_some();
-        let ex = ExpressionNode { omit: eos, body: expr, span: self.span.clone() };
+        let ex = ExpressionNode { omit: eos, body: expr, span: self.get_range32() };
         Ok(StatementKind::Expression(Box::new(ex)))
     }
 }

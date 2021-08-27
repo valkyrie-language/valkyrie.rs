@@ -1,25 +1,25 @@
 use super::*;
 
-impl crate::DefineClassNode {
+impl<'i> crate::DefineClassNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ClassDeclaration> {
-        let _ = build_constraint(&self.define_constraint, ctx);
+        let _ = build_constraint(&self.define_constraint(), ctx);
         Ok(ClassDeclaration {
-            kind: self.kw_class.build(),
-            annotations: self.annotation_head.annotations(ctx),
-            name: self.identifier.build(ctx.file),
+            kind: self.kw_class().build(),
+            annotations: self.annotation_head().annotations(ctx),
+            name: self.identifier().build(ctx.file),
             generic: None,
             inherits: None,
             implements: vec![],
-            terms: self.class_block.build(ctx),
-            span: self.span.clone(),
+            terms: self.class_block().build(ctx),
+            span: self.get_range32(),
         })
     }
 }
 
-impl crate::ClassBlockNode {
+impl<'i> crate::ClassBlockNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Vec<ClassTerm> {
-        let mut terms = Vec::with_capacity(self.class_term.len());
-        for term in &self.class_term {
+        let mut terms = Vec::with_capacity(self.class_term().len());
+        for term in &self.class_term() {
             match term.build(ctx) {
                 Ok(s) => terms.extend(s),
                 Err(e) => ctx.add_error(e),
@@ -28,11 +28,11 @@ impl crate::ClassBlockNode {
         terms
     }
     pub(crate) fn build_domain(&self, ctx: &mut ProgramState) -> DomainDeclaration {
-        DomainDeclaration { annotations: Default::default(), body: self.build(ctx), span: self.span.clone() }
+        DomainDeclaration { annotations: Default::default(), body: self.build(ctx), span: self.get_range32() }
     }
 }
 
-impl crate::ClassTermNode {
+impl<'i> crate::ClassTermNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<Option<ClassTerm>> {
         match self {
             Self::ProceduralCall(v) => Ok(Some(ClassTerm::Macro(v.build(ctx)))),
@@ -44,7 +44,7 @@ impl crate::ClassTermNode {
     }
 }
 
-impl crate::KwClassNode {
+impl<'i> crate::KwClassNode<'i> {
     pub(crate) fn build(&self) -> ClassKind {
         match self.text.as_str() {
             "class" => ClassKind::Class,
@@ -53,38 +53,38 @@ impl crate::KwClassNode {
         }
     }
 }
-impl crate::DefineFieldNode {
+impl<'i> crate::DefineFieldNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FieldDeclaration> {
-        let name = self.identifier.build(ctx.file);
-        let annotations = self.annotation_mix.annotations(ctx)?;
+        let name = self.identifier().build(ctx.file);
+        let annotations = self.annotation_mix().annotations(ctx)?;
         Ok(FieldDeclaration {
             annotations,
             name,
-            typing: self.type_hint.build(ctx),
-            default: self.parameter_default.build(ctx),
-            span: self.span.clone(),
+            typing: self.type_hint().build(ctx),
+            default: self.parameter_default().build(ctx),
+            span: self.get_range32(),
         })
     }
 }
 
-impl crate::DefineMethodNode {
+impl<'i> crate::DefineMethodNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<MethodDeclaration> {
-        let returns = self.function_middle.returns(ctx)?;
-        let annotations = self.annotation_mix.annotations(ctx)?;
+        let returns = self.function_middle().returns(ctx)?;
+        let annotations = self.annotation_mix().annotations(ctx)?;
         Ok(MethodDeclaration {
             annotations,
-            name: self.identifier.build(ctx.file),
-            generics: self.function_middle.generics(ctx),
-            parameters: self.function_middle.parameters(ctx),
+            name: self.identifier().build(ctx.file),
+            generics: self.function_middle().generics(ctx),
+            parameters: self.function_middle().parameters(ctx),
             returns,
-            body: self.continuation.as_ref().map(|s| s.build(ctx)),
-            span: self.span.clone(),
+            body: self.continuation().as_ref().map(|s| s.build(ctx)),
+            span: self.get_range32(),
         })
     }
 }
 
-impl crate::DefineDomainNode {
+impl<'i> crate::DefineDomainNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<DomainDeclaration> {
-        Ok(DomainDeclaration { annotations: Default::default(), body: Default::default(), span: self.span.clone() })
+        Ok(DomainDeclaration { annotations: Default::default(), body: Default::default(), span: self.get_range32() })
     }
 }

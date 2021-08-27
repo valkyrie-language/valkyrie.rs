@@ -1,8 +1,8 @@
 use super::*;
 
-impl crate::IfGuardNode {
+impl<'i> crate::IfGuardNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
-        match &self.condition {
+        match &self.condition() {
             Some(s) => match s.build(ctx) {
                 Ok(o) => Some(o),
                 Err(e) => {

@@ -1,35 +1,35 @@
 use super::*;
 use valkyrie_ast::helper::ValkyrieNode;
 
-impl crate::RangeLiteralNode {
+impl<'i> crate::RangeLiteralNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeNode> {
         let mut value = RangeNode { kind: RangeKind::Ordinal, terms: vec![], span: Default::default() };
         match self {
             Self::RangeLiteralIndex0(v) => {
-                for term in &v.subscript_axis {
+                for term in &v.subscript_axis() {
                     match term.build(ctx) {
                         Ok(o) => value.terms.push(o),
                         Err(e) => ctx.add_error(e),
                     }
                 }
-                value.span = v.span.clone()
+                value.span = v.span().clone()
             }
             Self::RangeLiteralIndex1(v) => {
                 value.kind = RangeKind::Offset;
-                for term in &v.subscript_axis {
+                for term in &v.subscript_axis() {
                     match term.build(ctx) {
                         Ok(o) => value.terms.push(o),
                         Err(e) => ctx.add_error(e),
                     }
                 }
-                value.span = v.span.clone()
+                value.span = v.span().clone()
             }
         }
         Ok(value)
     }
 }
 
-impl crate::SubscriptAxisNode {
+impl<'i> crate::SubscriptAxisNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeTermNode> {
         match self {
             Self::SubscriptOnly(v) => v.build(ctx),
@@ -38,39 +38,39 @@ impl crate::SubscriptAxisNode {
     }
 }
 
-impl crate::SubscriptOnlyNode {
+impl<'i> crate::SubscriptOnlyNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeTermNode> {
-        self.index.build(ctx).map(|v| RangeTermNode::Index { span: ctx.file.with_range(v.get_range()), index: v })
+        self.index().build(ctx).map(|v| RangeTermNode::Index { span: ctx.file.with_range(v.get_range()), index: v })
     }
 }
 
-impl crate::SubscriptRangeNode {
+impl<'i> crate::SubscriptRangeNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<RangeTermNode> {
-        let head = match &self.head {
+        let head = match &self.head() {
             Some(s) => Some(s.build(ctx)?),
             None => None,
         };
-        let tail = match &self.tail {
+        let tail = match &self.tail() {
             Some(s) => Some(s.build(ctx)?),
             None => None,
         };
-        let step = match &self.step {
+        let step = match &self.step() {
             Some(s) => Some(s.build(ctx)?),
             None => None,
         };
         Ok(RangeTermNode::Range { head, tail, step })
     }
 }
-impl crate::RangeCallNode {
+impl<'i> crate::RangeCallNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<SubscriptCallNode> {
-        let monadic = self.op_and_then.is_some();
-        let terms = self.range_literal.build(ctx)?.terms;
+        let monadic = self.op_and_then().is_some();
+        let terms = self.range_literal().build(ctx)?.terms;
         Ok(SubscriptCallNode {
             kind: RangeKind::Ordinal,
             base: ExpressionKind::Placeholder,
             monadic,
             terms,
-            span: self.span.clone(),
+            span: self.get_range32(),
         })
     }
 }
