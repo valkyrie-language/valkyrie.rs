@@ -1,4 +1,4 @@
-use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension};
+use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension, InlineTermNode};
 use nyar_error::{NyarError, Result, SourceID};
 use pratt::{Affix, PrattParser, Precedence};
 use std::str::FromStr;
@@ -24,7 +24,8 @@ impl<'i> crate::ExpressionRootNode<'i> {
 impl<'i> crate::MainExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.main_term().split_first().expect("at least one term");
+        let terms = self.main_term();
+        let (head, rest) = terms.split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
         for (infix, rhs) in self.main_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));
@@ -38,7 +39,8 @@ impl<'i> crate::MainExpressionNode<'i> {
 impl<'i> crate::InlineExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.inline_term().split_first().expect("at least one term");
+        let terms = self.inline_term();
+        let (head, rest) = terms.split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
         for (infix, rhs) in self.main_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));

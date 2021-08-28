@@ -429,8 +429,8 @@ union Leading {
 }
 @railway(false)
 atomic union MainSuffixTerm {
-    | HIDE DotMatchCall   #DotMatchCall
-    | HIDE DotClosureCall #DotClosureCall
+    | HIDE DotMatchCall
+    | HIDE DotClosureCall
     | TupleCall
     | InlineSuffixTerm
 }

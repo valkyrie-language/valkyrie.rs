@@ -1,3 +1,3 @@
-# ValkyrieParser
+# Parser
 
 ![Railway](./railway.svg)

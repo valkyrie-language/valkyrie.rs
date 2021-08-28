@@ -14,6 +14,7 @@ pub mod helper;
 mod package_level;
 mod patterns;
 mod string_like;
+mod traits;
 pub(crate) mod utils;
 
 pub use crate::{

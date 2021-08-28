@@ -1,4 +1,5 @@
 use super::*;
+use nyar_error::SourceSpan;
 
 mod display;
 
@@ -26,6 +27,8 @@ pub struct TraitDeclaration {
     pub implements: Option<ExpressionKind>,
     /// the needed fields(zero parameter method, get + set)
     pub body: Vec<TraitTerm>,
+    /// The range of the node
+    pub span: Range<u32>,
 }
 
 /// `extends path::A: Debug {}`

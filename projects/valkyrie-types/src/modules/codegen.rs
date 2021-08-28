@@ -16,13 +16,13 @@ impl Mir2Lir for ModuleItem {
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         match self {
-            ModuleItem::Resource(s) => s.to_lir(graph, context),
-            ModuleItem::Structure(s) => s.to_lir(graph, context),
-            ModuleItem::Variant(s) => s.to_lir(graph, context),
-            ModuleItem::Function(s) => s.to_lir(graph, context),
-            ModuleItem::External(s) => s.to_lir(graph, context),
-            ModuleItem::Flags(s) => s.to_lir(graph, context),
-            ModuleItem::Enums(s) => s.to_lir(graph, context),
+            Self::Resource(s) => s.to_lir(graph, context),
+            Self::Structure(s) => s.to_lir(graph, context),
+            Self::Variant(s) => s.to_lir(graph, context),
+            Self::Function(s) => s.to_lir(graph, context),
+            Self::External(s) => s.to_lir(graph, context),
+            Self::Flags(s) => s.to_lir(graph, context),
+            Self::Enums(s) => s.to_lir(graph, context),
         }
     }
 }
