@@ -37,7 +37,7 @@ impl<'i> crate::FlagTermNode<'i> {
             Self::ProceduralCall(v) => v.build(ctx).into(),
             Self::DefineMethod(v) => v.build(ctx)?.into(),
             Self::FlagField(v) => v.build(ctx)?.into(),
-            Self::EOS_FREE(_) => return Ok(None),
+            Self::EosFree(_) => return Ok(None),
         };
         Ok(Some(value))
     }

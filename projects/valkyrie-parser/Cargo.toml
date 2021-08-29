@@ -18,14 +18,14 @@ version = "0.1.*"
 path = "../valkyrie-ast"
 
 [dependencies.yggdrasil-rt]
-version = "0.1.0"
-path = 'C:\Users\Dell\CLionProjects\yggdrasil.rs\projects\ygg-rt'
+version = "0.1.3"
+#path = 'C:\Users\Dell\CLionProjects\yggdrasil.rs\projects\ygg-rt'
 
 [dependencies.nyar-error]
-version = "0.1.*"
-features = ["pratt", "yggdrasil-rt", "dashu"]
-path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
+workspace = true
 
+[features]
+serde = ["valkyrie-ast/serde"]
 
 [dev-dependencies]
 anyhow = "1.0.79"

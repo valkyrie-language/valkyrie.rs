@@ -1,4 +1,5 @@
 use super::*;
+use crate::MatchTermsNode;
 use std::sync::Arc;
 
 impl<'i> crate::MatchExpressionNode<'i> {
@@ -45,7 +46,7 @@ impl<'i> crate::MatchTermsNode<'i> {
             Self::MatchElse(v) => v.build(ctx)?,
             Self::MatchType(v) => v.build(ctx)?,
             Self::MatchWhen(v) => v.build(ctx)?,
-            Self::COMMA(_) => return Ok(None),
+            Self::Comma(_) => return Ok(None),
         };
         Ok(Some(value))
     }

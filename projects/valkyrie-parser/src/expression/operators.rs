@@ -34,6 +34,13 @@ impl<'i> crate::TypePrefixNode<'i> {
         OperatorNode { kind: o, span: self.get_range32() }
     }
 }
+
+impl<'i> crate::InlineSuffixTerm0Node<'i> {
+    pub fn as_operator(&self) -> OperatorNode {
+        todo!()
+    }
+}
+
 impl<'i> crate::MainInfixNode<'i> {
     pub fn as_operator(&self) -> OperatorNode {
         use valkyrie_ast::LogicMatrix;

@@ -1,8 +1,10 @@
-use crate::{FieldDeclaration, ProgramRoot, StatementKind, TraitDeclaration, TraitTerm};
+use crate::{FieldDeclaration, IdentifierNode, NamePathNode, ProgramRoot, StatementKind, TraitDeclaration, TraitTerm};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 // This token can call references
-pub trait DefinitionProvider {}
+pub enum DefinitionQuery {
+    Trait(Vec<String>),
+}
 
 pub struct DefinitionContext {
     pub names: Vec<String>,
@@ -12,22 +14,7 @@ pub trait ReferenceCaller {}
 
 #[allow(unused_variables)]
 pub trait ElementQuery {
-    fn query_definition_provider(&self, cursor: usize) -> Option<&dyn DefinitionProvider> {
-        None
-    }
-
-    fn query_definition(&self, cursor: usize) -> Option<&dyn ReferenceCaller> {
-        None
-    }
-
-    fn query_super_class(&self, cursor: usize) -> Option<&dyn ReferenceCaller> {
-        None
-    }
-
-    fn query_sub_class(&self, cursor: usize) -> Option<&dyn ReferenceCaller> {
-        None
-    }
-    fn query_document(&self, cursor: usize) -> Option<&dyn ReferenceCaller> {
+    fn query_definition_provider(&self, cursor: usize) -> Option<DefinitionQuery> {
         None
     }
 }
@@ -36,7 +23,7 @@ impl<T> ElementQuery for Vec<T>
 where
     T: ElementQuery,
 {
-    fn query_definition_provider(&self, cursor: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, cursor: usize) -> Option<&dyn DefinitionQuery> {
         for item in self.iter() {
             match item.query_definition_provider(cursor) {
                 Some(s) => return Some(s),
@@ -48,13 +35,13 @@ where
 }
 
 impl ElementQuery for ProgramRoot {
-    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionQuery> {
         self.statements.query_definition_provider(offset)
     }
 }
 
 impl ElementQuery for StatementKind {
-    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionQuery> {
         match self {
             StatementKind::Nothing => None,
             StatementKind::Document(_) => None,
@@ -78,7 +65,7 @@ impl ElementQuery for StatementKind {
 }
 
 impl ElementQuery for TraitDeclaration {
-    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionQuery> {
         if self.span.contains(&offset) {
             // if cursor on trait elements
             match self.body.query_definition_provider(offset) {
@@ -92,10 +79,10 @@ impl ElementQuery for TraitDeclaration {
     }
 }
 
-impl DefinitionProvider for TraitDeclaration {}
+impl DefinitionQuery for TraitDeclaration {}
 
 impl ElementQuery for TraitTerm {
-    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionQuery> {
         match self {
             TraitTerm::Macro(_) => None,
             TraitTerm::Field(v) => v.query_definition_provider(offset),
@@ -105,9 +92,9 @@ impl ElementQuery for TraitTerm {
 }
 
 impl ElementQuery for FieldDeclaration {
-    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionProvider> {
+    fn query_definition_provider(&self, offset: usize) -> Option<&dyn DefinitionQuery> {
         if self.span.contains(&offset) { Some(self) } else { None }
     }
 }
 
-impl DefinitionProvider for FieldDeclaration {}
+impl DefinitionQuery for FieldDeclaration {}

@@ -12,3 +12,15 @@ impl<'i> crate::DotMatchCallNode<'i> {
         })
     }
 }
+
+impl<'i> crate::MainSuffixTerm0Node<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<MatchCallNode> {
+        todo!()
+    }
+}
+
+impl<'i> crate::MainSuffixTerm1Node<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ClosureCallNode> {
+        todo!()
+    }
+}

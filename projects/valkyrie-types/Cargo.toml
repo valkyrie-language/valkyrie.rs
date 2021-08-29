@@ -17,19 +17,15 @@ xxhash-rust = { version = "0.8.10", features = ["xxh3", "const_xxh3"] }
 smallvec = "2.0.0-alpha.3"
 dashmap = "5.5.3"
 indexmap = "2.2.3"
-itertools = "0.12.1"
+itertools = "0.13.0"
 image = { version = "0.25.0", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
+nyar-error = { workspace = true }
 
 [dependencies.nyar-wasm]
-version = "0.0.6"
-path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
-
-[dependencies.nyar-error]
-version = "0.1.*"
-features = ["json5", "num", "dashu", "walkdir"]
-path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
+version = "0.0.7"
+#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
 
 [dependencies.valkyrie-ast]
 version = "0.1.*"

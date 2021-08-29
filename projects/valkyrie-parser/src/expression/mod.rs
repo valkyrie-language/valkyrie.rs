@@ -1,4 +1,4 @@
-use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension, InlineTermNode};
+use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension, InlineTermNode, MainSuffixTermNode};
 use nyar_error::{NyarError, Result, SourceID};
 use pratt::{Affix, PrattParser, Precedence};
 use std::str::FromStr;
@@ -58,7 +58,9 @@ impl<'i> crate::TypeExpressionNode<'i> {
     }
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
         let mut stream = vec![];
-        let (head, rest) = self.type_term().split_first().expect("at least one term");
+        let terms = self.type_term();
+
+        let (head, rest) = terms.split_first().expect("at least one term");
         head.push_tokens(&mut stream, ctx)?;
         for (infix, rhs) in self.type_infix().iter().zip(rest.iter()) {
             stream.push(TokenStream::Infix(infix.as_operator()));
@@ -202,13 +204,18 @@ impl<'i> crate::TypeFactorNode<'i> {
         }
     }
 }
+impl<'i> crate::TypeFactor0Node<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ExpressionKind> {
+        todo!()
+    }
+}
 
 impl<'i> crate::MainSuffixTermNode<'i> {
     fn as_token(&self, ctx: &mut ProgramState) -> Result<TokenStream> {
         let token = match self {
             Self::InlineSuffixTerm(v) => v.as_token(ctx)?,
-            Self::DotMatchCall(v) => TokenStream::DotMatch(v.build(ctx)?),
-            Self::DotClosureCall(v) => TokenStream::DotClosure(v.build(ctx)?),
+            Self::MainSuffixTerm0(v) => TokenStream::DotMatch(v.build(ctx)?),
+            Self::MainSuffixTerm1(v) => TokenStream::DotClosure(v.build(ctx)?),
             Self::TupleCall(v) => TokenStream::Apply(v.build(ctx)?),
         };
         Ok(token)
@@ -228,6 +235,11 @@ impl<'i> crate::InlineSuffixTermNode<'i> {
     }
 }
 
+impl<'i> crate::InlineSuffixTerm1Node<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<DotCallNode> {
+        todo!()
+    }
+}
 impl<'i> crate::TypeSuffixTermNode<'i> {
     fn as_token(&self, ctx: &mut ProgramState) -> Result<TokenStream> {
         let token = match self {

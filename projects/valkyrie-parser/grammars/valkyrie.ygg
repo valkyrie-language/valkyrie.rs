@@ -1,10 +1,5 @@
-grammar Valkyrie {
-    patterns: ("*.vk", "*.valkyrie"),
-    parser: {
-        text_raw: {
-            rust: crate::helpers::parse_text_raw
-        }
-    }
+grammar valkyrie {
+    patterns: ("*.vk", "*.valkyrie")
 }
 // === statements === -----------------------------------------------------------------
 atomic class Program {
@@ -68,20 +63,20 @@ union ImportTerm {
 }
 /// `import package∷module∷*`
 class ImportAll ^ {
-    (path:Identifier NS_CONCAT)+ OP_IMPORT_ALL
+    (path=Identifier NS_CONCAT)+ OP_IMPORT_ALL
 }
 /// `import` package.module.name { space }
 class ImportSpace ^ {
-    path:Identifier (NS_CONCAT path:Identifier)* NS_CONCAT? body:ImportBlock
+    path=Identifier (NS_CONCAT path=Identifier)* NS_CONCAT? body=ImportBlock
 }
 /// import package::module::@macro as @macro
 /// import package::module::macro as @macro
 class ImportName ^ {
-    (path:Identifier NS_CONCAT)* item:ImportNameItem alias:ImportAs
+    (path=Identifier NS_CONCAT)* item=ImportNameItem alias=ImportAs
 }
 // import package∷module∷item as alias
 class ImportAs ^ {
-    (KW_AS alias:ImportNameItem)?
+    (KW_AS alias=ImportNameItem)?
 }
 atomic union ImportNameItem {
     | ProceduralName
@@ -246,7 +241,7 @@ class FunctionMiddle {
     DefineGeneric? '(' FunctionParameters ')' TypeReturn? TypeEffect?
 }
 class TypeHint ^ {
-    (COLON hint:TypeExpression)?
+    (COLON hint=TypeExpression)?
 }
 class TypeReturn {
     ARROW1 TypeExpression
@@ -327,7 +322,7 @@ class ForStatement {
     KW_FOR LetPattern KW_IN InlineExpression? IfGuard Continuation ^EOS?
 }
 class IfGuard ^ {
-    (KW_IF condition:InlineExpression)?
+    (KW_IF condition=InlineExpression)?
 }
 // === controls === ----------------------------------------------------------------------------------------------------
 class ControlFlow {
@@ -609,12 +604,12 @@ union SubscriptAxis {
     | SubscriptOnly
 }
 class SubscriptOnly {
-    index:MainExpression
+    index=MainExpression
 }
 atomic class SubscriptRange ^ {
-    (head:MainExpression HIDE)? (
-        | RangeOmit (HIDE step:MainExpression)?
-        | COLON (HIDE tail:MainExpression (HIDE COLON (HIDE step:MainExpression)?)?)?
+    (head=MainExpression HIDE)? (
+        | RangeOmit (HIDE step=MainExpression)?
+        | COLON (HIDE tail=MainExpression (HIDE COLON (HIDE step=MainExpression)?)?)?
     )
 }
 atomic inline class RangeOmit {
@@ -629,7 +624,7 @@ atomic class GenericParameter {
     (GenericParameterPair (HIDE ^COMMA ~ GenericParameterPair)* (HIDE ^COMMA)?)?
 }
 class GenericParameterPair {
-    Identifier (^COLON bound:TypeExpression)? ('=' default:TypeExpression)?
+    Identifier (^COLON bound=TypeExpression)? ('=' default=TypeExpression)?
 }
 // === generic call === ------------------------------------------------------------------------------------------------
 class GenericCall {
@@ -727,7 +722,7 @@ class KEYWORDS_STOP {
 }
 @railway(false)
 atomic class IDENTIFIER_STOP {
-    Identifier ~ /[\[\](){}<>⟨:∷,.;∈=]|in|is/
+    Identifier ~ /[\[\](){}<>⟨=∷,.;∈=]|in|is/
 }
 // === identifier === --------------------------------------------------------------------------------------------------
 atomic class Slot {
@@ -775,28 +770,28 @@ text class DigitsX {
     /[0-9a-zA-Z](_*[0-9a-zA-Z])*/
 }
 atomic class Decimal ^ {
-    (lhs:Integer (dot:DOT rhs:Integer)?)
-    (/[⁑]|[*]{2}/ (sign:Sign)? shift:Integer)?
-    (/[_]*/ unit:Identifier)?
+    (lhs=Integer (dot=DOT rhs=Integer)?)
+    (/[⁑]|[*]{2}/ (sign=Sign)? shift=Integer)?
+    (/[_]*/ unit=Identifier)?
 }
 atomic class DecimalX ^ {
-    base:Integer /[⁂]|[*]{3}/
-    (lhs:DigitsX (dot:DOT rhs:DigitsX)?)
+    base=Integer /[⁂]|[*]{3}/
+    (lhs=DigitsX (dot=DOT rhs=DigitsX)?)
     (/[⁑]|[*]{2}/ (
-        | (sign:Sign)? shift:Integer (/[_]*/ unit:Identifier)?
-        | unit:Identifier
+        | (sign=Sign)? shift=Integer (/[_]*/ unit=Identifier)?
+        | unit=Identifier
     ))?
 }
 // === keywords === ----------------------------------------------------------------------------------------------------
 @railway(false)
 atomic token {
     PROPORTION: /∷|::/
-    NS_CONCAT: /[.∷]|::/
-    COLON: [:：]
-    ARROW1: /[:：⟶]|->/
-    COMMA: [,，]
-    DOT:   [.．]
-    OP_SLOT: /[$]{1,3}/
+    NS_CONCAT : /[.∷]|::/
+    COLON     : [:：]
+    ARROW1    : /[:：⟶]|->/
+    COMMA     : [,，]
+    DOT       : [.．]
+    OP_SLOT   : /[$]{1,3}/
     // brackets
     OFFSET_L: '⁅'
     OFFSET_R: '⁆'
@@ -808,8 +803,8 @@ class PROPORTION2 -> PROPORTION {
 @style(keyword)
 token {
     OP_IMPORT_ALL: '*'
-    OP_AND_THEN: '?'
-    OP_BIND: /≔|:=/
+    OP_AND_THEN  : '?'
+    OP_BIND      : /≔|:=/
 }
 @railway(false)
 @style(keyword)
@@ -830,34 +825,34 @@ text class KW_CONTROL {
 @style(keyword)
 token {
     KW_NAMESPACE: 'namespace'
-    KW_IMPORT: 'using'
+    KW_IMPORT   : 'using'
     // === class === ---------------------------------------------------------------------------------------------------
     KW_CONSTRAINT: /template|generic|constraint|∀/
-    KW_WHERE: 'where'
+    KW_WHERE     : 'where'
     KW_IMPLEMENTS: /implements?/
-    KW_EXTENDS: /extends?/
-    KW_INHERITS: /inherits?/
+    KW_EXTENDS   : /extends?/
+    KW_INHERITS  : /inherits?/
     // === looping === -------------------------------------------------------------------------------------------------
     KW_FOR: 'for'
     KW_END: 'end'
     // === constructor === ---------------------------------------------------------------------------------------------
-    KW_LET: 'let'
-    KW_NEW: 'new'
+    KW_LET   : 'let'
+    KW_NEW   : 'new'
     KW_OBJECT: 'object'
     KW_LAMBDA: 'lambda'
     // === if/switch/catch/match === -----------------------------------------------------------------------------------
-    KW_IF: 'if'
+    KW_IF    : 'if'
     KW_SWITCH: 'switch'
-    KW_TRY: 'try'
-    KW_TYPE: 'type'
-    KW_CASE: 'case'
-    KW_WHEN: 'when'
-    KW_ELSE: 'else'
+    KW_TRY   : 'try'
+    KW_TYPE  : 'type'
+    KW_CASE  : 'case'
+    KW_WHEN  : 'when'
+    KW_ELSE  : 'else'
     // === operators === -----------------------------------------------------------------------------------------------
     KW_NOT: 'not'
-    KW_IN: /in|∈/
-    KW_IS: 'is'
-    KW_AS: 'as'
+    KW_IN : /in|∈/
+    KW_IS : 'is'
+    KW_AS : 'as'
 }
 // === ignores === -----------------------------------------------------------------------------------------------------
 atomic class Shebang {
@@ -868,13 +863,12 @@ class WhiteSpace {
     /[^\\S\r\n]+/
 }
 @railway(false)
-hide class SkipSpace {
+ignore class SkipSpace {
     /\p{White_Space}+/
 }
 @style(comment)
-hide class Comment {
-    | /[⍝🗨]|\\{2}/ ROL
-    | '🗨🗨🗨' '🗩🗩🗩'
+ignore class Comment {
+    | /[⍝#]|\\{2}/ ROL
 }
 // ============================-----------------------------------------------------------------------------------------
 // === string interpolation === ----------------------------------------------------------------------------------------
@@ -893,7 +887,7 @@ atomic text class EscapeCharacter {
     /\\\\.|\{\{|\}\}/
 }
 atomic class EscapeUnicode {
-    '\u' '{' ~ code:EscapeUnicodeCode ~ '}'
+    '\u' '{' ~ code=EscapeUnicodeCode ~ '}'
 }
 text class EscapeUnicodeCode {
     /[0-9a-zA-Z]*/

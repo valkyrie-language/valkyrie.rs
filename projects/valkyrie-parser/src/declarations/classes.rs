@@ -40,7 +40,7 @@ impl<'i> crate::ClassTermNode<'i> {
             Self::DefineDomain(v) => Ok(Some(ClassTerm::Domain(v.build(ctx)?))),
             Self::DefineField(v) => Ok(Some(ClassTerm::Field(v.build(ctx)?))),
             Self::DefineMethod(v) => Ok(Some(ClassTerm::Method(v.build(ctx)?))),
-            Self::EOS_FREE(_) => Ok(None),
+            Self::EosFree(_) => Ok(None),
         }
     }
 }

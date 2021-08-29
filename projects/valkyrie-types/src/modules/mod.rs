@@ -40,9 +40,12 @@ pub struct ResolveState {
     /// Collect errors
     errors: Vec<NyarError>,
     /// Collect spread statements
-    pub(crate) main_function: Vec<StatementNode>,
+    pub(crate) main_function: Vec<ValkyrieStatement>,
     sources: SourceCache,
 }
+
+#[derive(Debug)]
+pub enum ValkyrieStatement {}
 
 #[derive(Clone, Default)]
 pub struct ModuleImportsMap {

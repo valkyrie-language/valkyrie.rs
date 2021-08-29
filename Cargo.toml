@@ -13,3 +13,9 @@ exclude = [
 [profile.release]
 lto = true
 opt-level = "s"
+
+
+[workspace.dependencies.nyar-error]
+version = "0.1.14"
+features = ["json5", "num", "dashu", "walkdir", "pratt", "yggdrasil-rt"]
+#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'

@@ -51,7 +51,7 @@ impl<'i> crate::ImportTermNode<'i> {
             Self::ImportAll(v) => Some(v.build(ctx).into()),
             Self::ImportSpace(v) => Some(v.build(ctx).into()),
             Self::ImportName(v) => Some(v.build(ctx).into()),
-            Self::EOS_FREE(_) => None,
+            Self::EosFree(_) => None,
         }
     }
 }

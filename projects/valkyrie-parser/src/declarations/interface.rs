@@ -8,6 +8,7 @@ impl<'i> crate::DefineTraitNode<'i> {
             generics: self.define_generic().as_ref().map(|s| s.build(ctx)),
             implements: self.type_hint().build(ctx),
             body: self.trait_block().build(ctx),
+            span: Default::default(),
         })
     }
 }
@@ -36,7 +37,7 @@ impl<'i> crate::TraitTermNode<'i> {
             Self::ProceduralCall(v) => v.build(ctx).into(),
             Self::DefineField(v) => v.build(ctx)?.into(),
             Self::DefineMethod(v) => v.build(ctx)?.into(),
-            Self::EOS_FREE(_) => return Ok(None),
+            Self::EosFree(_) => return Ok(None),
         };
         Ok(Some(item))
     }
