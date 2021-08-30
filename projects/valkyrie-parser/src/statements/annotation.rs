@@ -52,8 +52,7 @@ impl<'i> crate::AttributeItemNode<'i> {
 impl<'i> crate::AnnotationTermNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeList {
         let terms = match self {
-            Self::AttributeCall(v) => vec![v.attribute_item().build(ctx)],
-            Self::AttributeList(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
+            Self::AttributeBelowCall(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
         };
         AttributeList { terms }
     }
@@ -62,9 +61,8 @@ impl<'i> crate::AnnotationTermNode<'i> {
 impl<'i> crate::AnnotationTermMixNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> AttributeList {
         let terms = match self {
-            Self::AttributeCall(v) => vec![v.attribute_item().build(ctx)],
             Self::ProceduralCall(v) => vec![v.build(ctx).into()],
-            Self::AttributeList(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
+            Self::AttributeBelowCall(v) => v.attribute_item().iter().map(|v| v.build(ctx)).collect(),
         };
         AttributeList { terms }
     }

@@ -33,3 +33,11 @@ impl Mir2Lir for ValkyrieClass {
         Ok(())
     }
 }
+impl Mir2Lir for ValkyrieMethod {
+    type Output = ();
+    type Context<'a> = &'a ResolveState;
+
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
+        Ok(())
+    }
+}

@@ -143,8 +143,8 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::ANNOTATION_MIX => parse_annotation_mix(state),
         ValkyrieRule::ANNOTATION_TERM => parse_annotation_term(state),
         ValkyrieRule::ANNOTATION_TERM_MIX => parse_annotation_term_mix(state),
-        ValkyrieRule::ATTRIBUTE_LIST => parse_attribute_list(state),
-        ValkyrieRule::ATTRIBUTE_CALL => parse_attribute_call(state),
+        ValkyrieRule::ATTRIBUTE_BELOW_CALL => parse_attribute_below_call(state),
+        ValkyrieRule::ATTRIBUTE_BELOW_MARK => parse_attribute_below_mark(state),
         ValkyrieRule::ATTRIBUTE_ITEM => parse_attribute_item(state),
         ValkyrieRule::ATTRIBUTE_NAME => parse_attribute_name(state),
         ValkyrieRule::PROCEDURAL_CALL => parse_procedural_call(state),
@@ -3001,81 +3001,78 @@ fn parse_annotation_mix(state: Input) -> Output {
 #[inline]
 fn parse_annotation_term(state: Input) -> Output {
     state.rule(ValkyrieRule::ANNOTATION_TERM, |s| {
-        Err(s)
-            .or_else(|s| parse_attribute_list(s).and_then(|s| s.tag_node("attribute_list")))
-            .or_else(|s| parse_attribute_call(s).and_then(|s| s.tag_node("attribute_call")))
+        Err(s).or_else(|s| parse_attribute_below_call(s).and_then(|s| s.tag_node("attribute_below_call")))
     })
 }
 #[inline]
 fn parse_annotation_term_mix(state: Input) -> Output {
     state.rule(ValkyrieRule::ANNOTATION_TERM_MIX, |s| {
         Err(s)
-            .or_else(|s| parse_attribute_list(s).and_then(|s| s.tag_node("attribute_list")))
-            .or_else(|s| parse_attribute_call(s).and_then(|s| s.tag_node("attribute_call")))
+            .or_else(|s| parse_attribute_below_call(s).and_then(|s| s.tag_node("attribute_below_call")))
             .or_else(|s| parse_procedural_call(s).and_then(|s| s.tag_node("procedural_call")))
     })
 }
 #[inline]
-fn parse_attribute_list(state: Input) -> Output {
-    state.rule(ValkyrieRule::ATTRIBUTE_LIST, |s| {
-        s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| builtin_text(s, "#", false))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| builtin_text(s, "[", false))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| {
-                    s.optional(|s| {
-                        s.sequence(|s| {
-                            Ok(s)
-                                .and_then(|s| parse_attribute_item(s).and_then(|s| s.tag_node("attribute_item")))
-                                .and_then(|s| builtin_ignore(s))
-                                .and_then(|s| {
-                                    s.repeat(0..4294967295, |s| {
-                                        s.sequence(|s| {
-                                            Ok(s).and_then(|s| builtin_ignore(s)).and_then(|s| {
+fn parse_attribute_below_call(state: Input) -> Output {
+    state.rule(ValkyrieRule::ATTRIBUTE_BELOW_CALL, |s| {
+        Err(s)
+            .or_else(|s| {
+                s.sequence(|s| {
+                    Ok(s)
+                        .and_then(|s| parse_attribute_below_mark(s).and_then(|s| s.tag_node("attribute_below_mark")))
+                        .and_then(|s| builtin_ignore(s))
+                        .and_then(|s| parse_attribute_item(s).and_then(|s| s.tag_node("attribute_item")))
+                })
+            })
+            .or_else(|s| {
+                s.sequence(|s| {
+                    Ok(s)
+                        .and_then(|s| parse_attribute_below_mark(s).and_then(|s| s.tag_node("attribute_below_mark")))
+                        .and_then(|s| builtin_ignore(s))
+                        .and_then(|s| builtin_text(s, "[", false))
+                        .and_then(|s| builtin_ignore(s))
+                        .and_then(|s| {
+                            s.optional(|s| {
+                                s.sequence(|s| {
+                                    Ok(s)
+                                        .and_then(|s| parse_attribute_item(s).and_then(|s| s.tag_node("attribute_item")))
+                                        .and_then(|s| builtin_ignore(s))
+                                        .and_then(|s| {
+                                            s.repeat(0..4294967295, |s| {
                                                 s.sequence(|s| {
-                                                    Ok(s)
-                                                        .and_then(|s| builtin_ignore(s))
-                                                        .and_then(|s| builtin_ignore(s))
-                                                        .and_then(|s| parse_eos_free(s))
-                                                        .and_then(|s| builtin_ignore(s))
-                                                        .and_then(|s| builtin_ignore(s))
-                                                        .and_then(|s| builtin_ignore(s))
-                                                        .and_then(|s| {
-                                                            parse_attribute_item(s).and_then(|s| s.tag_node("attribute_item"))
+                                                    Ok(s).and_then(|s| builtin_ignore(s)).and_then(|s| {
+                                                        s.sequence(|s| {
+                                                            Ok(s)
+                                                                .and_then(|s| parse_eos_free(s))
+                                                                .and_then(|s| builtin_ignore(s))
+                                                                .and_then(|s| builtin_ignore(s))
+                                                                .and_then(|s| builtin_ignore(s))
+                                                                .and_then(|s| {
+                                                                    parse_attribute_item(s)
+                                                                        .and_then(|s| s.tag_node("attribute_item"))
+                                                                })
                                                         })
+                                                    })
                                                 })
                                             })
                                         })
-                                    })
+                                        .and_then(|s| builtin_ignore(s))
+                                        .and_then(|s| s.optional(|s| parse_eos_free(s)))
                                 })
-                                .and_then(|s| builtin_ignore(s))
-                                .and_then(|s| {
-                                    s.optional(|s| {
-                                        s.sequence(|s| {
-                                            Ok(s)
-                                                .and_then(|s| builtin_ignore(s))
-                                                .and_then(|s| builtin_ignore(s))
-                                                .and_then(|s| parse_eos_free(s))
-                                        })
-                                    })
-                                })
+                            })
                         })
-                    })
+                        .and_then(|s| builtin_ignore(s))
+                        .and_then(|s| builtin_text(s, "]", false))
                 })
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| builtin_text(s, "]", false))
-        })
+            })
     })
 }
 #[inline]
-fn parse_attribute_call(state: Input) -> Output {
-    state.rule(ValkyrieRule::ATTRIBUTE_CALL, |s| {
-        s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| builtin_text(s, "#", false))
-                .and_then(|s| parse_attribute_item(s).and_then(|s| s.tag_node("attribute_item")))
+fn parse_attribute_below_mark(state: Input) -> Output {
+    state.rule(ValkyrieRule::ATTRIBUTE_BELOW_MARK, |s| {
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)(↯|@\\.)").unwrap())
         })
     })
 }

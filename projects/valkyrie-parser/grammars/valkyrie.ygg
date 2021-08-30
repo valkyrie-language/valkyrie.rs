@@ -652,22 +652,18 @@ class AnnotationMix {
     AnnotationTermMix* ModifierAhead*
 }
 union AnnotationTerm {
-    | AttributeList
-    | AttributeCallBelow
+    | AttributeBelowCall
 }
 union AnnotationTermMix {
-    | AttributeList
-    | AttributeCallBelow
+    | AttributeBelowCall
     | ProceduralCall
 }
-class AttributeList {
-    AttributeBelowMark '[' (AttributeItem (^EOS_FREE ~ AttributeItem)* (^EOS_FREE)?)? ']'
+// ↯call.variant(...) { domain }
+class AttributeBelowCall {
+    | AttributeBelowMark AttributeItem
+    | AttributeBelowMark '[' (AttributeItem (^EOS_FREE ~ AttributeItem)* (^EOS_FREE)?)? ']'
 }
-// #call.variant(...) { domain }
-class AttributeCallBelow {
-    AttributeBelowMark AttributeItem
-}
-atomic class AttributeBelowMark {
+class AttributeBelowMark {
     /↯|@\./
 }
 class AttributeItem {

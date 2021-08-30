@@ -35,9 +35,9 @@ pub enum ValkyrieRule {
     ANNOTATION_MIX,
     ANNOTATION_TERM,
     ANNOTATION_TERM_MIX,
-    ATTRIBUTE_CALL,
+    ATTRIBUTE_BELOW_CALL,
+    ATTRIBUTE_BELOW_MARK,
     ATTRIBUTE_ITEM,
-    ATTRIBUTE_LIST,
     ATTRIBUTE_NAME,
     BIND_L,
     BIND_R,
@@ -442,8 +442,8 @@ impl YggdrasilRule for ValkyrieRule {
             Self::ANNOTATION_MIX => "",
             Self::ANNOTATION_TERM => "",
             Self::ANNOTATION_TERM_MIX => "",
-            Self::ATTRIBUTE_LIST => "",
-            Self::ATTRIBUTE_CALL => "",
+            Self::ATTRIBUTE_BELOW_CALL => "",
+            Self::ATTRIBUTE_BELOW_MARK => "",
             Self::ATTRIBUTE_ITEM => "",
             Self::ATTRIBUTE_NAME => "",
             Self::PROCEDURAL_CALL => "",
@@ -1339,24 +1339,22 @@ pub struct AnnotationMixNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AnnotationTermNode<'i> {
-    AttributeList(AttributeListNode<'i>),
-    AttributeCall(AttributeCallNode<'i>),
+    AttributeBelowCall(AttributeBelowCallNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AnnotationTermMixNode<'i> {
-    AttributeList(AttributeListNode<'i>),
-    AttributeCall(AttributeCallNode<'i>),
+    AttributeBelowCall(AttributeBelowCallNode<'i>),
     ProceduralCall(ProceduralCallNode<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct AttributeListNode<'i> {
+pub struct AttributeBelowCallNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct AttributeCallNode<'i> {
+pub struct AttributeBelowMarkNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]

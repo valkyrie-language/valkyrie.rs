@@ -30,7 +30,7 @@ pub struct ValkyrieClass {
     pub class_name: Identifier,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
-    pub methods: IndexMap<Arc<str>, ValkyrieNativeFunction>,
+    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
 }
 
 impl Hash for ValkyrieClass {
@@ -56,7 +56,13 @@ impl AddAssign<ValkyrieField> for ValkyrieClass {
         self.fields.insert(rhs.field_name.clone(), rhs);
     }
 }
-
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValkyrieMethod {
+    /// The name of the field
+    pub method_name: Arc<str>,
+    /// The WASI name of the field
+    pub wasi_alias: Arc<str>,
+}
 impl ValkyrieClass {
     pub fn get_name(&self) -> String {
         self.class_name.to_string()

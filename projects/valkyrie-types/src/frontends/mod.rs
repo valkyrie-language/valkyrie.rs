@@ -2,7 +2,7 @@ use crate::{
     functions::{FunctionParameter, FunctionSignature},
     helpers::Hir2Mir,
     structures::ValkyrieResource,
-    ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieImportFunction,
+    ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieMethod,
     ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite, ValkyrieVariant,
 };
 use indexmap::IndexMap;
@@ -135,13 +135,10 @@ impl Hir2Mir for ClassDeclaration {
                 }
                 ClassTerm::Method(v) => {
                     let method = v.to_mir(store, &symbol)?;
-                    unimplemented!();
-                    // match methods.insert(method.method_name.clone(), method) {
-                    //     Some(s) => {
-                    //         unimplemented!()
-                    //     }
-                    //     None => {}
-                    // }
+                    match methods.insert(method.method_name.clone(), method) {
+                        Some(s) => {}
+                        None => {}
+                    }
                 }
                 ClassTerm::Domain(_) => {
                     todo!()
@@ -161,11 +158,13 @@ impl Hir2Mir for ClassDeclaration {
 }
 
 impl Hir2Mir for MethodDeclaration {
-    type Output = ();
+    type Output = ValkyrieMethod;
     type Context<'a> = &'a Identifier;
 
     fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
-        todo!()
+        let (field_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
+
+        Ok(ValkyrieMethod { method_name: field_name, wasi_alias })
     }
 }
 
