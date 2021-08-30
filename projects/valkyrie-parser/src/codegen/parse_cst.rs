@@ -320,7 +320,7 @@ fn parse_eos_free(state: Input) -> Output {
     state.rule(ValkyrieRule::EOS_FREE, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([,，;；⁏])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[,，;；⁏]").unwrap())
         })
     })
 }
@@ -2073,7 +2073,7 @@ fn parse_main_infix(state: Input) -> Output {
             static REGEX: OnceLock<Regex> = OnceLock::new();
             REGEX.get_or_init(|| {
                 Regex::new(
-                    "^(?x)( [+\\\\-*٪⁒÷/%]=?
+                    "^(?x)( [+\\-*٪⁒÷/%]=?
     | /%=? | %%=?
     | [√^]
     # start with ?, !, =
@@ -3223,7 +3223,7 @@ fn parse_text_content_1(state: Input) -> Output {
         s.repeat(0..4294967295, |s| {
             builtin_regex(s, {
                 static REGEX: OnceLock<Regex> = OnceLock::new();
-                REGEX.get_or_init(|| Regex::new("^(?x)([^\"])").unwrap())
+                REGEX.get_or_init(|| Regex::new("^[^\"]").unwrap())
             })
         })
     })
@@ -3234,7 +3234,7 @@ fn parse_text_content_2(state: Input) -> Output {
         s.repeat(0..4294967295, |s| {
             builtin_regex(s, {
                 static REGEX: OnceLock<Regex> = OnceLock::new();
-                REGEX.get_or_init(|| Regex::new("^(?x)([^'])").unwrap())
+                REGEX.get_or_init(|| Regex::new("^[^']").unwrap())
             })
         })
     })
@@ -3425,7 +3425,7 @@ fn parse_identifier_raw_text(state: Input) -> Output {
                 Ok(s).and_then(|s| builtin_ignore(s)).and_then(|s| {
                     builtin_regex(s, {
                         static REGEX: OnceLock<Regex> = OnceLock::new();
-                        REGEX.get_or_init(|| Regex::new("^(?x)([^`])").unwrap())
+                        REGEX.get_or_init(|| Regex::new("^[^`]").unwrap())
                     })
                 })
             })
@@ -3622,7 +3622,7 @@ fn parse_colon(state: Input) -> Output {
     state.rule(ValkyrieRule::COLON, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([:：])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[:：]").unwrap())
         })
     })
 }
@@ -3640,7 +3640,7 @@ fn parse_comma(state: Input) -> Output {
     state.rule(ValkyrieRule::COMMA, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([,，])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[,，]").unwrap())
         })
     })
 }
@@ -3649,7 +3649,7 @@ fn parse_dot(state: Input) -> Output {
     state.rule(ValkyrieRule::DOT, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([.．])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[.．]").unwrap())
         })
     })
 }
@@ -3873,7 +3873,7 @@ fn parse_comment(state: Input) -> Output {
                 .and_then(|s| {
                     builtin_regex(s, {
                         static REGEX: OnceLock<Regex> = OnceLock::new();
-                        REGEX.get_or_init(|| Regex::new("^(?x)([⍝#]|\\\\{2})").unwrap())
+                        REGEX.get_or_init(|| Regex::new("^[⍝#]").unwrap())
                     })
                 })
                 .and_then(|s| s.rest_of_line())
@@ -4129,18 +4129,18 @@ fn parse_template_e(state: Input) -> Output {
 }
 #[inline]
 fn parse_template_l(state: Input) -> Output {
-    state.rule(ValkyrieRule::TEMPLATE_L, |s| s.match_string("<%", false))
+    state.rule(ValkyrieRule::TEMPLATE_L, |s| s.match_string("{%", false))
 }
 #[inline]
 fn parse_template_r(state: Input) -> Output {
-    state.rule(ValkyrieRule::TEMPLATE_R, |s| s.match_string("%>", false))
+    state.rule(ValkyrieRule::TEMPLATE_R, |s| s.match_string("%}", false))
 }
 #[inline]
 fn parse_template_m(state: Input) -> Output {
     state.rule(ValkyrieRule::TEMPLATE_M, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([-_~.=])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[-_~.=]").unwrap())
         })
     })
 }
@@ -4149,7 +4149,7 @@ fn parse_eos_0(state: Input) -> Output {
     state.rule(ValkyrieRule::EOS0, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([;；])").unwrap())
+            REGEX.get_or_init(|| Regex::new("^[;；]").unwrap())
         })
     })
 }

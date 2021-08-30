@@ -451,7 +451,7 @@ text class TypePrefix {
 @railway(false)
 @style(operator)
 text class MainInfix ^ {
-    / [+\\-*٪⁒÷\/%]=?
+    / [+\-*٪⁒÷\/%]=?
     | \/%=? | %%=?
     | [√^]
     # start with ?, !, =
@@ -653,19 +653,22 @@ class AnnotationMix {
 }
 union AnnotationTerm {
     | AttributeList
-    | AttributeCall
+    | AttributeCallBelow
 }
 union AnnotationTermMix {
     | AttributeList
-    | AttributeCall
+    | AttributeCallBelow
     | ProceduralCall
 }
 class AttributeList {
-    '#' '[' (AttributeItem (HIDE ^EOS_FREE ~ AttributeItem)* (HIDE ^EOS_FREE)?)? ']'
+    AttributeBelowMark '[' (AttributeItem (^EOS_FREE ~ AttributeItem)* (^EOS_FREE)?)? ']'
 }
 // #call.variant(...) { domain }
-atomic class AttributeCall {
-    '#' AttributeItem
+class AttributeCallBelow {
+    AttributeBelowMark AttributeItem
+}
+atomic class AttributeBelowMark {
+    /↯|@\./
 }
 class AttributeItem {
     Namepath (^DOT Identifier)*
@@ -868,7 +871,7 @@ ignore class SkipSpace {
 }
 @style(comment)
 ignore class Comment {
-    | /[⍝#]|\\{2}/ ROL
+    | [⍝#] ROL
 }
 // ============================-----------------------------------------------------------------------------------------
 // === string interpolation === ----------------------------------------------------------------------------------------
@@ -943,7 +946,7 @@ atomic class TEMPLATE_E {
 }
 @railway(false)
 token {
-    TEMPLATE_L: '<%'
-    TEMPLATE_R: '%>'
+    TEMPLATE_L: '{%'
+    TEMPLATE_R: '%}'
     TEMPLATE_M: [-_~.=]
 }

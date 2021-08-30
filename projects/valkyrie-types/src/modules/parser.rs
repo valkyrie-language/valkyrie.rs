@@ -1,6 +1,6 @@
 use super::*;
 use nyar_error::third_party::WalkDir;
-use std::fs::FileType;
+use std::fs::{DirEntry, FileType};
 
 impl ResolveState {
     pub fn resolve_package<P>(&mut self, directory: P) -> Result<()>
@@ -14,7 +14,9 @@ impl ResolveState {
                     if !path.file_type().is_file() {
                         continue;
                     }
-                    if !path.file_name().to_string_lossy().ends_with("vk") {
+                    if !(path.file_name().to_string_lossy().ends_with("vk")
+                        || path.file_name().to_string_lossy().ends_with("valkyrie"))
+                    {
                         continue;
                     }
 
