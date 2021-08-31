@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "pretty-print")]
-impl PrettyPrint for ForLoop {
+impl PrettyPrint for LoopEach {
     fn pretty(&self, theme: &PrettyProvider) -> PrettyTree {
         let mut terms = PrettySequence::new(4);
         terms += theme.keyword("for");
@@ -21,7 +21,7 @@ impl PrettyPrint for ForLoop {
     }
 }
 #[cfg(feature = "lispify")]
-impl Lispify for ForLoop {
+impl Lispify for LoopEach {
     type Output = Lisp;
 
     fn lispify(&self) -> Self::Output {

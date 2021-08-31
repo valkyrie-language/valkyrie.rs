@@ -2,6 +2,7 @@ use crate::{
     helpers::ProgramState,
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
+    StatementNode,
 };
 use nyar_error::Result;
 use valkyrie_ast::*;
@@ -35,9 +36,11 @@ impl<'i> crate::StatementNode<'i> {
             Self::DefineUnion(v) => v.build(ctx)?.into(),
             Self::ControlFlow(v) => v.build(ctx)?.into(),
             Self::DefineImport(v) => v.build(ctx)?.into(),
-            Self::ForStatement(v) => v.build(ctx)?.into(),
-            Self::WhileStatement(v) => v.build(ctx)?.into(),
             Self::ExpressionRoot(v) => v.build(ctx)?.into(),
+            Self::LoopStatement(v) => v.build(ctx)?.into(),
+            Self::LoopEachStatement(v) => v.build(ctx)?.into(),
+            Self::LoopWhileStatement(v) => v.build(ctx)?.into(),
+            Self::LoopUntilStatement(v) => v.build(ctx)?.into(),
             Self::Eos(_) => return Ok(None),
         };
         Ok(Some(value))

@@ -70,11 +70,17 @@ impl<'i> YggdrasilNode<'i> for StatementNode<'i> {
         if let Ok(s) = pair.take_tagged_one("control_flow") {
             return Ok(Self::ControlFlow(s));
         }
-        if let Ok(s) = pair.take_tagged_one("while_statement") {
-            return Ok(Self::WhileStatement(s));
+        if let Ok(s) = pair.take_tagged_one("loop_each_statement") {
+            return Ok(Self::LoopEachStatement(s));
         }
-        if let Ok(s) = pair.take_tagged_one("for_statement") {
-            return Ok(Self::ForStatement(s));
+        if let Ok(s) = pair.take_tagged_one("loop_while_statement") {
+            return Ok(Self::LoopWhileStatement(s));
+        }
+        if let Ok(s) = pair.take_tagged_one("loop_until_statement") {
+            return Ok(Self::LoopUntilStatement(s));
+        }
+        if let Ok(s) = pair.take_tagged_one("loop_statement") {
+            return Ok(Self::LoopStatement(s));
         }
         if let Ok(s) = pair.take_tagged_one("expression_root") {
             return Ok(Self::ExpressionRoot(s));
@@ -101,8 +107,10 @@ impl<'i> YggdrasilNode<'i> for StatementNode<'i> {
             Self::DefineVariable(s) => s.get_str(),
             Self::DefineImport(s) => s.get_str(),
             Self::ControlFlow(s) => s.get_str(),
-            Self::WhileStatement(s) => s.get_str(),
-            Self::ForStatement(s) => s.get_str(),
+            Self::LoopEachStatement(s) => s.get_str(),
+            Self::LoopWhileStatement(s) => s.get_str(),
+            Self::LoopUntilStatement(s) => s.get_str(),
+            Self::LoopStatement(s) => s.get_str(),
             Self::ExpressionRoot(s) => s.get_str(),
             Self::Eos(s) => s.get_str(),
         }
@@ -120,8 +128,10 @@ impl<'i> YggdrasilNode<'i> for StatementNode<'i> {
             Self::DefineVariable(s) => s.get_range(),
             Self::DefineImport(s) => s.get_range(),
             Self::ControlFlow(s) => s.get_range(),
-            Self::WhileStatement(s) => s.get_range(),
-            Self::ForStatement(s) => s.get_range(),
+            Self::LoopEachStatement(s) => s.get_range(),
+            Self::LoopWhileStatement(s) => s.get_range(),
+            Self::LoopUntilStatement(s) => s.get_range(),
+            Self::LoopStatement(s) => s.get_range(),
             Self::ExpressionRoot(s) => s.get_range(),
             Self::Eos(s) => s.get_range(),
         }
@@ -1487,49 +1497,6 @@ impl<'i> DefineTraitNode<'i> {
     }
 }
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for DefineExtendsNode<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::DEFINE_EXTENDS)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::DEFINE_EXTENDS
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> DefineExtendsNode<'i> {
-    pub fn annotation_head(&self) -> AnnotationHeadNode<'i> {
-        self.pair.take_tagged_one("annotation_head").unwrap()
-    }
-    pub fn define_constraint(&self) -> Option<DefineConstraintNode<'i>> {
-        self.pair.take_tagged_option("define_constraint")
-    }
-    pub fn kw_extends(&self) -> KwExtendsNode<'i> {
-        self.pair.take_tagged_one("kw_extends").unwrap()
-    }
-    pub fn trait_block(&self) -> TraitBlockNode<'i> {
-        self.pair.take_tagged_one("trait_block").unwrap()
-    }
-    pub fn type_expression(&self) -> TypeExpressionNode<'i> {
-        self.pair.take_tagged_one("type_expression").unwrap()
-    }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
-    }
-}
-#[automatically_derived]
 impl<'i> YggdrasilNode<'i> for TraitBlockNode<'i> {
     type Rule = ValkyrieRule;
 
@@ -1637,6 +1604,49 @@ impl<'i> YggdrasilNode<'i> for KwTraitNode<'i> {
             Self::Trait(s) => s.get_range(),
             Self::Interface(s) => s.get_range(),
         }
+    }
+}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for DefineExtendsNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::DEFINE_EXTENDS)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::DEFINE_EXTENDS
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> DefineExtendsNode<'i> {
+    pub fn annotation_head(&self) -> AnnotationHeadNode<'i> {
+        self.pair.take_tagged_one("annotation_head").unwrap()
+    }
+    pub fn define_constraint(&self) -> Option<DefineConstraintNode<'i>> {
+        self.pair.take_tagged_option("define_constraint")
+    }
+    pub fn kw_extends(&self) -> KwExtendsNode<'i> {
+        self.pair.take_tagged_one("kw_extends").unwrap()
+    }
+    pub fn namepath(&self) -> NamepathNode<'i> {
+        self.pair.take_tagged_one("namepath").unwrap()
+    }
+    pub fn trait_block(&self) -> TraitBlockNode<'i> {
+        self.pair.take_tagged_one("trait_block").unwrap()
+    }
+    pub fn type_hint(&self) -> TypeHintNode<'i> {
+        self.pair.take_tagged_one("type_hint").unwrap()
     }
 }
 #[automatically_derived]
@@ -2323,18 +2333,18 @@ impl<'i> TuplePatternItemNode<'i> {
     }
 }
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for WhileStatementNode<'i> {
+impl<'i> YggdrasilNode<'i> for LoopStatementNode<'i> {
     type Rule = ValkyrieRule;
 
     fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::WHILE_STATEMENT)?)
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::LOOP_STATEMENT)?)
     }
     fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
         Ok(Self { pair })
     }
 
     fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::WHILE_STATEMENT
+        ValkyrieRule::LOOP_STATEMENT
     }
 
     fn get_str(&self) -> &'i str {
@@ -2345,66 +2355,64 @@ impl<'i> YggdrasilNode<'i> for WhileStatementNode<'i> {
         self.pair.get_span().get_range()
     }
 }
-impl<'i> WhileStatementNode<'i> {
+impl<'i> LoopStatementNode<'i> {
+    pub fn continuation(&self) -> ContinuationNode<'i> {
+        self.pair.take_tagged_one("continuation").unwrap()
+    }
+    pub fn kw_loop(&self) -> KwLoopNode<'i> {
+        self.pair.take_tagged_one("kw_loop").unwrap()
+    }
+}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for LoopWhileStatementNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::LOOP_WHILE_STATEMENT)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::LOOP_WHILE_STATEMENT
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> LoopWhileStatementNode<'i> {
     pub fn continuation(&self) -> ContinuationNode<'i> {
         self.pair.take_tagged_one("continuation").unwrap()
     }
     pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
         self.pair.take_tagged_option("inline_expression")
     }
+    pub fn kw_loop(&self) -> KwLoopNode<'i> {
+        self.pair.take_tagged_one("kw_loop").unwrap()
+    }
     pub fn kw_while(&self) -> KwWhileNode<'i> {
         self.pair.take_tagged_one("kw_while").unwrap()
     }
 }
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwWhileNode<'i> {
+impl<'i> YggdrasilNode<'i> for LoopUntilStatementNode<'i> {
     type Rule = ValkyrieRule;
 
     fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_WHILE)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        let _span = pair.get_span();
-        if let Ok(s) = pair.take_tagged_one("while") {
-            return Ok(Self::While(s));
-        }
-        if let Ok(s) = pair.take_tagged_one("until") {
-            return Ok(Self::Until(s));
-        }
-        Err(YggdrasilError::invalid_node(ValkyrieRule::KW_WHILE, _span))
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_WHILE
-    }
-
-    fn get_str(&self) -> &'i str {
-        match self {
-            Self::While(s) => s.get_str(),
-            Self::Until(s) => s.get_str(),
-        }
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        match self {
-            Self::While(s) => s.get_range(),
-            Self::Until(s) => s.get_range(),
-        }
-    }
-}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for ForStatementNode<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::FOR_STATEMENT)?)
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::LOOP_UNTIL_STATEMENT)?)
     }
     fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
         Ok(Self { pair })
     }
 
     fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::FOR_STATEMENT
+        ValkyrieRule::LOOP_UNTIL_STATEMENT
     }
 
     fn get_str(&self) -> &'i str {
@@ -2415,7 +2423,44 @@ impl<'i> YggdrasilNode<'i> for ForStatementNode<'i> {
         self.pair.get_span().get_range()
     }
 }
-impl<'i> ForStatementNode<'i> {
+impl<'i> LoopUntilStatementNode<'i> {
+    pub fn continuation(&self) -> ContinuationNode<'i> {
+        self.pair.take_tagged_one("continuation").unwrap()
+    }
+    pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
+        self.pair.take_tagged_option("inline_expression")
+    }
+    pub fn kw_loop(&self) -> KwLoopNode<'i> {
+        self.pair.take_tagged_one("kw_loop").unwrap()
+    }
+    pub fn kw_until(&self) -> KwUntilNode<'i> {
+        self.pair.take_tagged_one("kw_until").unwrap()
+    }
+}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for LoopEachStatementNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::LOOP_EACH_STATEMENT)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::LOOP_EACH_STATEMENT
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> LoopEachStatementNode<'i> {
     pub fn continuation(&self) -> ContinuationNode<'i> {
         self.pair.take_tagged_one("continuation").unwrap()
     }
@@ -2425,11 +2470,14 @@ impl<'i> ForStatementNode<'i> {
     pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
         self.pair.take_tagged_option("inline_expression")
     }
-    pub fn kw_for(&self) -> KwForNode<'i> {
-        self.pair.take_tagged_one("kw_for").unwrap()
+    pub fn kw_each(&self) -> Option<KwEachNode<'i>> {
+        self.pair.take_tagged_option("kw_each")
     }
     pub fn kw_in(&self) -> KwInNode<'i> {
         self.pair.take_tagged_one("kw_in").unwrap()
+    }
+    pub fn kw_loop(&self) -> KwLoopNode<'i> {
+        self.pair.take_tagged_one("kw_loop").unwrap()
     }
     pub fn let_pattern(&self) -> LetPatternNode<'i> {
         self.pair.take_tagged_one("let_pattern").unwrap()
@@ -6423,18 +6471,18 @@ impl<'i> YggdrasilNode<'i> for KwFlagsNode<'i> {
 }
 impl<'i> KwFlagsNode<'i> {}
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwForNode<'i> {
+impl<'i> YggdrasilNode<'i> for KwLoopNode<'i> {
     type Rule = ValkyrieRule;
 
     fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_FOR)?)
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_LOOP)?)
     }
     fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
         Ok(Self { pair })
     }
 
     fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_FOR
+        ValkyrieRule::KW_LOOP
     }
 
     fn get_str(&self) -> &'i str {
@@ -6445,20 +6493,20 @@ impl<'i> YggdrasilNode<'i> for KwForNode<'i> {
         self.pair.get_span().get_range()
     }
 }
-impl<'i> KwForNode<'i> {}
+impl<'i> KwLoopNode<'i> {}
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwEndNode<'i> {
+impl<'i> YggdrasilNode<'i> for KwEachNode<'i> {
     type Rule = ValkyrieRule;
 
     fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_END)?)
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_EACH)?)
     }
     fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
         Ok(Self { pair })
     }
 
     fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_END
+        ValkyrieRule::KW_EACH
     }
 
     fn get_str(&self) -> &'i str {
@@ -6469,7 +6517,55 @@ impl<'i> YggdrasilNode<'i> for KwEndNode<'i> {
         self.pair.get_span().get_range()
     }
 }
-impl<'i> KwEndNode<'i> {}
+impl<'i> KwEachNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwWhileNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_WHILE)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_WHILE
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwWhileNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwUntilNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_UNTIL)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_UNTIL
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwUntilNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for KwLetNode<'i> {
     type Rule = ValkyrieRule;
@@ -6830,6 +6926,30 @@ impl<'i> YggdrasilNode<'i> for KwAsNode<'i> {
     }
 }
 impl<'i> KwAsNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwEndNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_END)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_END
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwEndNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for ShebangNode<'i> {
     type Rule = ValkyrieRule;
@@ -7353,11 +7473,11 @@ impl<'i> ForTemplateBeginNode<'i> {
     pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
         self.pair.take_tagged_option("inline_expression")
     }
-    pub fn kw_for(&self) -> KwForNode<'i> {
-        self.pair.take_tagged_one("kw_for").unwrap()
-    }
     pub fn kw_in(&self) -> KwInNode<'i> {
         self.pair.take_tagged_one("kw_in").unwrap()
+    }
+    pub fn kw_loop(&self) -> KwLoopNode<'i> {
+        self.pair.take_tagged_one("kw_loop").unwrap()
     }
     pub fn let_pattern(&self) -> LetPatternNode<'i> {
         self.pair.take_tagged_one("let_pattern").unwrap()
@@ -7430,8 +7550,8 @@ impl<'i> ForTemplateEndNode<'i> {
     pub fn kw_end(&self) -> KwEndNode<'i> {
         self.pair.take_tagged_one("kw_end").unwrap()
     }
-    pub fn kw_for(&self) -> Option<KwForNode<'i>> {
-        self.pair.take_tagged_option("kw_for")
+    pub fn kw_loop(&self) -> Option<KwLoopNode<'i>> {
+        self.pair.take_tagged_option("kw_loop")
     }
     pub fn template_e(&self) -> TemplateENode<'i> {
         self.pair.take_tagged_one("template_e").unwrap()
@@ -7784,54 +7904,6 @@ impl<'i> YggdrasilNode<'i> for PatternItem2Node<'i> {
     }
 }
 impl<'i> PatternItem2Node<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwWhile0Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_WHILE0)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_WHILE0
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwWhile0Node<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwWhile1Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_WHILE1)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_WHILE1
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwWhile1Node<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for KwMatch0Node<'i> {
     type Rule = ValkyrieRule;

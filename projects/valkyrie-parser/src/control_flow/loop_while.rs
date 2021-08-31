@@ -1,21 +1,23 @@
 use super::*;
 
-impl<'i> crate::WhileStatementNode<'i> {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<WhileLoop> {
-        Ok(WhileLoop {
-            kind: self.kw_while().build(),
-            condition: WhileConditionNode::Unconditional,
+impl<'i> crate::LoopWhileStatementNode<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LoopWhile> {
+        Ok(LoopWhile {
+            keyword: self.kw_while().get_range32(),
+            condition: ConditionNode::Unconditional,
             then: self.continuation().build(ctx),
             span: self.get_range32(),
         })
     }
 }
 
-impl<'i> crate::KwWhileNode<'i> {
-    pub(crate) fn build(&self) -> WhileLoopKind {
-        match self {
-            Self::Until(_) => WhileLoopKind::Until,
-            Self::While(_) => WhileLoopKind::While,
-        }
+impl<'i> crate::LoopUntilStatementNode<'i> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LoopWhile> {
+        Ok(LoopWhile {
+            keyword: self.kw_until().get_range32(),
+            condition: ConditionNode::Unconditional,
+            then: self.continuation().build(ctx),
+            span: self.get_range32(),
+        })
     }
 }

@@ -5,7 +5,7 @@ mod display;
 #[doc = include_str!("readme.md")]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ForLoop {
+pub struct LoopEach {
     /// `for pattern`
     pub pattern: PatternNode,
     /// `in iterator`
@@ -20,7 +20,7 @@ pub struct ForLoop {
     pub span: Range<u32>,
 }
 
-impl ValkyrieNode for ForLoop {
+impl ValkyrieNode for LoopEach {
     fn get_range(&self) -> Range<u32> {
         self.span.clone()
     }
@@ -35,10 +35,10 @@ pub struct ForBarePattern {
     pub span: Range<u32>,
 }
 
-impl ForLoop {
-    pub fn standardization(self, iterator: IdentifierNode) -> (VariableDeclaration, LoopStatement) {
+impl LoopEach {
+    pub fn standardization(self, iterator: IdentifierNode) -> (VariableDeclaration, LoopRepeat) {
         let var = VariableDeclaration { identifier: iterator, type_hint: None, body: None };
-        let lops = LoopStatement { label: self.label, terms: vec![] };
+        let lops = LoopRepeat { label: self.label, terms: vec![] };
         (var, lops)
     }
 }

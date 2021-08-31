@@ -92,7 +92,6 @@ pub enum ValkyrieRule {
     EXPRESSION_TEMPLATE,
     FLAG_FIELD,
     FLAG_TERM,
-    FOR_STATEMENT,
     FOR_TEMPLATE,
     FOR_TEMPLATE_BEGIN,
     FOR_TEMPLATE_ELSE,
@@ -134,12 +133,12 @@ pub enum ValkyrieRule {
     KW_CLASS,
     KW_CONSTRAINT,
     KW_CONTROL,
+    KW_EACH,
     KW_ELSE,
     KW_END,
     KW_ENUMERATE,
     KW_EXTENDS,
     KW_FLAGS,
-    KW_FOR,
     KW_FUNCTION,
     KW_IF,
     KW_IMPLEMENTS,
@@ -149,6 +148,7 @@ pub enum ValkyrieRule {
     KW_IS,
     KW_LAMBDA,
     KW_LET,
+    KW_LOOP,
     KW_MATCH,
     KW_NAMESPACE,
     KW_NEW,
@@ -159,6 +159,7 @@ pub enum ValkyrieRule {
     KW_TRY,
     KW_TYPE,
     KW_UNION,
+    KW_UNTIL,
     KW_WHEN,
     KW_WHERE,
     KW_WHILE,
@@ -166,10 +167,12 @@ pub enum ValkyrieRule {
     KW_MATCH1,
     KW_TRAIT0,
     KW_TRAIT1,
-    KW_WHILE0,
-    KW_WHILE1,
     LEADING,
     LET_PATTERN,
+    LOOP_EACH_STATEMENT,
+    LOOP_STATEMENT,
+    LOOP_UNTIL_STATEMENT,
+    LOOP_WHILE_STATEMENT,
     MAIN_EXPRESSION,
     MAIN_FACTOR,
     MAIN_INFIX,
@@ -289,7 +292,6 @@ pub enum ValkyrieRule {
     UNION_TERM,
     WHERE_BLOCK,
     WHERE_BOUND,
-    WHILE_STATEMENT,
     WHITE_SPACE,
     /// Label for unnamed text literal
     HiddenText,
@@ -343,10 +345,10 @@ impl YggdrasilRule for ValkyrieRule {
             Self::DEFINE_VARIANT => "",
             Self::KW_UNION => "",
             Self::DEFINE_TRAIT => "",
-            Self::DEFINE_EXTENDS => "",
             Self::TRAIT_BLOCK => "",
             Self::TRAIT_TERM => "",
             Self::KW_TRAIT => "",
+            Self::DEFINE_EXTENDS => "",
             Self::DEFINE_FUNCTION => "",
             Self::DEFINE_LAMBDA => "",
             Self::FUNCTION_MIDDLE => "",
@@ -368,9 +370,10 @@ impl YggdrasilRule for ValkyrieRule {
             Self::TUPLE_PATTERN => "",
             Self::PATTERN_ITEM => "",
             Self::TUPLE_PATTERN_ITEM => "",
-            Self::WHILE_STATEMENT => "",
-            Self::KW_WHILE => "",
-            Self::FOR_STATEMENT => "",
+            Self::LOOP_STATEMENT => "",
+            Self::LOOP_WHILE_STATEMENT => "",
+            Self::LOOP_UNTIL_STATEMENT => "",
+            Self::LOOP_EACH_STATEMENT => "",
             Self::IF_GUARD => "",
             Self::CONTROL_FLOW => "",
             Self::JUMP_LABEL => "",
@@ -501,8 +504,10 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_INHERITS => "",
             Self::KW_ENUMERATE => "",
             Self::KW_FLAGS => "",
-            Self::KW_FOR => "",
-            Self::KW_END => "",
+            Self::KW_LOOP => "",
+            Self::KW_EACH => "",
+            Self::KW_WHILE => "",
+            Self::KW_UNTIL => "",
             Self::KW_LET => "",
             Self::KW_NEW => "",
             Self::KW_OBJECT => "",
@@ -518,6 +523,7 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_IN => "",
             Self::KW_IS => "",
             Self::KW_AS => "",
+            Self::KW_END => "",
             Self::SHEBANG => "",
             Self::WHITE_SPACE => "",
             Self::SKIP_SPACE => "",
@@ -552,8 +558,6 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_TRAIT1 => "",
             Self::PATTERN_ITEM1 => "",
             Self::PATTERN_ITEM2 => "",
-            Self::KW_WHILE0 => "",
-            Self::KW_WHILE1 => "",
             Self::KW_MATCH0 => "",
             Self::KW_MATCH1 => "",
             Self::MAIN_SUFFIX_TERM0 => "",
@@ -585,8 +589,10 @@ pub enum StatementNode<'i> {
     DefineVariable(DefineVariableNode<'i>),
     DefineImport(DefineImportNode<'i>),
     ControlFlow(ControlFlowNode<'i>),
-    WhileStatement(WhileStatementNode<'i>),
-    ForStatement(ForStatementNode<'i>),
+    LoopEachStatement(LoopEachStatementNode<'i>),
+    LoopWhileStatement(LoopWhileStatementNode<'i>),
+    LoopUntilStatement(LoopUntilStatementNode<'i>),
+    LoopStatement(LoopStatementNode<'i>),
     ExpressionRoot(ExpressionRootNode<'i>),
     Eos(EosNode<'i>),
 }
@@ -805,11 +811,6 @@ pub struct DefineTraitNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DefineExtendsNode<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TraitBlockNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
@@ -826,6 +827,11 @@ pub enum TraitTermNode<'i> {
 pub enum KwTraitNode<'i> {
     Trait(KwTrait0Node<'i>),
     Interface(KwTrait1Node<'i>),
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DefineExtendsNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -938,18 +944,22 @@ pub struct TuplePatternItemNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct WhileStatementNode<'i> {
+pub struct LoopStatementNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum KwWhileNode<'i> {
-    While(KwWhile0Node<'i>),
-    Until(KwWhile1Node<'i>),
+pub struct LoopWhileStatementNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ForStatementNode<'i> {
+pub struct LoopUntilStatementNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct LoopEachStatementNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
@@ -1645,12 +1655,22 @@ pub struct KwFlagsNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwForNode<'i> {
+pub struct KwLoopNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwEndNode<'i> {
+pub struct KwEachNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwWhileNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwUntilNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
@@ -1726,6 +1746,11 @@ pub struct KwIsNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KwAsNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwEndNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
@@ -1901,16 +1926,6 @@ pub struct PatternItem1Node<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PatternItem2Node<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwWhile0Node<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwWhile1Node<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]

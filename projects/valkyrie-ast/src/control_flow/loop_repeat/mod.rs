@@ -2,8 +2,8 @@ use crate::{IdentifierNode, StatementKind};
 use alloc::{vec, vec::Vec};
 
 /// The pure `loop` statement
-#[derive(Debug)]
-pub struct LoopStatement {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LoopRepeat {
     /// The named label of the loop
     pub label: Option<IdentifierNode>,
     pub terms: Vec<StatementKind>,

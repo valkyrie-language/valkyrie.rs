@@ -19,8 +19,11 @@ union Statement {
     // continuation level statements
     | DefineImport
     | ControlFlow
-    | WhileStatement
-    | ForStatement
+    // loop statements
+    | LoopEachStatement
+    | LoopWhileStatement
+    | LoopUntilStatement
+    | LoopStatement
     | ExpressionRoot
     | EOS
 }
@@ -201,16 +204,11 @@ class DefineVariant {
 class KW_UNION {
     'union'
 }
-// === identifier === --------------------------------------------------------------------------------------------------
+// === trait === --------------------------------------------------------------------------------------------------
 class DefineTrait {
     DefineConstraint?
     AnnotationHead
     KW_TRAIT Identifier DefineGeneric? DefineInherit? TypeHint TraitBlock ^EOS?
-}
-class DefineExtends {
-    DefineConstraint?
-    AnnotationHead
-    KW_EXTENDS TypeExpression TypeHint TraitBlock ^EOS?
 }
 class TraitBlock {
     '{' TraitTerm* '}'
@@ -225,6 +223,13 @@ union TraitTerm {
 union KW_TRAIT {
     | 'trait'     #Trait
     | 'interface' #Interface
+}
+// === extends === --------------------------------------------------------------------------------------------------
+// extends<T> Type<T>: Trait { }
+class DefineExtends {
+    DefineConstraint?
+    AnnotationHead
+    KW_EXTENDS Namepath TypeHint TraitBlock ^EOS?
 }
 // === def function === ------------------------------------------------------------------------------------------------
 class DefineFunction {
@@ -305,18 +310,22 @@ union PatternItem {
 class TuplePatternItem {
     AnnotationMix ParameterHint? Identifier (COLON StandardPattern)?
 }
-// === while loop === --------------------------------------------------------------------------------------------------
-class WhileStatement {
-    KW_WHILE InlineExpression? Continuation ^EOS?
+// === loop === --------------------------------------------------------------------------------------------------------
+// loop { }
+class LoopStatement {
+    KW_LOOP Continuation ^EOS?
 }
-@style(keyword)
-union KW_WHILE {
-    | 'while' #While
-    | 'until' #Until
+// loop while a > 0 { }
+class LoopWhileStatement {
+    KW_LOOP KW_WHILE InlineExpression? Continuation ^EOS?
 }
-// === for loop === ----------------------------------------------------------------------------------------------------
-class ForStatement {
-    KW_FOR LetPattern KW_IN InlineExpression? IfGuard Continuation ^EOS?
+// loop until a > 0 { }
+class LoopUntilStatement {
+    KW_LOOP KW_UNTIL InlineExpression? Continuation ^EOS?
+}
+// loop each i, j in k { }
+class LoopEachStatement {
+    KW_LOOP KW_EACH? LetPattern KW_IN InlineExpression? IfGuard Continuation ^EOS?
 }
 class IfGuard ^ {
     (KW_IF condition=InlineExpression)?
@@ -730,7 +739,7 @@ union SlotItem {
     | Integer
     | Identifier
 }
-atomic class NamepathFree  {
+atomic class NamepathFree -> Namepath {
     Identifier (HIDE ^PROPORTION2 ~ Identifier)*
 }
 atomic class Namepath {
@@ -833,8 +842,10 @@ token {
     KW_ENUMERATE : /enumerate|enums|enum/
     KW_FLAGS     : 'flags'
     // === looping === -------------------------------------------------------------------------------------------------
-    KW_FOR: 'for'
-    KW_END: 'end'
+    KW_LOOP : 'loop'
+    KW_EACH : 'each'
+    KW_WHILE: 'while'
+    KW_UNTIL: 'until'
     // === constructor === ---------------------------------------------------------------------------------------------
     KW_LET   : 'let'
     KW_NEW   : 'new'
@@ -853,6 +864,7 @@ token {
     KW_IN : /in|∈/
     KW_IS : 'is'
     KW_AS : 'as'
+    KW_END: 'end'
 }
 // === ignores === -----------------------------------------------------------------------------------------------------
 atomic class Shebang {
@@ -924,13 +936,13 @@ atomic class ForTemplate {
     ForTemplateBegin ForTemplateElse? ForTemplateEnd
 }
 class ForTemplateBegin {
-    TEMPLATE_S KW_FOR LetPattern KW_IN InlineExpression? IfGuard TEMPLATE_E
+    TEMPLATE_S KW_LOOP LetPattern KW_IN InlineExpression? IfGuard TEMPLATE_E
 }
 class ForTemplateElse {
     TEMPLATE_S KW_ELSE TEMPLATE_E
 }
 class ForTemplateEnd {
-    TEMPLATE_S KW_END KW_FOR? TEMPLATE_E
+    TEMPLATE_S KW_END KW_LOOP? TEMPLATE_E
 }
 
 @railway(false)

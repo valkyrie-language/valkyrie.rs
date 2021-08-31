@@ -43,10 +43,10 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::DEFINE_VARIANT => parse_define_variant(state),
         ValkyrieRule::KW_UNION => parse_kw_union(state),
         ValkyrieRule::DEFINE_TRAIT => parse_define_trait(state),
-        ValkyrieRule::DEFINE_EXTENDS => parse_define_extends(state),
         ValkyrieRule::TRAIT_BLOCK => parse_trait_block(state),
         ValkyrieRule::TRAIT_TERM => parse_trait_term(state),
         ValkyrieRule::KW_TRAIT => parse_kw_trait(state),
+        ValkyrieRule::DEFINE_EXTENDS => parse_define_extends(state),
         ValkyrieRule::DEFINE_FUNCTION => parse_define_function(state),
         ValkyrieRule::DEFINE_LAMBDA => parse_define_lambda(state),
         ValkyrieRule::FUNCTION_MIDDLE => parse_function_middle(state),
@@ -68,9 +68,10 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::TUPLE_PATTERN => parse_tuple_pattern(state),
         ValkyrieRule::PATTERN_ITEM => parse_pattern_item(state),
         ValkyrieRule::TUPLE_PATTERN_ITEM => parse_tuple_pattern_item(state),
-        ValkyrieRule::WHILE_STATEMENT => parse_while_statement(state),
-        ValkyrieRule::KW_WHILE => parse_kw_while(state),
-        ValkyrieRule::FOR_STATEMENT => parse_for_statement(state),
+        ValkyrieRule::LOOP_STATEMENT => parse_loop_statement(state),
+        ValkyrieRule::LOOP_WHILE_STATEMENT => parse_loop_while_statement(state),
+        ValkyrieRule::LOOP_UNTIL_STATEMENT => parse_loop_until_statement(state),
+        ValkyrieRule::LOOP_EACH_STATEMENT => parse_loop_each_statement(state),
         ValkyrieRule::IF_GUARD => parse_if_guard(state),
         ValkyrieRule::CONTROL_FLOW => parse_control_flow(state),
         ValkyrieRule::JUMP_LABEL => parse_jump_label(state),
@@ -201,8 +202,10 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::KW_INHERITS => parse_kw_inherits(state),
         ValkyrieRule::KW_ENUMERATE => parse_kw_enumerate(state),
         ValkyrieRule::KW_FLAGS => parse_kw_flags(state),
-        ValkyrieRule::KW_FOR => parse_kw_for(state),
-        ValkyrieRule::KW_END => parse_kw_end(state),
+        ValkyrieRule::KW_LOOP => parse_kw_loop(state),
+        ValkyrieRule::KW_EACH => parse_kw_each(state),
+        ValkyrieRule::KW_WHILE => parse_kw_while(state),
+        ValkyrieRule::KW_UNTIL => parse_kw_until(state),
         ValkyrieRule::KW_LET => parse_kw_let(state),
         ValkyrieRule::KW_NEW => parse_kw_new(state),
         ValkyrieRule::KW_OBJECT => parse_kw_object(state),
@@ -218,6 +221,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::KW_IN => parse_kw_in(state),
         ValkyrieRule::KW_IS => parse_kw_is(state),
         ValkyrieRule::KW_AS => parse_kw_as(state),
+        ValkyrieRule::KW_END => parse_kw_end(state),
         ValkyrieRule::SHEBANG => parse_shebang(state),
         ValkyrieRule::WHITE_SPACE => parse_white_space(state),
         ValkyrieRule::SKIP_SPACE => parse_skip_space(state),
@@ -252,8 +256,6 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::KW_TRAIT1 => parse_kw_trait_1(state),
         ValkyrieRule::PATTERN_ITEM1 => parse_pattern_item_1(state),
         ValkyrieRule::PATTERN_ITEM2 => parse_pattern_item_2(state),
-        ValkyrieRule::KW_WHILE0 => parse_kw_while_0(state),
-        ValkyrieRule::KW_WHILE1 => parse_kw_while_1(state),
         ValkyrieRule::KW_MATCH0 => parse_kw_match_0(state),
         ValkyrieRule::KW_MATCH1 => parse_kw_match_1(state),
         ValkyrieRule::MAIN_SUFFIX_TERM0 => parse_main_suffix_term_0(state),
@@ -302,8 +304,10 @@ fn parse_statement(state: Input) -> Output {
             .or_else(|s| parse_define_variable(s).and_then(|s| s.tag_node("define_variable")))
             .or_else(|s| parse_define_import(s).and_then(|s| s.tag_node("define_import")))
             .or_else(|s| parse_control_flow(s).and_then(|s| s.tag_node("control_flow")))
-            .or_else(|s| parse_while_statement(s).and_then(|s| s.tag_node("while_statement")))
-            .or_else(|s| parse_for_statement(s).and_then(|s| s.tag_node("for_statement")))
+            .or_else(|s| parse_loop_each_statement(s).and_then(|s| s.tag_node("loop_each_statement")))
+            .or_else(|s| parse_loop_while_statement(s).and_then(|s| s.tag_node("loop_while_statement")))
+            .or_else(|s| parse_loop_until_statement(s).and_then(|s| s.tag_node("loop_until_statement")))
+            .or_else(|s| parse_loop_statement(s).and_then(|s| s.tag_node("loop_statement")))
             .or_else(|s| parse_expression_root(s).and_then(|s| s.tag_node("expression_root")))
             .or_else(|s| parse_eos(s).and_then(|s| s.tag_node("eos")))
     })
@@ -1072,27 +1076,6 @@ fn parse_define_trait(state: Input) -> Output {
     })
 }
 #[inline]
-fn parse_define_extends(state: Input) -> Output {
-    state.rule(ValkyrieRule::DEFINE_EXTENDS, |s| {
-        s.sequence(|s| {
-            Ok(s)
-                .and_then(|s| s.optional(|s| parse_define_constraint(s).and_then(|s| s.tag_node("define_constraint"))))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_annotation_head(s).and_then(|s| s.tag_node("annotation_head")))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_kw_extends(s).and_then(|s| s.tag_node("kw_extends")))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_type_expression(s).and_then(|s| s.tag_node("type_expression")))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint")))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_trait_block(s).and_then(|s| s.tag_node("trait_block")))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| s.optional(|s| parse_eos(s)))
-        })
-    })
-}
-#[inline]
 fn parse_trait_block(state: Input) -> Output {
     state.rule(ValkyrieRule::TRAIT_BLOCK, |s| {
         s.sequence(|s| {
@@ -1129,6 +1112,27 @@ fn parse_kw_trait(state: Input) -> Output {
         Err(s)
             .or_else(|s| parse_kw_trait_0(s).and_then(|s| s.tag_node("kw_trait_0")))
             .or_else(|s| parse_kw_trait_1(s).and_then(|s| s.tag_node("kw_trait_1")))
+    })
+}
+#[inline]
+fn parse_define_extends(state: Input) -> Output {
+    state.rule(ValkyrieRule::DEFINE_EXTENDS, |s| {
+        s.sequence(|s| {
+            Ok(s)
+                .and_then(|s| s.optional(|s| parse_define_constraint(s).and_then(|s| s.tag_node("define_constraint"))))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_annotation_head(s).and_then(|s| s.tag_node("annotation_head")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_kw_extends(s).and_then(|s| s.tag_node("kw_extends")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_namepath(s).and_then(|s| s.tag_node("namepath")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_trait_block(s).and_then(|s| s.tag_node("trait_block")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| s.optional(|s| parse_eos(s)))
+        })
     })
 }
 #[inline]
@@ -1571,10 +1575,25 @@ fn parse_tuple_pattern_item(state: Input) -> Output {
     })
 }
 #[inline]
-fn parse_while_statement(state: Input) -> Output {
-    state.rule(ValkyrieRule::WHILE_STATEMENT, |s| {
+fn parse_loop_statement(state: Input) -> Output {
+    state.rule(ValkyrieRule::LOOP_STATEMENT, |s| {
         s.sequence(|s| {
             Ok(s)
+                .and_then(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_continuation(s).and_then(|s| s.tag_node("continuation")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| s.optional(|s| parse_eos(s)))
+        })
+    })
+}
+#[inline]
+fn parse_loop_while_statement(state: Input) -> Output {
+    state.rule(ValkyrieRule::LOOP_WHILE_STATEMENT, |s| {
+        s.sequence(|s| {
+            Ok(s)
+                .and_then(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop")))
+                .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_kw_while(s).and_then(|s| s.tag_node("kw_while")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| s.optional(|s| parse_inline_expression(s).and_then(|s| s.tag_node("inline_expression"))))
@@ -1586,19 +1605,30 @@ fn parse_while_statement(state: Input) -> Output {
     })
 }
 #[inline]
-fn parse_kw_while(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_WHILE, |s| {
-        Err(s)
-            .or_else(|s| parse_kw_while_0(s).and_then(|s| s.tag_node("kw_while_0")))
-            .or_else(|s| parse_kw_while_1(s).and_then(|s| s.tag_node("kw_while_1")))
+fn parse_loop_until_statement(state: Input) -> Output {
+    state.rule(ValkyrieRule::LOOP_UNTIL_STATEMENT, |s| {
+        s.sequence(|s| {
+            Ok(s)
+                .and_then(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_kw_until(s).and_then(|s| s.tag_node("kw_until")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| s.optional(|s| parse_inline_expression(s).and_then(|s| s.tag_node("inline_expression"))))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| parse_continuation(s).and_then(|s| s.tag_node("continuation")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| s.optional(|s| parse_eos(s)))
+        })
     })
 }
 #[inline]
-fn parse_for_statement(state: Input) -> Output {
-    state.rule(ValkyrieRule::FOR_STATEMENT, |s| {
+fn parse_loop_each_statement(state: Input) -> Output {
+    state.rule(ValkyrieRule::LOOP_EACH_STATEMENT, |s| {
         s.sequence(|s| {
             Ok(s)
-                .and_then(|s| parse_kw_for(s).and_then(|s| s.tag_node("kw_for")))
+                .and_then(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop")))
+                .and_then(|s| builtin_ignore(s))
+                .and_then(|s| s.optional(|s| parse_kw_each(s).and_then(|s| s.tag_node("kw_each"))))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_let_pattern(s).and_then(|s| s.tag_node("let_pattern")))
                 .and_then(|s| builtin_ignore(s))
@@ -3788,12 +3818,20 @@ fn parse_kw_flags(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_FLAGS, |s| s.match_string("flags", false))
 }
 #[inline]
-fn parse_kw_for(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_FOR, |s| s.match_string("for", false))
+fn parse_kw_loop(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_LOOP, |s| s.match_string("loop", false))
 }
 #[inline]
-fn parse_kw_end(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_END, |s| s.match_string("end", false))
+fn parse_kw_each(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_EACH, |s| s.match_string("each", false))
+}
+#[inline]
+fn parse_kw_while(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_WHILE, |s| s.match_string("while", false))
+}
+#[inline]
+fn parse_kw_until(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_UNTIL, |s| s.match_string("until", false))
 }
 #[inline]
 fn parse_kw_let(state: Input) -> Output {
@@ -3859,6 +3897,10 @@ fn parse_kw_is(state: Input) -> Output {
 #[inline]
 fn parse_kw_as(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_AS, |s| s.match_string("as", false))
+}
+#[inline]
+fn parse_kw_end(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_END, |s| s.match_string("end", false))
 }
 #[inline]
 fn parse_shebang(state: Input) -> Output {
@@ -4084,7 +4126,7 @@ fn parse_for_template_begin(state: Input) -> Output {
             Ok(s)
                 .and_then(|s| parse_template_s(s).and_then(|s| s.tag_node("template_s")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_kw_for(s).and_then(|s| s.tag_node("kw_for")))
+                .and_then(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_let_pattern(s).and_then(|s| s.tag_node("let_pattern")))
                 .and_then(|s| builtin_ignore(s))
@@ -4120,7 +4162,7 @@ fn parse_for_template_end(state: Input) -> Output {
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_kw_end(s).and_then(|s| s.tag_node("kw_end")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| s.optional(|s| parse_kw_for(s).and_then(|s| s.tag_node("kw_for"))))
+                .and_then(|s| s.optional(|s| parse_kw_loop(s).and_then(|s| s.tag_node("kw_loop"))))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_template_e(s).and_then(|s| s.tag_node("template_e")))
         })
@@ -4208,14 +4250,6 @@ fn parse_pattern_item_1(state: Input) -> Output {
 #[inline]
 fn parse_pattern_item_2(state: Input) -> Output {
     state.rule(ValkyrieRule::PATTERN_ITEM2, |s| s.match_string("..", false))
-}
-#[inline]
-fn parse_kw_while_0(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_WHILE0, |s| s.match_string("while", false))
-}
-#[inline]
-fn parse_kw_while_1(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_WHILE1, |s| s.match_string("until", false))
 }
 #[inline]
 fn parse_kw_match_0(state: Input) -> Output {

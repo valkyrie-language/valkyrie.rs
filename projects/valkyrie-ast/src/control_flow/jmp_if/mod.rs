@@ -65,11 +65,11 @@ impl IfStatement {
     }
 }
 
-impl WhileConditionNode {
+impl ConditionNode {
     /// Weather it is a unconditional loop
     pub fn is_empty(&self) -> bool {
         match self {
-            WhileConditionNode::Unconditional => true,
+            ConditionNode::Unconditional => true,
             _ => false,
         }
     }

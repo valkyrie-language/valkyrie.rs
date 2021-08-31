@@ -43,9 +43,7 @@ impl Hir2Mir for StatementKind {
                 todo!()
             }
             Self::Namespace(v) => v.to_mir(store, ())?,
-            Self::Import(_) => {
-                todo!()
-            }
+            Self::Import(i) => {}
             Self::Class(v) => v.to_mir(store, ())?,
             Self::Union(v) => v.to_mir(store, ())?,
             Self::Enumerate(v) => v.to_mir(store, ())?,
@@ -54,16 +52,21 @@ impl Hir2Mir for StatementKind {
                 todo!()
             }
             Self::Function(v) => v.to_mir(store, ())?,
-            Self::Variable(_) => {
-                todo!()
-            }
+            Self::Variable(_) => {}
             Self::Guard(_) => {
                 todo!()
             }
+            Self::Loop(_) => {
+                todo!()
+            }
+
             Self::While(_) => {
                 todo!()
             }
-            Self::For(_) => {
+            Self::Until(_) => {
+                todo!()
+            }
+            Self::Each(_) => {
                 todo!()
             }
             Self::Control(_) => {

@@ -13,30 +13,34 @@ pub enum StatementKind {
     Document(Box<DocumentationList>),
     /// The annotation list node.
     Annotation(Box<AttributeList>),
-    /// The namespace declaration node.
+    /// The `namespace` declaration node.
     Namespace(Box<NamespaceDeclaration>),
-    /// The import statement node.
+    /// The `import` statement node.
     Import(Box<ImportStatement>),
-    /// The class declaration node.
+    /// The `class` declaration node.
     Class(Box<ClassDeclaration>),
-    /// The union declaration node.
+    /// The `union` declaration node.
     Union(Box<UnionDeclaration>),
-    /// The enumerate declaration node.
+    /// The `enumerate` declaration node.
     Enumerate(Box<SemanticNumber>),
-    /// The trait declaration node
+    /// The `trait` declaration node
     Trait(Box<TraitDeclaration>),
     /// The type extension node
     Extends(Box<ExtendsStatement>),
     /// The function declaration node.
     Function(Box<FunctionDeclaration>),
-    /// The let bind statement node.
+    /// The `let` bind statement node.
     Variable(Box<LetBindNode>),
-    /// The guard statement node.
+    /// The `guard` statement node.
     Guard(Box<GuardStatement>),
-    /// The while loop statement node.
-    While(Box<WhileLoop>),
-    /// The for loop statement node.
-    For(Box<ForLoop>),
+    /// The infinity `loop` statement node.
+    Loop(Box<LoopRepeat>),
+    /// The `while` loop statement node.
+    While(Box<LoopWhile>),
+    /// The `until` loop statement node.
+    Until(Box<LoopUntil>),
+    /// The `each` loop statement node.
+    Each(Box<LoopEach>),
     /// The argument argument node.
     Control(Box<ControlNode>),
     /// The argument argument node.

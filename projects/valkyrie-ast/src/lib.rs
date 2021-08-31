@@ -25,9 +25,10 @@ pub use crate::{
         jmp_guard::{GuardPattern, GuardStatement},
         jmp_if::{BreakStatement, ElseStatement, IfBranchNode, IfStatement, JumpStatement},
         jmp_switch::SwitchStatement,
-        loop_for::{ForBarePattern, ForLoop},
-        loop_pure::{LoopContinuation, LoopStatement},
-        loop_while::{WhileConditionNode, WhileLoop, WhileLoopKind},
+        loop_each::{ForBarePattern, LoopEach},
+        loop_repeat::{LoopContinuation, LoopRepeat},
+        loop_until::LoopUntil,
+        loop_while::{ConditionNode, LoopWhile},
     },
     expression_level::{
         annotations::{AnnotationNode, AttributeKind, AttributeList, AttributeTerm, ModifierList, ProceduralNode},
