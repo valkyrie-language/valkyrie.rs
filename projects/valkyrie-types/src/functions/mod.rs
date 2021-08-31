@@ -34,7 +34,15 @@ pub struct ValkyrieNativeFunction {
     /// The WASI export symbol if exists
     pub wasi_export: Option<WasiExport>,
     /// The input output signature of the function
-    pub overloads: BTreeMap<NotNan<f64>, FunctionSignature>,
+    pub overloads: BTreeMap<NotNan<f64>, FunctionInstance>,
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct FunctionSignature {
+    pub positional: IndexMap<Arc<str>, FunctionParameter>,
+    pub mixed: IndexMap<Arc<str>, FunctionParameter>,
+    pub named: BTreeMap<Arc<str>, FunctionParameter>,
+    pub output: Vec<FunctionParameter>,
 }
 
 #[derive(Clone, Debug, Hash)]
@@ -45,12 +53,21 @@ pub struct FunctionParameter {
     pub r#type: ValkyrieType,
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct FunctionSignature {
-    pub positional: IndexMap<Arc<str>, FunctionParameter>,
-    pub mixed: IndexMap<Arc<str>, FunctionParameter>,
-    pub named: BTreeMap<Arc<str>, FunctionParameter>,
-    pub output: Vec<FunctionParameter>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FunctionInstance {
+    pub signature: FunctionSignature,
+    pub body: FunctionBody,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FunctionBody {
+    pub assembly: String,
+}
+
+impl Default for FunctionInstance {
+    fn default() -> Self {
+        Self { signature: Default::default(), body: FunctionBody { assembly: "".to_string() } }
+    }
 }
 
 impl Hash for FunctionSignature {

@@ -136,6 +136,7 @@ pub enum ValkyrieRule {
     KW_CONTROL,
     KW_ELSE,
     KW_END,
+    KW_ENUMERATE,
     KW_EXTENDS,
     KW_FLAGS,
     KW_FOR,
@@ -337,7 +338,6 @@ impl YggdrasilRule for ValkyrieRule {
             Self::DEFINE_ENUMERATE => "",
             Self::FLAG_TERM => "",
             Self::FLAG_FIELD => "",
-            Self::KW_FLAGS => "",
             Self::DEFINE_UNION => "",
             Self::UNION_TERM => "",
             Self::DEFINE_VARIANT => "",
@@ -499,6 +499,8 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_IMPLEMENTS => "",
             Self::KW_EXTENDS => "",
             Self::KW_INHERITS => "",
+            Self::KW_ENUMERATE => "",
+            Self::KW_FLAGS => "",
             Self::KW_FOR => "",
             Self::KW_END => "",
             Self::KW_LET => "",
@@ -771,11 +773,6 @@ pub enum FlagTermNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FlagFieldNode<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwFlagsNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
@@ -1634,6 +1631,16 @@ pub struct KwExtendsNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KwInheritsNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwEnumerateNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwFlagsNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]

@@ -36,9 +36,20 @@ impl Mir2Lir for ValkyrieNativeFunction {
             else {
                 self.function_name.join(format!("0x{:X}", unsafe { transmute::<f64, u64>(id.into_inner()) }))
             };
-            let inputs = f.to_lir(graph, context)?;
-            *graph +=
-                WasiFunction { symbol: name, inputs, output: vec![], body: WasiFunctionBody::Native { bytecodes: vec![] } };
+            let inputs = f.signature.to_lir(graph, context)?;
+
+            if f.body.assembly.is_empty() {
+                *graph +=
+                    WasiFunction { symbol: name, inputs, output: vec![], body: WasiFunctionBody::Native { bytecodes: vec![] } };
+            }
+            else {
+                // *graph += WasiFunction {
+                //     symbol: name,
+                //     inputs,
+                //     output: vec![],
+                //     body: WasiFunctionBody::Assembly { string: f.body.assembly.clone() },
+                // };
+            }
         }
 
         Ok(())

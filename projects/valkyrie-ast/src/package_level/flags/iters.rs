@@ -1,6 +1,6 @@
 use super::*;
 
-impl<'i> IntoIterator for &'i FlagDeclaration {
+impl<'i> IntoIterator for &'i SemanticNumber {
     type Item = &'i FlagTerm;
     type IntoIter = core::slice::Iter<'i, FlagTerm>;
 

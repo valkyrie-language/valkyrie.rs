@@ -1,4 +1,5 @@
 use crate::{
+    functions::FunctionInstance,
     helpers::Hir2Mir,
     modules::{ModuleItem, ResolveState},
     ValkyrieImportFunction, ValkyrieNativeFunction,
@@ -6,7 +7,9 @@ use crate::{
 use indexmap::IndexMap;
 use nyar_error::Result;
 use nyar_wasm::{Identifier, WasiExport, WasiImport, WasiResource};
+use ordered_float::NotNan;
 use std::{
+    collections::BTreeMap,
     fmt::{Debug, Formatter},
     hash::{Hash, Hasher},
     ops::AddAssign,
@@ -62,7 +65,10 @@ pub struct ValkyrieMethod {
     pub method_name: Arc<str>,
     /// The WASI name of the field
     pub wasi_alias: Arc<str>,
+
+    pub overloads: BTreeMap<NotNan<f64>, FunctionInstance>,
 }
+
 impl ValkyrieClass {
     pub fn get_name(&self) -> String {
         self.class_name.to_string()

@@ -2,7 +2,7 @@ use super::*;
 use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineEnumerateNode<'i> {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<FlagDeclaration> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<SemanticNumber> {
         let mut terms = vec![];
         for term in &self.flag_term() {
             match term.build(ctx) {
@@ -10,10 +10,10 @@ impl<'i> crate::DefineEnumerateNode<'i> {
                 Err(e) => ctx.add_error(e),
             }
         }
-        Ok(FlagDeclaration {
+        Ok(SemanticNumber {
             annotations: self.annotation_head().annotations(ctx),
             name: self.identifier().build(ctx.file),
-            kind: self.kw_flags().build(),
+            kind: SemanticKind::Enumerate,
             layout: None,
             implements: None,
             body: terms,
@@ -23,10 +23,10 @@ impl<'i> crate::DefineEnumerateNode<'i> {
 }
 
 impl<'i> crate::KwFlagsNode<'i> {
-    pub(crate) fn build(&self) -> FlagKind {
+    pub(crate) fn build(&self) -> SemanticKind {
         match self.get_str() {
-            "enumerate" | "enum" => FlagKind::Enumerate,
-            "flags" => FlagKind::Flags,
+            "enumerate" | "enum" => SemanticKind::Enumerate,
+            "flags" => SemanticKind::Flags,
             _ => unreachable!(),
         }
     }

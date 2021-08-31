@@ -168,8 +168,9 @@ class ObjectStatement {
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineEnumerate {
     AnnotationHead
-    KW_FLAGS Identifier DefineInherit? TypeHint '{' FlagTerm* '}'
+    KW_ENUMERATE Identifier DefineInherit? ('=' layout=TypeExpression)? '{' FlagTerm* '}'
 }
+
 union FlagTerm {
     | ProceduralCall
     | DefineMethod
@@ -179,11 +180,7 @@ union FlagTerm {
 class FlagField {
     AnnotationTerm* Identifier ParameterDefault
 }
-@style(keyword)
-@railway(false)
-text class KW_FLAGS {
-    'enumerate' | 'flags'
-}
+
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineUnion {
     DefineConstraint?
@@ -713,7 +710,9 @@ atomic class ModifierAhead -> ModifierCall ^ {
 class KEYWORDS_STOP {
     / template | generic | constraint
     | class | structure
-    | enumerate | flags | union
+    | enumerate | enum | enums
+    | flags
+    | union
     | function | micro | macro
     | trait | interface
     | extends?
@@ -784,8 +783,8 @@ atomic class DecimalX ^ {
 // === keywords === ----------------------------------------------------------------------------------------------------
 @railway(false)
 atomic token {
-    PROPORTION: /∷|::/
-    NS_CONCAT : /[.∷]|::/
+    PROPORTION: /[∷⸬]|::/
+    NS_CONCAT : /[.∷⸬]|::/
     COLON     : [:：]
     ARROW1    : /[:：⟶]|->/
     COMMA     : [,，]
@@ -829,8 +828,10 @@ token {
     KW_CONSTRAINT: /template|generic|constraint|∀/
     KW_WHERE     : 'where'
     KW_IMPLEMENTS: /implements?/
-    KW_EXTENDS   : /extends?/
+    KW_EXTENDS   : /extends?|imply/
     KW_INHERITS  : /inherits?/
+    KW_ENUMERATE : /enumerate|enums|enum/
+    KW_FLAGS     : 'flags'
     // === looping === -------------------------------------------------------------------------------------------------
     KW_FOR: 'for'
     KW_END: 'end'

@@ -1197,11 +1197,11 @@ impl<'i> DefineEnumerateNode<'i> {
     pub fn identifier(&self) -> IdentifierNode<'i> {
         self.pair.take_tagged_one("identifier").unwrap()
     }
-    pub fn kw_flags(&self) -> KwFlagsNode<'i> {
-        self.pair.take_tagged_one("kw_flags").unwrap()
+    pub fn kw_enumerate(&self) -> KwEnumerateNode<'i> {
+        self.pair.take_tagged_one("kw_enumerate").unwrap()
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn layout(&self) -> Option<TypeExpressionNode<'i>> {
+        self.pair.take_tagged_option("layout")
     }
 }
 #[automatically_derived]
@@ -1284,30 +1284,6 @@ impl<'i> FlagFieldNode<'i> {
         self.pair.take_tagged_one("parameter_default").unwrap()
     }
 }
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwFlagsNode<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_FLAGS)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_FLAGS
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwFlagsNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for DefineUnionNode<'i> {
     type Rule = ValkyrieRule;
@@ -6398,6 +6374,54 @@ impl<'i> YggdrasilNode<'i> for KwInheritsNode<'i> {
     }
 }
 impl<'i> KwInheritsNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwEnumerateNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_ENUMERATE)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_ENUMERATE
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwEnumerateNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwFlagsNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_FLAGS)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_FLAGS
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwFlagsNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for KwForNode<'i> {
     type Rule = ValkyrieRule;

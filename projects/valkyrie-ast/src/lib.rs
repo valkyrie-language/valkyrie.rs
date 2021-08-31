@@ -52,7 +52,7 @@ pub use crate::{
         },
         constraints::{ConstraintDeclaration, ConstraintTerm},
         documentation::DocumentationList,
-        flags::{EncodeDeclaration, FlagDeclaration, FlagKind, FlagTerm},
+        flags::{EncodeDeclaration, FlagTerm, SemanticKind, SemanticNumber},
         function::{FunctionDeclaration, FunctionKind, FunctionReturnNode, StatementBlock},
         guarantee::{EffectTypeNode, GuaranteeNode},
         import::{

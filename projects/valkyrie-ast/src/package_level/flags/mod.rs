@@ -5,7 +5,7 @@ mod iters;
 /// The flags kind
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum FlagKind {
+pub enum SemanticKind {
     /// `enumerate`, exclusive encoding number
     Enumerate,
     /// `flags`, juxtapose encoding number
@@ -19,14 +19,14 @@ pub enum FlagKind {
 /// `flags Bit(8bits): Trait { FlagA, FlagB }`
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct FlagDeclaration {
+pub struct SemanticNumber {
     /// The kind of the flag statement
-    pub kind: FlagKind,
+    pub kind: SemanticKind,
     /// The annotations of this flag.
     pub annotations: AnnotationNode,
     /// The name of the flag.
     pub name: IdentifierNode,
-    /// `flags Flag(8bits)`
+    /// `flags Flag = u32`
     pub layout: Option<ExpressionKind>,
     /// `flags Flag: Trait`
     pub implements: Option<ExpressionKind>,

@@ -22,7 +22,7 @@ pub enum StatementKind {
     /// The union declaration node.
     Union(Box<UnionDeclaration>),
     /// The enumerate declaration node.
-    Enumerate(Box<FlagDeclaration>),
+    Enumerate(Box<SemanticNumber>),
     /// The trait declaration node
     Trait(Box<TraitDeclaration>),
     /// The type extension node

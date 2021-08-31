@@ -1,10 +1,10 @@
 use super::*;
 
-impl Debug for FlagDeclaration {
+impl Debug for SemanticNumber {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let w = &mut match self.kind {
-            FlagKind::Enumerate => f.debug_struct("Enumerate"),
-            FlagKind::Flags => f.debug_struct("Flags"),
+            SemanticKind::Enumerate => f.debug_struct("Enumerate"),
+            SemanticKind::Flags => f.debug_struct("Flags"),
         };
         if !self.annotations.is_empty() {
             w.field("annotations", &self.annotations);
@@ -24,7 +24,7 @@ impl Debug for FlagDeclaration {
 }
 
 #[cfg(feature = "pretty-print")]
-impl PrettyPrint for FlagDeclaration {
+impl PrettyPrint for SemanticNumber {
     fn pretty(&self, theme: &PrettyProvider) -> PrettyTree {
         let mut terms = PrettySequence::new(4);
         terms += theme.keyword("enumerate");

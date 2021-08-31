@@ -19,6 +19,10 @@
         ))
     ))
     (alias export $wasi:random/random "get-random-u64" (func $std::random::random_seed_safe))
+    (type $std::primitive::Boolean (enum
+        "fals" ;; 0
+        "true" ;; 1
+    ))
     
     
     (core func $std::random::random_seed_fast (canon lower

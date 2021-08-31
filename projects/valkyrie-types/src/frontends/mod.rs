@@ -1,5 +1,5 @@
 use crate::{
-    functions::{FunctionParameter, FunctionSignature},
+    functions::{FunctionInstance, FunctionParameter, FunctionSignature},
     helpers::Hir2Mir,
     structures::ValkyrieResource,
     ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieMethod,
@@ -11,9 +11,9 @@ use nyar_wasm::Identifier;
 use ordered_float::NotNan;
 use std::collections::BTreeMap;
 use valkyrie_ast::{
-    ClassDeclaration, ClassTerm, EncodeDeclaration, ExpressionKind, FieldDeclaration, FlagDeclaration, FlagKind, FlagTerm,
-    FunctionDeclaration, IdentifierNode, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, StatementKind,
-    TraitDeclaration, UnionDeclaration, UnionTerm, VariantDeclaration,
+    ClassDeclaration, ClassTerm, EncodeDeclaration, ExpressionKind, FieldDeclaration, FlagTerm, FunctionDeclaration,
+    IdentifierNode, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, SemanticKind, SemanticNumber,
+    StatementKind, TraitDeclaration, UnionDeclaration, UnionTerm, VariantDeclaration,
 };
 use valkyrie_parser::NamepathNode;
 
@@ -164,7 +164,7 @@ impl Hir2Mir for MethodDeclaration {
     fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
         let (field_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
 
-        Ok(ValkyrieMethod { method_name: field_name, wasi_alias })
+        Ok(ValkyrieMethod { method_name: field_name, wasi_alias, overloads: Default::default() })
     }
 }
 
@@ -244,7 +244,7 @@ impl Hir2Mir for VariantDeclaration {
     }
 }
 
-impl Hir2Mir for FlagDeclaration {
+impl Hir2Mir for SemanticNumber {
     type Output = ();
     type Context<'a> = ();
 
@@ -265,8 +265,8 @@ impl Hir2Mir for FlagDeclaration {
         }
 
         match self.kind {
-            FlagKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, enumerations: terms },
-            FlagKind::Flags => *store += ValkyrieFlagation { flags_name: name, flags: terms },
+            SemanticKind::Enumerate => *store += ValkyrieEnumeration { enumeration_name: name, enumerations: terms },
+            SemanticKind::Flags => *store += ValkyrieFlagation { flags_name: name, flags: terms },
         }
 
         Ok(())
@@ -289,12 +289,12 @@ impl Hir2Mir for FunctionDeclaration {
 
     fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let function_name = store.register_item(&self.name);
-        let mut signature = FunctionSignature::default();
+        let mut instance = FunctionInstance::default();
 
         for parameter in self.parameters.positional {
             match parameter.to_mir(store, ()) {
                 Ok(o) => {
-                    signature.positional.insert(o.name.clone(), o);
+                    instance.signature.positional.insert(o.name.clone(), o);
                 }
                 Err(e) => store.push_error(e),
             }
@@ -302,7 +302,7 @@ impl Hir2Mir for FunctionDeclaration {
         for parameter in self.parameters.mixed {
             match parameter.to_mir(store, ()) {
                 Ok(o) => {
-                    signature.mixed.insert(o.name.clone(), o);
+                    instance.signature.mixed.insert(o.name.clone(), o);
                 }
                 Err(e) => store.push_error(e),
             }
@@ -310,19 +310,19 @@ impl Hir2Mir for FunctionDeclaration {
         for parameter in self.parameters.named {
             match parameter.to_mir(store, ()) {
                 Ok(o) => {
-                    signature.named.insert(o.name.clone(), o);
+                    instance.signature.named.insert(o.name.clone(), o);
                 }
                 Err(e) => store.push_error(e),
             }
         }
         match store.wasi_import_module_name(&self.annotations, &self.name) {
             Some(wasi_import) => {
-                *store += ValkyrieImportFunction { function_name, wasi_import, signature };
+                *store += ValkyrieImportFunction { function_name, wasi_import, signature: instance.signature };
             }
             None => {
                 let mut overloads = BTreeMap::default();
                 unsafe {
-                    overloads.insert(NotNan::new_unchecked(0.0), signature);
+                    overloads.insert(NotNan::new_unchecked(0.0), instance);
                 }
                 *store += ValkyrieNativeFunction { function_name, wasi_export: None, overloads };
             }

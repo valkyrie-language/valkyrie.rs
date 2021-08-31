@@ -38,7 +38,6 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::DEFINE_ENUMERATE => parse_define_enumerate(state),
         ValkyrieRule::FLAG_TERM => parse_flag_term(state),
         ValkyrieRule::FLAG_FIELD => parse_flag_field(state),
-        ValkyrieRule::KW_FLAGS => parse_kw_flags(state),
         ValkyrieRule::DEFINE_UNION => parse_define_union(state),
         ValkyrieRule::UNION_TERM => parse_union_term(state),
         ValkyrieRule::DEFINE_VARIANT => parse_define_variant(state),
@@ -200,6 +199,8 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::KW_IMPLEMENTS => parse_kw_implements(state),
         ValkyrieRule::KW_EXTENDS => parse_kw_extends(state),
         ValkyrieRule::KW_INHERITS => parse_kw_inherits(state),
+        ValkyrieRule::KW_ENUMERATE => parse_kw_enumerate(state),
+        ValkyrieRule::KW_FLAGS => parse_kw_flags(state),
         ValkyrieRule::KW_FOR => parse_kw_for(state),
         ValkyrieRule::KW_END => parse_kw_end(state),
         ValkyrieRule::KW_LET => parse_kw_let(state),
@@ -908,13 +909,25 @@ fn parse_define_enumerate(state: Input) -> Output {
             Ok(s)
                 .and_then(|s| parse_annotation_head(s).and_then(|s| s.tag_node("annotation_head")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_kw_flags(s).and_then(|s| s.tag_node("kw_flags")))
+                .and_then(|s| parse_kw_enumerate(s).and_then(|s| s.tag_node("kw_enumerate")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_identifier(s).and_then(|s| s.tag_node("identifier")))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| s.optional(|s| parse_define_inherit(s).and_then(|s| s.tag_node("define_inherit"))))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint")))
+                .and_then(|s| {
+                    s.optional(|s| {
+                        s.sequence(|s| {
+                            Ok(s)
+                                .and_then(|s| {
+                                    s.sequence(|s| {
+                                        Ok(s).and_then(|s| builtin_text(s, "=", false)).and_then(|s| builtin_ignore(s))
+                                    })
+                                })
+                                .and_then(|s| parse_type_expression(s).and_then(|s| s.tag_node("layout")))
+                        })
+                    })
+                })
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| builtin_text(s, "{", false))
                 .and_then(|s| builtin_ignore(s))
@@ -961,12 +974,6 @@ fn parse_flag_field(state: Input) -> Output {
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_parameter_default(s).and_then(|s| s.tag_node("parameter_default")))
         })
-    })
-}
-#[inline]
-fn parse_kw_flags(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_FLAGS, |s| {
-        Err(s).or_else(|s| builtin_text(s, "enumerate", false)).or_else(|s| builtin_text(s, "flags", false))
     })
 }
 #[inline]
@@ -3305,7 +3312,9 @@ fn parse_keywords_stop(state: Input) -> Output {
                 Regex::new(
                     "^(?x)( template | generic | constraint
     | class | structure
-    | enumerate | flags | union
+    | enumerate | enum | enums
+    | flags
+    | union
     | function | micro | macro
     | trait | interface
     | extends?
@@ -3601,7 +3610,7 @@ fn parse_proportion(state: Input) -> Output {
     state.rule(ValkyrieRule::PROPORTION, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)(∷|::)").unwrap())
+            REGEX.get_or_init(|| Regex::new("^(?x)([∷⸬]|::)").unwrap())
         })
     })
 }
@@ -3610,7 +3619,7 @@ fn parse_ns_concat(state: Input) -> Output {
     state.rule(ValkyrieRule::NS_CONCAT, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)([.∷]|::)").unwrap())
+            REGEX.get_or_init(|| Regex::new("^(?x)([.∷⸬]|::)").unwrap())
         })
     })
 }
@@ -3752,7 +3761,7 @@ fn parse_kw_extends(state: Input) -> Output {
     state.rule(ValkyrieRule::KW_EXTENDS, |s| {
         s.match_regex({
             static REGEX: OnceLock<Regex> = OnceLock::new();
-            REGEX.get_or_init(|| Regex::new("^(?x)(extends?)").unwrap())
+            REGEX.get_or_init(|| Regex::new("^(?x)(extends?|imply)").unwrap())
         })
     })
 }
@@ -3764,6 +3773,19 @@ fn parse_kw_inherits(state: Input) -> Output {
             REGEX.get_or_init(|| Regex::new("^(?x)(inherits?)").unwrap())
         })
     })
+}
+#[inline]
+fn parse_kw_enumerate(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_ENUMERATE, |s| {
+        s.match_regex({
+            static REGEX: OnceLock<Regex> = OnceLock::new();
+            REGEX.get_or_init(|| Regex::new("^(?x)(enumerate|enums|enum)").unwrap())
+        })
+    })
+}
+#[inline]
+fn parse_kw_flags(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_FLAGS, |s| s.match_string("flags", false))
 }
 #[inline]
 fn parse_kw_for(state: Input) -> Output {
