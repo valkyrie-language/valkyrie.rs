@@ -2390,8 +2390,8 @@ impl<'i> LoopWhileStatementNode<'i> {
     pub fn continuation(&self) -> ContinuationNode<'i> {
         self.pair.take_tagged_one("continuation").unwrap()
     }
-    pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
-        self.pair.take_tagged_option("inline_expression")
+    pub fn inline_expression(&self) -> InlineExpressionNode<'i> {
+        self.pair.take_tagged_one("inline_expression").unwrap()
     }
     pub fn kw_loop(&self) -> KwLoopNode<'i> {
         self.pair.take_tagged_one("kw_loop").unwrap()
@@ -2427,8 +2427,8 @@ impl<'i> LoopUntilStatementNode<'i> {
     pub fn continuation(&self) -> ContinuationNode<'i> {
         self.pair.take_tagged_one("continuation").unwrap()
     }
-    pub fn inline_expression(&self) -> Option<InlineExpressionNode<'i>> {
-        self.pair.take_tagged_option("inline_expression")
+    pub fn inline_expression(&self) -> InlineExpressionNode<'i> {
+        self.pair.take_tagged_one("inline_expression").unwrap()
     }
     pub fn kw_loop(&self) -> KwLoopNode<'i> {
         self.pair.take_tagged_one("kw_loop").unwrap()

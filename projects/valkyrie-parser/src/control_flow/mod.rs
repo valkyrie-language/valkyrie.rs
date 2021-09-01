@@ -7,4 +7,5 @@ mod jmp_if;
 mod jmp_match;
 mod jmp_switch;
 mod loop_for;
+mod loop_until;
 mod loop_while;

@@ -1,7 +1,7 @@
 use crate::{
-    helper::ValkyrieNode, package_level::let_bind::VariableDeclaration, patterns::PatternsList, ArgumentKey, ConditionNode,
-    ElseStatement, ExpressionKind, ExpressionNode, GuardPattern, IdentifierNode, LoopEach, LoopRepeat, PatternBranch,
-    PatternNode, StatementBlock, StatementKind, SwitchStatement, TuplePatternNode,
+    helper::ValkyrieNode, package_level::let_bind::VariableDeclaration, patterns::PatternsList, ArgumentKey, ElseStatement,
+    ExpressionKind, ExpressionNode, GuardPattern, IdentifierNode, LoopEach, LoopRepeat, PatternBranch, PatternNode,
+    StatementBlock, StatementKind, SwitchStatement, TuplePatternNode, WhileConditionNode,
 };
 use alloc::{
     boxed::Box,

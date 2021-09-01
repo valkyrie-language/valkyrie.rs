@@ -4536,39 +4536,36 @@ KW_WHILE</text>
 <text x="449" y="5163">
 HIDE</text>
 </g>
-<g class="optional">
-<path d=" M 485 5158 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 148 m -71 0 l -5 -5 m 0 10 l 5 -5 m 71 0 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
 <a class="link" xlink:href="#InlineExpression">
 <g class="symbol">
-<rect height="22" width="148" x="509" y="5147"/>
-<text x="583" y="5163">
+<rect height="22" width="148" x="485" y="5147"/>
+<text x="559" y="5163">
 InlineExpression</text>
 </g>
 </a>
-</g>
 <g class="character">
-<rect height="22" rx="10" ry="10" width="52" x="691" y="5147"/>
-<text x="717" y="5163">
+<rect height="22" rx="10" ry="10" width="52" x="643" y="5147"/>
+<text x="669" y="5163">
 HIDE</text>
 </g>
 <a class="link" xlink:href="#Continuation">
 <g class="symbol">
-<rect height="22" width="116" x="753" y="5147"/>
-<text x="811" y="5163">
+<rect height="22" width="116" x="705" y="5147"/>
+<text x="763" y="5163">
 Continuation</text>
 </g>
 </a>
 <g class="character">
-<rect height="22" rx="10" ry="10" width="52" x="879" y="5147"/>
-<text x="905" y="5163">
+<rect height="22" rx="10" ry="10" width="52" x="831" y="5147"/>
+<text x="857" y="5163">
 HIDE</text>
 </g>
 <g class="optional">
-<path d=" M 941 5158 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 44 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
+<path d=" M 893 5158 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 44 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
 <a class="link" xlink:href="#EOS">
 <g class="symbol">
-<rect height="22" width="44" x="965" y="5147"/>
-<text x="987" y="5163">
+<rect height="22" width="44" x="917" y="5147"/>
+<text x="939" y="5163">
 EOS</text>
 </g>
 </a>
@@ -4577,15 +4574,15 @@ EOS</text>
 <path d=" M 319 5158 h 10"/>
 <path d=" M 413 5158 h 10"/>
 <path d=" M 475 5158 h 10"/>
-<path d=" M 681 5158 h 10"/>
-<path d=" M 743 5158 h 10"/>
-<path d=" M 869 5158 h 10"/>
-<path d=" M 931 5158 h 10"/>
+<path d=" M 633 5158 h 10"/>
+<path d=" M 695 5158 h 10"/>
+<path d=" M 821 5158 h 10"/>
+<path d=" M 883 5158 h 10"/>
 </g>
-<path d=" M 1043 5158 h 5 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5"/>
+<path d=" M 995 5158 h 5 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5"/>
 <path d=" M 25 5158 h 10"/>
 <path d=" M 171 5158 h 10"/>
-<path d=" M 1033 5158 h 10"/>
+<path d=" M 985 5158 h 10"/>
 </g>
 <g class="sequence">
 <path d=" M 10 5205 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5 m 10 0 h 5"/>
@@ -4616,39 +4613,36 @@ KW_UNTIL</text>
 <text x="449" y="5210">
 HIDE</text>
 </g>
-<g class="optional">
-<path d=" M 485 5205 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 148 m -71 0 l -5 -5 m 0 10 l 5 -5 m 71 0 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
 <a class="link" xlink:href="#InlineExpression">
 <g class="symbol">
-<rect height="22" width="148" x="509" y="5194"/>
-<text x="583" y="5210">
+<rect height="22" width="148" x="485" y="5194"/>
+<text x="559" y="5210">
 InlineExpression</text>
 </g>
 </a>
-</g>
 <g class="character">
-<rect height="22" rx="10" ry="10" width="52" x="691" y="5194"/>
-<text x="717" y="5210">
+<rect height="22" rx="10" ry="10" width="52" x="643" y="5194"/>
+<text x="669" y="5210">
 HIDE</text>
 </g>
 <a class="link" xlink:href="#Continuation">
 <g class="symbol">
-<rect height="22" width="116" x="753" y="5194"/>
-<text x="811" y="5210">
+<rect height="22" width="116" x="705" y="5194"/>
+<text x="763" y="5210">
 Continuation</text>
 </g>
 </a>
 <g class="character">
-<rect height="22" rx="10" ry="10" width="52" x="879" y="5194"/>
-<text x="905" y="5210">
+<rect height="22" rx="10" ry="10" width="52" x="831" y="5194"/>
+<text x="857" y="5210">
 HIDE</text>
 </g>
 <g class="optional">
-<path d=" M 941 5205 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 44 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
+<path d=" M 893 5205 h 24 m -24 0 a 12 12 0 0 0 12 -12 v 0 a 12 12 0 0 1 12 -12 h 44 a 12 12 0 0 1 12 12 v 0 a 12 12 0 0 0 12 12 h -24"/>
 <a class="link" xlink:href="#EOS">
 <g class="symbol">
-<rect height="22" width="44" x="965" y="5194"/>
-<text x="987" y="5210">
+<rect height="22" width="44" x="917" y="5194"/>
+<text x="939" y="5210">
 EOS</text>
 </g>
 </a>
@@ -4657,15 +4651,15 @@ EOS</text>
 <path d=" M 319 5205 h 10"/>
 <path d=" M 413 5205 h 10"/>
 <path d=" M 475 5205 h 10"/>
-<path d=" M 681 5205 h 10"/>
-<path d=" M 743 5205 h 10"/>
-<path d=" M 869 5205 h 10"/>
-<path d=" M 931 5205 h 10"/>
+<path d=" M 633 5205 h 10"/>
+<path d=" M 695 5205 h 10"/>
+<path d=" M 821 5205 h 10"/>
+<path d=" M 883 5205 h 10"/>
 </g>
-<path d=" M 1043 5205 h 5 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5"/>
+<path d=" M 995 5205 h 5 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5"/>
 <path d=" M 25 5205 h 10"/>
 <path d=" M 171 5205 h 10"/>
-<path d=" M 1033 5205 h 10"/>
+<path d=" M 985 5205 h 10"/>
 </g>
 <g class="sequence">
 <path d=" M 10 5252 a 5 5 0 0 1 5 -5 a 5 5 0 0 1 5 5 a 5 5 0 0 1 -5 5 a 5 5 0 0 1 -5 -5 m 10 0 h 5"/>

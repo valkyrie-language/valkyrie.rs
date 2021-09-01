@@ -10,7 +10,7 @@ pub struct LoopWhile {
     /// The kind of while loop, including `while` and `until`
     pub keyword: Range<u32>,
     /// The condition of the loop
-    pub condition: ConditionNode,
+    pub condition: WhileConditionNode,
     /// The main body of the loop
     pub then: StatementBlock,
     /// The range of the node
@@ -20,13 +20,11 @@ pub struct LoopWhile {
 /// `while true`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ConditionNode {
-    /// `while { }`
-    Unconditional,
+pub enum WhileConditionNode {
     /// `while true {}`
-    Expression(ExpressionNode),
+    Expression(ExpressionKind),
     /// `while let Some(_) = ... {}`
-    Case(PatternNode),
+    LetCase(PatternNode),
 }
 
 impl ValkyrieNode for LoopWhile {

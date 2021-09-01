@@ -317,11 +317,11 @@ class LoopStatement {
 }
 // loop while a > 0 { }
 class LoopWhileStatement {
-    KW_LOOP KW_WHILE InlineExpression? Continuation ^EOS?
+    KW_LOOP KW_WHILE InlineExpression Continuation ^EOS?
 }
 // loop until a > 0 { }
 class LoopUntilStatement {
-    KW_LOOP KW_UNTIL InlineExpression? Continuation ^EOS?
+    KW_LOOP KW_UNTIL InlineExpression Continuation ^EOS?
 }
 // loop each i, j in k { }
 class LoopEachStatement {

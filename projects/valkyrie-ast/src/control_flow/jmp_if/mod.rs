@@ -64,13 +64,3 @@ impl IfStatement {
         todo!()
     }
 }
-
-impl ConditionNode {
-    /// Weather it is a unconditional loop
-    pub fn is_empty(&self) -> bool {
-        match self {
-            ConditionNode::Unconditional => true,
-            _ => false,
-        }
-    }
-}

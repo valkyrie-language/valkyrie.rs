@@ -27,8 +27,8 @@ pub use crate::{
         jmp_switch::SwitchStatement,
         loop_each::{ForBarePattern, LoopEach},
         loop_repeat::{LoopContinuation, LoopRepeat},
-        loop_until::LoopUntil,
-        loop_while::{ConditionNode, LoopWhile},
+        loop_until::{LoopUntil, UntilConditionNode},
+        loop_while::{LoopWhile, WhileConditionNode},
     },
     expression_level::{
         annotations::{AnnotationNode, AttributeKind, AttributeList, AttributeTerm, ModifierList, ProceduralNode},

@@ -1,125 +1,61 @@
-`while cond {...} otherwise {...}`
-
-
-```vk
-outer: loop {
-    if c1 {
-        break; // break 'outer
-    }
-    if c2 {
-        continue; // continue 'outer
-    }
-    if c3 {
-        return;
-    }
-    inner: loop {
-        if c4 {
-            break 'outer;
-        }
-        if c5 {
-            continue 'outer;
-        }
-        if c6 {
-            return;
-        }
-        if c7 {
-            break; // break 'inner
-        }
-        if c8 {
-            continue; // continue 'inner
-        }
-        if c9 {
-            return;
-        }
-        "inner-continuation"
-    }
-    "outer-continuation"
-}
-"function-continuation"
-```
-
-
+`while condition {...}`, `while let pattern = condition {...}`
 
 ```vk
-// promotion local variable here!!
-let outer_continue = || {
-    if c1 {
-        outer_break()
-    }
-    if c2 {
-        outer_continue();
-    }
-    if c3 {
-        return;
-    }
-    inner: loop {
-        if c4 {
-            outer_break()
-        }
-        if c5 {
-            outer_continue()
-        }
-        if c6 {
-            return;
-        }
-        if c7 {
-            break; // break 'inner
-        }
-        if c8 {
-            continue; // continue 'inner
-        }
-        if c9 {
-            return;
-        }
-        "inner-continuation"
-    }
-    "outer-continuation"
-}
-let outer_break = || {
-    "function-continuation"
+while condition() {
+    do()
 }
 ```
 
-
+```vk
+loop ^label {
+    if condition() {
+        break ^label
+    }
+    do()
+}
+```
 
 ```vk
-// promotion local variable here!!
-let outer_continue = || {
-    if c1 {
-        outer_break()
-    }
-    if c2 {
-        outer_continue();
-    }
-    if c3 {
-        return;
-    }
-    inner_continue()
+while let Some(a) = condition() {
+    a.do()
 }
-let outer_break = || {
-    "function-continuation"
-}
-let inner_continue = || {
-    if c4 {
-        outer_break()
-    }
-    if c5 {
-        outer_continue()
-    }
-    if c6 {
-        return;
-    }
-    if c7 {
-        inner_break()
-    }
-    if c8 {
-        inner_continue()
-    }
-    if c9 {
-        return;
+```
+
+```vk
+loop ^label {
+    match condition() {
+        case Some(a): a.do(),
+        case _      : break ^label,
     }
 }
-let inner_break = || {
-    "outer-continuation"
+``` {...}`
+
+```vk
+while condition() {
+    do()
+}
+```
+
+```vk
+loop ^label {
+    if condition() {
+        break ^label
+    }
+    do()
+}
+```
+
+```vk
+while let Some(a) = condition() {
+    a.do()
+}
+```
+
+```vk
+loop ^label {
+    match condition() {
+        case Some(a): a.do(),
+        case _      : break ^label,
+    }
 }
 ```

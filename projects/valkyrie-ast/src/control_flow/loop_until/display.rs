@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "pretty-print")]
-impl PrettyPrint for LoopWhile {
+impl PrettyPrint for LoopUntil {
     /// ```vk
     /// # inline style
     /// while a || b || c { ... }
@@ -24,7 +24,7 @@ impl PrettyPrint for LoopWhile {
 }
 
 #[cfg(feature = "lispify")]
-impl Lispify for LoopWhile {
+impl Lispify for LoopUntil {
     type Output = Lisp;
 
     fn lispify(&self) -> Self::Output {
@@ -45,7 +45,7 @@ impl Lispify for LoopWhile {
     }
 }
 #[cfg(feature = "pretty-print")]
-impl PrettyPrint for WhileConditionNode {
+impl PrettyPrint for UntilConditionNode {
     /// ```vk
     /// # inline style
     /// a || b || c
@@ -58,22 +58,21 @@ impl PrettyPrint for WhileConditionNode {
     /// ```
     fn pretty(&self, theme: &PrettyProvider) -> PrettyTree {
         match self {
-            WhileConditionNode::Unconditional => theme.keyword("true"),
-            WhileConditionNode::Case => theme.keyword("case"),
-            WhileConditionNode::Expression(e) => e.pretty(theme),
+            UntilConditionNode::NotCase(e) => theme.keyword("case"),
+            UntilConditionNode::Expression(e) => e.pretty(theme),
         }
     }
 }
 
 #[cfg(feature = "lispify")]
-impl Lispify for WhileConditionNode {
+impl Lispify for UntilConditionNode {
     type Output = Lisp;
 
     fn lispify(&self) -> Self::Output {
         match self {
-            WhileConditionNode::Unconditional => Lisp::keyword("true"),
-            WhileConditionNode::Case => Lisp::keyword("case"),
-            WhileConditionNode::Expression(v) => v.lispify(),
+            UntilConditionNode::Unconditional => Lisp::keyword("true"),
+            UntilConditionNode::NotCase => Lisp::keyword("case"),
+            UntilConditionNode::Expression(v) => v.lispify(),
         }
     }
 }
