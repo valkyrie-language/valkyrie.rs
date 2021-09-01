@@ -1,5 +1,4 @@
 use super::*;
-use nyar_error::SourceSpan;
 
 mod codegen;
 

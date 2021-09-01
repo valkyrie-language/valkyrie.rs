@@ -15,10 +15,8 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
-use valkyrie_ast::{
-    AnnotationNode, ArgumentTerm, AttributeTerm, IdentifierNode, NamespaceDeclaration, ProgramRoot, StatementKind,
-};
-use valkyrie_parser::{ProgramContext, StatementNode};
+use valkyrie_ast::{AnnotationNode, ArgumentTerm, IdentifierNode, ProgramRoot};
+use valkyrie_parser::ProgramContext;
 
 mod codegen;
 mod display;

@@ -3,7 +3,7 @@ use super::*;
 impl<'i> crate::DefineVariableNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<LetBindNode> {
         Ok(LetBindNode {
-            pattern: PatternNode::Tuple(Box::new(TuplePatternNode {
+            pattern: CasePattern::Tuple(Box::new(TuplePatternNode {
                 bind: None,
                 name: None,
                 terms: vec![],

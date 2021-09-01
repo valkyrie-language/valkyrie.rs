@@ -2,10 +2,7 @@ use super::*;
 
 impl Debug for TraitDeclaration {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let w = &mut match &self.kind {
-            TraitKind::Trait => f.debug_struct("Trait"),
-            TraitKind::Interface => f.debug_struct("Interface"),
-        };
+        let w = &mut f.debug_struct("Trait");
         w.field("name", &self.name);
         if let Some(g) = &self.generics {
             w.field("generics", g);

@@ -1,6 +1,7 @@
 use super::*;
 use nyar_error::SourceSpan;
 
+mod builtin;
 mod display;
 
 mod iters;
@@ -153,6 +154,11 @@ impl Debug for MethodDeclaration {
         w.field("span", &self.span);
         w.finish()
     }
+}
+
+#[derive(Debug)]
+pub struct FunctionAssembly {
+    pub text: String,
 }
 
 /// `domain { field; method(); domain {} }`

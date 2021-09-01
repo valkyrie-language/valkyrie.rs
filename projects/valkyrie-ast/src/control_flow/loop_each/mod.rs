@@ -6,8 +6,10 @@ mod display;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LoopEach {
+    /// Position of `each`
+    pub keyword: Range<u32>,
     /// `for pattern`
-    pub pattern: PatternNode,
+    pub pattern: CasePattern,
     /// `in iterator`
     pub iterator: ExpressionKind,
     /// `if condition`
@@ -38,7 +40,7 @@ pub struct ForBarePattern {
 impl LoopEach {
     pub fn standardization(self, iterator: IdentifierNode) -> (VariableDeclaration, LoopRepeat) {
         let var = VariableDeclaration { identifier: iterator, type_hint: None, body: None };
-        let lops = LoopRepeat { label: self.label, terms: vec![] };
+        let lops = LoopRepeat { keyword: self.keyword, label: self.label, terms: vec![] };
         (var, lops)
     }
 }
@@ -46,11 +48,11 @@ impl LoopEach {
 impl ForBarePattern {
     /// Convert this bare pattern into tuple pattern
     #[allow(clippy::wrong_self_convention)]
-    pub fn as_pattern_expression(self) -> PatternNode {
+    pub fn as_pattern_expression(self) -> CasePattern {
         TuplePatternNode {
             bind: None,
             name: None,
-            terms: self.pattern.into_iter().map(PatternNode::from).collect(),
+            terms: self.pattern.into_iter().map(CasePattern::from).collect(),
             span: self.span,
         }
         .into()

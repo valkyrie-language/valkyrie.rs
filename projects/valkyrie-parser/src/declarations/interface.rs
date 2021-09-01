@@ -3,12 +3,12 @@ use super::*;
 impl<'i> crate::DefineTraitNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<TraitDeclaration> {
         Ok(TraitDeclaration {
-            kind: self.kw_trait().build(),
+            keyword: self.kw_trait().get_range32(),
             name: self.identifier().build(ctx.file),
             generics: self.define_generic().as_ref().map(|s| s.build(ctx)),
-            implements: self.type_hint().build(ctx),
+            implements: self.type_hint().and_then(|e| e.build(ctx)),
             body: self.trait_block().build(ctx),
-            span: Default::default(),
+            span: self.get_range32(),
         })
     }
 }

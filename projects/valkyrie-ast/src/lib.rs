@@ -1,3 +1,6 @@
+#![feature(coroutines)]
+#![feature(coroutine_trait)]
+#![feature(iter_from_coroutine)]
 #![no_std]
 #![allow(unused_imports)]
 #![deny(missing_debug_implementations, missing_copy_implementations)]
@@ -56,6 +59,7 @@ pub use crate::{
         flags::{EncodeDeclaration, FlagTerm, SemanticKind, SemanticNumber},
         function::{FunctionDeclaration, FunctionKind, FunctionReturnNode, StatementBlock},
         guarantee::{EffectTypeNode, GuaranteeNode},
+        implements::ImplementsStatement,
         import::{
             ImportAliasItem, ImportAliasNode, ImportAllNode, ImportGroupNode, ImportKind, ImportResolvedItem, ImportState,
             ImportStatement, ImportTermNode,
@@ -65,12 +69,12 @@ pub use crate::{
         namespace::{NamespaceDeclaration, NamespaceKind},
         program::ProgramRoot,
         statements::{StatementContext, StatementKind},
-        traits::{ExtendsStatement, TraitDeclaration, TraitKind, TraitTerm},
+        traits::{TraitDeclaration, TraitKind, TraitTerm},
         unions::{UnionDeclaration, UnionTerm, VariantDeclaration},
     },
     patterns::{
-        ArrayPatternNode, ClassPatternNode, IdentifierPattern, ImplicitCaseNode, PatternBranch, PatternCaseNode,
-        PatternCondition, PatternNode, PatternTypeNode, PatternWhenNode, PatternsList, TuplePatternNode, UnionPatternNode,
+        ArrayPatternNode, CasePattern, ClassPatternNode, IdentifierPattern, ImplicitCaseNode, PatternBranch, PatternCaseNode,
+        PatternCondition, PatternTypeNode, PatternWhenNode, PatternsList, TuplePatternNode, TypePattern, UnionPatternNode,
     },
     string_like::{
         string_formatter::{FormatterNode, FormatterTerm},

@@ -18,7 +18,7 @@ pub enum TraitKind {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TraitDeclaration {
     /// The kind of the trait
-    pub kind: TraitKind,
+    pub keyword: Range<u32>,
     /// The name of the trait
     pub name: IdentifierNode,
     /// The generic parameters
@@ -29,16 +29,6 @@ pub struct TraitDeclaration {
     pub body: Vec<TraitTerm>,
     /// The range of the node
     pub span: Range<u32>,
-}
-
-/// `extends path::A: Debug {}`
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ExtendsStatement {
-    /// `extends A: Debug { }`, the trait bounds
-    pub implements: Option<ExpressionKind>,
-    /// The additional methods
-    pub body: Vec<TraitTerm>,
 }
 
 /// The valid terms in a trait body.

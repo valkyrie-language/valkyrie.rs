@@ -106,9 +106,9 @@ impl<'i> crate::MatchElseNode<'i> {
 }
 
 impl<'i> crate::CasePatternNode<'i> {
-    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<PatternNode> {
+    pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<CasePattern> {
         match self {
-            Self::Namepath(v) => Ok(PatternNode::Atom(Box::new(IdentifierPattern {
+            Self::Namepath(v) => Ok(CasePattern::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
                 identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
             }))),

@@ -1,21 +1,21 @@
 use crate::{
-    functions::{FunctionInstance, FunctionParameter, FunctionSignature},
+    functions::{FunctionBody, FunctionInstance, FunctionParameter},
     helpers::Hir2Mir,
     structures::ValkyrieResource,
-    ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieMethod,
-    ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite, ValkyrieVariant,
+    ModuleItem, ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
+    ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
+    ValkyrieVariant,
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
 use nyar_wasm::Identifier;
 use ordered_float::NotNan;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 use valkyrie_ast::{
     ClassDeclaration, ClassTerm, EncodeDeclaration, ExpressionKind, FieldDeclaration, FlagTerm, FunctionDeclaration,
-    IdentifierNode, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, SemanticKind, SemanticNumber,
-    StatementKind, TraitDeclaration, UnionDeclaration, UnionTerm, VariantDeclaration,
+    ImplementsStatement, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, SemanticKind, SemanticNumber,
+    StatementKind, TraitDeclaration, TraitTerm, UnionDeclaration, UnionTerm, VariantDeclaration,
 };
-use valkyrie_parser::NamepathNode;
 
 impl Hir2Mir for ProgramRoot {
     type Output = ();
@@ -48,9 +48,7 @@ impl Hir2Mir for StatementKind {
             Self::Union(v) => v.to_mir(store, ())?,
             Self::Enumerate(v) => v.to_mir(store, ())?,
             Self::Trait(v) => v.to_mir(store, ())?,
-            Self::Extends(_) => {
-                todo!()
-            }
+            Self::Extends(v) => v.to_mir(store, ())?,
             Self::Function(v) => v.to_mir(store, ())?,
             Self::Variable(_) => {}
             Self::Guard(_) => {
@@ -59,7 +57,6 @@ impl Hir2Mir for StatementKind {
             Self::Loop(_) => {
                 todo!()
             }
-
             Self::While(_) => {
                 todo!()
             }
@@ -112,6 +109,76 @@ impl Hir2Mir for TraitDeclaration {
     }
 }
 
+impl Hir2Mir for ImplementsStatement {
+    type Output = ();
+    type Context<'a> = ();
+
+    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+        for x in self.annotations.derives() {
+            if x.path.last().unwrap().name.as_ref().eq("TypeCast") {
+                let id = match self.target.path.as_slice() {
+                    [path @ .., last] => {
+                        Identifier { namespace: path.iter().map(|x| x.name.clone()).collect(), name: last.name.clone() }
+                    }
+                    _ => {
+                        todo!()
+                    }
+                };
+                match store.items.get_mut(&id) {
+                    Some(ModuleItem::Structure(s)) => {
+                        for item in self.body {
+                            match item {
+                                TraitTerm::Macro(_) => {
+                                    todo!()
+                                }
+                                TraitTerm::Field(_) => {
+                                    todo!()
+                                }
+                                TraitTerm::Method(f) => match f.name.name.as_ref() {
+                                    "from" => {
+                                        if f.annotations.modifiers.contains("explicit") {
+                                        }
+                                        else if f.annotations.modifiers.contains("explicit") {
+                                        }
+                                        else {
+                                            todo!()
+                                        }
+                                        let body = match f.as_assembly()? {
+                                            Some(s) => FunctionBody { assembly: s.text },
+                                            None => FunctionBody { assembly: "".to_string() },
+                                        };
+                                        match f.parameters.mixed.first() {
+                                            Some(s) => match s.bound.as_ref().and_then(|x| x.as_symbol()) {
+                                                Some(s) => {}
+                                                None => {}
+                                            },
+                                            None => {}
+                                        }
+
+                                        ValkyrieFrom { from: Default::default(), action: body, exception: None }
+                                    }
+                                    "into" => {}
+                                    "try_from" => {}
+                                    "try_into" => {}
+                                    _ => {
+                                        todo!()
+                                    }
+                                },
+                            }
+                        }
+                    }
+                    Some(s) => todo!(),
+                    None => {
+                        todo!()
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl Hir2Mir for ClassDeclaration {
     type Output = ();
     type Context<'a> = ();
@@ -153,7 +220,7 @@ impl Hir2Mir for ClassDeclaration {
             Some(wasi_import) => {
                 *store += ValkyrieResource { resource_name: symbol, wasi_import, imports };
             }
-            None => *store += ValkyrieClass { class_name: symbol, fields, imports, methods },
+            None => *store += ValkyrieClass { class_name: symbol, fields, imports, methods, from: vec![], into: vec![] },
         }
 
         Ok(())

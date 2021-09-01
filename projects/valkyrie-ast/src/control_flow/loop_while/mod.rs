@@ -24,7 +24,7 @@ pub enum WhileConditionNode {
     /// `while true {}`
     Expression(ExpressionKind),
     /// `while let Some(_) = ... {}`
-    LetCase(PatternNode),
+    LetCase(CasePattern),
 }
 
 impl ValkyrieNode for LoopWhile {

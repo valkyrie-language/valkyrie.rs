@@ -195,4 +195,10 @@ impl ExpressionKind {
             _ => None,
         }
     }
+    pub fn as_symbol(&self) -> Option<&NamePathNode> {
+        match self {
+            Self::Symbol(v) => Some(&**v),
+            _ => None,
+        }
+    }
 }

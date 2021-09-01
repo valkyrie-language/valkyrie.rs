@@ -2,7 +2,6 @@ use crate::{
     helpers::{Hir2Mir, Mir2Lir},
     ModuleItem, ResolveState, ValkyrieType,
 };
-use im::HashMap;
 use indexmap::IndexMap;
 use nyar_wasm::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
 use ordered_float::NotNan;
@@ -12,7 +11,7 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::FunctionDeclaration;
+
 mod arithmetic;
 mod stage1_mir;
 mod stage2_lir;

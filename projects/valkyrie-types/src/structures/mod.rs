@@ -1,12 +1,12 @@
 use crate::{
-    functions::FunctionInstance,
-    helpers::Hir2Mir,
+    functions::{FunctionBody, FunctionInstance},
+    helpers::Mir2Lir,
     modules::{ModuleItem, ResolveState},
-    ValkyrieImportFunction, ValkyrieNativeFunction,
+    ValkyrieImportFunction,
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
-use nyar_wasm::{Identifier, WasiExport, WasiImport, WasiResource};
+use nyar_wasm::{DependentGraph, Identifier, WasiImport, WasiResource};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -15,7 +15,7 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::{helper::WrapDisplay, ClassDeclaration, ClassTerm, FieldDeclaration, MethodDeclaration};
+use valkyrie_ast::helper::WrapDisplay;
 
 mod codegen;
 mod display;
@@ -34,6 +34,8 @@ pub struct ValkyrieClass {
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
     pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub from: Vec<ValkyrieFrom>,
+    pub into: Vec<ValkyrieInto>,
 }
 
 impl Hash for ValkyrieClass {
@@ -67,6 +69,20 @@ pub struct ValkyrieMethod {
     pub wasi_alias: Arc<str>,
 
     pub overloads: BTreeMap<NotNan<f64>, FunctionInstance>,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValkyrieFrom {
+    pub from: Identifier,
+    pub action: FunctionBody,
+    pub exception: Option<Identifier>,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValkyrieInto {
+    pub into: Identifier,
+    pub action: FunctionBody,
+    pub exception: Option<Identifier>,
 }
 
 impl ValkyrieClass {

@@ -67,7 +67,7 @@ impl PrettyPrint for PatternStatements {
     }
 }
 
-impl Debug for PatternNode {
+impl Debug for CasePattern {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Symbol(v) => Debug::fmt(v, f),
@@ -79,9 +79,20 @@ impl Debug for PatternNode {
         }
     }
 }
-
+impl Debug for TypePattern {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Symbol(v) => Debug::fmt(v, f),
+            Self::Tuple(v) => Debug::fmt(v, f),
+            Self::Class(v) => Debug::fmt(v, f),
+            Self::Union(v) => Debug::fmt(v, f),
+            Self::Array(v) => Debug::fmt(v, f),
+            Self::Atom(v) => Debug::fmt(v, f),
+        }
+    }
+}
 #[cfg(feature = "pretty-print")]
-impl PrettyPrint for PatternNode {
+impl PrettyPrint for CasePattern {
     fn pretty(&self, theme: &PrettyProvider) -> PrettyTree {
         match self {
             Self::Symbol(v) => v.pretty(theme),

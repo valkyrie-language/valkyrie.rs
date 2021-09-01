@@ -18,7 +18,7 @@ mod display;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LetBindNode {
     /// The annotation of the variable
-    pub pattern: PatternNode,
+    pub pattern: CasePattern,
     /// The type of the variable
     pub type_hint: Option<ExpressionKind>,
     /// The default value of the variable
@@ -53,12 +53,12 @@ pub struct VariableDeclaration {
 impl LetBindNode {
     pub fn canonicalization(self) -> Vec<VariableDeclaration> {
         match &self.pattern {
-            PatternNode::Symbol(_) => {}
-            PatternNode::Tuple(_) => {}
-            PatternNode::Class(_) => {}
-            PatternNode::Union(_) => {}
-            PatternNode::Array(_) => {}
-            PatternNode::Atom(_) => {}
+            CasePattern::Symbol(_) => {}
+            CasePattern::Tuple(_) => {}
+            CasePattern::Class(_) => {}
+            CasePattern::Union(_) => {}
+            CasePattern::Array(_) => {}
+            CasePattern::Atom(_) => {}
         }
         todo!()
     }

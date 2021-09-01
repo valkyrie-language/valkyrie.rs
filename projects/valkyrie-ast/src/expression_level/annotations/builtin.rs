@@ -1,4 +1,27 @@
 use super::*;
+use core::{iter::from_coroutine, ops::Coroutine, slice::Iter};
+
+impl AnnotationNode {
+    pub fn derives(&self) -> Vec<&NamePathNode> {
+        let mut traits = Vec::new();
+        for x in self.attributes.terms.iter() {
+            if x.eq("derive") {
+                for _ in x.variant.iter() {
+                    // error
+                }
+                for x in x.arguments.terms.iter() {
+                    match &x.value {
+                        ExpressionKind::Symbol(s) => traits.push(&**s),
+                        _ => {
+                            // error
+                        }
+                    }
+                }
+            }
+        }
+        traits
+    }
+}
 
 impl AttributeTerm {
     /// Interpreted as an external function call

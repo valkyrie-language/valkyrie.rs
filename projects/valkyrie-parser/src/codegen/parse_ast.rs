@@ -1480,9 +1480,6 @@ impl<'i> DefineTraitNode<'i> {
     pub fn define_generic(&self) -> Option<DefineGenericNode<'i>> {
         self.pair.take_tagged_option("define_generic")
     }
-    pub fn define_inherit(&self) -> Option<DefineInheritNode<'i>> {
-        self.pair.take_tagged_option("define_inherit")
-    }
     pub fn identifier(&self) -> IdentifierNode<'i> {
         self.pair.take_tagged_one("identifier").unwrap()
     }
@@ -1492,8 +1489,8 @@ impl<'i> DefineTraitNode<'i> {
     pub fn trait_block(&self) -> TraitBlockNode<'i> {
         self.pair.take_tagged_one("trait_block").unwrap()
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -1571,42 +1568,6 @@ impl<'i> YggdrasilNode<'i> for TraitTermNode<'i> {
     }
 }
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwTraitNode<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_TRAIT)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        let _span = pair.get_span();
-        if let Ok(s) = pair.take_tagged_one("trait") {
-            return Ok(Self::Trait(s));
-        }
-        if let Ok(s) = pair.take_tagged_one("interface") {
-            return Ok(Self::Interface(s));
-        }
-        Err(YggdrasilError::invalid_node(ValkyrieRule::KW_TRAIT, _span))
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_TRAIT
-    }
-
-    fn get_str(&self) -> &'i str {
-        match self {
-            Self::Trait(s) => s.get_str(),
-            Self::Interface(s) => s.get_str(),
-        }
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        match self {
-            Self::Trait(s) => s.get_range(),
-            Self::Interface(s) => s.get_range(),
-        }
-    }
-}
-#[automatically_derived]
 impl<'i> YggdrasilNode<'i> for DefineExtendsNode<'i> {
     type Rule = ValkyrieRule;
 
@@ -1645,8 +1606,8 @@ impl<'i> DefineExtendsNode<'i> {
     pub fn trait_block(&self) -> TraitBlockNode<'i> {
         self.pair.take_tagged_one("trait_block").unwrap()
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -6375,6 +6336,30 @@ impl<'i> YggdrasilNode<'i> for KwImplementsNode<'i> {
 }
 impl<'i> KwImplementsNode<'i> {}
 #[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwTraitNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_TRAIT)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_TRAIT
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwTraitNode<'i> {}
+#[automatically_derived]
 impl<'i> YggdrasilNode<'i> for KwExtendsNode<'i> {
     type Rule = ValkyrieRule;
 
@@ -7808,54 +7793,6 @@ impl<'i> YggdrasilNode<'i> for OpNamespace2Node<'i> {
     }
 }
 impl<'i> OpNamespace2Node<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwTrait0Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_TRAIT0)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_TRAIT0
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwTrait0Node<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwTrait1Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_TRAIT1)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_TRAIT1
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwTrait1Node<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for PatternItem1Node<'i> {
     type Rule = ValkyrieRule;

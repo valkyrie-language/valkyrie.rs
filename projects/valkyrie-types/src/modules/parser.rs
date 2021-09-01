@@ -1,6 +1,5 @@
 use super::*;
 use nyar_error::third_party::WalkDir;
-use std::fs::{DirEntry, FileType};
 
 impl ResolveState {
     pub fn resolve_package<P>(&mut self, directory: P) -> Result<()>

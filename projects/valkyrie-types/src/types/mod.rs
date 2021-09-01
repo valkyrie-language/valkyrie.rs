@@ -3,13 +3,13 @@ use crate::{
     ModuleItem, ResolveState, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
 };
 use indexmap::IndexMap;
-use nyar_wasm::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex};
+use nyar_error::SourceSpan;
+use nyar_wasm::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
 use std::{
     fmt::{Debug, Formatter},
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::TraitDeclaration;
 
 pub mod encoding_type;
 pub mod enumeration_types;

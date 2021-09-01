@@ -4,6 +4,7 @@ pub mod documentation;
 pub mod flags;
 pub mod function;
 pub mod guarantee;
+pub mod implements;
 pub mod import;
 pub mod labeled;
 pub mod let_bind;

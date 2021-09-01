@@ -1,6 +1,5 @@
 use super::*;
-use crate::helpers::Mir2Lir;
-use nyar_wasm::{DependentGraph, WasiFunction, WasiFunctionBody};
+
 impl Mir2Lir for ValkyrieResource {
     type Output = ();
     type Context<'a> = &'a ResolveState;

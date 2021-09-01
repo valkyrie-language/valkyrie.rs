@@ -1,6 +1,4 @@
 use super::*;
-use crate::{helpers::Mir2Lir, ValkyrieUnite};
-use nyar_wasm::{DependentGraph, WasiVariantItem, WasiVariantType};
 
 impl Mir2Lir for ValkyrieVariant {
     type Output = WasiVariantItem;

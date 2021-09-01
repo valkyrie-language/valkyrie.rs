@@ -165,8 +165,6 @@ pub enum ValkyrieRule {
     KW_WHILE,
     KW_MATCH0,
     KW_MATCH1,
-    KW_TRAIT0,
-    KW_TRAIT1,
     LEADING,
     LET_PATTERN,
     LOOP_EACH_STATEMENT,
@@ -347,7 +345,6 @@ impl YggdrasilRule for ValkyrieRule {
             Self::DEFINE_TRAIT => "",
             Self::TRAIT_BLOCK => "",
             Self::TRAIT_TERM => "",
-            Self::KW_TRAIT => "",
             Self::DEFINE_EXTENDS => "",
             Self::DEFINE_FUNCTION => "",
             Self::DEFINE_LAMBDA => "",
@@ -500,6 +497,7 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_CONSTRAINT => "",
             Self::KW_WHERE => "",
             Self::KW_IMPLEMENTS => "",
+            Self::KW_TRAIT => "",
             Self::KW_EXTENDS => "",
             Self::KW_INHERITS => "",
             Self::KW_ENUMERATE => "",
@@ -554,8 +552,6 @@ impl YggdrasilRule for ValkyrieRule {
             Self::OP_NAMESPACE0 => "",
             Self::OP_NAMESPACE1 => "",
             Self::OP_NAMESPACE2 => "",
-            Self::KW_TRAIT0 => "",
-            Self::KW_TRAIT1 => "",
             Self::PATTERN_ITEM1 => "",
             Self::PATTERN_ITEM2 => "",
             Self::KW_MATCH0 => "",
@@ -821,12 +817,6 @@ pub enum TraitTermNode<'i> {
     DefineMethod(DefineMethodNode<'i>),
     DefineField(DefineFieldNode<'i>),
     EosFree(EosFreeNode<'i>),
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum KwTraitNode<'i> {
-    Trait(KwTrait0Node<'i>),
-    Interface(KwTrait1Node<'i>),
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1635,6 +1625,11 @@ pub struct KwImplementsNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwTraitNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KwExtendsNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
@@ -1906,16 +1901,6 @@ pub struct OpNamespace1Node<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OpNamespace2Node<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwTrait0Node<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwTrait1Node<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]

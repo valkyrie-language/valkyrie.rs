@@ -208,7 +208,7 @@ class KW_UNION {
 class DefineTrait {
     DefineConstraint?
     AnnotationHead
-    KW_TRAIT Identifier DefineGeneric? DefineInherit? TypeHint TraitBlock ^EOS?
+    KW_TRAIT Identifier DefineGeneric? TypeHint? TraitBlock ^EOS?
 }
 class TraitBlock {
     '{' TraitTerm* '}'
@@ -219,17 +219,12 @@ union TraitTerm {
     | DefineField
     | EOS_FREE
 }
-@style(keyword)
-union KW_TRAIT {
-    | 'trait'     #Trait
-    | 'interface' #Interface
-}
 // === extends === --------------------------------------------------------------------------------------------------
 // extends<T> Type<T>: Trait { }
 class DefineExtends {
     DefineConstraint?
     AnnotationHead
-    KW_EXTENDS Namepath TypeHint TraitBlock ^EOS?
+    KW_EXTENDS Namepath TypeHint? TraitBlock ^EOS?
 }
 // === def function === ------------------------------------------------------------------------------------------------
 class DefineFunction {
@@ -724,7 +719,7 @@ class KEYWORDS_STOP {
     | union
     | function | micro | macro
     | trait | interface
-    | extends?
+    | extends? | imply
     /
 }
 @railway(false)
@@ -837,6 +832,7 @@ token {
     KW_CONSTRAINT: /template|generic|constraint|∀/
     KW_WHERE     : 'where'
     KW_IMPLEMENTS: /implements?/
+    KW_TRAIT     : 'trait'
     KW_EXTENDS   : /extends?|imply/
     KW_INHERITS  : /inherits?/
     KW_ENUMERATE : /enumerate|enums|enum/

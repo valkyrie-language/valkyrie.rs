@@ -1,4 +1,5 @@
 use super::*;
+use crate::TypePattern;
 
 mod display;
 
@@ -23,7 +24,7 @@ pub enum UntilConditionNode {
     /// `while true {}`
     Expression(ExpressionKind),
     /// `while let Some(_) = ... {}`
-    NotCase(PatternNode),
+    NotCase(TypePattern),
 }
 
 impl ValkyrieNode for LoopUntil {

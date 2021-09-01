@@ -2,7 +2,6 @@ use crate::{
     helpers::ProgramState,
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
-    StatementNode,
 };
 use nyar_error::Result;
 use valkyrie_ast::*;

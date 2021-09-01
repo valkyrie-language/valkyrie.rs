@@ -88,7 +88,7 @@ impl Debug for PatternCondition {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PatternCaseNode {
     /// `case bind <- Some(a)`
-    pub pattern: PatternNode,
+    pub pattern: CasePattern,
     /// `case a | b | c`
     pub guard: Option<ExpressionKind>,
     /// The range of the node
@@ -129,7 +129,56 @@ pub struct PatternCaseNode {
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, From)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum PatternNode {
+pub enum CasePattern {
+    /// `a, 'string', number, bool`
+    Symbol(Box<ArgumentKey>),
+    /// `(mut a, mut b)`
+    Tuple(Box<TuplePatternNode>),
+    /// `{ mut a: b, mut c: d }`
+    Class(Box<ClassPatternNode>),
+    /// `Some(a) | Success { value: a }`
+    Union(Box<UnionPatternNode>),
+    /// `[a, b, **]`
+    Array(Box<ArrayPatternNode>),
+    /// `#macro mod id`
+    Atom(Box<IdentifierPattern>),
+}
+
+/// ```vk
+/// let a, b = expr
+/// let (a, b) = expr
+/// let [a, b, **args] = expr
+/// let Named(a, b) = expr
+/// let Named {a, b, ***kws} = expr
+/// let Named(Struct {a: b, b}, b, **args) = expr
+///
+/// let i = 1;
+/// let j = 1;
+/// let mut i, mut j;
+/// let [a, b]
+/// let (a, b)
+/// ```
+///
+/// ```vk
+/// case Some(a)
+///    | Success { value: a }
+///    | Extractor { a, b: _, *** }
+///    | [a, b: _, **arg, ***kws]
+/// when a > 0
+///    & a is Integer:
+///     do something
+/// ```
+///
+///
+/// ```vk
+/// for i in range;
+/// for i, j in range;
+/// for mut i, mut j in range
+/// for [tuple] in
+/// ```
+#[derive(Clone, PartialEq, Eq, Hash, From)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum TypePattern {
     /// `a, 'string', number, bool`
     Symbol(Box<ArgumentKey>),
     /// `(mut a, mut b)`
@@ -161,7 +210,7 @@ pub struct UnionPatternNode {
     /// `case bind <- Some(a)`
     pub bind: Option<IdentifierNode>,
     /// `case a | b | c`
-    pub terms: Vec<PatternNode>,
+    pub terms: Vec<CasePattern>,
     /// The range of the node
     pub span: Range<u32>,
 }
@@ -197,7 +246,7 @@ pub struct TuplePatternNode {
     /// `namespace::Name(...)`
     pub name: Option<NamePathNode>,
     /// `(ref a, mut b, ..c)`
-    pub terms: Vec<PatternNode>,
+    pub terms: Vec<CasePattern>,
     /// The range of the node
     pub span: Range<u32>,
 }
@@ -234,7 +283,7 @@ pub struct ClassPatternNode {
     /// `case namespace::Name()`
     pub name: Option<NamePathNode>,
     /// `case (ref a, mut b)`
-    pub terms: Vec<PatternNode>,
+    pub terms: Vec<CasePattern>,
     /// The range of the node
     pub span: Range<u32>,
 }
@@ -268,7 +317,7 @@ pub struct ArrayPatternNode {
     /// `bind <- ...`
     pub bind: Option<IdentifierNode>,
     /// `[a, b, **]`
-    pub terms: Vec<PatternNode>,
+    pub terms: Vec<CasePattern>,
     /// The range of the node
     pub span: Range<u32>,
 }
@@ -278,7 +327,7 @@ pub struct ArrayPatternNode {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ImplicitCaseNode {
     /// `Soma(a) | Success { value :a }`
-    pub pattern: PatternNode,
+    pub pattern: CasePattern,
     /// `:=`
     pub body: ExpressionNode,
     /// The range of the node

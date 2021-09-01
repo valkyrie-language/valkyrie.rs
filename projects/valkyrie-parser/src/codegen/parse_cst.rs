@@ -45,7 +45,6 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::DEFINE_TRAIT => parse_define_trait(state),
         ValkyrieRule::TRAIT_BLOCK => parse_trait_block(state),
         ValkyrieRule::TRAIT_TERM => parse_trait_term(state),
-        ValkyrieRule::KW_TRAIT => parse_kw_trait(state),
         ValkyrieRule::DEFINE_EXTENDS => parse_define_extends(state),
         ValkyrieRule::DEFINE_FUNCTION => parse_define_function(state),
         ValkyrieRule::DEFINE_LAMBDA => parse_define_lambda(state),
@@ -198,6 +197,7 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::KW_CONSTRAINT => parse_kw_constraint(state),
         ValkyrieRule::KW_WHERE => parse_kw_where(state),
         ValkyrieRule::KW_IMPLEMENTS => parse_kw_implements(state),
+        ValkyrieRule::KW_TRAIT => parse_kw_trait(state),
         ValkyrieRule::KW_EXTENDS => parse_kw_extends(state),
         ValkyrieRule::KW_INHERITS => parse_kw_inherits(state),
         ValkyrieRule::KW_ENUMERATE => parse_kw_enumerate(state),
@@ -252,8 +252,6 @@ pub(super) fn parse_cst(input: &str, rule: ValkyrieRule) -> OutputResult<Valkyri
         ValkyrieRule::OP_NAMESPACE0 => parse_op_namespace_0(state),
         ValkyrieRule::OP_NAMESPACE1 => parse_op_namespace_1(state),
         ValkyrieRule::OP_NAMESPACE2 => parse_op_namespace_2(state),
-        ValkyrieRule::KW_TRAIT0 => parse_kw_trait_0(state),
-        ValkyrieRule::KW_TRAIT1 => parse_kw_trait_1(state),
         ValkyrieRule::PATTERN_ITEM1 => parse_pattern_item_1(state),
         ValkyrieRule::PATTERN_ITEM2 => parse_pattern_item_2(state),
         ValkyrieRule::KW_MATCH0 => parse_kw_match_0(state),
@@ -1065,9 +1063,7 @@ fn parse_define_trait(state: Input) -> Output {
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| s.optional(|s| parse_define_generic(s).and_then(|s| s.tag_node("define_generic"))))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| s.optional(|s| parse_define_inherit(s).and_then(|s| s.tag_node("define_inherit"))))
-                .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint")))
+                .and_then(|s| s.optional(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint"))))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_trait_block(s).and_then(|s| s.tag_node("trait_block")))
                 .and_then(|s| builtin_ignore(s))
@@ -1107,14 +1103,6 @@ fn parse_trait_term(state: Input) -> Output {
     })
 }
 #[inline]
-fn parse_kw_trait(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_TRAIT, |s| {
-        Err(s)
-            .or_else(|s| parse_kw_trait_0(s).and_then(|s| s.tag_node("kw_trait_0")))
-            .or_else(|s| parse_kw_trait_1(s).and_then(|s| s.tag_node("kw_trait_1")))
-    })
-}
-#[inline]
 fn parse_define_extends(state: Input) -> Output {
     state.rule(ValkyrieRule::DEFINE_EXTENDS, |s| {
         s.sequence(|s| {
@@ -1127,7 +1115,7 @@ fn parse_define_extends(state: Input) -> Output {
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_namepath(s).and_then(|s| s.tag_node("namepath")))
                 .and_then(|s| builtin_ignore(s))
-                .and_then(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint")))
+                .and_then(|s| s.optional(|s| parse_type_hint(s).and_then(|s| s.tag_node("type_hint"))))
                 .and_then(|s| builtin_ignore(s))
                 .and_then(|s| parse_trait_block(s).and_then(|s| s.tag_node("trait_block")))
                 .and_then(|s| builtin_ignore(s))
@@ -3347,7 +3335,7 @@ fn parse_keywords_stop(state: Input) -> Output {
     | union
     | function | micro | macro
     | trait | interface
-    | extends?
+    | extends? | imply
     )",
                 )
                 .unwrap()
@@ -3785,6 +3773,10 @@ fn parse_kw_implements(state: Input) -> Output {
             REGEX.get_or_init(|| Regex::new("^(?x)(implements?)").unwrap())
         })
     })
+}
+#[inline]
+fn parse_kw_trait(state: Input) -> Output {
+    state.rule(ValkyrieRule::KW_TRAIT, |s| s.match_string("trait", false))
 }
 #[inline]
 fn parse_kw_extends(state: Input) -> Output {
@@ -4234,14 +4226,6 @@ fn parse_op_namespace_1(state: Input) -> Output {
 #[inline]
 fn parse_op_namespace_2(state: Input) -> Output {
     state.rule(ValkyrieRule::OP_NAMESPACE2, |s| s.match_string("*", false))
-}
-#[inline]
-fn parse_kw_trait_0(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_TRAIT0, |s| s.match_string("trait", false))
-}
-#[inline]
-fn parse_kw_trait_1(state: Input) -> Output {
-    state.rule(ValkyrieRule::KW_TRAIT1, |s| s.match_string("interface", false))
 }
 #[inline]
 fn parse_pattern_item_1(state: Input) -> Output {

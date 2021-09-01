@@ -1,6 +1,6 @@
 use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension, StringInterpolationsNode};
 use nyar_error::{Failure, NyarError, Result, SourceID, Success, SyntaxError, Validation};
-use std::{mem::take, ops::Range, str::FromStr};
+use std::{mem::take, ops::Range};
 use valkyrie_ast::{helper::StringInterpreter, FormatterNode, FormatterTerm, StringTextNode};
 use yggdrasil_rt::YggdrasilNode;
 

@@ -26,7 +26,7 @@ pub enum StatementKind {
     /// The `trait` declaration node
     Trait(Box<TraitDeclaration>),
     /// The type extension node
-    Extends(Box<ExtendsStatement>),
+    Extends(Box<ImplementsStatement>),
     /// The function declaration node.
     Function(Box<FunctionDeclaration>),
     /// The `let` bind statement node.

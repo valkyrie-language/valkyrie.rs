@@ -1,9 +1,11 @@
 use crate::{IdentifierNode, StatementKind};
 use alloc::{vec, vec::Vec};
+use core::ops::Range;
 
 /// The pure `loop` statement
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LoopRepeat {
+    pub keyword: Range<u32>,
     /// The named label of the loop
     pub label: Option<IdentifierNode>,
     pub terms: Vec<StatementKind>,
