@@ -15,7 +15,7 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::helper::WrapDisplay;
+use valkyrie_ast::{helper::WrapDisplay, MethodDeclaration};
 
 mod codegen;
 mod display;
@@ -31,6 +31,7 @@ pub struct ValkyrieResource {
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieClass {
     pub class_name: Identifier,
+    pub primitive: Option<Identifier>,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
     pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
@@ -71,9 +72,13 @@ pub struct ValkyrieMethod {
     pub overloads: BTreeMap<NotNan<f64>, FunctionInstance>,
 }
 
+// up_cast
+// down_cast
+// explicit_cast
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieFrom {
     pub from: Identifier,
+    pub implicit: bool,
     pub action: FunctionBody,
     pub exception: Option<Identifier>,
 }

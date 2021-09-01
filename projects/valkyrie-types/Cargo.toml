@@ -25,7 +25,7 @@ nyar-error = { workspace = true }
 
 [dependencies.nyar-wasm]
 version = "0.0.7"
-#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
+path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
 
 [dependencies.valkyrie-ast]
 version = "0.1.*"

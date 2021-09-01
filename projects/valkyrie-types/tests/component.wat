@@ -23,6 +23,18 @@
         "fals" ;; 0
         "true" ;; 1
     ))
+    (type $std::primitive::f32 (record
+    ))
+    (type $std::primitive::f64 (record
+    ))
+    (type $std::primitive::u16 (record
+    ))
+    (type $std::primitive::u32 (record
+    ))
+    (type $std::primitive::u64 (record
+    ))
+    (type $std::text::Unicode (record
+    ))
     
     
     (core func $std::random::random_seed_fast (canon lower
@@ -35,6 +47,18 @@
         (import "wasi:random/insecure" "get-insecure-random-u64" (func $std::random::random_seed_fast
         ))
         (import "wasi:random/random" "get-random-u64" (func $std::random::random_seed_safe
+        ))
+        (type $std::primitive::f32 (struct
+        ))
+        (type $std::primitive::f64 (struct
+        ))
+        (type $std::primitive::u16 (struct
+        ))
+        (type $std::primitive::u32 (struct
+        ))
+        (type $std::primitive::u64 (struct
+        ))
+        (type $std::text::Unicode (struct
         ))
         (func $std::text::let_us_random
         )
