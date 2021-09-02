@@ -1,11 +1,11 @@
 use super::*;
-use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineClassNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ClassDeclaration> {
         let _ = build_constraint(&self.define_constraint(), ctx);
         Ok(ClassDeclaration {
-            kind: self.kw_class().build(),
+            keyword: self.class_kind().get_range32(),
+            kind: self.class_kind().build(),
             annotations: self.annotation_head().annotations(ctx),
             name: self.identifier().build(ctx.file),
             generic: None,
@@ -45,12 +45,17 @@ impl<'i> crate::ClassTermNode<'i> {
     }
 }
 
-impl<'i> crate::KwClassNode<'i> {
+impl<'i> crate::ClassKindNode<'i> {
     pub(crate) fn build(&self) -> ClassKind {
-        match self.get_str() {
-            "class" => ClassKind::Class,
-            "structure" => ClassKind::Structure,
-            _ => unreachable!(),
+        match self {
+            Self::KwClass(_) => ClassKind::Class,
+            Self::KwStructure(_) => ClassKind::Structure,
+            Self::KwWidget(_) => {
+                unreachable!()
+            }
+            Self::KwNeural(_) => {
+                unreachable!()
+            }
         }
     }
 }
@@ -61,8 +66,8 @@ impl<'i> crate::DefineFieldNode<'i> {
         Ok(FieldDeclaration {
             annotations,
             name,
-            typing: self.type_hint().build(ctx),
-            default: self.parameter_default().build(ctx),
+            typing: self.type_hint().and_then(|x| x.build(ctx)),
+            default: self.parameter_default().and_then(|x| x.build(ctx)),
             span: self.get_range32(),
         })
     }

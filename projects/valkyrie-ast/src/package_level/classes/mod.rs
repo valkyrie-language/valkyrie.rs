@@ -20,6 +20,7 @@ pub enum ClassKind {
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ClassDeclaration {
+    pub keyword: Range<u32>,
     /// The name of the class.
     pub name: IdentifierNode,
     /// The kind of class

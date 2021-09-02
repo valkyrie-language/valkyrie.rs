@@ -1,7 +1,9 @@
 use super::*;
 use crate::helpers::AsIdentifier;
 use nyar_error::NyarError;
-use nyar_wasm::{WasiRecordField, WasiRecordType, WasiType};
+use nyar_wasm::{
+    WasiFunction, WasiFunctionBody, WasiOwnership, WasiParameter, WasiRecordField, WasiRecordType, WasiType, WasiTypeReference,
+};
 
 impl Mir2Lir for ValkyrieResource {
     type Output = ();
@@ -27,9 +29,9 @@ impl Mir2Lir for ValkyrieClass {
         for method in self.methods.values() {
             method.to_lir(graph, context)?
         }
-        // for from in self.from {
-        //     from.to_lir(graph, context)?
-        // }
+        for from in self.from.iter() {
+            from.to_lir(graph, &self.class_name)?
+        }
         let mut fields = IndexMap::default();
         for (key, field) in self.fields.iter() {
             match field.to_lir(graph, context) {
@@ -71,7 +73,26 @@ impl Mir2Lir for ValkyrieMethod {
         Ok(())
     }
 }
+impl Mir2Lir for ValkyrieFrom {
+    type Output = ();
+    type Context<'a> = &'a Identifier;
 
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
+        *graph += WasiFunction {
+            symbol: context.join("from"),
+            inputs: vec![WasiParameter::new(
+                "value",
+                WasiType::TypeHandler(WasiTypeReference { symbol: self.from.clone(), owner: WasiOwnership::Normal }),
+            )],
+            output: vec![WasiParameter::new(
+                "",
+                WasiType::TypeHandler(WasiTypeReference { symbol: context.clone(), owner: WasiOwnership::Normal }),
+            )],
+            body: WasiFunctionBody::Assembly { text: self.action.assembly.clone() },
+        };
+        Ok(())
+    }
+}
 impl ValkyrieClass {
     pub fn register_from(&mut self, method: &MethodDeclaration) -> Result<()> {
         let implicit = if method.annotations.modifiers.contains("explicit") {

@@ -28,12 +28,11 @@ union Statement {
     | EOS
 }
 /// Used to isolate expressions and control whether to output the expression
-union EOS ^ {
-    | [;；]   #Omit
-    | /⁏|;;/  #Show
+class EOS {
+    /[;；⁏]|;;/
 }
 /// Used to isolate expressions, has no practical meaning
-class EOS_FREE {
+class EOS_FREE -> EOS {
     [,，;；⁏]
 }
 // === namespace === -----------------------------------------------------------------
@@ -123,7 +122,13 @@ class WhereBound {
 class DefineClass {
     DefineConstraint?
     AnnotationHead
-    KW_CLASS Identifier DefineGeneric? DefineInherit? TypeHint ClassBlock ^EOS?
+    ClassKind Identifier DefineGeneric? DefineInherit? TypeHint? ClassBlock ^EOS?
+}
+union ClassKind {
+    | KW_CLASS
+    | KW_STRUCTURE
+    | KW_WIDGET
+    | KW_NEURAL
 }
 class ClassBlock {
     '{' ClassTerm* '}'
@@ -135,18 +140,13 @@ union ClassTerm {
     | DefineField
     | EOS_FREE
 }
-@style(keyword)
-@railway(false)
-text class KW_CLASS {
-    'class' | 'structure'
-}
 // === field/method/domain === -----------------------------------------------------------------------------------------
 class DefineField {
     AnnotationMix
-    Identifier TypeHint ParameterDefault
+    Identifier TypeHint? ParameterDefault?
 }
-class ParameterDefault {
-    ('=' MainExpression)?
+class ParameterDefault ^ {
+    EQUAL default=MainExpression
 }
 class DefineMethod {
     AnnotationMix Identifier FunctionMiddle Continuation?
@@ -166,7 +166,7 @@ class InheritTerm {
 }
 // === object statement === --------------------------------------------------------------------------------------------
 class ObjectStatement {
-    KW_OBJECT DefineInherit? TypeHint ClassBlock ^EOS?
+    KW_OBJECT DefineInherit? TypeHint? ClassBlock ^EOS?
 }
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineEnumerate {
@@ -181,14 +181,14 @@ union FlagTerm {
     | EOS_FREE
 }
 class FlagField {
-    AnnotationTerm* Identifier ParameterDefault
+    AnnotationTerm* Identifier ParameterDefault?
 }
 
 // === identifier === --------------------------------------------------------------------------------------------------
 class DefineUnion {
     DefineConstraint?
     AnnotationHead
-    KW_UNION Identifier DefineGeneric? DefineInherit? TypeHint '{' UnionTerm* '}'
+    KW_UNION Identifier DefineGeneric? DefineInherit? TypeHint? '{' UnionTerm* '}'
 }
 union UnionTerm {
     | ProceduralCall
@@ -238,7 +238,7 @@ class FunctionMiddle {
     DefineGeneric? '(' FunctionParameters ')' TypeReturn? TypeEffect?
 }
 class TypeHint ^ {
-    (COLON hint=TypeExpression)?
+    COLON hint=TypeExpression
 }
 class TypeReturn {
     ARROW1 TypeExpression
@@ -258,7 +258,7 @@ text class ParameterItemControl {
 }
 class ParameterPair {
     ModifierAhead* ParameterHint?
-    Identifier TypeHint ParameterDefault
+    Identifier TypeHint? ParameterDefault?
 }
 text class ParameterHint {
     /[.]{2,3}|[%^]/
@@ -274,7 +274,7 @@ text class KW_FUNCTION {
 // === let variable === ------------------------------------------------------------------------------------------------
 class DefineVariable {
     AnnotationTerm*
-    KW_LET LetPattern TypeHint ParameterDefault ^EOS?
+    KW_LET LetPattern TypeHint? ParameterDefault? ^EOS?
 }
 union LetPattern {
     | StandardPattern
@@ -724,7 +724,7 @@ class KEYWORDS_STOP {
 }
 @railway(false)
 atomic class IDENTIFIER_STOP {
-    Identifier ~ /[\[\](){}<>⟨=∷,.;∈=]|in|is/
+    Identifier ~ /[\[\](){}<>⟨∷,.;∈:=]|in|is/
 }
 // === identifier === --------------------------------------------------------------------------------------------------
 atomic class Slot {
@@ -790,6 +790,7 @@ atomic token {
     PROPORTION: /[∷⸬]|::/
     NS_CONCAT : /[.∷⸬]|::/
     COLON     : [:：]
+    EQUAL     : '='
     ARROW1    : /[:：⟶]|->/
     COMMA     : [,，]
     DOT       : [.．]
@@ -835,8 +836,13 @@ token {
     KW_TRAIT     : 'trait'
     KW_EXTENDS   : /extends?|imply/
     KW_INHERITS  : /inherits?/
-    KW_ENUMERATE : /enumerate|enums|enum/
-    KW_FLAGS     : 'flags'
+    // === structures === ----------------------------------------------------------------------------------------------
+    KW_CLASS    : 'class'
+    KW_STRUCTURE: 'structure'
+    KW_WIDGET   : 'widget'
+    KW_NEURAL   : 'neural'
+    KW_ENUMERATE: /enumerate|enums|enum/
+    KW_FLAGS    : 'flags'
     // === looping === -------------------------------------------------------------------------------------------------
     KW_LOOP : 'loop'
     KW_EACH : 'each'

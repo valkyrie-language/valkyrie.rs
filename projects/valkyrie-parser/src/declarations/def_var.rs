@@ -9,8 +9,8 @@ impl<'i> crate::DefineVariableNode<'i> {
                 terms: vec![],
                 span: Default::default(),
             })),
-            type_hint: self.type_hint().build(ctx),
-            body: self.parameter_default().build(ctx),
+            type_hint: self.type_hint().and_then(|x| x.build(ctx)),
+            body: self.parameter_default().and_then(|x| x.build(ctx)),
             span: self.get_range32(),
         })
     }

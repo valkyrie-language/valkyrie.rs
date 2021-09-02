@@ -19,6 +19,15 @@
         ))
     ))
     (alias export $wasi:random/random "get-random-u64" (func $std::random::random_seed_safe))
+    (type $std::geometry::Point2D (record
+        (field "x" bool)
+        (field "y" bool)
+    ))
+    (type $std::geometry::Point3D (record
+        (field "x" bool)
+        (field "y" bool)
+        (field "z" bool)
+    ))
     (type $std::primitive::Boolean (enum
         "fals" ;; 0
         "true" ;; 1
@@ -47,6 +56,15 @@
         (import "wasi:random/insecure" "get-insecure-random-u64" (func $std::random::random_seed_fast
         ))
         (import "wasi:random/random" "get-random-u64" (func $std::random::random_seed_safe
+        ))
+        (type $std::geometry::Point2D (struct
+            (field "x" i32)
+            (field "y" i32)
+        ))
+        (type $std::geometry::Point3D (struct
+            (field "x" i32)
+            (field "y" i32)
+            (field "z" i32)
         ))
         (type $std::primitive::f32 (struct
         ))

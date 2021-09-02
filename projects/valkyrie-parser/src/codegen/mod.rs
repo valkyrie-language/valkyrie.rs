@@ -47,6 +47,7 @@ pub enum ValkyrieRule {
     COMMA,
     CASE_PATTERN,
     CLASS_BLOCK,
+    CLASS_KIND,
     CLASS_TERM,
     COMMENT,
     CONSTRAINT_BLOCK,
@@ -83,8 +84,7 @@ pub enum ValkyrieRule {
     DOT_MATCH_CALL,
     EOS,
     EOS_FREE,
-    EOS0,
-    EOS1,
+    EQUAL,
     ESCAPE_CHARACTER,
     ESCAPE_UNICODE,
     ESCAPE_UNICODE_CODE,
@@ -151,9 +151,11 @@ pub enum ValkyrieRule {
     KW_LOOP,
     KW_MATCH,
     KW_NAMESPACE,
+    KW_NEURAL,
     KW_NEW,
     KW_NOT,
     KW_OBJECT,
+    KW_STRUCTURE,
     KW_SWITCH,
     KW_TRAIT,
     KW_TRY,
@@ -163,6 +165,7 @@ pub enum ValkyrieRule {
     KW_WHEN,
     KW_WHERE,
     KW_WHILE,
+    KW_WIDGET,
     KW_MATCH0,
     KW_MATCH1,
     LEADING,
@@ -324,9 +327,9 @@ impl YggdrasilRule for ValkyrieRule {
             Self::WHERE_BLOCK => "",
             Self::WHERE_BOUND => "",
             Self::DEFINE_CLASS => "",
+            Self::CLASS_KIND => "",
             Self::CLASS_BLOCK => "",
             Self::CLASS_TERM => "",
-            Self::KW_CLASS => "",
             Self::DEFINE_FIELD => "",
             Self::PARAMETER_DEFAULT => "",
             Self::DEFINE_METHOD => "",
@@ -481,6 +484,7 @@ impl YggdrasilRule for ValkyrieRule {
             Self::PROPORTION => "",
             Self::NS_CONCAT => "",
             Self::COLON => "",
+            Self::EQUAL => "",
             Self::ARROW1 => "",
             Self::COMMA => "",
             Self::DOT => "",
@@ -500,6 +504,10 @@ impl YggdrasilRule for ValkyrieRule {
             Self::KW_TRAIT => "",
             Self::KW_EXTENDS => "",
             Self::KW_INHERITS => "",
+            Self::KW_CLASS => "",
+            Self::KW_STRUCTURE => "",
+            Self::KW_WIDGET => "",
+            Self::KW_NEURAL => "",
             Self::KW_ENUMERATE => "",
             Self::KW_FLAGS => "",
             Self::KW_LOOP => "",
@@ -547,8 +555,6 @@ impl YggdrasilRule for ValkyrieRule {
             Self::TEMPLATE_L => "",
             Self::TEMPLATE_R => "",
             Self::TEMPLATE_M => "",
-            Self::EOS0 => "",
-            Self::EOS1 => "",
             Self::OP_NAMESPACE0 => "",
             Self::OP_NAMESPACE1 => "",
             Self::OP_NAMESPACE2 => "",
@@ -594,9 +600,8 @@ pub enum StatementNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum EosNode<'i> {
-    Omit(Eos0Node<'i>),
-    Show(Eos1Node<'i>),
+pub struct EosNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -702,6 +707,14 @@ pub struct DefineClassNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ClassKindNode<'i> {
+    KwClass(KwClassNode<'i>),
+    KwStructure(KwStructureNode<'i>),
+    KwWidget(KwWidgetNode<'i>),
+    KwNeural(KwNeuralNode<'i>),
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ClassBlockNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
@@ -713,11 +726,6 @@ pub enum ClassTermNode<'i> {
     DefineDomain(DefineDomainNode<'i>),
     DefineField(DefineFieldNode<'i>),
     EosFree(EosFreeNode<'i>),
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct KwClassNode<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1545,6 +1553,11 @@ pub struct ColonNode<'i> {
 }
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct EqualNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Arrow1Node<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
@@ -1636,6 +1649,26 @@ pub struct KwExtendsNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KwInheritsNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwClassNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwStructureNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwWidgetNode<'i> {
+    pair: TokenPair<'i, ValkyrieRule>,
+}
+#[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct KwNeuralNode<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]
@@ -1876,16 +1909,6 @@ pub struct TemplateRNode<'i> {
 #[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TemplateMNode<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Eos0Node<'i> {
-    pair: TokenPair<'i, ValkyrieRule>,
-}
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Eos1Node<'i> {
     pair: TokenPair<'i, ValkyrieRule>,
 }
 #[derive(Clone, Debug, Hash)]

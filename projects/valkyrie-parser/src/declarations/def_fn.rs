@@ -173,8 +173,8 @@ impl<'i> crate::ParameterPairNode<'i> {
             annotations: self.annotations(ctx),
             unpack: 0,
             key,
-            bound: self.type_hint().build(ctx),
-            default: self.parameter_default().build(ctx),
+            bound: self.type_hint().and_then(|x| x.build(ctx)),
+            default: self.parameter_default().and_then(|x| x.build(ctx)),
         }))
     }
     fn annotations(&self, ctx: &mut ProgramState) -> AnnotationNode {
@@ -185,8 +185,8 @@ impl<'i> crate::ParameterPairNode<'i> {
 }
 impl<'i> crate::ParameterDefaultNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
-        let expr = self.main_expression()?;
-        match expr.build(ctx) {
+        let expr = self.default().build(ctx);
+        match expr {
             Ok(o) => Some(o),
             Err(e) => {
                 ctx.add_error(e);
@@ -210,8 +210,8 @@ impl<'i> crate::ContinuationNode<'i> {
 }
 impl<'i> crate::TypeHintNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Option<ExpressionKind> {
-        let hint = self.hint()?;
-        match hint.build(ctx) {
+        let hint = self.hint().build(ctx);
+        match hint {
             Ok(o) => Some(o),
             Err(e) => {
                 ctx.add_error(e);

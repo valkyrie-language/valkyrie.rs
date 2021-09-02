@@ -6,7 +6,7 @@ impl<'i> crate::DefineUnionNode<'i> {
             annotations: self.annotation_head().annotations(ctx),
             name: self.identifier().build(ctx.file),
             inherits: vec![],
-            implements: self.type_hint().build(ctx),
+            implements: self.type_hint().and_then(|x| x.build(ctx)),
             body: self.terms(ctx),
             span: self.get_range32(),
         })

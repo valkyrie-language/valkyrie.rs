@@ -145,14 +145,7 @@ impl<'i> YggdrasilNode<'i> for EosNode<'i> {
         Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::EOS)?)
     }
     fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        let _span = pair.get_span();
-        if let Ok(s) = pair.take_tagged_one("omit") {
-            return Ok(Self::Omit(s));
-        }
-        if let Ok(s) = pair.take_tagged_one("show") {
-            return Ok(Self::Show(s));
-        }
-        Err(YggdrasilError::invalid_node(ValkyrieRule::EOS, _span))
+        Ok(Self { pair })
     }
 
     fn get_rule(&self) -> Self::Rule {
@@ -160,19 +153,14 @@ impl<'i> YggdrasilNode<'i> for EosNode<'i> {
     }
 
     fn get_str(&self) -> &'i str {
-        match self {
-            Self::Omit(s) => s.get_str(),
-            Self::Show(s) => s.get_str(),
-        }
+        self.pair.get_span().as_str()
     }
 
     fn get_range(&self) -> Range<usize> {
-        match self {
-            Self::Omit(s) => s.get_range(),
-            Self::Show(s) => s.get_range(),
-        }
+        self.pair.get_span().get_range()
     }
 }
+impl<'i> EosNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for EosFreeNode<'i> {
     type Rule = ValkyrieRule;
@@ -786,6 +774,9 @@ impl<'i> DefineClassNode<'i> {
     pub fn class_block(&self) -> ClassBlockNode<'i> {
         self.pair.take_tagged_one("class_block").unwrap()
     }
+    pub fn class_kind(&self) -> ClassKindNode<'i> {
+        self.pair.take_tagged_one("class_kind").unwrap()
+    }
     pub fn define_constraint(&self) -> Option<DefineConstraintNode<'i>> {
         self.pair.take_tagged_option("define_constraint")
     }
@@ -798,11 +789,54 @@ impl<'i> DefineClassNode<'i> {
     pub fn identifier(&self) -> IdentifierNode<'i> {
         self.pair.take_tagged_one("identifier").unwrap()
     }
-    pub fn kw_class(&self) -> KwClassNode<'i> {
-        self.pair.take_tagged_one("kw_class").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for ClassKindNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::CLASS_KIND)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        let _span = pair.get_span();
+        if let Ok(s) = pair.take_tagged_one("kw_class") {
+            return Ok(Self::KwClass(s));
+        }
+        if let Ok(s) = pair.take_tagged_one("kw_structure") {
+            return Ok(Self::KwStructure(s));
+        }
+        if let Ok(s) = pair.take_tagged_one("kw_widget") {
+            return Ok(Self::KwWidget(s));
+        }
+        if let Ok(s) = pair.take_tagged_one("kw_neural") {
+            return Ok(Self::KwNeural(s));
+        }
+        Err(YggdrasilError::invalid_node(ValkyrieRule::CLASS_KIND, _span))
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::CLASS_KIND
+    }
+
+    fn get_str(&self) -> &'i str {
+        match self {
+            Self::KwClass(s) => s.get_str(),
+            Self::KwStructure(s) => s.get_str(),
+            Self::KwWidget(s) => s.get_str(),
+            Self::KwNeural(s) => s.get_str(),
+        }
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        match self {
+            Self::KwClass(s) => s.get_range(),
+            Self::KwStructure(s) => s.get_range(),
+            Self::KwWidget(s) => s.get_range(),
+            Self::KwNeural(s) => s.get_range(),
+        }
     }
 }
 #[automatically_derived]
@@ -885,30 +919,6 @@ impl<'i> YggdrasilNode<'i> for ClassTermNode<'i> {
     }
 }
 #[automatically_derived]
-impl<'i> YggdrasilNode<'i> for KwClassNode<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_CLASS)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::KW_CLASS
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> KwClassNode<'i> {}
-#[automatically_derived]
 impl<'i> YggdrasilNode<'i> for DefineFieldNode<'i> {
     type Rule = ValkyrieRule;
 
@@ -938,11 +948,11 @@ impl<'i> DefineFieldNode<'i> {
     pub fn identifier(&self) -> IdentifierNode<'i> {
         self.pair.take_tagged_one("identifier").unwrap()
     }
-    pub fn parameter_default(&self) -> ParameterDefaultNode<'i> {
-        self.pair.take_tagged_one("parameter_default").unwrap()
+    pub fn parameter_default(&self) -> Option<ParameterDefaultNode<'i>> {
+        self.pair.take_tagged_option("parameter_default")
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -969,8 +979,8 @@ impl<'i> YggdrasilNode<'i> for ParameterDefaultNode<'i> {
     }
 }
 impl<'i> ParameterDefaultNode<'i> {
-    pub fn main_expression(&self) -> Option<MainExpressionNode<'i>> {
-        self.pair.take_tagged_option("main_expression")
+    pub fn default(&self) -> MainExpressionNode<'i> {
+        self.pair.take_tagged_one("default").unwrap()
     }
 }
 #[automatically_derived]
@@ -1167,8 +1177,8 @@ impl<'i> ObjectStatementNode<'i> {
     pub fn kw_object(&self) -> KwObjectNode<'i> {
         self.pair.take_tagged_one("kw_object").unwrap()
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -1290,8 +1300,8 @@ impl<'i> FlagFieldNode<'i> {
     pub fn identifier(&self) -> IdentifierNode<'i> {
         self.pair.take_tagged_one("identifier").unwrap()
     }
-    pub fn parameter_default(&self) -> ParameterDefaultNode<'i> {
-        self.pair.take_tagged_one("parameter_default").unwrap()
+    pub fn parameter_default(&self) -> Option<ParameterDefaultNode<'i>> {
+        self.pair.take_tagged_option("parameter_default")
     }
 }
 #[automatically_derived]
@@ -1336,8 +1346,8 @@ impl<'i> DefineUnionNode<'i> {
     pub fn kw_union(&self) -> KwUnionNode<'i> {
         self.pair.take_tagged_one("kw_union").unwrap()
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
     pub fn union_term(&self) -> Vec<UnionTermNode<'i>> {
         self.pair.take_tagged_items("union_term").collect::<Result<Vec<_>, _>>().unwrap()
@@ -1748,8 +1758,8 @@ impl<'i> YggdrasilNode<'i> for TypeHintNode<'i> {
     }
 }
 impl<'i> TypeHintNode<'i> {
-    pub fn hint(&self) -> Option<TypeExpressionNode<'i>> {
-        self.pair.take_tagged_option("hint")
+    pub fn hint(&self) -> TypeExpressionNode<'i> {
+        self.pair.take_tagged_one("hint").unwrap()
     }
 }
 #[automatically_derived]
@@ -1929,14 +1939,14 @@ impl<'i> ParameterPairNode<'i> {
     pub fn modifier_ahead(&self) -> Vec<ModifierAheadNode<'i>> {
         self.pair.take_tagged_items("modifier_ahead").collect::<Result<Vec<_>, _>>().unwrap()
     }
-    pub fn parameter_default(&self) -> ParameterDefaultNode<'i> {
-        self.pair.take_tagged_one("parameter_default").unwrap()
+    pub fn parameter_default(&self) -> Option<ParameterDefaultNode<'i>> {
+        self.pair.take_tagged_option("parameter_default")
     }
     pub fn parameter_hint(&self) -> Option<ParameterHintNode<'i>> {
         self.pair.take_tagged_option("parameter_hint")
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -2048,11 +2058,11 @@ impl<'i> DefineVariableNode<'i> {
     pub fn let_pattern(&self) -> LetPatternNode<'i> {
         self.pair.take_tagged_one("let_pattern").unwrap()
     }
-    pub fn parameter_default(&self) -> ParameterDefaultNode<'i> {
-        self.pair.take_tagged_one("parameter_default").unwrap()
+    pub fn parameter_default(&self) -> Option<ParameterDefaultNode<'i>> {
+        self.pair.take_tagged_option("parameter_default")
     }
-    pub fn type_hint(&self) -> TypeHintNode<'i> {
-        self.pair.take_tagged_one("type_hint").unwrap()
+    pub fn type_hint(&self) -> Option<TypeHintNode<'i>> {
+        self.pair.take_tagged_option("type_hint")
     }
 }
 #[automatically_derived]
@@ -5952,6 +5962,30 @@ impl<'i> YggdrasilNode<'i> for ColonNode<'i> {
 }
 impl<'i> ColonNode<'i> {}
 #[automatically_derived]
+impl<'i> YggdrasilNode<'i> for EqualNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::EQUAL)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::EQUAL
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> EqualNode<'i> {}
+#[automatically_derived]
 impl<'i> YggdrasilNode<'i> for Arrow1Node<'i> {
     type Rule = ValkyrieRule;
 
@@ -6407,6 +6441,102 @@ impl<'i> YggdrasilNode<'i> for KwInheritsNode<'i> {
     }
 }
 impl<'i> KwInheritsNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwClassNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_CLASS)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_CLASS
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwClassNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwStructureNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_STRUCTURE)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_STRUCTURE
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwStructureNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwWidgetNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_WIDGET)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_WIDGET
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwWidgetNode<'i> {}
+#[automatically_derived]
+impl<'i> YggdrasilNode<'i> for KwNeuralNode<'i> {
+    type Rule = ValkyrieRule;
+
+    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::KW_NEURAL)?)
+    }
+    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
+        Ok(Self { pair })
+    }
+
+    fn get_rule(&self) -> Self::Rule {
+        ValkyrieRule::KW_NEURAL
+    }
+
+    fn get_str(&self) -> &'i str {
+        self.pair.get_span().as_str()
+    }
+
+    fn get_range(&self) -> Range<usize> {
+        self.pair.get_span().get_range()
+    }
+}
+impl<'i> KwNeuralNode<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for KwEnumerateNode<'i> {
     type Rule = ValkyrieRule;
@@ -7673,54 +7803,6 @@ impl<'i> YggdrasilNode<'i> for TemplateMNode<'i> {
     }
 }
 impl<'i> TemplateMNode<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for Eos0Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::EOS0)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::EOS0
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> Eos0Node<'i> {}
-#[automatically_derived]
-impl<'i> YggdrasilNode<'i> for Eos1Node<'i> {
-    type Rule = ValkyrieRule;
-
-    fn from_str(input: &'i str, offset: usize) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Self::from_cst(ValkyrieParser::parse_cst(input, ValkyrieRule::EOS1)?)
-    }
-    fn from_pair(pair: TokenPair<'i, Self::Rule>) -> Result<Self, YggdrasilError<Self::Rule>> {
-        Ok(Self { pair })
-    }
-
-    fn get_rule(&self) -> Self::Rule {
-        ValkyrieRule::EOS1
-    }
-
-    fn get_str(&self) -> &'i str {
-        self.pair.get_span().as_str()
-    }
-
-    fn get_range(&self) -> Range<usize> {
-        self.pair.get_span().get_range()
-    }
-}
-impl<'i> Eos1Node<'i> {}
 #[automatically_derived]
 impl<'i> YggdrasilNode<'i> for OpNamespace0Node<'i> {
     type Rule = ValkyrieRule;

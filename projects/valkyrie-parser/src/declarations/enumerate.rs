@@ -54,7 +54,7 @@ impl<'i> crate::FlagFieldNode<'i> {
         Ok(EncodeDeclaration {
             annotations,
             name: self.identifier().build(ctx.file),
-            value: self.parameter_default().build(ctx),
+            value: self.parameter_default().and_then(|x| x.build(ctx)),
             span: self.get_range32(),
         })
     }
