@@ -8,7 +8,7 @@ pub struct ValkyrieEnumeration {
 
 impl AddAssign<ValkyrieEnumeration> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieEnumeration) {
-        self.items.insert(rhs.enumeration_name.clone(), ModuleItem::Enums(rhs));
+        self.items.insert(rhs.enumeration_name.clone(), NamespaceItem::Enums(rhs));
     }
 }
 

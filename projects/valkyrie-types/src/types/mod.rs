@@ -1,6 +1,6 @@
 use crate::{
     helpers::{Hir2Mir, Mir2Lir},
-    ModuleItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
+    NamespaceItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
 };
 use indexmap::IndexMap;
 use nyar_error::SourceSpan;

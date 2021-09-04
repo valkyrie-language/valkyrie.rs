@@ -1,12 +1,12 @@
 use crate::{
     functions::{FunctionBody, FunctionInstance},
     helpers::Mir2Lir,
-    modules::{ModuleItem, ResolveContext},
+    modules::{NamespaceItem, ResolveContext},
     ValkyrieImportFunction,
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
-use nyar_wasm::{DependentGraph, Identifier, WasiImport, WasiResource};
+use nyar_wasm::{DependentGraph, Identifier, WasiImport, WasiResource, WasiType};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -34,23 +34,11 @@ pub struct ValkyriePrimitive {
     /// The name of the primitive
     pub primitive_name: Identifier,
     /// primitive type had no fields, only primitive type wrapper
-    pub wrapper: PrimitiveType,
+    pub wrapper: WasiType,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
     pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
     pub from: Vec<ValkyrieFrom>,
     pub into: Vec<ValkyrieInto>,
-}
-
-#[derive(Clone, Eq, PartialEq)]
-pub enum PrimitiveType {
-    /// Equivalent to the wasm type `i32`
-    I32,
-    /// Equivalent to the wasm type `i64`
-    I64,
-    /// Equivalent to the wasm type `f32`
-    F32,
-    /// Equivalent to the wasm type `f64`
-    F64,
 }
 
 #[derive(Clone, Eq, PartialEq)]

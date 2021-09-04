@@ -15,7 +15,13 @@ impl Debug for ValkyrieClass {
         debug.finish()
     }
 }
-
+impl Debug for ValkyriePrimitive {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let debug = &mut f.debug_struct("Primitive");
+        debug.field("symbol", &WrapDisplay::new(&self.primitive_name)).field("wrapper", &self.wrapper);
+        debug.finish()
+    }
+}
 impl Debug for ValkyrieField {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Field").field("name", &self.field_name).field("wasi", &self.wasi_alias).finish()
@@ -24,11 +30,11 @@ impl Debug for ValkyrieField {
 
 impl AddAssign<ValkyrieClass> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieClass) {
-        self.items.insert(rhs.class_name.clone(), ModuleItem::Structure(rhs));
+        self.items.insert(rhs.class_name.clone(), NamespaceItem::Structure(rhs));
     }
 }
 impl AddAssign<ValkyrieResource> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieResource) {
-        self.items.insert(rhs.resource_name.clone(), ModuleItem::Resource(rhs));
+        self.items.insert(rhs.resource_name.clone(), NamespaceItem::Resource(rhs));
     }
 }

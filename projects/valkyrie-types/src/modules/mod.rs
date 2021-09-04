@@ -34,7 +34,7 @@ pub struct ResolveContext {
     /// Mapping local name to global name
     pub(crate) name_mapping: HashMap<Vec<Arc<str>>, ModuleImportsMap>,
     /// The declared items in file
-    pub(crate) items: IndexMap<Identifier, ModuleItem>,
+    pub(crate) items: IndexMap<Identifier, NamespaceItem>,
     /// Collect errors
     errors: Vec<NyarError>,
     /// Collect spread statements
@@ -51,7 +51,9 @@ pub struct ModuleImportsMap {
     local: HashMap<Identifier, Identifier>,
 }
 
-pub enum ModuleItem {
+pub enum NamespaceItem {
+    /// A unresolved symbol
+    Unknown(Identifier),
     Resource(ValkyrieResource),
     Structure(ValkyrieClass),
     Primitive(ValkyriePrimitive),

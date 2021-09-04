@@ -10,7 +10,7 @@ impl ResolveContext {
     }
 }
 
-impl Mir2Lir for ModuleItem {
+impl Mir2Lir for NamespaceItem {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
@@ -18,11 +18,15 @@ impl Mir2Lir for ModuleItem {
         match self {
             Self::Resource(s) => s.to_lir(graph, context),
             Self::Structure(s) => s.to_lir(graph, context),
+            Self::Primitive(s) => s.to_lir(graph, context),
             Self::Variant(s) => s.to_lir(graph, context),
             Self::Function(s) => s.to_lir(graph, context),
             Self::External(s) => s.to_lir(graph, context),
             Self::Flags(s) => s.to_lir(graph, context),
             Self::Enums(s) => s.to_lir(graph, context),
+            Self::Unknown(_) => {
+                unreachable!()
+            }
         }
     }
 }

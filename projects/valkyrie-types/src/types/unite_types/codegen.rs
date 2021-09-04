@@ -3,7 +3,7 @@ use nyar_wasm::WasiVariantType;
 
 impl AddAssign<ValkyrieUnite> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieUnite) {
-        self.items.insert(rhs.unite_name.clone(), ModuleItem::Variant(rhs));
+        self.items.insert(rhs.unite_name.clone(), NamespaceItem::Variant(rhs));
     }
 }
 

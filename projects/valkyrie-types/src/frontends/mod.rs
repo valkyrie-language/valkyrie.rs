@@ -2,7 +2,7 @@ use crate::{
     functions::{FunctionBody, FunctionInstance, FunctionParameter},
     helpers::{AsIdentifier, Hir2Mir},
     structures::ValkyrieResource,
-    ModuleItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
+    NamespaceItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
     ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
     ValkyrieVariant,
 };
@@ -118,7 +118,7 @@ impl Hir2Mir for ImplementsStatement {
             if x.path.last().unwrap().name.as_ref().eq("TypeCast") {
                 let id = self.target.as_identifier();
                 match store.items.get_mut(&id) {
-                    Some(ModuleItem::Structure(class)) => {
+                    Some(NamespaceItem::Structure(class)) => {
                         for item in &self.body {
                             match item {
                                 TraitTerm::Macro(_) => {

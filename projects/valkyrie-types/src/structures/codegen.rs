@@ -51,6 +51,20 @@ impl Mir2Lir for ValkyrieClass {
     }
 }
 
+impl Mir2Lir for ValkyriePrimitive {
+    type Output = ();
+    type Context<'a> = &'a ResolveContext;
+
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
+        for method in self.methods.values() {
+            method.to_lir(graph, context)?
+        }
+        for from in self.from.iter() {
+            from.to_lir(graph, &self.primitive_name)?
+        }
+        Ok(())
+    }
+}
 impl Mir2Lir for ValkyrieField {
     type Output = WasiRecordField;
     type Context<'a> = &'a ResolveContext;

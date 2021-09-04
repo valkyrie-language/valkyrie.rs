@@ -2,7 +2,7 @@ use super::*;
 
 impl AddAssign<ValkyrieFlagation> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieFlagation) {
-        self.items.insert(rhs.flags_name.clone(), ModuleItem::Flags(rhs));
+        self.items.insert(rhs.flags_name.clone(), NamespaceItem::Flags(rhs));
     }
 }
 
