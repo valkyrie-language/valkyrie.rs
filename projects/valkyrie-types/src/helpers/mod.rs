@@ -1,11 +1,11 @@
-use crate::ResolveState;
+use crate::ResolveContext;
 use nyar_wasm::{DependentGraph, Identifier};
 use valkyrie_ast::NamePathNode;
 
 pub(crate) trait Hir2Mir {
     type Output;
     type Context<'a>;
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output>;
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output>;
 }
 
 pub(crate) trait Mir2Lir {

@@ -2,7 +2,7 @@ use crate::{
     functions::{FunctionBody, FunctionInstance, FunctionParameter},
     helpers::{AsIdentifier, Hir2Mir},
     structures::ValkyrieResource,
-    ModuleItem, ResolveState, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
+    ModuleItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
     ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
     ValkyrieVariant,
 };
@@ -21,7 +21,7 @@ impl Hir2Mir for ProgramRoot {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         for statement in self.statements {
             statement.to_mir(store, ())?
         }
@@ -33,7 +33,7 @@ impl Hir2Mir for StatementKind {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir(self, store: &mut ResolveState, context: Self::Context<'_>) -> Result<Self::Output> {
+    fn to_mir(self, store: &mut ResolveContext, context: Self::Context<'_>) -> Result<Self::Output> {
         match self {
             Self::Nothing => {}
             Self::Document(_) => {
@@ -81,7 +81,7 @@ impl Hir2Mir for NamespaceDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         store.namespace.clear();
         match self.path.path.as_slice() {
             // clear current namespace
@@ -104,7 +104,7 @@ impl Hir2Mir for TraitDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         todo!()
     }
 }
@@ -113,7 +113,7 @@ impl Hir2Mir for ImplementsStatement {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         for x in self.annotations.derives() {
             if x.path.last().unwrap().name.as_ref().eq("TypeCast") {
                 let id = self.target.as_identifier();
@@ -155,7 +155,7 @@ impl Hir2Mir for ClassDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let symbol = store.register_item(&self.name);
         let mut imports = IndexMap::default();
         let mut methods = IndexMap::default();
@@ -206,7 +206,7 @@ impl Hir2Mir for MethodDeclaration {
     type Output = ValkyrieMethod;
     type Context<'a> = &'a Identifier;
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let (field_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
 
         Ok(ValkyrieMethod { method_name: field_name, wasi_alias, overloads: Default::default() })
@@ -217,7 +217,7 @@ impl Hir2Mir for FieldDeclaration {
     type Output = ValkyrieField;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let (field_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
 
         Ok(ValkyrieField { field_name, wasi_alias })
@@ -228,7 +228,7 @@ impl Hir2Mir for UnionDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let name = store.register_item(&self.name);
         let mut output = ValkyrieUnite { unite_name: name, variants: Default::default(), source: Default::default() };
         for item in self.body {
@@ -259,7 +259,7 @@ impl Hir2Mir for VariantDeclaration {
     type Output = ValkyrieVariant;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let (variant_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
         let mut output = ValkyrieVariant {
             variant_name,
@@ -293,7 +293,7 @@ impl Hir2Mir for SemanticNumber {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let name = store.register_item(&self.name);
 
         let mut terms = IndexMap::default();
@@ -322,7 +322,7 @@ impl Hir2Mir for EncodeDeclaration {
     type Output = ValkyrieSemanticNumber;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let wasm_alias = store.find_wasi_alias(&self.annotations, &self.name);
         Ok(ValkyrieSemanticNumber { number_name: self.name.name.clone(), wasm_alias })
     }
@@ -332,7 +332,7 @@ impl Hir2Mir for FunctionDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let function_name = store.register_item(&self.name);
         let mut instance = FunctionInstance::default();
 
@@ -381,7 +381,7 @@ impl Hir2Mir for ParameterTerm {
     type Output = FunctionParameter;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveState, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let name = self.key.name;
         let type_hint = match self.bound {
             Some(s) => match s {

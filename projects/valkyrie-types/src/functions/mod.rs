@@ -1,6 +1,6 @@
 use crate::{
     helpers::{Hir2Mir, Mir2Lir},
-    ModuleItem, ResolveState, ValkyrieType,
+    ModuleItem, ResolveContext, ValkyrieType,
 };
 use indexmap::IndexMap;
 use nyar_wasm::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};

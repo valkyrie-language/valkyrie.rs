@@ -6,7 +6,7 @@ pub struct ValkyrieEnumeration {
     pub enumerations: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
 }
 
-impl AddAssign<ValkyrieEnumeration> for ResolveState {
+impl AddAssign<ValkyrieEnumeration> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieEnumeration) {
         self.items.insert(rhs.enumeration_name.clone(), ModuleItem::Enums(rhs));
     }
@@ -14,7 +14,7 @@ impl AddAssign<ValkyrieEnumeration> for ResolveState {
 
 impl Mir2Lir for ValkyrieEnumeration {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let mut enumerations = Vec::with_capacity(self.enumerations.len());

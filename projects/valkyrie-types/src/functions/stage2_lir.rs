@@ -5,7 +5,7 @@ use std::mem::transmute;
 
 impl Mir2Lir for ValkyrieImportFunction {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let mut function = WasiFunction::external(&self.wasi_import.module, &self.wasi_import.name, &self.function_name);
@@ -26,7 +26,7 @@ impl Mir2Lir for ValkyrieImportFunction {
 
 impl Mir2Lir for ValkyrieNativeFunction {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         for (id, f) in self.overloads.iter() {
@@ -58,7 +58,7 @@ impl Mir2Lir for ValkyrieNativeFunction {
 
 impl Mir2Lir for FunctionSignature {
     type Output = Vec<WasiParameter>;
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let mut outs = Vec::with_capacity(16);
@@ -77,7 +77,7 @@ impl Mir2Lir for FunctionSignature {
 
 impl Mir2Lir for FunctionParameter {
     type Output = WasiParameter;
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let typing = self.r#type.to_lir(graph, context)?;
@@ -87,7 +87,7 @@ impl Mir2Lir for FunctionParameter {
 
 impl Mir2Lir for ValkyrieType {
     type Output = WasiType;
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let wasi_ty = match self {

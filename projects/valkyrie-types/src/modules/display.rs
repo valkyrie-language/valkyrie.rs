@@ -1,6 +1,6 @@
 use super::*;
 
-impl Debug for ResolveState {
+impl Debug for ResolveContext {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResolveContext")
             .field("namespace", &self.namespace.join("∷"))

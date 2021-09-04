@@ -1,6 +1,6 @@
 use super::*;
 
-impl AddAssign<ValkyrieFlagation> for ResolveState {
+impl AddAssign<ValkyrieFlagation> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieFlagation) {
         self.items.insert(rhs.flags_name.clone(), ModuleItem::Flags(rhs));
     }
@@ -8,7 +8,7 @@ impl AddAssign<ValkyrieFlagation> for ResolveState {
 
 impl Mir2Lir for ValkyrieFlagation {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         let mut flags = Vec::with_capacity(self.flags.len());

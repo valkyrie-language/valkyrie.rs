@@ -22,12 +22,12 @@ impl Debug for ValkyrieField {
     }
 }
 
-impl AddAssign<ValkyrieClass> for ResolveState {
+impl AddAssign<ValkyrieClass> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieClass) {
         self.items.insert(rhs.class_name.clone(), ModuleItem::Structure(rhs));
     }
 }
-impl AddAssign<ValkyrieResource> for ResolveState {
+impl AddAssign<ValkyrieResource> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieResource) {
         self.items.insert(rhs.resource_name.clone(), ModuleItem::Resource(rhs));
     }

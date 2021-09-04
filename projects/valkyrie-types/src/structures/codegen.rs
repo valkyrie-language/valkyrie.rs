@@ -7,7 +7,7 @@ use nyar_wasm::{
 
 impl Mir2Lir for ValkyrieResource {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         // for method in self.methods.values() {
@@ -23,7 +23,7 @@ impl Mir2Lir for ValkyrieResource {
 }
 impl Mir2Lir for ValkyrieClass {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         for method in self.methods.values() {
@@ -53,9 +53,9 @@ impl Mir2Lir for ValkyrieClass {
 
 impl Mir2Lir for ValkyrieField {
     type Output = WasiRecordField;
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: &ResolveState) -> Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: &ResolveContext) -> Result<Self::Output> {
         Ok(WasiRecordField {
             name: self.field_name.clone(),
             wasi_name: self.wasi_alias.clone(),
@@ -67,7 +67,7 @@ impl Mir2Lir for ValkyrieField {
 
 impl Mir2Lir for ValkyrieMethod {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         Ok(())

@@ -2,7 +2,7 @@ use super::*;
 
 impl Mir2Lir for ValkyrieVariant {
     type Output = WasiVariantItem;
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
         // *graph +=

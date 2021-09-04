@@ -1,6 +1,6 @@
 use super::*;
 
-impl ResolveState {
+impl ResolveContext {
     pub fn resolve(&self) -> Result<CanonicalWasi> {
         let mut output = DependentGraph::default();
         for item in self.items.values() {
@@ -12,7 +12,7 @@ impl ResolveState {
 
 impl Mir2Lir for ModuleItem {
     type Output = ();
-    type Context<'a> = &'a ResolveState;
+    type Context<'a> = &'a ResolveContext;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         match self {
