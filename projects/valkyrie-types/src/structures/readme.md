@@ -15,7 +15,9 @@ class A {
     print() { 0 }
 }
 class B {
-    print() { 1 }
+    print() { 
+        1
+    }
 }
 class C(A, B) {
     run() {
@@ -23,6 +25,3 @@ class C(A, B) {
     }
 }
 ```
-
-
-

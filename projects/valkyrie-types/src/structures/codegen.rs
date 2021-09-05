@@ -65,6 +65,7 @@ impl Mir2Lir for ValkyriePrimitive {
         Ok(())
     }
 }
+
 impl Mir2Lir for ValkyrieField {
     type Output = WasiRecordField;
     type Context<'a> = &'a ResolveContext;

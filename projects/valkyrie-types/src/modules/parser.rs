@@ -7,27 +7,27 @@ impl ResolveContext {
         P: AsRef<Path>,
     {
         let path = directory.as_ref();
-        // for entry in WalkDir::new(path).contents_first(true) {
-        //     match entry {
-        //         Ok(path) => {
-        //             if !path.file_type().is_file() {
-        //                 continue;
-        //             }
-        //             if !(path.file_name().to_string_lossy().ends_with("vk")
-        //                 || path.file_name().to_string_lossy().ends_with("valkyrie"))
-        //             {
-        //                 continue;
-        //             }
-        //
-        //             if let Err(e) = self.resolve_file(path.path()) {
-        //                 println!("error: {:?}\n       {}", path, e);
-        //                 self.push_error(e)
-        //             }
-        //         }
-        //
-        //         Err(e) => self.push_error(e),
-        //     }
-        // }
+        for entry in WalkDir::new(path).contents_first(true) {
+            match entry {
+                Ok(path) => {
+                    if !path.file_type().is_file() {
+                        continue;
+                    }
+                    if !(path.file_name().to_string_lossy().ends_with("vk")
+                        || path.file_name().to_string_lossy().ends_with("valkyrie"))
+                    {
+                        continue;
+                    }
+
+                    if let Err(e) = self.resolve_file(path.path()) {
+                        println!("error: {:?}\n       {}", path, e);
+                        self.push_error(e)
+                    }
+                }
+
+                Err(e) => self.push_error(e),
+            }
+        }
         Ok(())
     }
     pub fn resolve_file<P>(&mut self, file: P) -> Result<()>
