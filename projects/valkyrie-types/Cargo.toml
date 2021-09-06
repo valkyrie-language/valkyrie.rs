@@ -10,22 +10,19 @@ license = "MPL-2.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0.196"
+serde = "1.0.214"
 im = "15.1.0"
-ordered-float = "4.2.0"
-xxhash-rust = { version = "0.8.10", features = ["xxh3", "const_xxh3"] }
-smallvec = "2.0.0-alpha.3"
-dashmap = "5.5.3"
-indexmap = "2.2.3"
+ordered-float = "4.4.0"
+xxhash-rust = { version = "0.8.12", features = ["xxh3", "const_xxh3"] }
+smallvec = "2.0.0-alpha.7"
+dashmap = "6.1.0"
+indexmap = "2.6.0"
 itertools = "0.13.0"
-image = { version = "0.25.0", features = [] }
+image = { version = "0.25.4", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 nyar-error = { workspace = true }
-
-[dependencies.nyar-wasm]
-version = "0.0.7"
-path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-wasm'
+nyar-wasm = { workspace = true }
 
 [dependencies.valkyrie-ast]
 version = "0.1.*"

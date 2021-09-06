@@ -10,7 +10,7 @@ edition = "2021"
 
 [dependencies]
 pratt = "0.4.0"
-num-bigint = "0.4.4"
+num-bigint = "0.4.6"
 
 
 [dependencies.valkyrie-ast]
@@ -28,7 +28,7 @@ workspace = true
 serde = ["valkyrie-ast/serde"]
 
 [dev-dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.91"
 
 
 [build-dependencies]
