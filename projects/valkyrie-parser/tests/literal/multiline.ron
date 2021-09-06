@@ -2,6 +2,6 @@ NamespaceDeclaration {
     kind: Standalone,
     path: std∷create∷test,
 }
-i'\nx\n{1 2 3 4 5 6 7 8 9}\n{x + 2}\n'
-json'\n{\n    x: 1,\n    y: 2\n}\n'
-json5'\n{\n    // comments\n    unquoted: \'and you can quote me on that\',\n    singleQuotes: \'I can use "double quotes" here\',\n    lineBreaks: "Look, Mom! \\\nNo \\\\n\'s!",\n    hexadecimal: 0xdecaf,\n    leadingDecimalPoint: .8675309, andTrailing: 8675309.,\n    positiveSign: +1,\n    trailingComma: \'in objects\', andIn: [\'arrays\',],\n    "backwardsCompatible": "with JSON",\n}\n'
+i'\r\nx\r\n{1 2 3 4 5 6 7 8 9}\r\n{x + 2}\r\n'
+json'\r\n{\r\n    x: 1,\r\n    y: 2\r\n}\r\n'
+json5'\r\n{\r\n    -- comments\r\n    unquoted: \'and you can quote me on that\',\r\n    singleQuotes: \'I can use "double quotes" here\',\r\n    lineBreaks: "Look, Mom! \\\r\nNo \\\\n\'s!",\r\n    hexadecimal: 0xdecaf,\r\n    leadingDecimalPoint: .8675309, andTrailing: 8675309.,\r\n    positiveSign: +1,\r\n    trailingComma: \'in objects\', andIn: [\'arrays\',],\r\n    "backwardsCompatible": "with JSON",\r\n}\r\n'

@@ -3,11 +3,11 @@ let a = 1⁏
 let mut ma = 1⁏
 
 function test(
-    // 1
+    -- 1
     #[nice(#boat args: what)]
-    // 2
+    -- 2
     placeholder mut a: A = 0,
-    // 3
+    -- 3
     `b`: `B` = null
 ) -> ReturnType {
     if err != nil {
@@ -49,7 +49,7 @@ violate {
 
 
 
-//? 能被 @derive 的 trait
+--- 能被 @derive 的 trait
 @derive(Copy, Clone, Debug, PartialEq, Eq, Hash)
 @(Copy, Clone , Debug, PartialEq, Eq, Hash)
 derived macro A {
@@ -68,7 +68,7 @@ trait Functor⟨F⟩ {
     map<A, B>(self: F<A>, f: (a: A) -> B) -> F<B>
 }
 
-//? 隐式宏, 此类宏不需要
+--- 隐式宏, 此类宏不需要
 implicit macro print {
 
 }
@@ -79,8 +79,8 @@ a[T]
 a⁅T⁆
 
 @document.include("a/b")
-/// a
-/// a
+--- a
+--- a
 @derive(Copy, Clone, Debug, PartialEq, Eq, Hash)
 @(Copy, Clone , Debug, PartialEq, Eq, Hash)
 class A⟬T <: Trait⟭ {
@@ -106,20 +106,20 @@ vow {
      }
 }
 function a() {
-    @assert // 断言
-    @assume // 假设
-    @refute // 否定
+    @assert -- 断言
+    @assume -- 假设
+    @refute -- 否定
 }
 
 
 generic T, U {
-     forall {f32, f64} // 前置
+     forall {f32, f64} -- 前置
 
      require {
 
      }
-    ensure // 后置
-    where // 约束
+    ensure -- 后置
+    where -- 约束
 }
 class A {
 

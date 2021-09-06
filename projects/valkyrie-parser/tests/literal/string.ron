@@ -2,18 +2,46 @@ NamespaceDeclaration {
     kind: Standalone,
     path: tests∷literal∷escape,
 }
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: empty,
+    },
+}
 ''
 ''
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: revert,
+    },
+}
 '\''
 '"'
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: newline,
+    },
+}
 f'\\n'
 r'\\n'
-'\\\n'
+'\\\r\n'
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: escape,
+    },
+}
 '\\u{24}'
 '\\u{03D6}'
 '\\u{000024}'
 '\\u{99999999}'
 '\\n'
 '\\a'
-re'\n# comment\nab[cd]\n'
-xml'\n<list>xml</list>\n'
+re'\r\n# comment\r\nab[cd]\r\n'
+xml'\r\n<list>xml</list>\r\n'

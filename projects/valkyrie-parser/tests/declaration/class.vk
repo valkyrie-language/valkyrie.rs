@@ -51,9 +51,9 @@ class A(B, C): Encode + Decode {
 
 
 
-// test
+-- test
 #[Copy(Clone), Debug]
-// test
+-- test
 #derive(PartialEq, Eq, Hash)
 class A⟨T⟩ {
 

@@ -3,11 +3,11 @@
 
 
 function test() {
-    @assert // 断言
+    @assert -- 断言
     assert
-    @assume // 假设
+    @assume -- 假设
     assume
-    @refute // 否定
+    @refute -- 否定
     refute
 }
 
@@ -15,15 +15,15 @@ template {
     where {
 
     }
-    // 前置
+    -- 前置
     require {
 
     }
-    // 后置
+    -- 后置
     ensures {
 
     }
-    // 约束
+    -- 约束
     return Positive
 }
 refine class Positive(like std::Integer) {

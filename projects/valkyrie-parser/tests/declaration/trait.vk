@@ -61,7 +61,7 @@ extends Array⟨A⟩: Functor {
 
 template A {}
 extends Array⟨A⟩: Functor⟨A⟩ {
-    // type A = i32
+    -- type A = i32
     fmap⟨B⟩(self, f: A -> B) -> Array⟨B⟩ {
         return map(f, self)
     }

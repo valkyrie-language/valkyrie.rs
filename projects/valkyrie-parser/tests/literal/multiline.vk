@@ -16,7 +16,7 @@ json'''
 
 json5"""
 {
-    // comments
+    -- comments
     unquoted: 'and you can quote me on that',
     singleQuotes: 'I can use "double quotes" here',
     lineBreaks: "Look, Mom! \

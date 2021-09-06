@@ -45,7 +45,7 @@ class RGBColor<T, A = T> {
 extends<T, A> RGBColor<T, A>: Pixel {
 
 }
-/// A memory-intensive, CPU-bound image
+--- A memory-intensive, CPU-bound image
 class ImageBuffer<Pixel> {
     get width: int;
     get height: int;

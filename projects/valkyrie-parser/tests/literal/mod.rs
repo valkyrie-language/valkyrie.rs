@@ -7,7 +7,7 @@ use super::*;
 
 fn debug_literal(input: &str) -> std::io::Result<()> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").canonicalize()?;
-    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::Program).unwrap();
+    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::PROGRAM).unwrap();
     println!("Short Form:\n{}", cst);
     let mut cache = SourceCache::default();
     let file = cache.load_text(input, "debug.v");

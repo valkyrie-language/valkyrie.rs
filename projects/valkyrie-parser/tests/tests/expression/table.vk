@@ -7,7 +7,7 @@
 [[], [[]], [[], [[]]]];
 
 
-// mixed structure
+-- mixed structure
 array[];
 array⁅⁆;
 array[0];

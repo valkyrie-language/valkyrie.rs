@@ -5,73 +5,73 @@ Control {
 Control {
     kind: Continue,
     expression: label,
-    span: 10..24,
+    span: 11..25,
 }
 Control {
     kind: Break,
-    span: 26..31,
+    span: 28..33,
 }
 Control {
     kind: Break,
     expression: label,
-    span: 33..44,
+    span: 36..47,
 }
 Control {
     kind: Fallthrough,
-    span: 46..57,
+    span: 50..61,
 }
 Control {
     kind: Fallthrough,
     expression: label,
-    span: 59..76,
+    span: 64..81,
 }
 Control {
     kind: Return,
-    span: 78..84,
+    span: 84..90,
 }
 Control {
     kind: Return,
     expression: expression,
-    span: 86..103,
+    span: 93..110,
 }
 Control {
     kind: Raise,
-    span: 105..110,
+    span: 113..118,
 }
 Control {
     kind: Raise,
     expression: expression,
-    span: 112..128,
+    span: 121..137,
 }
 Control {
     kind: YieldReturn,
-    span: 130..135,
-}
-Control {
-    kind: YieldReturn,
-    expression: expression,
-    span: 137..153,
+    span: 140..145,
 }
 Control {
     kind: YieldReturn,
     expression: expression,
-    span: 155..178,
+    span: 148..164,
+}
+Control {
+    kind: YieldReturn,
+    expression: expression,
+    span: 167..190,
 }
 Control {
     kind: YieldBreak,
-    span: 180..191,
+    span: 193..204,
 }
 Control {
     kind: YieldBreak,
     expression: label,
-    span: 193..210,
+    span: 207..224,
 }
 Control {
     kind: YieldFrom,
-    span: 212..222,
+    span: 227..237,
 }
 Control {
     kind: YieldFrom,
     expression: expression,
-    span: 224..245,
+    span: 240..261,
 }

@@ -1,8 +1,16 @@
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: ascii,
+    },
+}
+form
 GenericCallNode {
     monadic: false,
     base: Object,
     term: [],
-    span: 20..24,
+    span: 21..25,
 }
 GenericCallNode {
     monadic: false,
@@ -13,7 +21,7 @@ GenericCallNode {
             value: T,
         },
     ],
-    span: 32..38,
+    span: 34..40,
 }
 GenericCallNode {
     monadic: false,
@@ -28,13 +36,21 @@ GenericCallNode {
             value: U,
         },
     ],
-    span: 46..53,
+    span: 49..56,
 }
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: unicode,
+    },
+}
+form
 GenericCallNode {
     monadic: false,
     base: Object,
     term: [],
-    span: 78..84,
+    span: 84..90,
 }
 GenericCallNode {
     monadic: false,
@@ -45,26 +61,25 @@ GenericCallNode {
             value: T,
         },
     ],
-    span: 92..99,
+    span: 99..106,
 }
-ApplyCallNode {
+GenericCallNode {
     monadic: false,
-    caller: GenericCallNode {
-        monadic: false,
-        base: Object,
-        term: [
-            ArgumentTerm {
-                key: Nothing,
-                value: T,
-            },
-            ArgumentTerm {
-                key: Nothing,
-                value: U,
-            },
-        ],
-        span: 107..116,
-    },
-    arguments: [
+    base: Object,
+    term: [
+        ArgumentTerm {
+            key: Nothing,
+            value: T,
+        },
+        ArgumentTerm {
+            key: Nothing,
+            value: U,
+        },
+    ],
+    span: 115..124,
+}
+Tuple {
+    terms: [
         ArgumentTerm {
             key: Nothing,
             value: 1,
@@ -74,6 +89,4 @@ ApplyCallNode {
             value: 2,
         },
     ],
-    body: None,
-    span: 116..122,
 }

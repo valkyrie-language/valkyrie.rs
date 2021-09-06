@@ -42,7 +42,7 @@ function fibonacci() -> Iterator⟨Integer⟩ {
 
 self.word ?= b"Hello, World!"
 
-//
+--
 #mut #async
 function f() {
     return 1;

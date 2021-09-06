@@ -1,17 +1,17 @@
 macro a {
-    // current package name
+    -- current package name
     package::a
-    // caller's package name
+    -- caller's package name
     package_caller::a
 }
-// @derive trait
+-- @derive trait
 #derive(Copy, Clone, Debug, PartialEq, Eq, Hash)
 derived macro A (){
 
 }
 
 
-//
+--
 implicit macro print() {
 
 }

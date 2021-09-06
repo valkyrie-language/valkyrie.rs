@@ -8,43 +8,43 @@ a ^ b ^ c;
 1 + 2 * 3 ^ (4 - 5);
 
 
-// divide
+-- divide
 a /% 2
 
 %%4
 
-// Equality
+-- Equality
 a == c;
 a ≠ b != c;
 a ≡ b === c;
 a ≢ b !== c =!= c;
 a =!= b =!= c;
 
-// Ordering
+-- Ordering
 a > b > c;
 a >= b + c >= c + e >= d;
 a < b < c;
 a <= b <= c <= d;
 
-// append
+-- append
 a ≫ b >> c >>= d;
 a ⋙ b >>> c;
 a ≪ b << c;
 a ⋘ b <<< c <<= d;
 
-// contains
+-- contains
 a ∈ list;
 a ∊ list;
 a ∉ list;
 a in list;
 a not in list;
 
-// subtyping
+-- subtyping
 a <: String;
 a is String;
 a <! String;
 b is not String;
 
-// logic
+-- logic
 a && b || c ∨ d ⊽ e ⊻ f ∧ g ⊼ h ⩟ i;
 

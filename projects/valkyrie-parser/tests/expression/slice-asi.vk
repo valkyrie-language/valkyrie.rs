@@ -1,4 +1,4 @@
-/// `[...]` Expresses a subscript if and only if `[` is at the same line as the expression
+--- `[...]` Expresses a subscript if and only if `[` is at the same line as the expression
 namespace expression;
 
 a.1

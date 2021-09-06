@@ -12,7 +12,7 @@ ConstructNewNode {
     generics: [],
     arguments: [],
     body: [],
-    span: 8..16,
+    span: 10..18,
 }
 ConstructNewNode {
     annotations: Empty,
@@ -20,7 +20,7 @@ ConstructNewNode {
     generics: [],
     arguments: [],
     body: [],
-    span: 18..29,
+    span: 22..35,
 }
 ConstructNewNode {
     annotations: Empty,
@@ -30,7 +30,7 @@ ConstructNewNode {
     ],
     arguments: [],
     body: [],
-    span: 31..41,
+    span: 39..49,
 }
 ConstructNewNode {
     annotations: Empty,
@@ -40,7 +40,7 @@ ConstructNewNode {
     ],
     arguments: [],
     body: [],
-    span: 43..57,
+    span: 53..67,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -54,7 +54,7 @@ ConstructNewNode {
     body: [
         'term',
     ],
-    span: 59..90,
+    span: 71..107,
 }
 ConstructNewNode {
     annotations: Empty,
@@ -69,7 +69,7 @@ ConstructNewNode {
     ],
     arguments: [],
     body: [],
-    span: 90..115,
+    span: 107..136,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -88,7 +88,7 @@ ConstructNewNode {
     ],
     arguments: [],
     body: [],
-    span: 115..144,
+    span: 136..169,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -116,7 +116,7 @@ ConstructNewNode {
         8,
         9,
     ],
-    span: 144..201,
+    span: 169..231,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -128,14 +128,14 @@ ConstructNewNode {
     generics: [
         [
             ArgumentTerm {
-                key: Identifier("T", 218..219),
+                key: Identifier("T", 248..249),
                 value: Integer,
             },
         ],
     ],
     arguments: [
         ArgumentTerm {
-            key: Identifier("capacity", 230..238),
+            key: Identifier("capacity", 260..268),
             value: 10,
         },
     ],
@@ -151,7 +151,7 @@ ConstructNewNode {
         8,
         9,
     ],
-    span: 201..282,
+    span: 231..317,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -187,7 +187,7 @@ ConstructNewNode {
         },
         value,
     ],
-    span: 282..375,
+    span: 317..418,
 }
 ConstructNewNode {
     annotations: Annotation {
@@ -266,9 +266,9 @@ ConstructNewNode {
                 'F above middle C',
                 'C above A above C above middle C',
             ],
-            span: 585..821,
+            span: 637..881,
         },
         'Jose Altuve',
     ],
-    span: 375..849,
+    span: 418..912,
 }

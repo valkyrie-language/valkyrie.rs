@@ -1,16 +1,16 @@
 namespace* tests.literal.escape;
-// empty
+-- empty
 '';
 "";
-// revert
+-- revert
 "'";
 '"';
-// newline
+-- newline
 f"\n";
 r"\n";
 '\
 ';
-// escape
+-- escape
 '\u{24}';
 '\u{03D6}';
 '\u{000024}';

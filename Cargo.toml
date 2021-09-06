@@ -3,6 +3,7 @@ resolver = "2"
 members = ["projects/*"]
 default-members = [
     "projects/valkyrie-ast",
+    "projects/valkyrie-hir",
     "projects/valkyrie-parser",
     "projects/valkyrie-types",
 ]
@@ -22,6 +23,6 @@ features = ["json5", "num", "dashu", "walkdir", "pratt", "yggdrasil-rt"]
 
 [workspace.dependencies.nyar-wasm]
 version = "0.0.7"
-git = "https://github.com/nyar-vm/nyar-vm.git"
-branch = "dev"
-#path = 'E:\RustroverProjects\nyar-vm'
+#git = "https://github.com/nyar-vm/nyar-vm.git"
+#branch = "dev"
+path = 'E:\RustroverProjects\nyar-vm\projects\nyar-wasm'

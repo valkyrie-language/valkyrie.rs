@@ -1,3 +1,14 @@
+InfixNode {
+    infix: ∈,
+    lhs: UnaryNode {
+        prefix: -,
+        base: UnaryNode {
+            prefix: -,
+            base: test,
+        },
+    },
+    rhs: teger,
+}
 0
 UnaryNode {
     prefix: +,
@@ -14,6 +25,14 @@ UnaryNode {
 InfixNode {
     infix: -,
     lhs: 115792089237316195423570985008687907853269984665640564039457584007913129639936_i256,
+    rhs: UnaryNode {
+        prefix: -,
+        base: test,
+    },
+}
+InfixNode {
+    infix: -,
+    lhs: decimal,
     rhs: 0.0,
 }
 UnaryNode {
@@ -32,32 +51,64 @@ UnaryNode {
 42_f32
 42_f32
 42_f64
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: test,
+    },
+}
+long
 InfixNode {
-    infix: +,
+    infix: -,
     lhs: InfixNode {
         infix: +,
         lhs: InfixNode {
             infix: +,
-            lhs: 114,
-            rhs: 514_i,
+            lhs: InfixNode {
+                infix: +,
+                lhs: 114,
+                rhs: 514_i,
+            },
+            rhs: 1919_j,
         },
-        rhs: 1919_j,
+        rhs: 810_k,
     },
-    rhs: 810_k,
+    rhs: UnaryNode {
+        prefix: -,
+        base: test,
+    },
 }
+binary
 42_f32
 42_f32
 42_f64
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: test,
+    },
+}
+units
 1234
 1234_cm
 1234_cm
 1234_cm
 1234.56_埃米
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: based,
+    },
+}
+number
 2⁑6
 2⁑6_f64
 2⁑6_f64
 2⁑6_f64
 11.2233⁑4_f32
-16⁂FF.0⁑-16
+16⁂FF.0⁑16
 36⁂XX.XX⁑36_f32
 16⁂0.FF⁑f16

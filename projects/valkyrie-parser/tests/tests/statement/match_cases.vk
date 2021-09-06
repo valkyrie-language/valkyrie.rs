@@ -4,7 +4,7 @@ match a {
     with [a, b]
 }
 
-// when with (expression: bool)
+-- when with (expression: bool)
 match _ {
     when true:
         @todo
@@ -43,7 +43,7 @@ match e := last as String {
     case (1, ):
         @todo
     case (114, "514", a) if true:
-        // expr is tuple && expr.1 == 114 && expr.2 == 514; a = expr.3
+        -- expr is tuple && expr.1 == 114 && expr.2 == 514; a = expr.3
         @todo
     case a ..= 2 | b ..< c:
         @todo("range")
@@ -100,13 +100,13 @@ try Option⟨T⟩{
 }
 .catch {
     with handler;
-    case Exception::A(message): // String
+    case Exception::A(message): -- String
         resume message + "A"
-    case Exception::F(message): // String
+    case Exception::F(message): -- String
         return message + "F"
-    case Exception::A(message): // String
+    case Exception::A(message): -- String
         resume message + "A"
-    case Exception::F(message): // String
+    case Exception::F(message): -- String
         return message + "F"
     else:
         return "else"

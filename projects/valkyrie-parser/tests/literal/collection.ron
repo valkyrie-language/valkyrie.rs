@@ -2,6 +2,13 @@ NamespaceDeclaration {
     kind: Standalone,
     path: test∷literal,
 }
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: tuple,
+    },
+}
 Tuple {
     terms: [],
 }
@@ -45,6 +52,13 @@ Tuple {
         },
     ],
 }
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: dict,
+    },
+}
 Tuple {
     terms: [
         ArgumentTerm {
@@ -56,11 +70,11 @@ Tuple {
             value: 1,
         },
         ArgumentTerm {
-            key: Identifier("a", 97..98),
+            key: Identifier("a", 106..107),
             value: 1,
         },
         ArgumentTerm {
-            key: Identifier("z", 103..104),
+            key: Identifier("z", 112..113),
             value: 26,
         },
     ],
@@ -68,63 +82,95 @@ Tuple {
 Tuple {
     terms: [
         ArgumentTerm {
-            key: Identifier("啊", 112..115),
+            key: Identifier("啊", 122..125),
             value: 1,
         },
         ArgumentTerm {
-            key: Identifier("吧", 120..123),
+            key: Identifier("吧", 130..133),
             value: 2,
         },
         ArgumentTerm {
-            key: Identifier("", 128..133),
+            key: Identifier("", 138..143),
             value: 3,
         },
         ArgumentTerm {
-            key: Identifier("", 138..143),
+            key: Identifier("", 148..153),
             value: 4,
         },
     ],
 }
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: list,
+    },
+}
 RangeNode {
     kind: Offset,
     terms: [],
-    span: 157..159,
+    span: 169..171,
 }
 RangeNode {
     kind: Offset,
     terms: [
         Index {
             index: 0,
+            span: FileSpan {
+                start: 175,
+                end: 176,
+                file: FileID(0xDAEB90FC3D753B45),
+            },
         },
     ],
-    span: 161..164,
+    span: 174..177,
 }
 RangeNode {
     kind: Offset,
     terms: [
         Index {
             index: 1,
+            span: FileSpan {
+                start: 181,
+                end: 182,
+                file: FileID(0xDAEB90FC3D753B45),
+            },
         },
     ],
-    span: 166..171,
+    span: 180..185,
 }
 RangeNode {
     kind: Offset,
     terms: [
         Index {
             index: 1,
+            span: FileSpan {
+                start: 189,
+                end: 190,
+                file: FileID(0xDAEB90FC3D753B45),
+            },
         },
         Index {
             index: 2,
+            span: FileSpan {
+                start: 192,
+                end: 193,
+                file: FileID(0xDAEB90FC3D753B45),
+            },
         },
     ],
-    span: 173..179,
+    span: 188..194,
 }
 RangeNode {
     kind: Offset,
     terms: [
         Index {
             index: true,
+            span: FileSpan {
+                start: 198,
+                end: 202,
+                file: FileID(0xDAEB90FC3D753B45),
+            },
         },
         Index {
             index: RangeNode {
@@ -132,18 +178,35 @@ RangeNode {
                 terms: [
                     Index {
                         index: false,
+                        span: FileSpan {
+                            start: 205,
+                            end: 210,
+                            file: FileID(0xDAEB90FC3D753B45),
+                        },
                     },
                 ],
-                span: 188..195,
+                span: 204..211,
+            },
+            span: FileSpan {
+                start: 204,
+                end: 211,
+                file: FileID(0xDAEB90FC3D753B45),
             },
         },
     ],
-    span: 181..196,
+    span: 197..212,
+}
+UnaryNode {
+    prefix: -,
+    base: UnaryNode {
+        prefix: -,
+        base: range,
+    },
 }
 RangeNode {
     kind: Offset,
     terms: [],
-    span: 207..209,
+    span: 225..227,
 }
 RangeNode {
     kind: Offset,
@@ -154,7 +217,7 @@ RangeNode {
             step: None,
         },
     ],
-    span: 211..214,
+    span: 230..233,
 }
 RangeNode {
     kind: Offset,
@@ -165,7 +228,7 @@ RangeNode {
             step: None,
         },
     ],
-    span: 216..220,
+    span: 236..240,
 }
 RangeNode {
     kind: Offset,
@@ -176,5 +239,5 @@ RangeNode {
             step: None,
         },
     ],
-    span: 222..227,
+    span: 243..248,
 }

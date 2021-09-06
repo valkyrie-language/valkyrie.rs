@@ -1,4 +1,4 @@
-// missing scope means public
+-- missing scope means public
 using { }
 using package.name;
 using `import` as @export;

@@ -1,13 +1,13 @@
-// normal arguments
+-- normal arguments
 f();
 f(1);
 f(k: 1);
 f(null, a: 1, ..args, ...kwargs)
 
-// Curry function
+-- Curry function
 f()(1)(1, 2)(1, 2, 3);
 
-// Dot call
+-- Dot call
 a.b;
 a.b();
 a.b.c();
@@ -23,7 +23,7 @@ a.b::c
 a.b::c()
 
 a.b.c
-// a.(b.c)
+-- a.(b.c)
 a.b.c()
 a.b().c()
 a().b().c()

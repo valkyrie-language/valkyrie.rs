@@ -1,28 +1,28 @@
 SwitchStatement {
     patterns: [],
-    span: 0..11,
+    span: 0..13,
 }
 SwitchStatement {
     patterns: [
         PatternBranch {
             condition: PatternWhenNode {
                 guard: true,
-                span: 22..34,
+                span: 26..38,
             },
             continuation: [
                 1,
             ],
-            span: 22..34,
+            span: 26..38,
         },
         PatternBranch {
             condition: Guaranteed,
             continuation: [
                 2,
             ],
-            span: 36..43,
+            span: 40..47,
         },
     ],
-    span: 13..44,
+    span: 17..48,
 }
 SwitchStatement {
     patterns: [
@@ -33,23 +33,23 @@ SwitchStatement {
                     identifier: Identifier("", 0..0),
                 },
                 guard: None,
-                span: 59..76,
+                span: 66..84,
             },
             continuation: [
                 a,
             ],
-            span: 59..76,
+            span: 66..84,
         },
         PatternBranch {
             condition: PatternTypeNode {
                 typing: B,
                 guard: None,
-                span: 82..99,
+                span: 91..109,
             },
             continuation: [
                 b,
             ],
-            span: 82..99,
+            span: 91..109,
         },
         PatternBranch {
             condition: PatternWhenNode {
@@ -58,20 +58,20 @@ SwitchStatement {
                     lhs: c,
                     rhs: 0,
                 },
-                span: 105..126,
+                span: 116..138,
             },
             continuation: [
                 c,
             ],
-            span: 105..126,
+            span: 116..138,
         },
         PatternBranch {
             condition: Guaranteed,
             continuation: [
                 d,
             ],
-            span: 132..147,
+            span: 145..161,
         },
     ],
-    span: 46..150,
+    span: 52..165,
 }

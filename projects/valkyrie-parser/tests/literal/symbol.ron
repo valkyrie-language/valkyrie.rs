@@ -4,11 +4,11 @@ NamespaceDeclaration {
 }
 NullNode {
     nil: true,
-    span: 28..31,
+    span: 30..33,
 }
 NullNode {
     nil: true,
-    span: 33..36,
+    span: 36..39,
 }
 nil
 null

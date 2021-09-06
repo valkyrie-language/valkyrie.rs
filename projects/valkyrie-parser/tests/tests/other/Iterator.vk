@@ -1,7 +1,7 @@
 trait Iterable {
     type Item
 
-    // Self <: Iterator { Item: Iterable.self.Item }
+    -- Self <: Iterator { Item: Iterable.self.Item }
     type IteratorType
     iterator: IteratorType;
 }

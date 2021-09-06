@@ -1,40 +1,40 @@
 namespace test.unary;
 
 
-// prefix
+-- prefix
 +counter;
 -counter;
 
-// pointer
+-- pointer
 &pointer;
 *pointer;
 
-// unbox, unpack, unpack all
-// *var;
-// **var;
-// ⁑var;
-// ***var;
-// ⁂ var;
-// a ** var;
+-- unbox, unpack, unpack all
+-- *var;
+-- **var;
+-- ⁑var;
+-- ***var;
+-- ⁂ var;
+-- a ** var;
 
 
-// inverse
+-- inverse
 ⅟a;
 
-// surd
+-- surd
 √2 + ∛3 + ∜5;
 √(2 + ∛(3 + ∜5));
 √∛∜x;
 
-// temperature
+-- temperature
 20℃ + 30℉;
 
-// percentage
+-- percentage
 2% + 3‰ + 5‱;
 (2% + (3‰ + 5))‱;
 x%‰‱;
 
-// tensor ᵀᴴᵀ
-// matrixᵀ;
-// matrixᴴ;
+-- tensor ᵀᴴᵀ
+-- matrixᵀ;
+-- matrixᴴ;
 

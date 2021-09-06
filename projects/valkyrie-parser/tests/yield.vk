@@ -89,7 +89,7 @@ function main()  {
 function function() {
 	return 1;
 }
-//
+--
 function function_cps(async) {
 	return async(1);
 }

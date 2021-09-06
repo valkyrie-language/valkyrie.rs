@@ -12,7 +12,7 @@ use valkyrie_parser::{
     ClassBlockNode, ClassTermNode, DefineFieldNode, DefineImportNode, DefineMethodNode, DefineNamespaceNode,
     MainExpressionNode, ProgramContext, ProgramNode, StatementNode, ValkyrieParser, ValkyrieRule,
 };
-use yggdrasil_rt::{OutputResult, YggdrasilError, YggdrasilParser};
+use yggdrasil_rt::{OutputResult, YggdrasilError, YggdrasilNode, YggdrasilParser};
 
 mod expression;
 
@@ -35,9 +35,9 @@ fn here() -> PathBuf {
 
 fn parse_program(input: &str, output: &str) -> std::io::Result<()> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").canonicalize()?;
-    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::Program).unwrap();
+    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::PROGRAM).unwrap();
     println!("Short Form:\n{}", cst);
-    let ast = ProgramNode::from_str(input).unwrap();
+    let ast = ProgramNode::from_str(input, 0).unwrap();
     let mut file = File::create(here.join(output))?;
     file.write_all(format!("{:#?}", ast).as_bytes())
 }
@@ -86,8 +86,8 @@ fn find_all(dir: &str, debug: bool) -> anyhow::Result<()> {
             }
         }
         // parse text
-        let text = cache.fetch(&file)?.to_string();
-        match ValkyrieParser::parse_cst(&text, ValkyrieRule::Program) {
+        let text = cache.fetch(&file)?.text();
+        match ValkyrieParser::parse_cst(&text, ValkyrieRule::PROGRAM) {
             Ok(o) if debug => println!("{}", o),
             _ => {}
         };

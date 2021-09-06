@@ -20,7 +20,7 @@ micro fun4<G, R>(g: G) -> R {
 
 
 macro outer<L>(lhs: L) -> String {
-    // let mut count = 0
+    -- let mut count = 0
     lambda<R>(rhs: R) {
         while count < 10 {
             count += 1
@@ -40,23 +40,23 @@ function name() {}
 
 function package::module::`function`
 (
-    // This parameter cannot be called by name
+    -- This parameter cannot be called by name
     position_only,
     <,
-    // The parameter's name and value is optional
+    -- The parameter's name and value is optional
     free: int = 1,
     >,
-    // This parameter must be called by name
+    -- This parameter must be called by name
     name_only,
-    // If this parameter is not passed in,
-    // the variable named `name` in the environment will be automatically captured.
-    // **Note that this parameter does not participate in position matching**
+    -- If this parameter is not passed in,
+    -- the variable named `name` in the environment will be automatically captured.
+    -- **Note that this parameter does not participate in position matching**
     context name,
-    // Redundant nameless functions will be captured as `list_catch`
-    // *Otherwise, passing in extra parameters is a compilation error*
+    -- Redundant nameless functions will be captured as `list_catch`
+    -- *Otherwise, passing in extra parameters is a compilation error*
     ..list_catch,
-    // Redundant named functions will be caught as `dict_catch`
-    // *Otherwise, passing in extra parameters is a compilation error*
+    -- Redundant named functions will be caught as `dict_catch`
+    -- *Otherwise, passing in extra parameters is a compilation error*
     ...dict_catch
 )
 {

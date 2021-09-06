@@ -10,7 +10,7 @@ fn take_expression(input: StatementNode) -> Option<MainExpressionNode> {
 
 fn debug_expression(input: &str) -> std::io::Result<()> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").canonicalize()?;
-    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::GenericHide).unwrap();
+    let cst = ValkyrieParser::parse_cst(input, ValkyrieRule::GENERIC_HIDE).unwrap();
     println!("Short Form:\n{}", cst);
     // let ast = NewStatementNode::from_str(input).unwrap();
     // println!("Long Form:\n{:#?}", ast);

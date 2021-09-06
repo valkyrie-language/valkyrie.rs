@@ -21,9 +21,9 @@ using std.logging.*;
 
 function my_function(my_arg: usize) {
     let result = input_1 + input_2;
-    // Record the result as part of the current span.
+    -- Record the result as part of the current span.
     logging::Span::current().record("result", &result);
-    // Now, the result will also be included on this event!
+    -- Now, the result will also be included on this event!
     logging::info!("calculation complete!");
 }
 

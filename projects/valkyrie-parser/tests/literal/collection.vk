@@ -1,21 +1,21 @@
 namespace test.literal;
 
-// tuple
+-- tuple
 ();
 (0);
 (1, );
 (1, 2);
 (true, (false,));
-// dict
+-- dict
 (1: 0, 0: 1, a: 1, z: 26);
 (啊: 1, 吧: 2, "啊": 3, "吧": 4);
-// list
+-- list
 [];
 [0];
 [1, ];
 [1, 2];
 [true, [false]];
-// range
+-- range
 [];
 [:];
 [::];

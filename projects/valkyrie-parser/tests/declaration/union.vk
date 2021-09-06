@@ -1,11 +1,11 @@
 namespace std.create.test;
 
-/// automatically generate tag type
-/// `hidden enumerate Union1Tag {}`
+--- automatically generate tag type
+--- `hidden enumerate Union1Tag {}`
 #tag
 union Union1 {}
 
-/// create a new tag `Tag1`
+--- create a new tag `Tag1`
 #tag(Tag1)
 union Union2 {
     Variant1
@@ -15,7 +15,7 @@ union Union2 {
     }
 }
 
-/// share an exists tag `Tag1`
+--- share an exists tag `Tag1`
 #tag(&Tag1)
 union Union3 {
     Variant1,
@@ -45,7 +45,7 @@ union Union4 {
 }
 
 
-/// inherit `BaseUnion`
+--- inherit `BaseUnion`
 union A(BaseUnion): A + B {
     A,
     Bb,
@@ -53,13 +53,13 @@ union A(BaseUnion): A + B {
 }
 
 
-/// generic union
+--- generic union
 union Option⟨T⟩ {
-    // Some value of type `T`.
+    -- Some value of type `T`.
     Some {
         value: T
     },
-    // No value.
+    -- No value.
     None,
 }
 
