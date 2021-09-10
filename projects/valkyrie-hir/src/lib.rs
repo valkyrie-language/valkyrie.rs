@@ -1,16 +1,16 @@
 mod c3;
-mod row_type;
 mod errors;
-mod string_pool;
-mod method_type;
-mod function_type;
 mod field_data;
+mod function_type;
+mod method_type;
+mod passes;
+mod row_type;
 
 pub use crate::{
     c3::ValkyrieTypeGraph,
-    row_type::{ValkyrieRowType, ValkyrieRowData},
     errors::LinearizeError,
-    string_pool::{FileName, Identifier, STRING_POOL, StringPool, NamePath},
+    passes::sna_pass::{RenameContext, SNAError, SingleNameAssignment, Variable},
+    row_type::{ValkyrieRowData, ValkyrieRowType},
 };
 
 pub use lasso::Spur;

@@ -1,5 +1,4 @@
-use crate::Identifier;
-
+use valkyrie_types::Identifier;
 
 pub struct ValkyrieFunctionType {
     name: Identifier,

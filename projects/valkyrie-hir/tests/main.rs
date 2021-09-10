@@ -1,4 +1,4 @@
-use legion_pool::ValkyrieTypeGraph;
+use valkyrie_hir::ValkyrieTypeGraph;
 
 #[test]
 fn main() {

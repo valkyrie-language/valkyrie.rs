@@ -16,7 +16,8 @@ exclude = ["package.json", "tests/**"]
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 indexmap = "2.7.0"
 tracing = "0.1.41"
-
+valkyrie-types = { workspace = true }
+valkyrie-ast = { workspace = true }
 [dev-dependencies]
 
 [features]

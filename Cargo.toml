@@ -26,3 +26,11 @@ version = "0.0.7"
 #git = "https://github.com/nyar-vm/nyar-vm.git"
 #branch = "dev"
 path = 'E:\RustroverProjects\nyar-vm\projects\nyar-wasm'
+
+[workspace.dependencies.valkyrie-types]
+version = "*"
+path = 'projects/valkyrie-types'
+
+[workspace.dependencies.valkyrie-ast]
+version = "*"
+path = 'projects/valkyrie-ast'

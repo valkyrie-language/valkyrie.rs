@@ -1,4 +1,4 @@
-use crate::Identifier;
+use valkyrie_types::Identifier;
 
 pub trait IntoField {
     fn as_field_name(&self) -> Identifier;

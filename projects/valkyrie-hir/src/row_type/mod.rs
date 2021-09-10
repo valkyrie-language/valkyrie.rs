@@ -1,10 +1,10 @@
 use crate::{
-    Identifier, STRING_POOL, Spur, ValkyrieTypeGraph,
+    Spur, ValkyrieTypeGraph,
     field_data::{IntoField, ValkyrieFieldData},
-    string_pool::NamePath,
 };
 use indexmap::IndexMap;
 use std::sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use valkyrie_types::{Identifier, NamePath, STRING_POOL};
 
 pub trait IntoRowType {
     fn get_type_name(&self) -> NamePath;

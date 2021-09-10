@@ -1,8 +1,9 @@
-use crate::{LinearizeError, NamePath, STRING_POOL, ValkyrieRowType, row_type::IntoRowType};
+use crate::{LinearizeError, ValkyrieRowType, row_type::IntoRowType};
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
+use valkyrie_types::NamePath;
 
 pub struct ValkyrieTypeGraph {
     graph: HashMap<NamePath, ValkyrieRowType>,

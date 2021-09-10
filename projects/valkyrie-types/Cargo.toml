@@ -10,6 +10,8 @@ license = "MPL-2.0"
 edition = "2021"
 
 [dependencies]
+tracing = "0.1.41"
+lasso = { version = "0.7.3", features = ["inline-more"] }
 serde = "1.0.214"
 im = "15.1.0"
 ordered-float = "4.4.0"
@@ -23,15 +25,6 @@ jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 nyar-error = { workspace = true }
 nyar-wasm = { workspace = true }
-
-[dependencies.valkyrie-ast]
-version = "0.1.*"
-path = "../valkyrie-ast"
-
-[dependencies.valkyrie-parser]
-version = "0.2.*"
-path = "../valkyrie-parser"
-
 
 
 [features]
