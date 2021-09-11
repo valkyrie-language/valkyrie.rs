@@ -1,4 +1,5 @@
 use valkyrie_hir::ValkyrieTypeGraph;
+mod sna_test;
 
 #[test]
 fn main() {

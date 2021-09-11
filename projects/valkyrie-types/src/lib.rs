@@ -10,7 +10,7 @@ mod string_pool;
 // mod types;
 
 pub use crate::{
-    string_pool::{NamePath, STRING_POOL, StringPool, FileName, Identifier, Location}
+    string_pool::{FileName, Identifier, Location, NamePath, STRING_POOL, StringPool, variable::Variable},
     // functions::{ValkyrieImportFunction, ValkyrieNativeFunction},
     // modules::{NamespaceItem, ResolveContext, ValkyrieModule},
     // structures::{ValkyrieClass, ValkyrieField, ValkyrieFrom, ValkyrieInto, ValkyrieMethod, ValkyriePrimitive},

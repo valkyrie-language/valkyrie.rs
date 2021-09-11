@@ -1,16 +1,17 @@
 use core::fmt;
-use lasso::{Key, Spur, Resolver, ThreadedRodeo};
+use lasso::{Key, Resolver, Spur, ThreadedRodeo};
 use std::{
     borrow::Cow,
     fmt::{Debug, Write},
     num::NonZeroUsize,
+    str::Split,
     sync::{Arc, LazyLock},
 };
-use std::str::Split;
 
+mod name_path;
 mod string_id;
 mod string_pool;
-mod name_path;
+pub mod variable;
 
 pub static STRING_POOL: LazyLock<StringPool> = std::sync::LazyLock::new(|| StringPool::default());
 
@@ -24,11 +25,18 @@ pub struct NamePath {
     key: Spur,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FileName {
     key: Spur,
 }
 
+impl Default for FileName {
+    fn default() -> Self {
+        Self { key: STRING_POOL.encode_static("") }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub struct Location {
     file: FileName,
     start: u32,

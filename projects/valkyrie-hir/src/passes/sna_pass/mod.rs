@@ -1,4 +1,6 @@
+use lasso::Spur;
 use std::collections::HashMap;
+use valkyrie_types::{Variable, STRING_POOL};
 
 /// Give each function in the expression a unique name.
 pub trait SingleNameAssignment {
@@ -37,12 +39,20 @@ pub trait SingleNameAssignment {
     fn rename(&mut self, ctx: &mut RenameContext) -> Result<(), SNAError>;
 }
 
+impl SingleNameAssignment for Variable {
+    fn rename(&mut self, ctx: &mut RenameContext) -> Result<(), SNAError> {
+        let index = ctx.get_current_index(&self.get_name_key())?;
+        self.set_name_index(index);
+        Ok(())
+    }
+}
+
 // The SNAError enum represents different types of errors that can occur
 // during the single name assignment process.
 #[derive(Debug)]
 pub enum SNAError {
     // The Undefined error indicates that a variable is undefined.
-    Undefined { variable: String },
+    Undefined { variable: Spur },
 }
 
 // The RenameContext struct is used to manage the renaming of variables
@@ -52,38 +62,21 @@ pub struct RenameContext {
     // The counter is a HashMap that keeps track of the number of times
     // a variable name has been used, allowing for the generation of
     // unique variable names.
-    counter: HashMap<String, u32>,
+    counter: HashMap<Spur, u32>,
     // The scope_stack is a Vec of HashMaps, where each HashMap represents
     // a scope in the code. This is used to keep track of the current
     // variable names and their corresponding renamed versions.
-    scope_stack: Vec<HashMap<String, u32>>,
+    scope_stack: Vec<HashMap<Spur, u32>>,
     errors: Vec<SNAError>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Variable {
-    /// The raw name of the variable.
-    pub name: String,
-    /// The unique index of the variable.
-    pub(crate) hidden_index: u32,
-}
 
-impl Variable {
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
-            hidden_index: 0,
-        }
-    }
-    pub fn set_index(&mut self, index: u32) {
-        self.hidden_index = index;
-    }
-}
+
 
 impl RenameContext {
     // Create a new index when `let-bind`
-    pub fn fresh_index(&mut self, base: &str) -> u32 {
-        let count = self.counter.entry(base.to_string()).or_insert(0);
+    pub fn fresh_index(&mut self, base: Spur) -> u32 {
+        let count = self.counter.entry(base).or_insert(0);
         *count += 1;
         *count
     }
@@ -101,26 +94,23 @@ impl RenameContext {
     // The get_current_index method retrieves the current name for the
     // given variable name, searching through the scope_stack in reverse
     // order to find the most recent definition.
-    pub fn get_current_index(&self, name: &str) -> Result<u32, SNAError> {
+    pub fn get_current_index(&self, name: &Spur) -> Result<u32, SNAError> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(renamed) = scope.get(name) {
                 return Ok(renamed.clone());
             }
         }
-        Err(SNAError::Undefined {
-            variable: name.to_string(),
-        })
+        Err(SNAError::Undefined { variable: *name })
     }
 
     // The add_to_current_scope method adds a new variable name mapping
     // to the current scope.
-    pub fn add_to_current_scope(&mut self, original: String, renamed: Variable) {
+    pub fn add_to_current_scope(&mut self, original: Spur, renamed: Variable) {
         if let Some(scope) = self.scope_stack.last_mut() {
-            scope.insert(original, renamed.hidden_index);
+            scope.insert(original, renamed.get_name_index());
         }
     }
     pub fn finish(self) -> Vec<SNAError> {
         self.errors
     }
 }
-
