@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
 #![feature(extend_one)]
+#![feature(pattern)]
 
 mod string_pool;
 // mod frontends;

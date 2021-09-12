@@ -36,7 +36,7 @@ impl Debug for ControlNode {
         match &self.label {
             LabelNode::Nearest => {}
             LabelNode::Named(s) => {
-                w.field("label", &s.name);
+                w.field("label", &s.name.to_string());
             }
         }
         if let Some(e) = &self.expression {

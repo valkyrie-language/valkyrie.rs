@@ -1,17 +1,18 @@
 use super::*;
-use alloc::sync::Arc;
+use valkyrie_types::Identifier;
 
 mod convert;
 mod display;
 
 /// A node representing a identifier.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct IdentifierNode {
     /// The name of the identifier.
-    pub name: Arc<str>,
+    pub name: Identifier,
     /// The location of this identifier.
     pub span: SourceSpan,
+    pub shadow_index: u32
 }
 
 /// `package∷module∷name`
@@ -68,7 +69,7 @@ pub struct LambdaSlotNode {
 }
 
 /// `$, $0, $1, $x`
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy,Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LambdaSlotItem {
     /// `$, $.call()`, Automatically obtain a number based on context

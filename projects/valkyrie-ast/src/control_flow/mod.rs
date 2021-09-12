@@ -3,12 +3,6 @@ use crate::{
     ElseStatement, ExpressionKind, ExpressionNode, GuardPattern, IdentifierNode, LoopEach, LoopRepeat, PatternBranch,
     StatementBlock, StatementKind, SwitchStatement, TuplePatternNode, WhileConditionNode,
 };
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec,
-    vec::Vec,
-};
 use core::{
     fmt::{Debug, Display, Formatter},
     ops::Range,

@@ -1,6 +1,6 @@
+use std::sync::Arc;
 use super::*;
 use crate::helper::WrapDisplay;
-use alloc::sync::Arc;
 use nyar_error::ForeignInterfaceError;
 
 mod builtin;

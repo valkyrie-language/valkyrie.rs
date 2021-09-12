@@ -1,7 +1,8 @@
+use std::sync::Arc;
 use super::*;
 use crate::helper::IdentifiersDisplay;
-use alloc::rc::Rc;
 use nyar_error::SourceSpan;
+use valkyrie_types::Identifier;
 
 mod display;
 mod iters;
@@ -79,7 +80,7 @@ pub struct ImportAliasNode {
 }
 
 /// The name of import items
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy,Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ImportAliasItem {
     /// `#attribute`
@@ -90,7 +91,7 @@ pub enum ImportAliasItem {
     Normal(IdentifierNode),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ImportResolvedKind {
     /// `import { }`
     Empty,
@@ -111,7 +112,7 @@ pub enum ImportResolvedKind {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImportResolvedItem {
     /// The path of the import
-    pub path: Vec<Arc<str>>,
+    pub path: Vec<Identifier>,
     /// The alias of the import
     pub kind: ImportResolvedKind,
     /// The position fo the resolved item

@@ -34,7 +34,7 @@ pub struct ArgumentTerm {
 }
 
 /// The key of the argument
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ArgumentKey {
     /// `a + b`

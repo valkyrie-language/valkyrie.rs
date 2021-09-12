@@ -1,5 +1,4 @@
 use crate::{IdentifierNode, StatementKind};
-use alloc::{vec, vec::Vec};
 use core::ops::Range;
 
 /// The pure `loop` statement

@@ -1,5 +1,4 @@
 use crate::{ExpressionNode, IdentifierNode};
-use alloc::vec::Vec;
 use core::ops::Range;
 
 /// `vow T {} fun f() { return T }`

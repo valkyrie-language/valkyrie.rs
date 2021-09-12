@@ -74,7 +74,7 @@ impl<'i> Debug for IdentifiersDisplay<'i> {
             if index != 0 {
                 f.write_str("∷")?;
             }
-            f.write_str(&id.name)?
+            f.write_str(&id.name.as_ref())?
         }
         Ok(())
     }

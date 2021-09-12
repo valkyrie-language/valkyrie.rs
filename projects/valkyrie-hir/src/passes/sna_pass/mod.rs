@@ -1,6 +1,8 @@
 use lasso::Spur;
-use std::collections::HashMap;
-use valkyrie_types::{Variable, STRING_POOL};
+use std::{collections::HashMap, ops::Range};
+use valkyrie_types::{FileName, Location, STRING_POOL, Variable};
+
+mod for_ast;
 
 /// Give each function in the expression a unique name.
 pub trait SingleNameAssignment {
@@ -39,26 +41,24 @@ pub trait SingleNameAssignment {
     fn rename(&mut self, ctx: &mut RenameContext) -> Result<(), SNAError>;
 }
 
-impl SingleNameAssignment for Variable {
-    fn rename(&mut self, ctx: &mut RenameContext) -> Result<(), SNAError> {
-        let index = ctx.get_current_index(&self.get_name_key())?;
-        self.set_name_index(index);
-        Ok(())
-    }
-}
+
 
 // The SNAError enum represents different types of errors that can occur
 // during the single name assignment process.
 #[derive(Debug)]
 pub enum SNAError {
+    EmptyPath {
+        location: Location
+    },
     // The Undefined error indicates that a variable is undefined.
-    Undefined { variable: Spur },
+    Undefined { variable: Spur, location: Location },
 }
 
 // The RenameContext struct is used to manage the renaming of variables
 // during the single name assignment process.
 #[derive(Default)]
 pub struct RenameContext {
+    file: FileName,
     // The counter is a HashMap that keeps track of the number of times
     // a variable name has been used, allowing for the generation of
     // unique variable names.
@@ -69,9 +69,6 @@ pub struct RenameContext {
     scope_stack: Vec<HashMap<Spur, u32>>,
     errors: Vec<SNAError>,
 }
-
-
-
 
 impl RenameContext {
     // Create a new index when `let-bind`
@@ -94,13 +91,13 @@ impl RenameContext {
     // The get_current_index method retrieves the current name for the
     // given variable name, searching through the scope_stack in reverse
     // order to find the most recent definition.
-    pub fn get_current_index(&self, name: &Spur) -> Result<u32, SNAError> {
+    pub fn get_current_index(&self, name: &Spur, range: Range<u32>) -> Result<u32, SNAError> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(renamed) = scope.get(name) {
                 return Ok(renamed.clone());
             }
         }
-        Err(SNAError::Undefined { variable: *name })
+        Err(SNAError::Undefined { variable: *name, location: self.file.with_range(range) })
     }
 
     // The add_to_current_scope method adds a new variable name mapping

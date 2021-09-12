@@ -1,6 +1,7 @@
+use std::sync::Arc;
 use super::*;
-use alloc::sync::Arc;
 use nyar_error::{SourceSpan, Validation};
+use valkyrie_types::Identifier;
 
 mod display;
 
@@ -41,7 +42,8 @@ impl ValkyrieNode for StringLiteralNode {
 impl StringTextNode {
     /// Convert to an identifier
     pub fn as_identifier(&self) -> IdentifierNode {
-        IdentifierNode { name: Arc::from(self.text.as_str()), span: SourceSpan::default().with_range(self.get_range()) }
+        let name = Identifier::new(self.text.as_str());
+        IdentifierNode { name, span: SourceSpan::default().with_range(self.get_range()), shadow_index: 0 }
     }
 }
 
