@@ -1,5 +1,5 @@
 [package]
-name = "valkyrie-types"
+name = "valkyrie-mir"
 version = "0.0.8"
 authors = ["Aster <192607617@qq.com>"]
 description = "Shard types for valkyrie language"
@@ -25,7 +25,8 @@ jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 nyar-error = { workspace = true }
 nyar-wasm = { workspace = true }
-
+valkyrie-parser = { workspace = true }
+valkyrie-ast = { workspace = true }
 
 [features]
 default = []

@@ -35,6 +35,6 @@ impl<'i> crate::TextRawNode<'i> {
         StringTextNode { text: buffer, span: file.with_range(self.get_range32()) }
     }
     pub(crate) fn build_id(&self, ctx: &mut ProgramState) -> IdentifierNode {
-        IdentifierNode { name: Arc::from(""), span: ctx.file.with_range(self.get_range32()) }
+        IdentifierNode { name: Identifier::new(""), span: ctx.file.with_range(self.get_range32()), shadow_index: 0 }
     }
 }

@@ -1,5 +1,6 @@
 use crate::ResolveContext;
 use nyar_wasm::{DependentGraph, Identifier};
+use std::sync::Arc;
 use valkyrie_ast::NamePathNode;
 
 pub(crate) trait Hir2Mir {
@@ -22,7 +23,7 @@ impl AsIdentifier for NamePathNode {
     fn as_identifier(&self) -> Identifier {
         match self.path.as_slice() {
             [path @ .., last] => {
-                Identifier { namespace: path.iter().map(|x| x.name.clone()).collect(), name: last.name.clone() }
+                Identifier { namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(), name: Arc::from(last.name.as_ref()) }
             }
             _ => unreachable!("empty name path"),
         }

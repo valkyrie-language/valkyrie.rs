@@ -1,0 +1,30 @@
+[package]
+name = "legion-wit"
+version = "0.1.0"
+authors = ["Aster <192607617@qq.com>"]
+description = "Valkyrie workspace manager"
+repository = "https://github.com/nyar-vm/valkyrie-valor"
+documentation = "https://docs.rs/valor-config"
+readme = "readme.md"
+license = "MPL-2.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.94"
+#url = "2.5.4"
+wat = { version = "1.222.0", features = ["component-model", "dwarf"] }
+wasmprinter = { version = "0.222.0", features = ["component-model"] }
+js-component-bindgen = "1.8.1"
+#reqwest = { workspace = true }
+wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
+
+[lib]
+crate-type = ["cdylib"]
+
+[dev-dependencies]
+
+[features]
+default = []
+
+[package.metadata.component]
+package = "legion:tools"

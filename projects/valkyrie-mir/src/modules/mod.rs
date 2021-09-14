@@ -1,10 +1,10 @@
 use crate::{
+    ValkyrieEnumeration, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieNativeFunction, ValkyriePrimitive, ValkyrieUnite,
     helpers::{Hir2Mir, Mir2Lir},
     structures::{ValkyrieClass, ValkyrieResource},
-    ValkyrieEnumeration, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieNativeFunction, ValkyriePrimitive, ValkyrieUnite,
 };
 use convert_case::{Case, Casing};
-use im::{hashmap::Entry, HashMap};
+use im::{HashMap, hashmap::Entry};
 use indexmap::IndexMap;
 use nyar_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
 use nyar_wasm::{CanonicalWasi, DependentGraph, Identifier, WasiImport, WasiModule};
@@ -26,13 +26,13 @@ pub struct ValkyrieModule {}
 
 /// Convert file to module
 pub struct ResolveContext {
-    pub(crate) package: Arc<str>,
+    pub(crate) package: valkyrie_ast::Identifier,
     /// The current namespace
-    pub(crate) namespace: Vec<Arc<str>>,
+    pub(crate) namespace: Vec<valkyrie_ast::Identifier>,
     /// The document buffer
     pub(crate) document: String,
     /// Mapping local name to global name
-    pub(crate) name_mapping: HashMap<Vec<Arc<str>>, ModuleImportsMap>,
+    pub(crate) name_mapping: HashMap<Vec<valkyrie_ast::Identifier>, ModuleImportsMap>,
     /// The declared items in file
     pub(crate) items: IndexMap<Identifier, NamespaceItem>,
     /// Collect errors
@@ -67,7 +67,7 @@ pub enum NamespaceItem {
 impl ResolveContext {
     pub fn new<S: Into<Arc<str>>>(package: S) -> Self {
         Self {
-            package: package.into(),
+            package: valkyrie_ast::Identifier::new(&package.into()),
             namespace: vec![],
             document: "".to_string(),
             name_mapping: Default::default(),
@@ -88,8 +88,9 @@ impl ResolveContext {
 impl ResolveContext {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
     pub fn register_item(&mut self, symbol: &IdentifierNode) -> Identifier {
-        let key = Identifier { namespace: vec![], name: symbol.name.clone() };
-        let value = Identifier { namespace: self.namespace.clone(), name: symbol.name.clone() };
+        let key = Identifier { namespace: vec![], name: Arc::from(symbol.name.as_ref()) };
+        let value =
+            Identifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: Arc::from(symbol.name.as_ref()) };
         match self.name_mapping.entry(self.namespace.clone()) {
             Entry::Occupied(v) => {
                 v.into_mut().local.insert(key, value.clone());
@@ -133,7 +134,7 @@ impl ResolveContext {
             },
             None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
         };
-        Ok((symbol.name.clone(), wasi_alias))
+        Ok((Arc::from(symbol.name.as_ref()), wasi_alias))
     }
 
     /// Get the full name path based on package name and namespace

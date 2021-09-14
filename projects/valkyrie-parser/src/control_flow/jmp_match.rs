@@ -110,7 +110,7 @@ impl<'i> crate::CasePatternNode<'i> {
         match self {
             Self::Namepath(v) => Ok(CasePattern::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: Arc::from(""), span: Default::default() },
+                identifier: IdentifierNode { name: Identifier::new(""), span: Default::default(), shadow_index: 0 },
             }))),
             Self::StandardPattern(v) => v.build(ctx),
         }

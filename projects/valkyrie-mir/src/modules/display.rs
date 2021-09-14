@@ -1,9 +1,10 @@
+use itertools::Itertools;
 use super::*;
 
 impl Debug for ResolveContext {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResolveContext")
-            .field("namespace", &self.namespace.join("∷"))
+            .field("namespace", &self.namespace.iter().map(|x|x.as_ref()).join("∷"))
             .field("document", &self.document)
             .field("items", &self.items.values())
             .field("errors", &self.errors)

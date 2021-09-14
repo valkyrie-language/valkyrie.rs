@@ -1,0 +1,4 @@
+src/
+node_modules/
+legion-wasm32-wasi.wasm
+package-lock.json

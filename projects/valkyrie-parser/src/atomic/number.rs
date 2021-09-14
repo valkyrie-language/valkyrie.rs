@@ -73,7 +73,7 @@ impl<'i> crate::IntegerNode<'i> {
     // }
     pub(crate) fn as_identifier(&self, ctx: &mut ProgramState) -> IdentifierNode {
         let text: String = self.get_chars().filter(|c| c.is_digit(10)).collect();
-        IdentifierNode { name: Arc::from(text), span: ctx.file.with_range(self.get_range32()) }
+        IdentifierNode { name: Identifier::new(&text), span: ctx.file.with_range(self.get_range32()), shadow_index: 0 }
     }
     pub(crate) fn as_base(&self, ctx: &mut ProgramState) -> Result<u32> {
         let span = ctx.file.with_range(self.get_range32());

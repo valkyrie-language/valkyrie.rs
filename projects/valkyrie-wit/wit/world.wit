@@ -1,0 +1,23 @@
+package legion:tools;
+
+world tools {
+	record tools-error {
+		message: string
+	}
+    record encode-config {
+        generate-dwarf: bool
+    }
+    record decode-config {
+        skeleton-only: bool,
+        name-unnamed: bool,
+        fold-instructions: bool
+    }
+    record polyfill-config {
+		name: string,
+		shim: list<tuple<string, string>>
+    }
+    export wat-encode: func(input: string, config: encode-config) -> result<list<u8>, tools-error>;
+    export wasm-decode: func(input: list<u8>, config: decode-config) -> result<string, tools-error>;
+    export wasi-polyfill: func(input: list<u8>, config: polyfill-config) -> result<list<tuple<string, list<u8>>>, tools-error>;
+}
+

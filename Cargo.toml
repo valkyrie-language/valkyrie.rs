@@ -2,13 +2,14 @@
 resolver = "2"
 members = ["projects/*"]
 default-members = [
+    "projects/valkyrie-types",
+    "projects/valkyrie-parser",
     "projects/valkyrie-ast",
     "projects/valkyrie-hir",
-    "projects/valkyrie-parser",
-    "projects/valkyrie-types",
+    "projects/valkyrie-mir",
 ]
 exclude = [
-
+    "projects/valkyrie-wasm32-wasi"
 ]
 
 [profile.release]
@@ -27,6 +28,10 @@ version = "0.0.7"
 #branch = "dev"
 path = 'E:\RustroverProjects\nyar-vm\projects\nyar-wasm'
 
+[workspace.dependencies.valkyrie-parser]
+version = "*"
+path = 'projects/valkyrie-parser'
+
 [workspace.dependencies.valkyrie-types]
 version = "*"
 path = 'projects/valkyrie-types'
@@ -34,3 +39,11 @@ path = 'projects/valkyrie-types'
 [workspace.dependencies.valkyrie-ast]
 version = "*"
 path = 'projects/valkyrie-ast'
+
+[workspace.dependencies.valkyrie-hir]
+version = "*"
+path = 'projects/valkyrie-hir'
+
+[workspace.dependencies.valkyrie-mir]
+version = "*"
+path = 'projects/valkyrie-mir'

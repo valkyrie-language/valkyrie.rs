@@ -1,0 +1,16 @@
+structure v2 {
+    x: f64,
+    y: f64,
+    constructor(x: f64, y: f64) {
+        self.x = x;
+        self.y = y;
+    }
+}
+
+extends v2 {
+    sum(self): f64 {
+        js::print_f32(self.x)
+        js::print_f32(self.y)
+        add(self.x, self.y)
+    }
+}

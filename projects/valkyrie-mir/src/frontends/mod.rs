@@ -324,7 +324,7 @@ impl Hir2Mir for EncodeDeclaration {
 
     fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let wasm_alias = store.find_wasi_alias(&self.annotations, &self.name);
-        Ok(ValkyrieSemanticNumber { number_name: self.name.name.clone(), wasm_alias })
+        Ok(ValkyrieSemanticNumber { number_name: Arc::from(self.name.name.as_ref()), wasm_alias })
     }
 }
 
@@ -413,6 +413,6 @@ impl Hir2Mir for ParameterTerm {
             },
             None => Err(nyar_error::SyntaxError::new("Missing type hint for parameter").with_span(self.key.span))?,
         };
-        Ok(FunctionParameter { name, r#type: type_hint })
+        Ok(FunctionParameter { name: Arc::from(name.as_ref()), r#type: type_hint })
     }
 }

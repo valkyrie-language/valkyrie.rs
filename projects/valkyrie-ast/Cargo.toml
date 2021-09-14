@@ -17,6 +17,7 @@ deriver = "0.0.0"
 serde = { version = "1.0.214", default-features = false, optional = true }
 valkyrie-types = { workspace = true }
 
+
 [dependencies.nyar-error]
 workspace = true
 

@@ -1,8 +1,6 @@
 #![feature(lazy_cell)]
 #![feature(const_trait_impl)]
 
-extern crate core;
-
 mod codegen;
 
 pub use crate::{codegen::*, helpers::ProgramContext};
