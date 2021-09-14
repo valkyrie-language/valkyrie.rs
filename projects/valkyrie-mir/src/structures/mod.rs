@@ -6,7 +6,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
-use nyar_wasm::{DependentGraph, Identifier, WasiImport, WasiResource, WasiType};
+use valkyrie_lir::{DependentGraph, Identifier, WasiImport, WasiResource, WasiType};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,

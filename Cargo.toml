@@ -22,11 +22,7 @@ version = "0.1.17"
 features = ["json5", "num", "dashu", "walkdir", "pratt", "yggdrasil-rt"]
 #path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
 
-[workspace.dependencies.nyar-wasm]
-version = "0.0.7"
-#git = "https://github.com/nyar-vm/nyar-vm.git"
-#branch = "dev"
-path = 'E:\RustroverProjects\nyar-vm\projects\nyar-wasm'
+
 
 [workspace.dependencies.valkyrie-parser]
 version = "*"
@@ -47,3 +43,7 @@ path = 'projects/valkyrie-hir'
 [workspace.dependencies.valkyrie-mir]
 version = "*"
 path = 'projects/valkyrie-mir'
+
+[workspace.dependencies.valkyrie-lir]
+version = "0.0.7"
+path = 'projects/valkyrie-lir'

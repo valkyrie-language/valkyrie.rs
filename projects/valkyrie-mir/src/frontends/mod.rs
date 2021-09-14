@@ -8,7 +8,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use nyar_error::Result;
-use nyar_wasm::Identifier;
+use valkyrie_lir::Identifier;
 use ordered_float::NotNan;
 use std::{collections::BTreeMap, sync::Arc};
 use valkyrie_ast::{

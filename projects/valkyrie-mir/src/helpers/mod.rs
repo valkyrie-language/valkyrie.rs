@@ -1,5 +1,5 @@
 use crate::ResolveContext;
-use nyar_wasm::{DependentGraph, Identifier};
+use valkyrie_lir::{DependentGraph, Identifier};
 use std::sync::Arc;
 use valkyrie_ast::NamePathNode;
 

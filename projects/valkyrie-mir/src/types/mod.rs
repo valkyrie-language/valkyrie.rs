@@ -4,7 +4,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use nyar_error::SourceSpan;
-use nyar_wasm::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
+use valkyrie_lir::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
 use std::{
     fmt::{Debug, Formatter},
     ops::AddAssign,

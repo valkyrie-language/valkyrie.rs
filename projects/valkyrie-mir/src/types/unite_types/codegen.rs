@@ -1,5 +1,5 @@
 use super::*;
-use nyar_wasm::WasiVariantType;
+use valkyrie_lir::WasiVariantType;
 
 impl AddAssign<ValkyrieUnite> for ResolveContext {
     fn add_assign(&mut self, rhs: ValkyrieUnite) {

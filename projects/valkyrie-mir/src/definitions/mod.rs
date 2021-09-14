@@ -4,7 +4,7 @@ use crate::{
     InitializeType, ValkyrieEnumerate, ValkyrieError, ValkyrieID, ValkyrieString,
 };
 use nyar_error::{SourceSpan, Success, Validation};
-use nyar_wasm::FieldType;
+use valkyrie_lir::FieldType;
 use std::{
     collections::BTreeMap,
     fmt::{Debug, Formatter},

@@ -24,7 +24,7 @@ image = { version = "0.25.4", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 nyar-error = { workspace = true }
-nyar-wasm = { workspace = true }
+valkyrie-lir = { workspace = true }
 
 
 [features]

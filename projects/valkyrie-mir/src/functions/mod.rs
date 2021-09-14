@@ -3,7 +3,7 @@ use crate::{
     NamespaceItem, ResolveContext, ValkyrieType,
 };
 use indexmap::IndexMap;
-use nyar_wasm::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
+use valkyrie_lir::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,

@@ -1,6 +1,6 @@
 use super::*;
 use nyar_error::SyntaxError;
-use nyar_wasm::{WasiFunctionBody, WasiParameter, WasiType};
+use valkyrie_lir::{WasiFunctionBody, WasiParameter, WasiType};
 use std::mem::transmute;
 
 impl Mir2Lir for ValkyrieImportFunction {
