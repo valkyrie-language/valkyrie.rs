@@ -15,6 +15,9 @@
         "access": "public",
         "registry": "https://registry.npmjs.org/"
     },
+    "scripts": {
+
+    },
     "dependencies": {
         "@bytecodealliance/preview2-shim": "^0.17.1"
     }
