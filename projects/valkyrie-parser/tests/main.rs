@@ -1,6 +1,6 @@
 #![allow(unused, dead_code)]
 
-use nyar_error::{third_party::Url, Failure, SourceCache, Success, Validation};
+use valkyrie_error::{third_party::Url, Failure, SourceCache, Success, Validation};
 use std::{
     ffi::OsStr,
     fs::File,

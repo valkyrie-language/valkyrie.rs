@@ -1,5 +1,5 @@
 use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension};
-use nyar_error::Result;
+use valkyrie_error::Result;
 use valkyrie_ast::{ExpressionKind, *};
 
 mod controller;

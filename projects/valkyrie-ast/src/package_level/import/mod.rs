@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use super::*;
 use crate::helper::IdentifiersDisplay;
-use nyar_error::SourceSpan;
+use valkyrie_error::SourceSpan;
 use valkyrie_types::Identifier;
 
 mod display;

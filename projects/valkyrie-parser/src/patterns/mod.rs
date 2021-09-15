@@ -1,5 +1,5 @@
 use crate::helpers::ProgramState;
-use nyar_error::Result;
+use valkyrie_error::Result;
 use std::sync::Arc;
 use valkyrie_ast::*;
 

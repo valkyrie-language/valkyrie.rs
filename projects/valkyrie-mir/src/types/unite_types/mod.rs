@@ -1,5 +1,5 @@
 use super::*;
-use nyar_error::SourceSpan;
+use valkyrie_error::SourceSpan;
 
 mod codegen;
 

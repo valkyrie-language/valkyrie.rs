@@ -6,7 +6,7 @@ use crate::{
 use convert_case::{Case, Casing};
 use im::{HashMap, hashmap::Entry};
 use indexmap::IndexMap;
-use nyar_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
+use valkyrie_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
 use valkyrie_lir::{CanonicalWasi, DependentGraph, Identifier, WasiImport, WasiModule};
 use std::{
     fmt::{Debug, Formatter},

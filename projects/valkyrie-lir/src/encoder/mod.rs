@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use nyar_error::NyarError;
+use valkyrie_error::NyarError;
 
 use crate::{
     helpers::{ComponentSections, DependenciesTrace},

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use super::*;
 use crate::helper::WrapDisplay;
-use nyar_error::ForeignInterfaceError;
+use valkyrie_error::ForeignInterfaceError;
 
 mod builtin;
 mod display;

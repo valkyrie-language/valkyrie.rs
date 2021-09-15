@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use crate::ProgramNode;
-use nyar_error::{Failure, NyarError, SourceCache, SourceID, Success, Validation};
+use valkyrie_error::{Failure, NyarError, SourceCache, SourceID, Success, Validation};
 use std::{ops::AddAssign, str::FromStr};
 use valkyrie_ast::ProgramRoot;
 use yggdrasil_rt::YggdrasilNode;

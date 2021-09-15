@@ -11,7 +11,7 @@ impl Mir2Lir for ValkyrieUnite {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let mut variants = Vec::with_capacity(self.variants.len());
         for x in self.variants.values() {
             variants.push(x.to_lir(graph, context)?)

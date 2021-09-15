@@ -3,7 +3,7 @@ use crate::{
     NamespaceItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
 };
 use indexmap::IndexMap;
-use nyar_error::SourceSpan;
+use valkyrie_error::SourceSpan;
 use valkyrie_lir::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
 use std::{
     fmt::{Debug, Formatter},

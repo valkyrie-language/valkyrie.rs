@@ -16,7 +16,7 @@ impl Mir2Lir for ValkyrieEnumeration {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let mut enumerations = Vec::with_capacity(self.enumerations.len());
         for value in self.enumerations.values() {
             enumerations.push(value.to_lir(graph, context)?);

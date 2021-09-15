@@ -1,4 +1,4 @@
-use nyar_error::third_party::Url;
+use valkyrie_error::third_party::Url;
 use std::path::PathBuf;
 use valkyrie_parser::{NewStatementNode, ProgramContext, RangeLiteralNode};
 

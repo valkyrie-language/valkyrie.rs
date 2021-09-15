@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use nyar_error::SyntaxError;
+use valkyrie_error::SyntaxError;
 
 use super::*;
 

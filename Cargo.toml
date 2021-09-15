@@ -17,12 +17,10 @@ lto = true
 opt-level = "s"
 
 
-[workspace.dependencies.nyar-error]
+[workspace.dependencies.valkyrie-error]
 version = "0.1.17"
 features = ["json5", "num", "dashu", "walkdir", "pratt", "yggdrasil-rt"]
-#path = 'C:\Users\Dell\CLionProjects\nyar-vm\projects\nyar-error'
-
-
+path = 'projects/valkyrie-error'
 
 [workspace.dependencies.valkyrie-parser]
 version = "*"

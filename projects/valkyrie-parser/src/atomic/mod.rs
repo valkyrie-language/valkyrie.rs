@@ -3,7 +3,7 @@ use crate::{
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, Ast2Hir},
 };
-use nyar_error::{Result, SourceID, SyntaxError};
+use valkyrie_error::{Result, SourceID, SyntaxError};
 use std::{num::NonZeroU64, sync::Arc};
 use valkyrie_ast::*;
 use yggdrasil_rt::YggdrasilNode;

@@ -1,5 +1,5 @@
 use super::*;
-use nyar_error::NyarError;
+use valkyrie_error::NyarError;
 
 mod codegen;
 

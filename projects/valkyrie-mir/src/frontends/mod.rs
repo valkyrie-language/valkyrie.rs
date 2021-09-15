@@ -7,7 +7,7 @@ use crate::{
     ValkyrieVariant,
 };
 use indexmap::IndexMap;
-use nyar_error::Result;
+use valkyrie_error::Result;
 use valkyrie_lir::Identifier;
 use ordered_float::NotNan;
 use std::{collections::BTreeMap, sync::Arc};
@@ -104,7 +104,7 @@ impl Hir2Mir for TraitDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         todo!()
     }
 }
@@ -113,7 +113,7 @@ impl Hir2Mir for ImplementsStatement {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         for x in self.annotations.derives() {
             if x.path.last().unwrap().name.as_ref().eq("TypeCast") {
                 let id = self.target.as_identifier();
@@ -332,7 +332,7 @@ impl Hir2Mir for FunctionDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let function_name = store.register_item(&self.name);
         let mut instance = FunctionInstance::default();
 
@@ -381,7 +381,7 @@ impl Hir2Mir for ParameterTerm {
     type Output = FunctionParameter;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let name = self.key.name;
         let type_hint = match self.bound {
             Some(s) => match s {
@@ -399,19 +399,19 @@ impl Hir2Mir for ParameterTerm {
                         "f32" => ValkyrieType::Float { bits: 32 },
                         "f64" => ValkyrieType::Float { bits: 64 },
                         "char" => ValkyrieType::Unicode,
-                        _ => Err(nyar_error::SyntaxError::new("Unknown Type hint for parameter")
+                        _ => Err(valkyrie_error::SyntaxError::new("Unknown Type hint for parameter")
                             .with_hint(format!("{:?}", s))
                             .with_span(self.key.span))?,
                     },
-                    long => Err(nyar_error::SyntaxError::new("Unknown Type hint for parameter")
+                    long => Err(valkyrie_error::SyntaxError::new("Unknown Type hint for parameter")
                         .with_hint(format!("{:?}", s))
                         .with_span(self.key.span))?,
                 },
-                _ => Err(nyar_error::SyntaxError::new("Invalid type hint for parameter")
+                _ => Err(valkyrie_error::SyntaxError::new("Invalid type hint for parameter")
                     .with_hint(format!("{:?}", s))
                     .with_span(self.key.span))?,
             },
-            None => Err(nyar_error::SyntaxError::new("Missing type hint for parameter").with_span(self.key.span))?,
+            None => Err(valkyrie_error::SyntaxError::new("Missing type hint for parameter").with_span(self.key.span))?,
         };
         Ok(FunctionParameter { name: Arc::from(name.as_ref()), r#type: type_hint })
     }

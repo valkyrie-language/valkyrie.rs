@@ -6,13 +6,13 @@ use valkyrie_ast::NamePathNode;
 pub(crate) trait Hir2Mir {
     type Output;
     type Context<'a>;
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> nyar_error::Result<Self::Output>;
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output>;
 }
 
 pub(crate) trait Mir2Lir {
     type Output;
     type Context<'a>;
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output>;
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output>;
 }
 
 pub(crate) trait AsIdentifier {

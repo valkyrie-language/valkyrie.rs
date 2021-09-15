@@ -1,5 +1,5 @@
 use super::*;
-use nyar_error::SyntaxError;
+use valkyrie_error::SyntaxError;
 use valkyrie_lir::{WasiFunctionBody, WasiParameter, WasiType};
 use std::mem::transmute;
 
@@ -7,7 +7,7 @@ impl Mir2Lir for ValkyrieImportFunction {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let mut function = WasiFunction::external(&self.wasi_import.module, &self.wasi_import.name, &self.function_name);
         for param in self.signature.positional.values() {
             function.inputs.push(param.to_lir(graph, context)?)
@@ -28,7 +28,7 @@ impl Mir2Lir for ValkyrieNativeFunction {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         for (id, f) in self.overloads.iter() {
             let name = if id.eq(&0.0) {
                 self.function_name.clone()
@@ -60,7 +60,7 @@ impl Mir2Lir for FunctionSignature {
     type Output = Vec<WasiParameter>;
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let mut outs = Vec::with_capacity(16);
         for param in self.positional.values() {
             outs.push(param.to_lir(graph, context)?)
@@ -79,7 +79,7 @@ impl Mir2Lir for FunctionParameter {
     type Output = WasiParameter;
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let typing = self.r#type.to_lir(graph, context)?;
         Ok(WasiParameter { name: self.name.clone(), wasi_name: self.name.clone(), r#type: typing })
     }
@@ -89,7 +89,7 @@ impl Mir2Lir for ValkyrieType {
     type Output = WasiType;
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> nyar_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
         let wasi_ty = match self {
             ValkyrieType::Boolean => WasiType::Boolean,
             ValkyrieType::Integer { bits } => match bits {

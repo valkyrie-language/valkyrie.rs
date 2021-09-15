@@ -1,6 +1,6 @@
 use dashmap::DashMap;
 
-use nyar_error::SourceSpan;
+use valkyrie_error::SourceSpan;
 
 use crate::{builtin::texts::StringID, utils::xx_id, ValkyrieString};
 use dashmap::mapref::one::Ref;

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{traits::YggdrasilNodeExtension, SignNode};
-use nyar_error::NyarError;
+use valkyrie_error::NyarError;
 use std::{str::FromStr, sync::Arc};
 use valkyrie_ast::NullNode;
 use yggdrasil_rt::YggdrasilNode;

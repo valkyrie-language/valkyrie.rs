@@ -1,4 +1,4 @@
-use nyar_error::NyarError;
+use valkyrie_error::NyarError;
 use valkyrie_ast::{helper::NumberInterpreter, NumberLiteralNode};
 
 pub struct NumberBuilder {}

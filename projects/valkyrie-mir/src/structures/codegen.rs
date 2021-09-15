@@ -1,6 +1,6 @@
 use super::*;
 use crate::helpers::AsIdentifier;
-use nyar_error::NyarError;
+use valkyrie_error::NyarError;
 use valkyrie_lir::{
     WasiFunction, WasiFunctionBody, WasiOwnership, WasiParameter, WasiRecordField, WasiRecordType, WasiType, WasiTypeReference,
 };

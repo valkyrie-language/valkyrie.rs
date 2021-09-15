@@ -8,7 +8,7 @@ use core::{
 use crate::{IdentifierNode, NumberLiteralNode, StringTextNode};
 #[cfg(feature = "lispify")]
 pub use lispify::{Lisp, Lispify};
-use nyar_error::{NyarError, Validation};
+use valkyrie_error::{NyarError, Validation};
 #[cfg(feature = "pretty-print")]
 pub use pretty_print::{PrettyPrint, PrettyProvider, PrettyTree};
 

@@ -3,7 +3,7 @@ use crate::{
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
 };
-use nyar_error::Result;
+use valkyrie_error::Result;
 use valkyrie_ast::*;
 mod annotation;
 mod import;

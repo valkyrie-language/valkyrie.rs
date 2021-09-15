@@ -5,7 +5,7 @@ use crate::{
     ValkyrieImportFunction,
 };
 use indexmap::IndexMap;
-use nyar_error::Result;
+use valkyrie_error::Result;
 use valkyrie_lir::{DependentGraph, Identifier, WasiImport, WasiResource, WasiType};
 use ordered_float::NotNan;
 use std::{

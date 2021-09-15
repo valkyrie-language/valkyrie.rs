@@ -26,7 +26,7 @@ use core::{
 use deriver::From;
 #[cfg(feature = "lispify")]
 use lispify::{Lisp, Lispify};
-use nyar_error::{
+use valkyrie_error::{
     third_party::{Associativity, Precedence},
     NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
 };

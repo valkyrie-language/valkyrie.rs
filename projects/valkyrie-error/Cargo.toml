@@ -1,10 +1,10 @@
 [package]
-name = "nyar-error"
+name = "valkyrie-error"
 version = "0.1.17"
 authors = ["Aster <192607617@qq.com>"]
 description = "Error types for valkyrie language"
-repository = "https://github.com/nyar-vm/nyar-vm/tree/dev/projects/nyar-error"
-documentation = "https://docs.rs/nyar-error"
+repository = "https://github.com/nyar-vm/nyar-vm/tree/dev/projects/valkyrie-error"
+documentation = "https://docs.rs/valkyrie-error"
 readme = "Readme.md"
 license = "MPL-2.0"
 edition = "2021"

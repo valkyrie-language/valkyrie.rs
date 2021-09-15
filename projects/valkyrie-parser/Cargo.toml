@@ -21,7 +21,7 @@ path = "../valkyrie-ast"
 version = "0.1.3"
 #path = 'C:\Users\Dell\CLionProjects\yggdrasil.rs\projects\ygg-rt'
 
-[dependencies.nyar-error]
+[dependencies.valkyrie-error]
 workspace = true
 
 [features]

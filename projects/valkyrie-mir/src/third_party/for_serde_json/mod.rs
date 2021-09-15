@@ -1,5 +1,5 @@
 use super::*;
-use nyar_error::third_party::JsonValue;
+use valkyrie_error::third_party::JsonValue;
 
 impl ValkyrieType for JsonValue {
     fn boxed(self) -> ValkyrieValue {

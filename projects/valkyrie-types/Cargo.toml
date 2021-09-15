@@ -23,8 +23,7 @@ itertools = "0.13.0"
 image = { version = "0.25.4", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
-nyar-error = { workspace = true }
-valkyrie-lir = { workspace = true }
+valkyrie-error = { workspace = true }
 
 
 [features]

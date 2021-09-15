@@ -1,5 +1,5 @@
 use crate::{helpers::ProgramState, AnnotationTermMixNode, AnnotationTermNode, DefineConstraintNode, ModifierAheadNode};
-use nyar_error::Result;
+use valkyrie_error::Result;
 use valkyrie_ast::{AttributeList, ConstraintDeclaration, ModifierList};
 
 pub(crate) trait Ast2Hir<Out> {

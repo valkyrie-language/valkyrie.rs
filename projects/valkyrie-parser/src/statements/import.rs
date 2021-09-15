@@ -3,7 +3,7 @@ use super::*;
 impl<'i> crate::DefineImportNode<'i> {
     #[allow(unused_imports)]
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<ImportStatement> {
-        use nyar_error::{ReportKind, SyntaxError};
+        use valkyrie_error::{ReportKind, SyntaxError};
         let imported = ImportStatement {
             annotation: Default::default(),
             kind: ImportKind::Shared,
