@@ -90,7 +90,7 @@ impl Mir2Lir for ValkyrieMethod {
 }
 impl Mir2Lir for ValkyrieFrom {
     type Output = ();
-    type Context<'a> = &'a Identifier;
+    type Context<'a> = &'a WasmIdentifier;
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         *graph += WasiFunction {

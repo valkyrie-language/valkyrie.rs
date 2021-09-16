@@ -1,7 +1,5 @@
 use std::str::FromStr;
-
-use valkyrie_error::SyntaxError;
-
+use valkyrie_types::SyntaxError;
 use super::*;
 
 // impl Default for WasiModule {

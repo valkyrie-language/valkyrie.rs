@@ -12,15 +12,15 @@ edition = "2021"
 [dependencies]
 tracing = "0.1.41"
 lasso = { version = "0.7.3", features = ["inline-more", "multi-threaded"] }
-serde = "1.0.214"
+serde = "1.0.216"
 im = "15.1.0"
-ordered-float = "4.4.0"
-xxhash-rust = { version = "0.8.12", features = ["xxh3", "const_xxh3"] }
-smallvec = "2.0.0-alpha.7"
+ordered-float = "4.6.0"
+xxhash-rust = { version = "0.8.14", features = ["xxh3", "const_xxh3"] }
+smallvec = "2.0.0-alpha.9"
 dashmap = "6.1.0"
-indexmap = "2.6.0"
+indexmap = "2.7.0"
 itertools = "0.13.0"
-image = { version = "0.25.4", features = [] }
+image = { version = "0.25.5", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 valkyrie-error = { workspace = true }

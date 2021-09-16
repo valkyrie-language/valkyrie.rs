@@ -1,5 +1,5 @@
 use crate::ResolveContext;
-use valkyrie_lir::{DependentGraph, Identifier};
+use valkyrie_lir::{DependentGraph, WasmIdentifier};
 use std::sync::Arc;
 use valkyrie_ast::NamePathNode;
 
@@ -16,14 +16,14 @@ pub(crate) trait Mir2Lir {
 }
 
 pub(crate) trait AsIdentifier {
-    fn as_identifier(&self) -> Identifier;
+    fn as_identifier(&self) -> WasmIdentifier;
 }
 
 impl AsIdentifier for NamePathNode {
-    fn as_identifier(&self) -> Identifier {
+    fn as_identifier(&self) -> WasmIdentifier {
         match self.path.as_slice() {
             [path @ .., last] => {
-                Identifier { namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(), name: Arc::from(last.name.as_ref()) }
+                WasmIdentifier { namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(), name: Arc::from(last.name.as_ref()) }
             }
             _ => unreachable!("empty name path"),
         }

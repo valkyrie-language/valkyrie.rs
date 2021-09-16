@@ -7,7 +7,7 @@ mod display;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiArrayType {
     /// The symbol of the array type
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     /// The inner type of the array
     pub r#type: WasiType,
     /// The inner mutable flag of the array
@@ -22,7 +22,7 @@ impl WasiArrayType {
     where
         T: Into<WasiType>,
     {
-        Self { symbol: Identifier::new(""), r#type: r#type.into(), mutable: false, length: None }
+        Self { symbol: WasmIdentifier::new(""), r#type: r#type.into(), mutable: false, length: None }
     }
     /// Set the mutable flag of the array elements
     pub fn with_mutable(self, mutable: bool) -> Self {

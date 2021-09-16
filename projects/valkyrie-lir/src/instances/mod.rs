@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     helpers::{ComponentSections, DependenciesTrace},
-    DependentGraph, Identifier, WasiFunction, WasiModule, WasiResource, WasiType, WastEncoder,
+    DependentGraph, WasmIdentifier, WasiFunction, WasiModule, WasiResource, WasiType, WastEncoder,
 };
 
 mod convert;
@@ -15,8 +15,8 @@ mod display;
 pub struct WasiInstance {
     pub module: WasiModule,
     /// language_name: wasi_name
-    pub resources: BTreeMap<Identifier, WasiResource>,
-    pub functions: BTreeMap<Identifier, WasiFunction>,
+    pub resources: BTreeMap<WasmIdentifier, WasiResource>,
+    pub functions: BTreeMap<WasmIdentifier, WasiFunction>,
 }
 
 impl WasiInstance {

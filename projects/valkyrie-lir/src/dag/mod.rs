@@ -2,13 +2,13 @@ use std::{collections::BTreeMap, fmt::Debug, ops::AddAssign};
 
 use dependent_sort::{DependentSort, TopologicalError};
 
-use crate::{helpers::GroupedTask, CanonicalImport, Identifier, WasiInstance, WasiModule, WasiType, WasiTypeReference};
+use crate::{helpers::GroupedTask, CanonicalImport, WasmIdentifier, WasiInstance, WasiModule, WasiType, WasiTypeReference};
 
 mod arithmetic;
 
 #[derive(Default, Debug)]
 pub struct DependentGraph {
-    pub(crate) types: BTreeMap<Identifier, WasiType>,
+    pub(crate) types: BTreeMap<WasmIdentifier, WasiType>,
 }
 
 impl DependentGraph {

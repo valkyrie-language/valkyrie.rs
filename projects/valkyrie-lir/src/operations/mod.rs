@@ -5,7 +5,7 @@ use crate::{
         branch::EnumerationTable,
         looping::{LoopEach, LoopRepeat, LoopUntilBody, LoopWhileBody},
     },
-    Identifier, InfixCall, JumpBranch, JumpTable, WasiType, WasiValue,
+    WasmIdentifier, InfixCall, JumpBranch, JumpTable, WasiType, WasiValue,
 };
 use std::{fmt::Write, sync::Arc};
 
@@ -39,7 +39,7 @@ pub enum WasiInstruction {
         into: WasiType,
     },
     CallFunction {
-        symbol: Identifier,
+        symbol: WasmIdentifier,
     },
     CallMethod {},
     GetField {

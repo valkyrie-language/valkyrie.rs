@@ -9,7 +9,7 @@ pub struct ValkyrieVariant {
     /// The alias name in wasi
     pub wasi_alias: Arc<str>,
     /// The following fields belonging to an independent type
-    pub type_alias: Identifier,
+    pub type_alias: WasmIdentifier,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
     pub source: SourceSpan,
 }

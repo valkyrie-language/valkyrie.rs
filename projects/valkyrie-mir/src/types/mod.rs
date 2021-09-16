@@ -4,7 +4,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use valkyrie_error::SourceSpan;
-use valkyrie_lir::{DependentGraph, Identifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
+use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
 use std::{
     fmt::{Debug, Formatter},
     ops::AddAssign,
@@ -25,7 +25,7 @@ pub enum ValkyrieType {
     Unsigned { bits: usize },
     Float { bits: usize },
     Unicode,
-    Unsolved(Identifier),
+    Unsolved(WasmIdentifier),
 }
 
 impl ValkyrieType {}

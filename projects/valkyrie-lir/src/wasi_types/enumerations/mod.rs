@@ -5,7 +5,7 @@ mod display;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WasiEnumeration {
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub enumerations: Vec<WasiSemanticIndex>,
 }
 

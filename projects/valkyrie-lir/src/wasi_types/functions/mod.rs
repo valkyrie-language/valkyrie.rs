@@ -8,7 +8,7 @@ use crate::{
     dag::DependentGraph,
     helpers::{DependenciesTrace, TypeReferenceInput},
     operations::WasiInstruction,
-    Identifier, WasiModule, WasiType, WastEncoder,
+    WasmIdentifier, WasiModule, WasiType, WastEncoder,
 };
 
 mod arithmetic;
@@ -18,7 +18,7 @@ mod display;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiFunction {
     /// The symbol of the function in source language
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     /// The input parameters of the function
     pub inputs: Vec<WasiParameter>,
     /// The output parameter of the function
@@ -54,7 +54,7 @@ pub struct WasiParameter {
 
 impl WasiFunction {
     /// Create a new external function type with the given symbol and WASI module
-    pub fn external(wasi_module: &WasiModule, wasi_name: &Arc<str>, name: &Identifier) -> Self {
+    pub fn external(wasi_module: &WasiModule, wasi_name: &Arc<str>, name: &WasmIdentifier) -> Self {
         Self {
             symbol: name.clone(),
             inputs: vec![],

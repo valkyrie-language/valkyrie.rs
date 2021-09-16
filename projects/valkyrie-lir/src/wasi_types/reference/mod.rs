@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiTypeReference {
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub owner: WasiOwnership,
 }
 
@@ -19,13 +19,13 @@ impl From<WasiTypeReference> for WasiType {
 }
 
 impl WasiTypeReference {
-    pub fn new(symbol: Identifier) -> Self {
+    pub fn new(symbol: WasmIdentifier) -> Self {
         Self { symbol, owner: WasiOwnership::Normal }
     }
-    pub fn owned(symbol: Identifier) -> Self {
+    pub fn owned(symbol: WasmIdentifier) -> Self {
         Self { symbol, owner: WasiOwnership::Owned }
     }
-    pub fn borrow(symbol: Identifier) -> Self {
+    pub fn borrow(symbol: WasmIdentifier) -> Self {
         Self { symbol, owner: WasiOwnership::Borrow }
     }
 }

@@ -9,7 +9,7 @@ use std::{
 use crate::{
     dag::DependentGraph,
     helpers::{ComponentSections, DependenciesTrace},
-    Identifier, WasiType, WastEncoder,
+    WasmIdentifier, WasiType, WastEncoder,
 };
 
 mod arithmetic;
@@ -19,7 +19,7 @@ mod display;
 #[derive(Debug, Clone, Eq)]
 pub struct WasiVariantType {
     /// Variant name in language
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     /// All variant items of this variant
     pub variants: Vec<WasiVariantItem>,
 }

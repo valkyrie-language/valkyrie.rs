@@ -5,6 +5,6 @@ mod display;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WasiFlags {
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub flags: Vec<WasiSemanticIndex>,
 }

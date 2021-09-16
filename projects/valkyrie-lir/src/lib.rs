@@ -11,7 +11,7 @@ pub use crate::{
     },
     symbols::{
         exports::WasiExport,
-        identifiers::Identifier,
+        identifiers::WasmIdentifier,
         imports::WasiImport,
         wasi_publisher::{WasiModule, WasiPublisher},
     },

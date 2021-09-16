@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug)]
 pub struct ValkyrieEnumeration {
-    pub enumeration_name: Identifier,
+    pub enumeration_name: WasmIdentifier,
     pub enumerations: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
 }
 

@@ -7,13 +7,13 @@ mod codegen;
 #[derive(Clone)]
 pub struct ValkyrieUnite {
     /// The full name path of the union
-    pub unite_name: Identifier,
+    pub unite_name: WasmIdentifier,
     pub variants: IndexMap<Arc<str>, ValkyrieVariant>,
     pub source: SourceSpan,
 }
 
 impl ValkyrieUnite {
-    pub fn new(name: Identifier) -> Self {
+    pub fn new(name: WasmIdentifier) -> Self {
         Self { unite_name: name, variants: Default::default(), source: Default::default() }
     }
 }

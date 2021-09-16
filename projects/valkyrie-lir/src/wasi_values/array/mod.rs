@@ -1,5 +1,5 @@
 use super::*;
-use crate::Identifier;
+use crate::WasmIdentifier;
 
 /// An array with dynamic value
 #[derive(Debug, Clone, Hash)]
@@ -12,7 +12,7 @@ pub struct ArrayValue {
 
 #[derive(Debug, Clone)]
 pub struct ArrayData {
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub values: Vec<u8>,
 }
 

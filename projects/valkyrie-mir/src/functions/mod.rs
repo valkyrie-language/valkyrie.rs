@@ -3,7 +3,7 @@ use crate::{
     NamespaceItem, ResolveContext, ValkyrieType,
 };
 use indexmap::IndexMap;
-use valkyrie_lir::{DependentGraph, Identifier, WasiExport, WasiFunction, WasiImport};
+use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiExport, WasiFunction, WasiImport};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -20,7 +20,7 @@ mod stage2_lir;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieImportFunction {
     /// The unique identifier of the function
-    pub function_name: Identifier,
+    pub function_name: WasmIdentifier,
     pub wasi_import: WasiImport,
     pub signature: FunctionSignature,
 }
@@ -29,7 +29,7 @@ pub struct ValkyrieImportFunction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieNativeFunction {
     /// The unique identifier of the function
-    pub function_name: Identifier,
+    pub function_name: WasmIdentifier,
     /// The WASI export symbol if exists
     pub wasi_export: Option<WasiExport>,
     /// The input output signature of the function

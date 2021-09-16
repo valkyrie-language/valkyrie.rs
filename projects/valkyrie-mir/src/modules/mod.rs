@@ -7,7 +7,7 @@ use convert_case::{Case, Casing};
 use im::{HashMap, hashmap::Entry};
 use indexmap::IndexMap;
 use valkyrie_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
-use valkyrie_lir::{CanonicalWasi, DependentGraph, Identifier, WasiImport, WasiModule};
+use valkyrie_lir::{CanonicalWasi, DependentGraph, WasmIdentifier, WasiImport, WasiModule};
 use std::{
     fmt::{Debug, Formatter},
     mem::take,
@@ -34,7 +34,7 @@ pub struct ResolveContext {
     /// Mapping local name to global name
     pub(crate) name_mapping: HashMap<Vec<valkyrie_ast::Identifier>, ModuleImportsMap>,
     /// The declared items in file
-    pub(crate) items: IndexMap<Identifier, NamespaceItem>,
+    pub(crate) items: IndexMap<WasmIdentifier, NamespaceItem>,
     /// Collect errors
     errors: Vec<NyarError>,
     /// Collect spread statements
@@ -47,13 +47,13 @@ pub enum ValkyrieStatement {}
 
 #[derive(Clone, Default)]
 pub struct ModuleImportsMap {
-    using: HashMap<Identifier, Identifier>,
-    local: HashMap<Identifier, Identifier>,
+    using: HashMap<WasmIdentifier, WasmIdentifier>,
+    local: HashMap<WasmIdentifier, WasmIdentifier>,
 }
 
 pub enum NamespaceItem {
     /// A unresolved symbol
-    Unknown(Identifier),
+    Unknown(WasmIdentifier),
     Resource(ValkyrieResource),
     Structure(ValkyrieClass),
     Primitive(ValkyriePrimitive),
@@ -87,10 +87,10 @@ impl ResolveContext {
 
 impl ResolveContext {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
-    pub fn register_item(&mut self, symbol: &IdentifierNode) -> Identifier {
-        let key = Identifier { namespace: vec![], name: Arc::from(symbol.name.as_ref()) };
+    pub fn register_item(&mut self, symbol: &IdentifierNode) -> WasmIdentifier {
+        let key = WasmIdentifier { namespace: vec![], name: Arc::from(symbol.name.as_ref()) };
         let value =
-            Identifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: Arc::from(symbol.name.as_ref()) };
+            WasmIdentifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: Arc::from(symbol.name.as_ref()) };
         match self.name_mapping.entry(self.namespace.clone()) {
             Entry::Occupied(v) => {
                 v.into_mut().local.insert(key, value.clone());

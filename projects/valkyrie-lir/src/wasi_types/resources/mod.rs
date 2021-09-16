@@ -6,13 +6,13 @@ use std::{
 use crate::{
     dag::DependentGraph,
     helpers::{ComponentSections, DependenciesTrace},
-    Identifier, WasiModule, WasiType, WastEncoder,
+    WasmIdentifier, WasiModule, WasiType, WastEncoder,
 };
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiResource {
     /// Resource language name
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub wasi_module: WasiModule,
     pub wasi_name: Arc<str>,
 }
@@ -62,7 +62,7 @@ impl ComponentSections for WasiResource {
 impl WasiResource {
     pub fn new<S, M>(wasi_module: M, wasi_name: &str, name: S) -> Self
     where
-        S: Into<Identifier>,
+        S: Into<WasmIdentifier>,
         M: Into<WasiModule>,
     {
         Self { symbol: name.into(), wasi_module: wasi_module.into(), wasi_name: Arc::from(wasi_name) }

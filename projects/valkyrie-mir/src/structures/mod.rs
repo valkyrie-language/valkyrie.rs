@@ -6,7 +6,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use valkyrie_error::Result;
-use valkyrie_lir::{DependentGraph, Identifier, WasiImport, WasiResource, WasiType};
+use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiImport, WasiResource, WasiType};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -22,7 +22,7 @@ mod display;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieResource {
-    pub resource_name: Identifier,
+    pub resource_name: WasmIdentifier,
     /// The wasi import/export name
     pub wasi_import: WasiImport,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
@@ -32,7 +32,7 @@ pub struct ValkyrieResource {
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyriePrimitive {
     /// The name of the primitive
-    pub primitive_name: Identifier,
+    pub primitive_name: WasmIdentifier,
     /// primitive type had no fields, only primitive type wrapper
     pub wrapper: WasiType,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
@@ -43,8 +43,8 @@ pub struct ValkyriePrimitive {
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieClass {
-    pub class_name: Identifier,
-    pub primitive: Option<Identifier>,
+    pub class_name: WasmIdentifier,
+    pub primitive: Option<WasmIdentifier>,
     pub fields: IndexMap<Arc<str>, ValkyrieField>,
     pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
     pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
@@ -90,17 +90,17 @@ pub struct ValkyrieMethod {
 // explicit_cast
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieFrom {
-    pub from: Identifier,
+    pub from: WasmIdentifier,
     pub implicit: bool,
     pub action: FunctionBody,
-    pub exception: Option<Identifier>,
+    pub exception: Option<WasmIdentifier>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieInto {
-    pub into: Identifier,
+    pub into: WasmIdentifier,
     pub action: FunctionBody,
-    pub exception: Option<Identifier>,
+    pub exception: Option<WasmIdentifier>,
 }
 
 impl ValkyrieClass {

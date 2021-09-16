@@ -3,13 +3,11 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-
-use valkyrie_error::NyarError;
-
+use valkyrie_types::NyarError;
 use crate::{
     helpers::{ComponentSections, DependenciesTrace},
     wasi_types::functions::WasiFunctionBody,
-    DependentGraph, Identifier, WasiFunction, WasiInstance, WasiType,
+    DependentGraph, WasmIdentifier, WasiFunction, WasiInstance, WasiType,
 };
 
 mod for_instance;
@@ -30,7 +28,7 @@ pub(crate) struct WastEncoder<'a, W> {
 }
 
 impl CanonicalWasi {
-    pub fn get_function(&self, symbol: &Identifier) -> Option<&WasiFunction> {
+    pub fn get_function(&self, symbol: &WasmIdentifier) -> Option<&WasiFunction> {
         match self.graph.types.get(symbol) {
             Some(WasiType::Function(s)) => Some(s),
             _ => None,

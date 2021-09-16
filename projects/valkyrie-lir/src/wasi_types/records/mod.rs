@@ -6,7 +6,7 @@ mod display;
 
 #[derive(Debug, Clone)]
 pub struct WasiRecordType {
-    pub symbol: Identifier,
+    pub symbol: WasmIdentifier,
     pub wasi_name: String,
     pub fields: IndexMap<Arc<str>, WasiRecordField>,
 }
@@ -31,7 +31,7 @@ pub struct WasiRecordField {
 
 impl WasiRecordType {
     /// Create a new record type
-    pub fn new(symbol: Identifier) -> Self {
+    pub fn new(symbol: WasmIdentifier) -> Self {
         let wasi_name = symbol.wasi_name();
         Self { symbol, wasi_name, fields: IndexMap::new() }
     }

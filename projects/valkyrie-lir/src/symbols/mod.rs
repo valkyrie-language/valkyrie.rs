@@ -5,7 +5,6 @@ use std::{
 };
 
 use convert_case::{Case, Casing};
-use valkyrie_error::SyntaxError;
 
 use crate::encode_id;
 

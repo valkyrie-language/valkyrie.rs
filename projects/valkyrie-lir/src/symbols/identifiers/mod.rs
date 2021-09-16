@@ -4,20 +4,20 @@ mod convert;
 mod display;
 
 #[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
-pub struct Identifier {
+pub struct WasmIdentifier {
     /// The namespace of the identifier, only valid when name is not empty
     pub namespace: Vec<Arc<str>>,
     /// The name of the identifier, anonymous identifier is empty
     pub name: Arc<str>,
 }
 
-impl Default for Identifier {
+impl Default for WasmIdentifier {
     fn default() -> Self {
         Self { namespace: Vec::new(), name: Arc::from("") }
     }
 }
 
-impl Identifier {
+impl WasmIdentifier {
     /// Check if it is an anonymous identifier
     pub fn is_anonymous(&self) -> bool {
         self.name.is_empty()
@@ -30,7 +30,7 @@ impl Identifier {
     }
 }
 
-impl Identifier {
+impl WasmIdentifier {
     /// Create a new identifier without namespace
     pub fn new<S>(name: S) -> Self
     where
@@ -38,7 +38,7 @@ impl Identifier {
     {
         Self { namespace: Vec::new(), name: name.into() }
     }
-    /// Create a new identifier with current [Identifier] as namespace
+    /// Create a new identifier with current [WasmIdentifier] as namespace
     pub fn join<S>(&self, name: S) -> Self
     where
         S: Into<Arc<str>>,

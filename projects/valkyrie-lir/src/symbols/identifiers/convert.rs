@@ -1,17 +1,18 @@
+use valkyrie_types::SyntaxError;
 use super::*;
 
-impl From<&str> for Identifier {
+impl From<&str> for WasmIdentifier {
     fn from(value: &str) -> Self {
         Self::from_str(value).unwrap()
     }
 }
 
-impl From<Arc<str>> for Identifier {
+impl From<Arc<str>> for WasmIdentifier {
     fn from(value: Arc<str>) -> Self {
         Self::from_str(&value).unwrap()
     }
 }
-impl FromStr for Identifier {
+impl FromStr for WasmIdentifier {
     type Err = SyntaxError;
 
     /// `package::module::name`
@@ -19,8 +20,8 @@ impl FromStr for Identifier {
         let names: Vec<Arc<str>> = s.split("::").map(Arc::from).collect();
         match names.as_slice() {
             [] => Err(SyntaxError::new("empty identifier")),
-            [name] => Ok(Identifier { namespace: vec![], name: name.clone() }),
-            [path @ .., name] => Ok(Identifier { namespace: path.to_vec(), name: name.clone() }),
+            [name] => Ok(WasmIdentifier { namespace: vec![], name: name.clone() }),
+            [path @ .., name] => Ok(WasmIdentifier { namespace: path.to_vec(), name: name.clone() }),
         }
     }
 }

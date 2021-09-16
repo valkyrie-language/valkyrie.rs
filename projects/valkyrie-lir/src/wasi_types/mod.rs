@@ -4,7 +4,7 @@ use crate::{
     wasi_types::{
         array::WasiArrayType, flags::WasiFlags, functions::WasiFunctionBody, resources::WasiResource, variants::WasiVariantType,
     },
-    DependentGraph, Identifier, WasiEnumeration, WasiFunction, WasiModule, WasiRecordType, WasiSemanticIndex,
+    DependentGraph, WasmIdentifier, WasiEnumeration, WasiFunction, WasiModule, WasiRecordType, WasiSemanticIndex,
     WasiTypeReference,
 };
 use indexmap::IndexMap;
@@ -96,7 +96,7 @@ impl WasiType {
         }
     }
     /// Returns the language identifier of the type, anonymous type returns `None`
-    pub fn language_id(&self) -> Option<&Identifier> {
+    pub fn language_id(&self) -> Option<&WasmIdentifier> {
         match self {
             Self::Variant(v) => Some(&v.symbol),
             Self::Resource(v) => Some(&v.symbol),

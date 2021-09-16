@@ -10,7 +10,7 @@ license = "MPL-2.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.94"
+anyhow = "1.0.95"
 #url = "2.5.4"
 wat = { version = "1.222.0", features = ["component-model", "dwarf"] }
 wasmprinter = { version = "0.222.0", features = ["component-model"] }

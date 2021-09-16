@@ -8,7 +8,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use valkyrie_error::Result;
-use valkyrie_lir::Identifier;
+use valkyrie_lir::WasmIdentifier;
 use ordered_float::NotNan;
 use std::{collections::BTreeMap, sync::Arc};
 use valkyrie_ast::{
@@ -204,7 +204,7 @@ impl Hir2Mir for ClassDeclaration {
 
 impl Hir2Mir for MethodDeclaration {
     type Output = ValkyrieMethod;
-    type Context<'a> = &'a Identifier;
+    type Context<'a> = &'a WasmIdentifier;
 
     fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let (field_name, wasi_alias) = store.export_field(&self.name, &self.annotations)?;
