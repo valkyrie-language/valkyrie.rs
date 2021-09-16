@@ -1,20 +1,15 @@
+
 use super::*;
 
 mod convert;
 mod display;
 
-#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Default)]
 pub struct WasmIdentifier {
     /// The namespace of the identifier, only valid when name is not empty
-    pub namespace: Vec<Arc<str>>,
+    pub namespace: Vec<Identifier>,
     /// The name of the identifier, anonymous identifier is empty
-    pub name: Arc<str>,
-}
-
-impl Default for WasmIdentifier {
-    fn default() -> Self {
-        Self { namespace: Vec::new(), name: Arc::from("") }
-    }
+    pub name: Identifier,
 }
 
 impl WasmIdentifier {
@@ -32,23 +27,19 @@ impl WasmIdentifier {
 
 impl WasmIdentifier {
     /// Create a new identifier without namespace
-    pub fn new<S>(name: S) -> Self
-    where
-        S: Into<Arc<str>>,
+    pub fn new(name: Identifier) -> Self
     {
-        Self { namespace: Vec::new(), name: name.into() }
+        Self { namespace: Vec::new(), name }
     }
     /// Create a new identifier with current [WasmIdentifier] as namespace
-    pub fn join<S>(&self, name: S) -> Self
-    where
-        S: Into<Arc<str>>,
+    pub fn join(&self, name: Identifier) -> Self
     {
         match self.name.as_ref() {
-            "" => Self { namespace: self.namespace.clone(), name: name.into() },
+            "" => Self { namespace: self.namespace.clone(), name },
             _ => {
                 let mut namespace = self.namespace.clone();
                 namespace.push(self.name.clone());
-                Self { namespace, name: name.into() }
+                Self { namespace, name }
             }
         }
     }

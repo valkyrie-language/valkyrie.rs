@@ -2,59 +2,23 @@ use core::fmt;
 use lasso::{Key, Resolver, Spur, ThreadedRodeo};
 use std::{
     borrow::Cow,
-    fmt::{Debug, Write},
+    fmt::{Debug, Display, Formatter, Write},
     num::NonZeroUsize,
     ops::Range,
-    str::Split,
+    str::{Split, pattern::Pattern},
     sync::{Arc, LazyLock},
 };
-use std::fmt::{Display, Formatter};
-use std::str::pattern::Pattern;
 
 mod name_path;
 mod string_id;
 mod string_pool;
 pub mod variable;
+pub mod identifier;
 
 pub static STRING_POOL: LazyLock<StringPool> = std::sync::LazyLock::new(|| StringPool::default());
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Identifier {
-    key: Spur,
-}
-impl AsRef<str> for Identifier {
-    fn as_ref(&self) -> &str {
-        STRING_POOL.decode_string(&self.key)
-    }
-}
 
-impl From<Identifier> for Spur {
-    fn from(value: Identifier) -> Self {
-        value.key
-    }
-}
 
-impl Debug for Identifier {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_ref())
-    }
-}
-impl Display for Identifier {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_ref())
-    }
-}
-
-impl Identifier {
-    pub fn new(s: &str) -> Self {
-        Self {
-            key: STRING_POOL.encode_string(s),
-        }
-    }
-    pub fn starts_with(&self, pattern: impl Pattern) -> bool {
-        self.as_ref().starts_with(pattern)
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct NamePath {

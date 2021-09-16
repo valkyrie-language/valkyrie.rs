@@ -22,7 +22,7 @@ impl WasiArrayType {
     where
         T: Into<WasiType>,
     {
-        Self { symbol: WasmIdentifier::new(""), r#type: r#type.into(), mutable: false, length: None }
+        Self { symbol: WasmIdentifier::default(), r#type: r#type.into(), mutable: false, length: None }
     }
     /// Set the mutable flag of the array elements
     pub fn with_mutable(self, mutable: bool) -> Self {

@@ -17,7 +17,7 @@ impl FromStr for WasmIdentifier {
 
     /// `package::module::name`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let names: Vec<Arc<str>> = s.split("::").map(Arc::from).collect();
+        let names: Vec<_> = s.split("::").map(Identifier::new).collect();
         match names.as_slice() {
             [] => Err(SyntaxError::new("empty identifier")),
             [name] => Ok(WasmIdentifier { namespace: vec![], name: name.clone() }),
