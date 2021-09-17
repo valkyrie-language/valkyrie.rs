@@ -41,15 +41,11 @@ pub trait SingleNameAssignment {
     fn rename(&mut self, ctx: &mut RenameContext) -> Result<(), SNAError>;
 }
 
-
-
 // The SNAError enum represents different types of errors that can occur
 // during the single name assignment process.
 #[derive(Debug)]
 pub enum SNAError {
-    EmptyPath {
-        location: Location
-    },
+    EmptyPath { location: Location },
     // The Undefined error indicates that a variable is undefined.
     Undefined { variable: Spur, location: Location },
 }

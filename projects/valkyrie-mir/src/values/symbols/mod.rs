@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieSymbol {
-    pub(crate) path: Vec<Arc<str>>,
+    pub(crate) path: Vec<Identifier>,
     pub(crate) span: SourceSpan,
 }
 

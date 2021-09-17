@@ -3,7 +3,7 @@ use super::*;
 #[derive(Debug)]
 pub struct ValkyrieEnumeration {
     pub enumeration_name: WasmIdentifier,
-    pub enumerations: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
+    pub enumerations: IndexMap<Identifier, ValkyrieSemanticNumber>,
 }
 
 impl AddAssign<ValkyrieEnumeration> for ResolveContext {

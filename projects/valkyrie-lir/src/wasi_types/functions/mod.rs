@@ -3,12 +3,12 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-
+use valkyrie_types::Identifier;
 use crate::{
+    WasiModule, WasiType, WasmIdentifier, WastEncoder,
     dag::DependentGraph,
     helpers::{DependenciesTrace, TypeReferenceInput},
     operations::WasiInstruction,
-    WasmIdentifier, WasiModule, WasiType, WastEncoder,
 };
 
 mod arithmetic;
@@ -31,7 +31,7 @@ pub enum WasiFunctionBody {
         /// The external module name registered in WASI host
         wasi_module: WasiModule,
         /// The external function name registered in WASI host
-        wasi_name: Arc<str>,
+        wasi_name: Identifier,
     },
     Native {
         bytecodes: Vec<WasiInstruction>,
@@ -45,16 +45,16 @@ pub enum WasiFunctionBody {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiParameter {
     /// The name of the parameter in source language
-    pub name: Arc<str>,
+    pub name: Identifier,
     /// The name of the parameter in WASI host
-    pub wasi_name: Arc<str>,
+    pub wasi_name: Identifier,
     /// The type of the parameter
     pub r#type: WasiType,
 }
 
 impl WasiFunction {
     /// Create a new external function type with the given symbol and WASI module
-    pub fn external(wasi_module: &WasiModule, wasi_name: &Arc<str>, name: &WasmIdentifier) -> Self {
+    pub fn external(wasi_module: &WasiModule, wasi_name: &Identifier, name: &WasmIdentifier) -> Self {
         Self {
             symbol: name.clone(),
             inputs: vec![],
@@ -89,13 +89,11 @@ impl WasiFunction {
 
 impl WasiParameter {
     /// Create a new WASI parameter with the given name and type
-    pub fn new<S, T>(name: S, r#type: T) -> Self
+    pub fn new<T>(name: Identifier, r#type: T) -> Self
     where
-        S: Into<Arc<str>>,
         T: Into<WasiType>,
     {
-        let wasi_name = name.into();
-        Self { name: wasi_name.clone(), wasi_name, r#type: r#type.into() }
+        Self { name, wasi_name: name, r#type: r#type.into() }
     }
 }
 

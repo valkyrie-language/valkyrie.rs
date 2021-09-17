@@ -1,19 +1,19 @@
 use crate::{
-    encoder::WastEncoder,
-    helpers::{ComponentSections, DependenciesTrace, EmitDefault, TypeReference},
-    wasi_types::{
+    encoder::WastEncoder, helpers::{ComponentSections, DependenciesTrace, EmitDefault, TypeReference}, wasi_types::{
         array::WasiArrayType, flags::WasiFlags, functions::WasiFunctionBody, resources::WasiResource, variants::WasiVariantType,
-    },
-    DependentGraph, WasmIdentifier, WasiEnumeration, WasiFunction, WasiModule, WasiRecordType, WasiSemanticIndex,
+    }, DependentGraph, WasiEnumeration, WasiFunction, WasiModule,
+    WasiRecordType,
+    WasiSemanticIndex,
     WasiTypeReference,
+    WasmIdentifier,
 };
 use indexmap::IndexMap;
 use std::{
     cmp::Ordering,
     fmt::{Debug, Display, Formatter, Write},
     hash::{Hash, Hasher},
-    ops::AddAssign,
-    sync::Arc,
+    ops::AddAssign
+    ,
 };
 
 pub mod array;

@@ -1,6 +1,6 @@
 use diagnostic::{Diagnostic, ReportKind, SourceID};
 
-use crate::{parsing::SyntaxError, DuplicateError, MissingError, RuntimeError, SourceSpan};
+use crate::{DuplicateError, MissingError, RuntimeError, SourceSpan, parsing::SyntaxError};
 
 mod convert;
 pub mod display;

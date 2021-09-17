@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use super::*;
 use crate::helper::WrapDisplay;
+use std::sync::Arc;
 use valkyrie_error::ForeignInterfaceError;
 
 mod builtin;
@@ -168,7 +168,7 @@ impl AttributeTerm {
     /// #ffi("module", "name")
     /// resource class A {}
     /// ```
-    pub fn get_ffi_modules(&self) -> Result<(&StringTextNode, Arc<str>), ForeignInterfaceError> {
+    pub fn get_ffi_modules(&self) -> Result<(&StringTextNode, Identifier), ForeignInterfaceError> {
         match self.arguments.terms.as_slice() {
             [module, name] => {
                 let module = match module.value.as_text() {

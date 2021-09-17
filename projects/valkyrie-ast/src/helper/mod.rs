@@ -8,9 +8,9 @@ use core::{
 use crate::{IdentifierNode, NumberLiteralNode, StringTextNode};
 #[cfg(feature = "lispify")]
 pub use lispify::{Lisp, Lispify};
-use valkyrie_error::{NyarError, Validation};
 #[cfg(feature = "pretty-print")]
 pub use pretty_print::{PrettyPrint, PrettyProvider, PrettyTree};
+use valkyrie_error::{NyarError, Validation};
 
 /// A node in the AST
 pub trait ValkyrieNode {

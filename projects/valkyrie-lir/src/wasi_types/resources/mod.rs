@@ -1,20 +1,17 @@
-use std::{
-    fmt::{Debug, Formatter, Write},
-    sync::Arc,
-};
-
 use crate::{
-    dag::DependentGraph,
-    helpers::{ComponentSections, DependenciesTrace},
-    WasmIdentifier, WasiModule, WasiType, WastEncoder,
+    dag::DependentGraph, helpers::{ComponentSections, DependenciesTrace}, WasiModule, WasiType,
+    WasmIdentifier,
+    WastEncoder,
 };
+use std::fmt::{Debug, Formatter, Write};
+use valkyrie_types::Identifier;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiResource {
     /// Resource language name
     pub symbol: WasmIdentifier,
     pub wasi_module: WasiModule,
-    pub wasi_name: Arc<str>,
+    pub wasi_name: Identifier,
 }
 
 impl Debug for WasiResource {
@@ -65,7 +62,7 @@ impl WasiResource {
         S: Into<WasmIdentifier>,
         M: Into<WasiModule>,
     {
-        Self { symbol: name.into(), wasi_module: wasi_module.into(), wasi_name: Arc::from(wasi_name) }
+        Self { symbol: name.into(), wasi_module: wasi_module.into(), wasi_name: Identifier::new(wasi_name) }
     }
 }
 

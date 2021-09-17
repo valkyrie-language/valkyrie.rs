@@ -60,9 +60,9 @@ impl StatementKind {
     /// Create a new raw text node
     pub fn text<S: ToString>(s: S, span: SourceSpan) -> Self {
         let literal = StringTextNode { text: s.to_string(), span: span.clone() };
-        Self::expression(
-            ExpressionKind::Text(Box::new(literal)),
-            Range { start: span.get_start() as u32, end: span.get_end() as u32 },
-        )
+        Self::expression(ExpressionKind::Text(Box::new(literal)), Range {
+            start: span.get_start() as u32,
+            end: span.get_end() as u32,
+        })
     }
 }

@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use super::*;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Variable {
@@ -36,7 +36,7 @@ impl Variable {
     }
 }
 
-impl AsRef<str> for Variable  {
+impl AsRef<str> for Variable {
     fn as_ref(&self) -> &str {
         STRING_POOL.decode_string(&self.name_key)
     }

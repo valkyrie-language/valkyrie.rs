@@ -28,5 +28,5 @@ use deriver::From;
 use lispify::{Lisp, Lispify};
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
-    helpers::KAndRBracket, helpers::PrettySequence, helpers::SoftBlock, PrettyPrint, PrettyProvider, PrettyTree,
+    PrettyPrint, PrettyProvider, PrettyTree, helpers::KAndRBracket, helpers::PrettySequence, helpers::SoftBlock,
 };

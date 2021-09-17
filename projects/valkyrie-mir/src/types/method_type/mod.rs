@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodDefinition {
-    symbol: Vec<Arc<str>>,
+    symbol: Vec<Identifier>,
     typing: Option<ExpressionKind>,
     span: SourceSpan,
 }

@@ -1,7 +1,7 @@
 use crate::ResolveContext;
-use valkyrie_lir::{DependentGraph, WasmIdentifier};
 use std::sync::Arc;
 use valkyrie_ast::NamePathNode;
+use valkyrie_lir::{DependentGraph, WasmIdentifier};
 
 pub(crate) trait Hir2Mir {
     type Output;
@@ -22,9 +22,10 @@ pub(crate) trait AsIdentifier {
 impl AsIdentifier for NamePathNode {
     fn as_identifier(&self) -> WasmIdentifier {
         match self.path.as_slice() {
-            [path @ .., last] => {
-                WasmIdentifier { namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(), name: Arc::from(last.name.as_ref()) }
-            }
+            [path @ .., last] => WasmIdentifier {
+                namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(),
+                name: Arc::from(last.name.as_ref()),
+            },
             _ => unreachable!("empty name path"),
         }
     }

@@ -7,5 +7,5 @@ pub struct WasiExport {
     ///
     pub module: WasiModule,
     ///
-    pub name: Arc<str>,
+    pub name: Identifier,
 }

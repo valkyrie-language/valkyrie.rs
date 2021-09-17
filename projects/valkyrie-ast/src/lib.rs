@@ -1,4 +1,3 @@
-
 #![feature(coroutines)]
 #![feature(coroutine_trait)]
 #![feature(iter_from_coroutine)]
@@ -32,6 +31,7 @@ pub use crate::{
         loop_while::{LoopWhile, WhileConditionNode},
     },
     expression_level::{
+        ExpressionContext, ExpressionKind, ExpressionNode, TypingExpression,
         annotations::{AnnotationNode, AttributeKind, AttributeList, AttributeTerm, ModifierList, ProceduralNode},
         argument::{ArgumentKey, ArgumentTerm, ArgumentsList},
         call_apply::ApplyCallNode,
@@ -46,7 +46,6 @@ pub use crate::{
         range::{RangeKind, RangeNode, RangeTermNode},
         symbol::{BooleanNode, IdentifierNode, LambdaSlotItem, LambdaSlotNode, NamePathNode, NullNode, OutputNode},
         tuple::{TupleKind, TupleNode},
-        ExpressionContext, ExpressionKind, ExpressionNode, TypingExpression,
     },
     package_level::{
         classes::{

@@ -1,9 +1,6 @@
-use core::fmt;
-use lasso::{Key, Resolver, Spur, ThreadedRodeo};
+use lasso::{  Spur, ThreadedRodeo};
 use std::{
-    borrow::Cow,
     fmt::{Debug, Display, Formatter, Write},
-    num::NonZeroUsize,
     ops::Range,
     str::{Split, pattern::Pattern},
     sync::{Arc, LazyLock},

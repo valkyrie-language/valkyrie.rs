@@ -1,7 +1,7 @@
 use dependent_sort::Task;
 use std::fmt::Write;
 
-use crate::{encoder::WastEncoder, DependentGraph, WasiModule, WasiType, WasiValue};
+use crate::{DependentGraph, WasiModule, WasiType, WasiValue, encoder::WastEncoder};
 
 pub trait ToWasiType {
     fn to_wasi_type(&self) -> WasiType;

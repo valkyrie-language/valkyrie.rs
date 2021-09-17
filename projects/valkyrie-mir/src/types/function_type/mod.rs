@@ -5,14 +5,14 @@ mod codegen;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FunctionDefinition {
-    symbol: Vec<Arc<str>>,
+    symbol: Vec<Identifier>,
     parameters: IndexMap<String, ParameterDefinition>,
     span: SourceSpan,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParameterDefinition {
-    symbol: Arc<str>,
+    symbol: Identifier,
     span: SourceSpan,
 }
 

@@ -1,3 +1,4 @@
+use valkyrie_types::Identifier;
 use super::*;
 
 mod loop_each;
@@ -7,25 +8,25 @@ mod normal;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LoopRepeat {
-    pub label: Arc<str>,
+    pub label: Identifier,
     pub body: Vec<WasiInstruction>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LoopEach {
-    pub label: Arc<str>,
+    pub label: Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LoopWhileBody {
-    pub label: Arc<str>,
+    pub label: Identifier,
     pub condition: Vec<WasiInstruction>,
     pub body: Vec<WasiInstruction>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LoopUntilBody {
-    pub label: Arc<str>,
+    pub label: Identifier,
     pub condition: Vec<WasiInstruction>,
     pub body: Vec<WasiInstruction>,
 }

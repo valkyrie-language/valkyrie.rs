@@ -6,8 +6,6 @@ use crate::{
 use convert_case::{Case, Casing};
 use im::{HashMap, hashmap::Entry};
 use indexmap::IndexMap;
-use valkyrie_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
-use valkyrie_lir::{CanonicalWasi, DependentGraph, WasmIdentifier, WasiImport, WasiModule};
 use std::{
     fmt::{Debug, Formatter},
     mem::take,
@@ -16,6 +14,8 @@ use std::{
     sync::Arc,
 };
 use valkyrie_ast::{AnnotationNode, ArgumentTerm, IdentifierNode, ProgramRoot};
+use valkyrie_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
+use valkyrie_lir::{CanonicalWasi, DependentGraph, WasiImport, WasiModule, WasmIdentifier};
 use valkyrie_parser::ProgramContext;
 
 mod codegen;
@@ -65,7 +65,7 @@ pub enum NamespaceItem {
 }
 
 impl ResolveContext {
-    pub fn new<S: Into<Arc<str>>>(package: S) -> Self {
+    pub fn new<S: Into<Identifier>>(package: S) -> Self {
         Self {
             package: valkyrie_ast::Identifier::new(&package.into()),
             namespace: vec![],
@@ -89,8 +89,10 @@ impl ResolveContext {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
     pub fn register_item(&mut self, symbol: &IdentifierNode) -> WasmIdentifier {
         let key = WasmIdentifier { namespace: vec![], name: Arc::from(symbol.name.as_ref()) };
-        let value =
-            WasmIdentifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: Arc::from(symbol.name.as_ref()) };
+        let value = WasmIdentifier {
+            namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(),
+            name: Arc::from(symbol.name.as_ref()),
+        };
         match self.name_mapping.entry(self.namespace.clone()) {
             Entry::Occupied(v) => {
                 v.into_mut().local.insert(key, value.clone());
@@ -109,7 +111,7 @@ impl ResolveContext {
         kind: &'static str,
         hint: &'static str,
         keyword: SourceSpan,
-    ) -> Option<(WasiModule, Arc<str>)> {
+    ) -> Option<(WasiModule, Identifier)> {
         let ffi = info.attributes.get("import")?;
         if !hint.is_empty() {
             if !info.modifiers.contains(hint) {
@@ -126,7 +128,7 @@ impl ResolveContext {
         return None;
     }
     /// Get the full name path based on package name and namespace
-    pub fn export_field(&self, symbol: &IdentifierNode, alias: &AnnotationNode) -> Result<(Arc<str>, Arc<str>)> {
+    pub fn export_field(&self, symbol: &IdentifierNode, alias: &AnnotationNode) -> Result<(Identifier, Identifier)> {
         let wasi_alias = match alias.attributes.get("export").and_then(|x| x.arguments.terms.first()) {
             Some(s) => match s.value.as_text() {
                 Some(s) => Arc::from(s.text.as_str()),
@@ -141,7 +143,7 @@ impl ResolveContext {
     pub fn wasi_import_module_name(&mut self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Option<WasiImport> {
         let import = alias.attributes.get("import")?;
         let module = self.find_wasi_module(import.arguments.terms.get(0), import.span)?;
-        let name: Arc<str> = match import.arguments.terms.get(1) {
+        let name: Identifier = match import.arguments.terms.get(1) {
             Some(term) => match term.value.as_text() {
                 Some(node) => Arc::from(node.text.as_str()),
                 None => {
@@ -153,7 +155,7 @@ impl ResolveContext {
         };
         Some(WasiImport { module, name })
     }
-    pub fn find_wasi_alias(&self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Arc<str> {
+    pub fn find_wasi_alias(&self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Identifier {
         match self.try_wasi_alias(alias) {
             Some(s) => Arc::from(s),
             None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),

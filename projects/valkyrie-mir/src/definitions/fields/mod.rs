@@ -5,7 +5,7 @@ mod codegen;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValkyrieField {
-    pub(crate) symbol: Arc<str>,
+    pub(crate) symbol: Identifier,
     pub(crate) typing: Option<ExpressionKind>,
     readonly: bool,
     pub(crate) optional: bool,

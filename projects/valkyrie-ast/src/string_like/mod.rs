@@ -3,7 +3,7 @@ pub mod string_html;
 pub mod string_literal;
 pub mod string_template;
 
-use crate::{helper::ValkyrieNode, ExpressionKind, IdentifierNode};
+use crate::{ExpressionKind, IdentifierNode, helper::ValkyrieNode};
 use core::{
     fmt::{Display, Formatter, Write},
     ops::Range,

@@ -2,8 +2,8 @@ use dependent_sort::Task;
 use std::hash::{DefaultHasher, Hash};
 
 use crate::{
-    helpers::{ComponentSections, GroupedTask, TypeReference, TypeReferenceInput, TypeReferenceOutput},
     WasiParameter,
+    helpers::{ComponentSections, GroupedTask, TypeReference, TypeReferenceInput, TypeReferenceOutput},
 };
 
 use super::*;
@@ -247,12 +247,8 @@ impl TypeReference for WasiType {
             Self::Record(v) => write!(w, "(ref eq ${})", v.wasi_name)?,
             Self::TypeHandler(v) => w.source.graph.get(v).canon_lower(w)?,
             Self::Array(array) => array.lower_type(w)?,
-            Self::Float32 => {
-                w.write_str("f32")?
-            }
-            Self::Float64 => {
-                w.write_str("f64")?
-            }
+            Self::Float32 => w.write_str("f32")?,
+            Self::Float64 => w.write_str("f64")?,
             Self::Function(_) => {
                 todo!()
             }

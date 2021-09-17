@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use valkyrie_types::SyntaxError;
 use super::*;
+use std::str::FromStr;
+use valkyrie_types::{Identifier, SyntaxError};
 
 // impl Default for WasiModule {
 //     fn default() -> Self {
@@ -10,18 +10,18 @@ use super::*;
 
 impl From<&str> for WasiModule {
     fn from(value: &str) -> Self {
-        Self { name: value.into(), package: None, version: None }
+        Self { name: Identifier::new(value), package: None, version: None }
     }
 }
 
 impl From<String> for WasiModule {
     fn from(value: String) -> Self {
-        Self { name: value.into(), package: None, version: None }
+        Self { name: Identifier::new(&value), package: None, version: None }
     }
 }
 
-impl From<Arc<str>> for WasiModule {
-    fn from(value: Arc<str>) -> Self {
+impl From<Identifier> for WasiModule {
+    fn from(value: Identifier) -> Self {
         Self { name: value.into(), package: None, version: None }
     }
 }
@@ -44,14 +44,14 @@ impl FromStr for WasiModule {
                 };
                 match package.split_once(':') {
                     Some((organization, project)) => Ok(Self {
-                        name: Arc::from(module),
-                        package: Some(WasiPublisher { organization: Arc::from(organization), project: Arc::from(project) }),
+                        name: Identifier::new(module),
+                        package: Some(WasiPublisher { organization: Identifier::new(organization), project: Identifier::new(project) }),
                         version,
                     }),
                     None => Err(SyntaxError::new("Missing organization name")),
                 }
             }
-            None => Ok(Self { name: Arc::from(s), package: None, version: None }),
+            None => Ok(Self { name: Identifier::new(s), package: None, version: None }),
         }
     }
 }

@@ -1,6 +1,6 @@
 use super::*;
-use valkyrie_error::SourceID;
 use std::sync::Arc;
+use valkyrie_error::SourceID;
 use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::TextLiteralNode<'i> {

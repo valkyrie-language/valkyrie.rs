@@ -10,14 +10,12 @@ fn main() {
     let animal = graph.register_class("std::number::f32");
     let animal = graph.register_class("std::number::f64");
 
-
     let animal = graph.register_class("Animal");
     animal.add_instance_of("Swim");
     animal.add_instance_of("Yell");
 
     let anonymous = graph.register_class("Anonymous<x:i32,y:i32>");
     animal.add_instance_of("Anonymous<x:i32,y:i32>");
-
 
     let swim = graph.register_class("Swim");
     let yell = graph.register_class("Yell");

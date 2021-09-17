@@ -12,7 +12,7 @@ pub struct IdentifierNode {
     pub name: Identifier,
     /// The location of this identifier.
     pub span: SourceSpan,
-    pub shadow_index: u32
+    pub shadow_index: u32,
 }
 
 /// `package∷module∷name`
@@ -69,7 +69,7 @@ pub struct LambdaSlotNode {
 }
 
 /// `$, $0, $1, $x`
-#[derive(Copy,Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LambdaSlotItem {
     /// `$, $.call()`, Automatically obtain a number based on context

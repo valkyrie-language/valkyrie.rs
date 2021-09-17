@@ -1,7 +1,7 @@
 use crate::{
-    helper::ValkyrieNode, package_level::let_bind::VariableDeclaration, patterns::PatternsList, ArgumentKey, CasePattern,
-    ElseStatement, ExpressionKind, ExpressionNode, GuardPattern, IdentifierNode, LoopEach, LoopRepeat, PatternBranch,
-    StatementBlock, StatementKind, SwitchStatement, TuplePatternNode, WhileConditionNode,
+    ArgumentKey, CasePattern, ElseStatement, ExpressionKind, ExpressionNode, GuardPattern, IdentifierNode, LoopEach,
+    LoopRepeat, PatternBranch, StatementBlock, StatementKind, SwitchStatement, TuplePatternNode, WhileConditionNode,
+    helper::ValkyrieNode, package_level::let_bind::VariableDeclaration, patterns::PatternsList,
 };
 use core::{
     fmt::{Debug, Display, Formatter},
@@ -10,7 +10,7 @@ use core::{
 #[cfg(feature = "lispify")]
 use lispify::{Lisp, Lispify};
 #[cfg(feature = "pretty-print")]
-use pretty_print::{helpers::PrettySequence, PrettyBuilder, PrettyPrint, PrettyProvider, PrettyTree};
+use pretty_print::{PrettyBuilder, PrettyPrint, PrettyProvider, PrettyTree, helpers::PrettySequence};
 pub mod control;
 pub mod do_catch;
 pub mod do_try;

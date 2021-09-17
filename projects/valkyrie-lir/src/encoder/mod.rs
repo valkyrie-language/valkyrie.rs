@@ -1,19 +1,18 @@
+use crate::{
+    DependentGraph, WasiFunction, WasiInstance, WasiType, WasmIdentifier,
+    helpers::{ComponentSections, DependenciesTrace},
+    wasi_types::functions::WasiFunctionBody,
+};
 use std::{
     fmt::{Debug, Formatter, Write},
     ops::AddAssign,
-    sync::Arc,
 };
-use valkyrie_types::NyarError;
-use crate::{
-    helpers::{ComponentSections, DependenciesTrace},
-    wasi_types::functions::WasiFunctionBody,
-    DependentGraph, WasmIdentifier, WasiFunction, WasiInstance, WasiType,
-};
+use valkyrie_types::{Identifier, NyarError};
 
 mod for_instance;
 
 pub struct CanonicalWasi {
-    pub name: Arc<str>,
+    pub name: Identifier,
     pub graph: DependentGraph,
     pub imports: Vec<CanonicalImport>,
     pub type_signatures: bool,
@@ -101,7 +100,13 @@ impl Debug for CanonicalImport {
 
 impl Default for CanonicalWasi {
     fn default() -> Self {
-        Self { name: Arc::from("root"), graph: Default::default(), imports: vec![], type_signatures: true, indent_text: "    " }
+        Self {
+            name: Identifier::new("root"),
+            graph: Default::default(),
+            imports: vec![],
+            type_signatures: true,
+            indent_text: "    ",
+        }
     }
 }
 

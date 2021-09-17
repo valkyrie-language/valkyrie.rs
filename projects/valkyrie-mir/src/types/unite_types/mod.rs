@@ -8,7 +8,7 @@ mod codegen;
 pub struct ValkyrieUnite {
     /// The full name path of the union
     pub unite_name: WasmIdentifier,
-    pub variants: IndexMap<Arc<str>, ValkyrieVariant>,
+    pub variants: IndexMap<Identifier, ValkyrieVariant>,
     pub source: SourceSpan,
 }
 

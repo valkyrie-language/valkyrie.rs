@@ -1,7 +1,7 @@
 use crate::{
+    ArrayValue, WasiArrayType, WasiType,
     encoder::WastEncoder,
     helpers::{EmitConstant, ToWasiType},
-    ArrayValue, WasiArrayType, WasiType,
 };
 use std::{
     cmp::Ordering,

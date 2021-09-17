@@ -40,6 +40,9 @@ impl Identifier {
     pub fn starts_with(&self, pattern: impl Pattern) -> bool {
         self.as_ref().starts_with(pattern)
     }
+    pub fn contains(&self, pattern: impl Pattern) -> bool {
+        self.as_ref().contains(pattern)
+    }
     pub fn is_empty(&self) -> bool {
         STRING_POOL.decode_string(&self.key).is_empty()
     }

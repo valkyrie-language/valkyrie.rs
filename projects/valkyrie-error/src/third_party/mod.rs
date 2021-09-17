@@ -1,8 +1,8 @@
 #[cfg(feature = "dashu")]
 pub use dashu::{
     float::{
-        round::mode::{HalfAway, HalfEven},
         DBig, FBig,
+        round::mode::{HalfAway, HalfEven},
     },
     integer::IBig,
 };

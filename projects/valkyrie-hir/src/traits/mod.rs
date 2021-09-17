@@ -1,10 +1,8 @@
-
 use std::fmt::Write;
 use valkyrie_types::Variable;
 
 pub trait IndentFormat {
-    fn indent_format<W: Write>(&self, context: &mut IndentContext<W>)
-                               -> std::fmt::Result;
+    fn indent_format<W: Write>(&self, context: &mut IndentContext<W>) -> std::fmt::Result;
     fn indent_display(&self) -> std::fmt::Result {
         let buffer = String::new();
         let mut context = IndentContext::new("    ".to_string(), buffer);
@@ -22,11 +20,7 @@ pub struct IndentContext<W> {
 
 impl<W: Write> IndentContext<W> {
     pub fn new(indent: String, buffer: W) -> Self {
-        Self {
-            writer: buffer,
-            level: 0,
-            indent: indent.to_string(),
-        }
+        Self { writer: buffer, level: 0, indent: indent.to_string() }
     }
 
     pub fn add_text(&mut self, text: &str) -> std::fmt::Result {

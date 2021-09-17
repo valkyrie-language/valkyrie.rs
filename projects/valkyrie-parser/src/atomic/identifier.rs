@@ -16,7 +16,9 @@ impl<'i> crate::NamepathFreeNode<'i> {
 impl<'i> crate::IdentifierNode<'i> {
     pub fn build(&self, file: SourceID) -> IdentifierNode {
         match self {
-            Self::IdentifierBare(v) => IdentifierNode { name: Identifier::new(v.get_str()), span: file.with_range(v.get_range32()), shadow_index: 0 },
+            Self::IdentifierBare(v) => {
+                IdentifierNode { name: Identifier::new(v.get_str()), span: file.with_range(v.get_range32()), shadow_index: 0 }
+            }
             Self::IdentifierRaw(v) => IdentifierNode {
                 name: Identifier::new(v.identifier_raw_text().get_str()),
                 span: file.with_range(v.get_range32().clone()),

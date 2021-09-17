@@ -1,12 +1,10 @@
 use crate::{
+    ValkyrieImportFunction,
     functions::{FunctionBody, FunctionInstance},
     helpers::Mir2Lir,
     modules::{NamespaceItem, ResolveContext},
-    ValkyrieImportFunction,
 };
 use indexmap::IndexMap;
-use valkyrie_error::Result;
-use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiImport, WasiResource, WasiType};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -15,7 +13,9 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::{helper::WrapDisplay, MethodDeclaration};
+use valkyrie_ast::{MethodDeclaration, helper::WrapDisplay};
+use valkyrie_error::Result;
+use valkyrie_lir::{DependentGraph, WasiImport, WasiResource, WasiType, WasmIdentifier};
 
 mod codegen;
 mod display;
@@ -25,7 +25,7 @@ pub struct ValkyrieResource {
     pub resource_name: WasmIdentifier,
     /// The wasi import/export name
     pub wasi_import: WasiImport,
-    pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
+    pub imports: IndexMap<Identifier, ValkyrieImportFunction>,
 }
 
 /// A primitive
@@ -35,8 +35,8 @@ pub struct ValkyriePrimitive {
     pub primitive_name: WasmIdentifier,
     /// primitive type had no fields, only primitive type wrapper
     pub wrapper: WasiType,
-    pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
-    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub imports: IndexMap<Identifier, ValkyrieImportFunction>,
+    pub methods: IndexMap<Identifier, ValkyrieMethod>,
     pub from: Vec<ValkyrieFrom>,
     pub into: Vec<ValkyrieInto>,
 }
@@ -45,9 +45,9 @@ pub struct ValkyriePrimitive {
 pub struct ValkyrieClass {
     pub class_name: WasmIdentifier,
     pub primitive: Option<WasmIdentifier>,
-    pub fields: IndexMap<Arc<str>, ValkyrieField>,
-    pub imports: IndexMap<Arc<str>, ValkyrieImportFunction>,
-    pub methods: IndexMap<Arc<str>, ValkyrieMethod>,
+    pub fields: IndexMap<Identifier, ValkyrieField>,
+    pub imports: IndexMap<Identifier, ValkyrieImportFunction>,
+    pub methods: IndexMap<Identifier, ValkyrieMethod>,
     pub from: Vec<ValkyrieFrom>,
     pub into: Vec<ValkyrieInto>,
 }
@@ -65,9 +65,9 @@ impl Hash for ValkyrieClass {
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieField {
     /// The name of the field
-    pub field_name: Arc<str>,
+    pub field_name: Identifier,
     /// The WASI name of the field
-    pub wasi_alias: Arc<str>,
+    pub wasi_alias: Identifier,
 }
 
 impl AddAssign<ValkyrieField> for ValkyrieClass {
@@ -78,9 +78,9 @@ impl AddAssign<ValkyrieField> for ValkyrieClass {
 #[derive(Clone, Eq, PartialEq)]
 pub struct ValkyrieMethod {
     /// The name of the field
-    pub method_name: Arc<str>,
+    pub method_name: Identifier,
     /// The WASI name of the field
-    pub wasi_alias: Arc<str>,
+    pub wasi_alias: Identifier,
 
     pub overloads: BTreeMap<NotNan<f64>, FunctionInstance>,
 }

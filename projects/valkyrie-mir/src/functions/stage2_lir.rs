@@ -1,7 +1,7 @@
 use super::*;
+use std::mem::transmute;
 use valkyrie_error::SyntaxError;
 use valkyrie_lir::{WasiFunctionBody, WasiParameter, WasiType};
-use std::mem::transmute;
 
 impl Mir2Lir for ValkyrieImportFunction {
     type Output = ();

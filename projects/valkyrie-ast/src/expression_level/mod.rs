@@ -26,14 +26,14 @@ use core::{
 use deriver::From;
 #[cfg(feature = "lispify")]
 use lispify::{Lisp, Lispify};
-use valkyrie_error::{
-    third_party::{Associativity, Precedence},
-    NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
-};
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
-    helpers::{KAndRBracket, PrettySequence},
     PrettyPrint, PrettyProvider, PrettyTree,
+    helpers::{KAndRBracket, PrettySequence},
+};
+use valkyrie_error::{
+    NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
+    third_party::{Associativity, Precedence},
 };
 /// The ast node for an expression
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]

@@ -5,11 +5,11 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-
+use valkyrie_types::Identifier;
 use crate::{
+    WasiType, WasmIdentifier, WastEncoder,
     dag::DependentGraph,
     helpers::{ComponentSections, DependenciesTrace},
-    WasmIdentifier, WasiType, WastEncoder,
 };
 
 mod arithmetic;
@@ -49,8 +49,8 @@ impl Ord for WasiVariantType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WasiVariantItem {
     /// Variant name in language
-    pub symbol: Arc<str>,
-    pub wasi_name: Arc<str>,
+    pub symbol: Identifier,
+    pub wasi_name: Identifier,
     pub fields: Option<WasiType>,
 }
 

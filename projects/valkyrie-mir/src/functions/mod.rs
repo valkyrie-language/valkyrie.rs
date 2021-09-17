@@ -1,9 +1,8 @@
 use crate::{
-    helpers::{Hir2Mir, Mir2Lir},
     NamespaceItem, ResolveContext, ValkyrieType,
+    helpers::{Hir2Mir, Mir2Lir},
 };
 use indexmap::IndexMap;
-use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiExport, WasiFunction, WasiImport};
 use ordered_float::NotNan;
 use std::{
     collections::BTreeMap,
@@ -11,6 +10,7 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
+use valkyrie_lir::{DependentGraph, WasiExport, WasiFunction, WasiImport, WasmIdentifier};
 
 mod arithmetic;
 mod stage1_mir;
@@ -38,16 +38,16 @@ pub struct ValkyrieNativeFunction {
 
 #[derive(Clone, Default, Debug)]
 pub struct FunctionSignature {
-    pub positional: IndexMap<Arc<str>, FunctionParameter>,
-    pub mixed: IndexMap<Arc<str>, FunctionParameter>,
-    pub named: BTreeMap<Arc<str>, FunctionParameter>,
+    pub positional: IndexMap<Identifier, FunctionParameter>,
+    pub mixed: IndexMap<Identifier, FunctionParameter>,
+    pub named: BTreeMap<Identifier, FunctionParameter>,
     pub output: Vec<FunctionParameter>,
 }
 
 #[derive(Clone, Debug, Hash)]
 pub struct FunctionParameter {
     /// The parameter name of the function
-    pub name: Arc<str>,
+    pub name: Identifier,
     /// The type hint of the function
     pub r#type: ValkyrieType,
 }

@@ -1,8 +1,8 @@
 use super::*;
-use crate::{traits::YggdrasilNodeExtension, SignNode};
-use valkyrie_error::NyarError;
+use crate::{SignNode, traits::YggdrasilNodeExtension};
 use std::{str::FromStr, sync::Arc};
 use valkyrie_ast::NullNode;
+use valkyrie_error::NyarError;
 use yggdrasil_rt::YggdrasilNode;
 
 // A number literal.

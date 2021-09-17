@@ -1,13 +1,14 @@
 use crate::{
-    encoder::WastEncoder,
-    helpers::{EmitConstant, EmitDefault, ToWasiType},
-    operations::{
+    encoder::WastEncoder, helpers::{EmitConstant, EmitDefault, ToWasiType}, operations::{
         branch::EnumerationTable,
         looping::{LoopEach, LoopRepeat, LoopUntilBody, LoopWhileBody},
-    },
-    WasmIdentifier, InfixCall, JumpBranch, JumpTable, WasiType, WasiValue,
+    }, InfixCall, JumpBranch, JumpTable,
+    WasiType,
+    WasiValue,
+    WasmIdentifier,
 };
-use std::{fmt::Write, sync::Arc};
+use std::fmt::Write;
+use valkyrie_types::Identifier;
 
 pub mod branch;
 pub mod infix;
@@ -43,10 +44,10 @@ pub enum WasiInstruction {
     },
     CallMethod {},
     GetField {
-        name: Arc<str>,
+        name: Identifier,
     },
     SetField {
-        name: Arc<str>,
+        name: Identifier,
     },
     GetOffset {
         offset: usize,
@@ -70,10 +71,10 @@ pub enum WasiInstruction {
     JumpEnumeration(EnumerationTable),
     Goto {},
     Continue {
-        label: Arc<str>,
+        label: Identifier,
     },
     Break {
-        label: Arc<str>,
+        label: Identifier,
     },
     Return {},
     Drop {

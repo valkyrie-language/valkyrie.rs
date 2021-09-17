@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, fmt::Debug, ops::AddAssign};
 
 use dependent_sort::{DependentSort, TopologicalError};
 
-use crate::{helpers::GroupedTask, CanonicalImport, WasmIdentifier, WasiInstance, WasiModule, WasiType, WasiTypeReference};
+use crate::{CanonicalImport, WasiInstance, WasiModule, WasiType, WasiTypeReference, WasmIdentifier, helpers::GroupedTask};
 
 mod arithmetic;
 

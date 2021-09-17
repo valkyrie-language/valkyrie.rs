@@ -2,7 +2,7 @@ use crate::{NyarError, SyntaxError};
 use diagnostic::{ReportKind, SourceID};
 use std::ops::Range;
 
-use yggdrasil_rt::{errors::YggdrasilErrorKind, YggdrasilError, YggdrasilRule};
+use yggdrasil_rt::{YggdrasilError, YggdrasilRule, errors::YggdrasilErrorKind};
 
 impl<R: YggdrasilRule> From<YggdrasilError<R>> for SyntaxError {
     fn from(error: YggdrasilError<R>) -> Self {

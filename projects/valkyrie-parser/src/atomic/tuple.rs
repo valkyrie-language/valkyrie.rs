@@ -1,5 +1,5 @@
 use super::*;
-use crate::{traits::YggdrasilNodeExtension, utils::Ast2Hir, TupleLiteralNode};
+use crate::{TupleLiteralNode, traits::YggdrasilNodeExtension, utils::Ast2Hir};
 
 impl<'i> crate::TupleLiteralStrictNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<TupleNode> {

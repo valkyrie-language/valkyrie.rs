@@ -5,12 +5,12 @@ mod codegen;
 #[derive(Clone)]
 pub struct ValkyrieVariant {
     /// The full name path of the variant item
-    pub variant_name: Arc<str>,
+    pub variant_name: Identifier,
     /// The alias name in wasi
-    pub wasi_alias: Arc<str>,
+    pub wasi_alias: Identifier,
     /// The following fields belonging to an independent type
     pub type_alias: WasmIdentifier,
-    pub fields: IndexMap<Arc<str>, ValkyrieField>,
+    pub fields: IndexMap<Identifier, ValkyrieField>,
     pub source: SourceSpan,
 }
 

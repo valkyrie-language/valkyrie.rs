@@ -2,8 +2,8 @@ use super::*;
 
 #[derive(Debug)]
 pub struct ValkyrieSemanticNumber {
-    pub number_name: Arc<str>,
-    pub wasm_alias: Arc<str>,
+    pub number_name: Identifier,
+    pub wasm_alias: Identifier,
 }
 impl Mir2Lir for ValkyrieSemanticNumber {
     type Output = WasiSemanticIndex;

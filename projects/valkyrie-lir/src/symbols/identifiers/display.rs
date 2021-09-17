@@ -1,4 +1,3 @@
-
 use super::*;
 
 impl Debug for WasmIdentifier {

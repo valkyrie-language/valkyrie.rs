@@ -10,8 +10,8 @@ use core::{
 use deriver::From;
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
-    helpers::{PrettySequence, SoftBlock},
     PrettyBuilder, PrettyPrint, PrettyProvider, PrettyTree,
+    helpers::{PrettySequence, SoftBlock},
 };
 
 /// A pattern match statement block

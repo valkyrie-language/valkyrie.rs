@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use super::*;
+use std::sync::Arc;
 use valkyrie_error::{SourceSpan, Validation};
 use valkyrie_types::Identifier;
 

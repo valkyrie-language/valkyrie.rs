@@ -1,14 +1,12 @@
 use crate::{
-    functions::{FunctionBody, FunctionInstance, FunctionParameter},
-    helpers::{AsIdentifier, Hir2Mir},
-    structures::ValkyrieResource,
     NamespaceItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
     ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
     ValkyrieVariant,
+    functions::{FunctionBody, FunctionInstance, FunctionParameter},
+    helpers::{AsIdentifier, Hir2Mir},
+    structures::ValkyrieResource,
 };
 use indexmap::IndexMap;
-use valkyrie_error::Result;
-use valkyrie_lir::WasmIdentifier;
 use ordered_float::NotNan;
 use std::{collections::BTreeMap, sync::Arc};
 use valkyrie_ast::{
@@ -16,6 +14,8 @@ use valkyrie_ast::{
     ImplementsStatement, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, SemanticKind, SemanticNumber,
     StatementKind, TraitDeclaration, TraitTerm, UnionDeclaration, UnionTerm, VariantDeclaration,
 };
+use valkyrie_error::Result;
+use valkyrie_lir::WasmIdentifier;
 
 impl Hir2Mir for ProgramRoot {
     type Output = ();

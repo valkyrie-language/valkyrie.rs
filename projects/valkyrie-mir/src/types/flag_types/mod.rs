@@ -5,5 +5,5 @@ mod codegen;
 #[derive(Debug)]
 pub struct ValkyrieFlagation {
     pub flags_name: WasmIdentifier,
-    pub flags: IndexMap<Arc<str>, ValkyrieSemanticNumber>,
+    pub flags: IndexMap<Identifier, ValkyrieSemanticNumber>,
 }

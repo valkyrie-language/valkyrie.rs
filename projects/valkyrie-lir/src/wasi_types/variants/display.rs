@@ -1,4 +1,4 @@
-use crate::{helpers::TypeReference, WasiModule};
+use crate::{WasiModule, helpers::TypeReference};
 
 use super::*;
 

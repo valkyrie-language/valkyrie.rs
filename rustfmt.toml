@@ -1,4 +1,4 @@
-version = "Two"
+style_version = "Two"
 edition = "2018"
 max_width = 128
 

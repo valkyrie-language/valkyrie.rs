@@ -1,5 +1,5 @@
-use valkyrie_types::SyntaxError;
 use super::*;
+use valkyrie_types::SyntaxError;
 
 impl From<&str> for WasmIdentifier {
     fn from(value: &str) -> Self {
@@ -7,9 +7,12 @@ impl From<&str> for WasmIdentifier {
     }
 }
 
-impl From<Arc<str>> for WasmIdentifier {
-    fn from(value: Arc<str>) -> Self {
-        Self::from_str(&value).unwrap()
+impl From<Identifier> for WasmIdentifier {
+    fn from(value: Identifier) -> Self {
+        Self {
+            namespace: vec![],
+            name: value,
+        }
     }
 }
 impl FromStr for WasmIdentifier {

@@ -1,9 +1,9 @@
+use itertools::Itertools;
 use std::{
     fmt::{Debug, Display, Formatter},
-    str::FromStr,
-    sync::Arc,
+    str::FromStr
+    ,
 };
-use itertools::Itertools;
 use valkyrie_types::Identifier;
 
 use convert_case::{Case, Casing};

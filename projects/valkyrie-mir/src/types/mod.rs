@@ -1,15 +1,15 @@
 use crate::{
-    helpers::{Hir2Mir, Mir2Lir},
     NamespaceItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
+    helpers::{Hir2Mir, Mir2Lir},
 };
 use indexmap::IndexMap;
-use valkyrie_error::SourceSpan;
-use valkyrie_lir::{DependentGraph, WasmIdentifier, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem};
 use std::{
     fmt::{Debug, Formatter},
     ops::AddAssign,
     sync::Arc,
 };
+use valkyrie_error::SourceSpan;
+use valkyrie_lir::{DependentGraph, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem, WasmIdentifier};
 
 pub mod encoding_type;
 pub mod enumeration_types;

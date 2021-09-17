@@ -2,14 +2,12 @@ use core::fmt;
 use lasso::{Key, Resolver, Spur, ThreadedRodeo};
 use std::{
     borrow::Cow,
-    fmt::{Debug, Write},
+    fmt::{Debug, Display, Formatter, Write},
     num::NonZeroUsize,
     ops::Range,
-    str::Split,
+    str::{Split, pattern::Pattern},
     sync::{Arc, LazyLock},
 };
-use std::fmt::{Display, Formatter};
-use std::str::pattern::Pattern;
 
 mod name_path;
 mod string_id;
@@ -47,9 +45,7 @@ impl Display for Identifier {
 
 impl Identifier {
     pub fn new(s: &str) -> Self {
-        Self {
-            key: STRING_POOL.encode_string(s),
-        }
+        Self { key: STRING_POOL.encode_string(s) }
     }
     pub fn starts_with(&self, pattern: impl Pattern) -> bool {
         self.as_ref().starts_with(pattern)

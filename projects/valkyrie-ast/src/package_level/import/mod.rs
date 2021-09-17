@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use super::*;
 use crate::helper::IdentifiersDisplay;
+use std::sync::Arc;
 use valkyrie_error::SourceSpan;
 use valkyrie_types::Identifier;
 
@@ -80,7 +80,7 @@ pub struct ImportAliasNode {
 }
 
 /// The name of import items
-#[derive(Copy,Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ImportAliasItem {
     /// `#attribute`

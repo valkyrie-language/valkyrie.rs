@@ -1,3 +1,4 @@
+use valkyrie_types::Identifier;
 use super::*;
 use crate::WasiValue;
 
@@ -8,7 +9,7 @@ mod display;
 pub struct WasiRecordType {
     pub symbol: WasmIdentifier,
     pub wasi_name: String,
-    pub fields: IndexMap<Arc<str>, WasiRecordField>,
+    pub fields: IndexMap<Identifier, WasiRecordField>,
 }
 
 impl Display for WasiRecordType {
@@ -20,9 +21,9 @@ impl Display for WasiRecordType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct WasiRecordField {
     /// The name of the field
-    pub name: Arc<str>,
+    pub name: Identifier,
     /// The WASI name of the field
-    pub wasi_name: Arc<str>,
+    pub wasi_name: Identifier,
     /// The type of the parameter
     pub r#type: WasiType,
     /// The default value of the parameter
@@ -38,7 +39,7 @@ impl WasiRecordType {
 }
 impl WasiRecordField {
     /// Create a new record type
-    pub fn new<T>(name: Arc<str>, r#type: T) -> Self
+    pub fn new<T>(name: Identifier, r#type: T) -> Self
     where
         T: Into<WasiType>,
     {
