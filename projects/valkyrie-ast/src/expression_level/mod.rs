@@ -28,12 +28,12 @@ use deriver::From;
 use lispify::{Lisp, Lispify};
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
-    PrettyPrint, PrettyProvider, PrettyTree,
     helpers::{KAndRBracket, PrettySequence},
+    PrettyPrint, PrettyProvider, PrettyTree,
 };
-use valkyrie_error::{
-    NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
+use valkyrie_types::{
     third_party::{Associativity, Precedence},
+    NyarError, ReportKind, SourceID, SourceSpan, SyntaxError,
 };
 /// The ast node for an expression
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]

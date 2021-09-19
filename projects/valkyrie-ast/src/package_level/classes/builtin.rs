@@ -1,5 +1,5 @@
 use super::*;
-use valkyrie_error::NyarError;
+use valkyrie_types::NyarError;
 
 impl MethodDeclaration {
     pub fn as_assembly(&self) -> Result<Option<FunctionAssembly>, NyarError> {

@@ -1,9 +1,9 @@
 #![allow(unused)]
 
 use crate::ProgramNode;
-use valkyrie_error::{Failure, NyarError, SourceCache, SourceID, Success, Validation};
 use std::{ops::AddAssign, str::FromStr};
 use valkyrie_ast::ProgramRoot;
+use valkyrie_types::{Failure, NyarError, SourceCache, SourceID, Success, Validation};
 use yggdrasil_rt::YggdrasilNode;
 
 pub struct ProgramContext {

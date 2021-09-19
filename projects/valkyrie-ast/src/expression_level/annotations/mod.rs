@@ -1,7 +1,7 @@
 use super::*;
 use crate::helper::WrapDisplay;
 use std::sync::Arc;
-use valkyrie_error::ForeignInterfaceError;
+use valkyrie_types::{ForeignInterfaceError, Identifier};
 
 mod builtin;
 mod display;
@@ -179,7 +179,7 @@ impl AttributeTerm {
                     Some(s) => s.text.as_str(),
                     None => Err(ForeignInterfaceError::InvalidForeignName { span: self.span.clone() })?,
                 };
-                Ok((module, Arc::from(name)))
+                Ok((module, Identifier::new(name)))
             }
             _ => Err(ForeignInterfaceError::InvalidForeignModule { span: self.span.clone() })?,
         }

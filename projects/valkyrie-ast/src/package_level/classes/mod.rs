@@ -1,5 +1,5 @@
 use super::*;
-use valkyrie_error::SourceSpan;
+use valkyrie_types::SourceSpan;
 
 mod builtin;
 mod display;

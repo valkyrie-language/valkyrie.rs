@@ -1,6 +1,6 @@
 use crate::{
-    NamespaceItem, ResolveContext, ValkyrieType,
     helpers::{Hir2Mir, Mir2Lir},
+    NamespaceItem, ResolveContext, ValkyrieType,
 };
 use indexmap::IndexMap;
 use ordered_float::NotNan;
@@ -11,6 +11,7 @@ use std::{
     sync::Arc,
 };
 use valkyrie_lir::{DependentGraph, WasiExport, WasiFunction, WasiImport, WasmIdentifier};
+use valkyrie_types::Identifier;
 
 mod arithmetic;
 mod stage1_mir;

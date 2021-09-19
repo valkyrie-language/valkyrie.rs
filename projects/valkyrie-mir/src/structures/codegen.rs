@@ -1,9 +1,9 @@
 use super::*;
 use crate::helpers::AsIdentifier;
-use valkyrie_error::NyarError;
 use valkyrie_lir::{
     WasiFunction, WasiFunctionBody, WasiOwnership, WasiParameter, WasiRecordField, WasiRecordType, WasiType, WasiTypeReference,
 };
+use valkyrie_types::NyarError;
 
 impl Mir2Lir for ValkyrieResource {
     type Output = ();

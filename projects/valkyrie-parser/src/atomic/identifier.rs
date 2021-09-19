@@ -1,4 +1,5 @@
 use super::*;
+use valkyrie_types::Identifier;
 
 impl<'i> crate::NamepathNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> NamePathNode {

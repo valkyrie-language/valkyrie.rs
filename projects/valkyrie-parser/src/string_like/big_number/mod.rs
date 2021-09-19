@@ -1,5 +1,5 @@
-use valkyrie_error::NyarError;
 use valkyrie_ast::{helper::NumberInterpreter, NumberLiteralNode};
+use valkyrie_types::NyarError;
 
 pub struct NumberBuilder {}
 

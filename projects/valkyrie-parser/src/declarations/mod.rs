@@ -3,8 +3,8 @@ use crate::{
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_constraint, build_modifier_ahead},
 };
-use valkyrie_error::Result;
 use valkyrie_ast::*;
+use valkyrie_types::Result;
 
 mod classes;
 mod def_fn;

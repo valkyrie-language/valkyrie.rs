@@ -1,8 +1,6 @@
-use crate::bindings::{self, DecodeConfig, EncodeConfig, Guest, PolyfillConfig, ToolsError, export};
+use crate::bindings::{self, export, DecodeConfig, EncodeConfig, Guest, PolyfillConfig, ToolsError};
 use js_component_bindgen::{BindingsMode, InstantiationMode, TranspileOpts};
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use wasmprinter::PrintFmtWrite;
 use wat::GenerateDwarf;
 

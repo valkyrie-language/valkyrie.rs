@@ -1,21 +1,18 @@
-use lasso::{  Spur, ThreadedRodeo};
+use lasso::{Spur, ThreadedRodeo};
 use std::{
     fmt::{Debug, Display, Formatter, Write},
     ops::Range,
-    str::{Split, pattern::Pattern},
+    str::{pattern::Pattern, Split},
     sync::{Arc, LazyLock},
 };
 
+pub mod identifier;
 mod name_path;
 mod string_id;
 mod string_pool;
 pub mod variable;
-pub mod identifier;
 
 pub static STRING_POOL: LazyLock<StringPool> = std::sync::LazyLock::new(|| StringPool::default());
-
-
-
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct NamePath {

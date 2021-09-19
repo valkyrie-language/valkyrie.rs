@@ -1,5 +1,5 @@
 use super::*;
-use valkyrie_error::{ReportKind, SourceSpan, SyntaxError};
+use valkyrie_types::{ReportKind, SourceSpan, SyntaxError};
 use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::DefineFunctionNode<'i> {

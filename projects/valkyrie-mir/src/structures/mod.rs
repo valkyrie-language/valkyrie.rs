@@ -1,8 +1,8 @@
 use crate::{
-    ValkyrieImportFunction,
     functions::{FunctionBody, FunctionInstance},
     helpers::Mir2Lir,
     modules::{NamespaceItem, ResolveContext},
+    ValkyrieImportFunction,
 };
 use indexmap::IndexMap;
 use ordered_float::NotNan;
@@ -13,9 +13,9 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_ast::{MethodDeclaration, helper::WrapDisplay};
-use valkyrie_error::Result;
+use valkyrie_ast::{helper::WrapDisplay, MethodDeclaration};
 use valkyrie_lir::{DependentGraph, WasiImport, WasiResource, WasiType, WasmIdentifier};
+use valkyrie_types::{Identifier, Result};
 
 mod codegen;
 mod display;

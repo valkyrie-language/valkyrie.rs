@@ -1,6 +1,6 @@
 use crate::{helpers::ProgramState, AnnotationTermMixNode, AnnotationTermNode, DefineConstraintNode, ModifierAheadNode};
-use valkyrie_error::Result;
 use valkyrie_ast::{AttributeList, ConstraintDeclaration, ModifierList};
+use valkyrie_types::Result;
 
 pub(crate) trait Ast2Hir<Out> {
     fn to_hir(&self, ctx: &mut ProgramState) -> Out;

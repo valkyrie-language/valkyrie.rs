@@ -1,8 +1,8 @@
 use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension};
-use valkyrie_error::{NyarError, Result, SourceID};
 use pratt::{Affix, PrattParser, Precedence};
 use std::str::FromStr;
 use valkyrie_ast::*;
+use valkyrie_types::{NyarError, Result, SourceID};
 use yggdrasil_rt::YggdrasilNode;
 
 mod call_dot;

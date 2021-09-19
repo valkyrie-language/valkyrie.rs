@@ -3,8 +3,8 @@ use crate::{
     traits::YggdrasilNodeExtension,
     utils::{build_annotation_terms, build_annotation_terms_mix, Ast2Hir},
 };
-use valkyrie_error::Result;
 use valkyrie_ast::*;
+use valkyrie_types::Result;
 mod annotation;
 mod import;
 mod namespace;

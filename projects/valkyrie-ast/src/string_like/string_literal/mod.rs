@@ -1,7 +1,6 @@
 use super::*;
 use std::sync::Arc;
-use valkyrie_error::{SourceSpan, Validation};
-use valkyrie_types::Identifier;
+use valkyrie_types::{Identifier, SourceSpan, Validation};
 
 mod display;
 

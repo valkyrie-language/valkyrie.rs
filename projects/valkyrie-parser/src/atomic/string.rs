@@ -1,6 +1,6 @@
 use super::*;
 use std::sync::Arc;
-use valkyrie_error::SourceID;
+use valkyrie_types::{Identifier, SourceID};
 use yggdrasil_rt::YggdrasilNode;
 
 impl<'i> crate::TextLiteralNode<'i> {
@@ -35,6 +35,6 @@ impl<'i> crate::TextRawNode<'i> {
         StringTextNode { text: buffer, span: file.with_range(self.get_range32()) }
     }
     pub(crate) fn build_id(&self, ctx: &mut ProgramState) -> IdentifierNode {
-        IdentifierNode { name: Identifier::new(""), span: ctx.file.with_range(self.get_range32()), shadow_index: 0 }
+        IdentifierNode { name: Identifier::default(), span: ctx.file.with_range(self.get_range32()), shadow_index: 0 }
     }
 }

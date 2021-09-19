@@ -1,6 +1,7 @@
 use super::*;
 use crate::MatchTermsNode;
 use std::sync::Arc;
+use valkyrie_types::Identifier;
 
 impl<'i> crate::MatchExpressionNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<MatchStatement> {
@@ -110,7 +111,7 @@ impl<'i> crate::CasePatternNode<'i> {
         match self {
             Self::Namepath(v) => Ok(CasePattern::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: Identifier::new(""), span: Default::default(), shadow_index: 0 },
+                identifier: IdentifierNode { name: Identifier::default(), span: Default::default(), shadow_index: 0 },
             }))),
             Self::StandardPattern(v) => v.build(ctx),
         }

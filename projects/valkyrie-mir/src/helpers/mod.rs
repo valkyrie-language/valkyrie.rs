@@ -22,10 +22,7 @@ pub(crate) trait AsIdentifier {
 impl AsIdentifier for NamePathNode {
     fn as_identifier(&self) -> WasmIdentifier {
         match self.path.as_slice() {
-            [path @ .., last] => WasmIdentifier {
-                namespace: path.iter().map(|x| Arc::from(x.name.as_ref())).collect(),
-                name: Arc::from(last.name.as_ref()),
-            },
+            [path @ .., last] => WasmIdentifier { namespace: path.iter().map(|x| x.name).collect(), name: last.name },
             _ => unreachable!("empty name path"),
         }
     }

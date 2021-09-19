@@ -1,7 +1,7 @@
 use crate::helpers::ProgramState;
-use valkyrie_error::Result;
 use std::sync::Arc;
 use valkyrie_ast::*;
+use valkyrie_types::{Identifier, Result};
 
 impl<'i> crate::LetPatternNode<'i> {
     pub(crate) fn build(&self, ctx: &mut ProgramState) -> Result<CasePattern> {
@@ -59,11 +59,11 @@ impl<'i> crate::PatternItemNode<'i> {
         let value = match self {
             Self::OmitDict(_) => CasePattern::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: Identifier::new(""), span: Default::default(), shadow_index: 0 },
+                identifier: IdentifierNode { name: Identifier::default(), span: Default::default(), shadow_index: 0 },
             })),
             Self::OmitList(_) => CasePattern::Atom(Box::new(IdentifierPattern {
                 modifiers: Default::default(),
-                identifier: IdentifierNode { name: Identifier::new(""), span: Default::default(), shadow_index: 0 },
+                identifier: IdentifierNode { name: Identifier::default(), span: Default::default(), shadow_index: 0 },
             })),
             Self::TuplePatternItem(v) => v.build(ctx)?,
         };

@@ -26,6 +26,7 @@ convert_case = "0.6.0"
 valkyrie-lir = { workspace = true }
 valkyrie-parser = { workspace = true }
 valkyrie-ast = { workspace = true }
+valkyrie-types = { workspace = true }
 
 [features]
 default = []

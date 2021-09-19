@@ -1,6 +1,5 @@
 #![allow(unused, dead_code)]
 
-use valkyrie_error::{third_party::Url, Failure, SourceCache, Success, Validation};
 use std::{
     ffi::OsStr,
     fs::File,
@@ -8,6 +7,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use valkyrie_error::{third_party::Url, Failure, SourceCache, Success, Validation};
 use valkyrie_parser::{
     ClassBlockNode, ClassTermNode, DefineFieldNode, DefineImportNode, DefineMethodNode, DefineNamespaceNode,
     MainExpressionNode, ProgramContext, ProgramNode, StatementNode, ValkyrieParser, ValkyrieRule,

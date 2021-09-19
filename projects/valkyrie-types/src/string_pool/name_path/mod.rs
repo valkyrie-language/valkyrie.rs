@@ -1,5 +1,5 @@
 use super::*;
-use std::{fmt::Formatter};
+use std::fmt::Formatter;
 
 impl Debug for NamePath {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

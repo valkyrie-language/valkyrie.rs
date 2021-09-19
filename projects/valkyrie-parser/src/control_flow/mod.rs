@@ -1,6 +1,6 @@
 use crate::{helpers::ProgramState, traits::YggdrasilNodeExtension};
-use valkyrie_error::Result;
 use valkyrie_ast::{ExpressionKind, *};
+use valkyrie_types::Result;
 
 mod controller;
 mod jmp_if;

@@ -1,10 +1,10 @@
 use crate::{
-    NamespaceItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
-    ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
-    ValkyrieVariant,
     functions::{FunctionBody, FunctionInstance, FunctionParameter},
     helpers::{AsIdentifier, Hir2Mir},
     structures::ValkyrieResource,
+    NamespaceItem, ResolveContext, ValkyrieClass, ValkyrieEnumeration, ValkyrieField, ValkyrieFlagation, ValkyrieFrom,
+    ValkyrieImportFunction, ValkyrieMethod, ValkyrieNativeFunction, ValkyrieSemanticNumber, ValkyrieType, ValkyrieUnite,
+    ValkyrieVariant,
 };
 use indexmap::IndexMap;
 use ordered_float::NotNan;
@@ -14,8 +14,8 @@ use valkyrie_ast::{
     ImplementsStatement, MethodDeclaration, NamespaceDeclaration, ParameterTerm, ProgramRoot, SemanticKind, SemanticNumber,
     StatementKind, TraitDeclaration, TraitTerm, UnionDeclaration, UnionTerm, VariantDeclaration,
 };
-use valkyrie_error::Result;
 use valkyrie_lir::WasmIdentifier;
+use valkyrie_types::Result;
 
 impl Hir2Mir for ProgramRoot {
     type Output = ();
@@ -324,7 +324,7 @@ impl Hir2Mir for EncodeDeclaration {
 
     fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> Result<Self::Output> {
         let wasm_alias = store.find_wasi_alias(&self.annotations, &self.name);
-        Ok(ValkyrieSemanticNumber { number_name: Arc::from(self.name.name.as_ref()), wasm_alias })
+        Ok(ValkyrieSemanticNumber { number_name: self.name.name, wasm_alias })
     }
 }
 
@@ -332,7 +332,7 @@ impl Hir2Mir for FunctionDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_types::Result<Self::Output> {
         let function_name = store.register_item(&self.name);
         let mut instance = FunctionInstance::default();
 
@@ -381,7 +381,7 @@ impl Hir2Mir for ParameterTerm {
     type Output = FunctionParameter;
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_types::Result<Self::Output> {
         let name = self.key.name;
         let type_hint = match self.bound {
             Some(s) => match s {
@@ -399,20 +399,20 @@ impl Hir2Mir for ParameterTerm {
                         "f32" => ValkyrieType::Float { bits: 32 },
                         "f64" => ValkyrieType::Float { bits: 64 },
                         "char" => ValkyrieType::Unicode,
-                        _ => Err(valkyrie_error::SyntaxError::new("Unknown Type hint for parameter")
+                        _ => Err(valkyrie_types::SyntaxError::new("Unknown Type hint for parameter")
                             .with_hint(format!("{:?}", s))
                             .with_span(self.key.span))?,
                     },
-                    long => Err(valkyrie_error::SyntaxError::new("Unknown Type hint for parameter")
+                    long => Err(valkyrie_types::SyntaxError::new("Unknown Type hint for parameter")
                         .with_hint(format!("{:?}", s))
                         .with_span(self.key.span))?,
                 },
-                _ => Err(valkyrie_error::SyntaxError::new("Invalid type hint for parameter")
+                _ => Err(valkyrie_types::SyntaxError::new("Invalid type hint for parameter")
                     .with_hint(format!("{:?}", s))
                     .with_span(self.key.span))?,
             },
-            None => Err(valkyrie_error::SyntaxError::new("Missing type hint for parameter").with_span(self.key.span))?,
+            None => Err(valkyrie_types::SyntaxError::new("Missing type hint for parameter").with_span(self.key.span))?,
         };
-        Ok(FunctionParameter { name: Arc::from(name.as_ref()), r#type: type_hint })
+        Ok(FunctionParameter { name, r#type: type_hint })
     }
 }

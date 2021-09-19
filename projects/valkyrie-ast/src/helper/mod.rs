@@ -10,7 +10,7 @@ use crate::{IdentifierNode, NumberLiteralNode, StringTextNode};
 pub use lispify::{Lisp, Lispify};
 #[cfg(feature = "pretty-print")]
 pub use pretty_print::{PrettyPrint, PrettyProvider, PrettyTree};
-use valkyrie_error::{NyarError, Validation};
+use valkyrie_types::{NyarError, Validation};
 
 /// A node in the AST
 pub trait ValkyrieNode {

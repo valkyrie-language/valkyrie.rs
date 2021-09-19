@@ -1,11 +1,11 @@
 use crate::{
     helpers::ProgramState,
     traits::YggdrasilNodeExtension,
-    utils::{Ast2Hir, build_annotation_terms},
+    utils::{build_annotation_terms, Ast2Hir},
 };
 use std::{num::NonZeroU64, sync::Arc};
 use valkyrie_ast::*;
-use valkyrie_error::{Result, SourceID, SyntaxError};
+use valkyrie_types::{Result, SourceID, SyntaxError};
 use yggdrasil_rt::YggdrasilNode;
 
 mod bytes;

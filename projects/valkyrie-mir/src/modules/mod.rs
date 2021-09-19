@@ -1,10 +1,10 @@
 use crate::{
-    ValkyrieEnumeration, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieNativeFunction, ValkyriePrimitive, ValkyrieUnite,
     helpers::{Hir2Mir, Mir2Lir},
     structures::{ValkyrieClass, ValkyrieResource},
+    ValkyrieEnumeration, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieNativeFunction, ValkyriePrimitive, ValkyrieUnite,
 };
 use convert_case::{Case, Casing};
-use im::{HashMap, hashmap::Entry};
+use im::{hashmap::Entry, HashMap};
 use indexmap::IndexMap;
 use std::{
     fmt::{Debug, Formatter},
@@ -14,9 +14,9 @@ use std::{
     sync::Arc,
 };
 use valkyrie_ast::{AnnotationNode, ArgumentTerm, IdentifierNode, ProgramRoot};
-use valkyrie_error::{Failure, ForeignInterfaceError, NyarError, Result, SourceCache, SourceSpan, Success};
 use valkyrie_lir::{CanonicalWasi, DependentGraph, WasiImport, WasiModule, WasmIdentifier};
 use valkyrie_parser::ProgramContext;
+use valkyrie_types::{Failure, ForeignInterfaceError, Identifier, NyarError, Result, SourceCache, SourceSpan, Success};
 
 mod codegen;
 mod display;
@@ -26,13 +26,13 @@ pub struct ValkyrieModule {}
 
 /// Convert file to module
 pub struct ResolveContext {
-    pub(crate) package: valkyrie_ast::Identifier,
+    pub(crate) package: Identifier,
     /// The current namespace
-    pub(crate) namespace: Vec<valkyrie_ast::Identifier>,
+    pub(crate) namespace: Vec<Identifier>,
     /// The document buffer
     pub(crate) document: String,
     /// Mapping local name to global name
-    pub(crate) name_mapping: HashMap<Vec<valkyrie_ast::Identifier>, ModuleImportsMap>,
+    pub(crate) name_mapping: HashMap<Vec<Identifier>, ModuleImportsMap>,
     /// The declared items in file
     pub(crate) items: IndexMap<WasmIdentifier, NamespaceItem>,
     /// Collect errors
@@ -65,9 +65,9 @@ pub enum NamespaceItem {
 }
 
 impl ResolveContext {
-    pub fn new<S: Into<Identifier>>(package: S) -> Self {
+    pub fn new(package: Identifier) -> Self {
         Self {
-            package: valkyrie_ast::Identifier::new(&package.into()),
+            package,
             namespace: vec![],
             document: "".to_string(),
             name_mapping: Default::default(),
@@ -88,11 +88,9 @@ impl ResolveContext {
 impl ResolveContext {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
     pub fn register_item(&mut self, symbol: &IdentifierNode) -> WasmIdentifier {
-        let key = WasmIdentifier { namespace: vec![], name: Arc::from(symbol.name.as_ref()) };
-        let value = WasmIdentifier {
-            namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(),
-            name: Arc::from(symbol.name.as_ref()),
-        };
+        let key = WasmIdentifier { namespace: vec![], name: symbol.name };
+        let value =
+            WasmIdentifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: symbol.name };
         match self.name_mapping.entry(self.namespace.clone()) {
             Entry::Occupied(v) => {
                 v.into_mut().local.insert(key, value.clone());

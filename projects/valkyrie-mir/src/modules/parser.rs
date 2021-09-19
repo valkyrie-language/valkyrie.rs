@@ -1,5 +1,5 @@
 use super::*;
-use valkyrie_error::third_party::WalkDir;
+use valkyrie_types::third_party::WalkDir;
 
 impl ResolveContext {
     pub fn step01_set_default_namespace<P>(&mut self, directory: P) -> Result<()>

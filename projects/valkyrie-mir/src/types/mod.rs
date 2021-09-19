@@ -1,6 +1,6 @@
 use crate::{
-    NamespaceItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
     helpers::{Hir2Mir, Mir2Lir},
+    NamespaceItem, ResolveContext, ValkyrieField, ValkyrieSemanticNumber, ValkyrieVariant,
 };
 use indexmap::IndexMap;
 use std::{
@@ -8,8 +8,8 @@ use std::{
     ops::AddAssign,
     sync::Arc,
 };
-use valkyrie_error::SourceSpan;
 use valkyrie_lir::{DependentGraph, WasiEnumeration, WasiFlags, WasiSemanticIndex, WasiVariantItem, WasmIdentifier};
+use valkyrie_types::{Identifier, SourceSpan};
 
 pub mod encoding_type;
 pub mod enumeration_types;
