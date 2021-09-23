@@ -94,13 +94,13 @@ impl Mir2Lir for ValkyrieFrom {
 
     fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> Result<Self::Output> {
         *graph += WasiFunction {
-            symbol: context.join("from"),
+            symbol: context.join(Identifier::new("from")),
             inputs: vec![WasiParameter::new(
-                "value",
+                Identifier::new("value"),
                 WasiType::TypeHandler(WasiTypeReference { symbol: self.from.clone(), owner: WasiOwnership::Normal }),
             )],
             output: vec![WasiParameter::new(
-                "",
+                Identifier::default(),
                 WasiType::TypeHandler(WasiTypeReference { symbol: context.clone(), owner: WasiOwnership::Normal }),
             )],
             body: WasiFunctionBody::Assembly { text: self.action.assembly.clone() },

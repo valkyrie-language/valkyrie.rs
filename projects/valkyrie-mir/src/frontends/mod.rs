@@ -104,7 +104,7 @@ impl Hir2Mir for TraitDeclaration {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_types::Result<Self::Output> {
         todo!()
     }
 }
@@ -113,7 +113,7 @@ impl Hir2Mir for ImplementsStatement {
     type Output = ();
     type Context<'a> = ();
 
-    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
+    fn to_mir<'a>(self, store: &mut ResolveContext, context: Self::Context<'a>) -> valkyrie_types::Result<Self::Output> {
         for x in self.annotations.derives() {
             if x.path.last().unwrap().name.as_ref().eq("TypeCast") {
                 let id = self.target.as_identifier();

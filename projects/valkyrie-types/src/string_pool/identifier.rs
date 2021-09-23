@@ -1,4 +1,5 @@
 use super::*;
+use convert_case::{Case, Casing};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Identifier {
@@ -45,5 +46,8 @@ impl Identifier {
     }
     pub fn is_empty(&self) -> bool {
         STRING_POOL.decode_string(&self.key).is_empty()
+    }
+    pub fn to_kebab_case(&self) -> Self {
+        Identifier::new(&self.as_ref().to_case(Case::Kebab))
     }
 }

@@ -3,7 +3,6 @@ use crate::{
     structures::{ValkyrieClass, ValkyrieResource},
     ValkyrieEnumeration, ValkyrieFlagation, ValkyrieImportFunction, ValkyrieNativeFunction, ValkyriePrimitive, ValkyrieUnite,
 };
-use convert_case::{Case, Casing};
 use im::{hashmap::Entry, HashMap};
 use indexmap::IndexMap;
 use std::{
@@ -89,8 +88,7 @@ impl ResolveContext {
     /// Get the full name path based on package name and namespace, then register the name to local namespace.
     pub fn register_item(&mut self, symbol: &IdentifierNode) -> WasmIdentifier {
         let key = WasmIdentifier { namespace: vec![], name: symbol.name };
-        let value =
-            WasmIdentifier { namespace: self.namespace.iter().map(|x| Arc::from(x.as_ref())).collect(), name: symbol.name };
+        let value = WasmIdentifier { namespace: self.namespace.clone(), name: symbol.name };
         match self.name_mapping.entry(self.namespace.clone()) {
             Entry::Occupied(v) => {
                 v.into_mut().local.insert(key, value.clone());
@@ -129,12 +127,12 @@ impl ResolveContext {
     pub fn export_field(&self, symbol: &IdentifierNode, alias: &AnnotationNode) -> Result<(Identifier, Identifier)> {
         let wasi_alias = match alias.attributes.get("export").and_then(|x| x.arguments.terms.first()) {
             Some(s) => match s.value.as_text() {
-                Some(s) => Arc::from(s.text.as_str()),
+                Some(s) => Identifier::new(s.text.as_str()),
                 None => Err(NyarError::custom("missing wasi alias"))?,
             },
-            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+            None => symbol.name.to_kebab_case(),
         };
-        Ok((Arc::from(symbol.name.as_ref()), wasi_alias))
+        Ok((symbol.name, wasi_alias))
     }
 
     /// Get the full name path based on package name and namespace
@@ -143,20 +141,20 @@ impl ResolveContext {
         let module = self.find_wasi_module(import.arguments.terms.get(0), import.span)?;
         let name: Identifier = match import.arguments.terms.get(1) {
             Some(term) => match term.value.as_text() {
-                Some(node) => Arc::from(node.text.as_str()),
+                Some(node) => Identifier::new(node.text.as_str()),
                 None => {
                     self.push_error(ForeignInterfaceError::InvalidForeignName { span: term.span });
                     return None;
                 }
             },
-            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+            None => symbol.name.to_kebab_case(),
         };
         Some(WasiImport { module, name })
     }
     pub fn find_wasi_alias(&self, alias: &AnnotationNode, symbol: &IdentifierNode) -> Identifier {
         match self.try_wasi_alias(alias) {
-            Some(s) => Arc::from(s),
-            None => Arc::from(symbol.name.as_ref().to_case(Case::Kebab)),
+            Some(s) => Identifier::new(s),
+            None => symbol.name.to_kebab_case(),
         }
     }
     fn try_wasi_alias<'a>(&self, alias: &'a AnnotationNode) -> Option<&'a str> {

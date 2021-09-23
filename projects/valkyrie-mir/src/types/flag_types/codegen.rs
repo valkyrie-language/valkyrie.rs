@@ -10,7 +10,7 @@ impl Mir2Lir for ValkyrieFlagation {
     type Output = ();
     type Context<'a> = &'a ResolveContext;
 
-    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_error::Result<Self::Output> {
+    fn to_lir<'a>(&self, graph: &mut DependentGraph, context: Self::Context<'a>) -> valkyrie_types::Result<Self::Output> {
         let mut flags = Vec::with_capacity(self.flags.len());
         for value in self.flags.values() {
             flags.push(value.to_lir(graph, context)?);
