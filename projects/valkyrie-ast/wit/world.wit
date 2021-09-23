@@ -1,0 +1,19 @@
+package valkyrie:ast;
+
+world types {
+	enum asynchronous-kind {
+		auto,
+		asynchronous,
+		synchronous
+	}
+	enum function-kind {
+	    /// A function that lazy evaluate the arguments
+	    ///
+	    /// `macro function(args)`
+		macro,
+	    /// A function that eager evaluates the arguments
+	    ///
+	    /// `micro function(args)`
+		micro,
+	}
+}

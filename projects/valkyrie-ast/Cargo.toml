@@ -16,7 +16,7 @@ edition = "2021"
 deriver = "0.0.0"
 serde = { version = "1.0.216", default-features = false, optional = true }
 valkyrie-types = { workspace = true }
-
+wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 
 [dependencies.pretty-print]
 version = "0.1.9"
@@ -33,3 +33,6 @@ serde = ["dep:serde", "serde/derive"]
 
 #[package.metadata.docs.rs]
 #all-features = true
+
+[package.metadata.component.bindings]
+derives = ["Hash"]

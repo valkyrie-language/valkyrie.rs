@@ -1,17 +1,8 @@
 use super::*;
+use crate::bindings::{AsynchronousKind, FunctionKind};
 use valkyrie_types::SourceSpan;
 
 mod display;
-
-/// `micro function(args)`, `macro procedure(args)`
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum FunctionKind {
-    /// A function that lazy evaluate the arguments
-    Macro,
-    /// A function that eager evaluates the arguments
-    Micro,
-}
 
 /// `micro name::<T>(self: Type, value: T) { }`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -19,6 +10,7 @@ pub enum FunctionKind {
 pub struct FunctionDeclaration {
     /// Keyword position of the declaration
     pub keyword: SourceSpan,
+    pub asynchronous: AsynchronousKind,
     /// The belonging and name of this function
     pub name: IdentifierNode,
     /// The range of the number.

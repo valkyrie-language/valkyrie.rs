@@ -8,6 +8,7 @@
 #![doc(html_logo_url = "https://avatars.githubusercontent.com/u/91894079")]
 #![doc(html_favicon_url = "https://avatars.githubusercontent.com/u/91894079")]
 
+mod bindings;
 mod control_flow;
 mod expression_level;
 pub mod helper;
@@ -18,6 +19,7 @@ mod string_like;
 pub(crate) mod utils;
 
 pub use crate::{
+    bindings::{AsynchronousKind, FunctionKind},
     control_flow::{
         control::{ControlKind, ControlNode, LabelNode},
         do_catch::{MatchCallNode, MatchKind, MatchStatement},
@@ -54,7 +56,7 @@ pub use crate::{
         constraints::{ConstraintDeclaration, ConstraintTerm},
         documentation::DocumentationList,
         flags::{EncodeDeclaration, FlagTerm, SemanticKind, SemanticNumber},
-        function::{FunctionDeclaration, FunctionKind, FunctionReturnNode, StatementBlock},
+        function::{FunctionDeclaration, FunctionReturnNode, StatementBlock},
         guarantee::{EffectTypeNode, GuaranteeNode},
         implements::ImplementsStatement,
         import::{

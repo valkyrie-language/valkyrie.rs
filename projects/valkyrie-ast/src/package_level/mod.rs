@@ -8,7 +8,6 @@ pub mod implements;
 pub mod import;
 pub mod labeled;
 pub mod let_bind;
-pub mod license;
 pub mod namespace;
 pub mod program;
 pub mod statements;
@@ -28,5 +27,5 @@ use deriver::From;
 use lispify::{Lisp, Lispify};
 #[cfg(feature = "pretty-print")]
 use pretty_print::{
-    PrettyPrint, PrettyProvider, PrettyTree, helpers::KAndRBracket, helpers::PrettySequence, helpers::SoftBlock,
+    helpers::KAndRBracket, helpers::PrettySequence, helpers::SoftBlock, PrettyPrint, PrettyProvider, PrettyTree,
 };

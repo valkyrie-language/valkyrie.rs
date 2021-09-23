@@ -1,6 +1,7 @@
 {
     "private": true,
     "scripts": {
+        "b": "cargo component build",
         "p": "cargo publish --allow-dirty"
     }
 }
