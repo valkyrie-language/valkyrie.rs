@@ -1,0 +1,10 @@
+package valkyrie:compiler-types;
+
+interface string-pool {
+	resource string-pool {
+
+	}
+	resource identifier {
+
+	}
+}

@@ -36,3 +36,6 @@ serde = ["dep:serde", "serde/derive"]
 
 [package.metadata.component.bindings]
 derives = ["Hash"]
+
+[package.metadata.component.target.dependencies]
+"valkyrie:compiler-types" = { path = "../valkyrie-types/wit" }

@@ -1,20 +1,6 @@
 mod display;
 use super::*;
 
-/// The kind of namespace
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum NamespaceKind {
-    /// Main namespace where definitions and imports can be shared
-    Main,
-    /// Independent namespace, isolated definitions, except public and main definitions
-    Standalone,
-    /// This is a test file, only available in the test environment
-    Test,
-    /// Temporarily remove a file
-    Hide,
-}
-
 /// `namespace std.math`
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

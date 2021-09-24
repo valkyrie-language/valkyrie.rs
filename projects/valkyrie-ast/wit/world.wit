@@ -1,6 +1,27 @@
 package valkyrie:ast;
 
 world types {
+    include valkyrie:compiler-types/types;
+	// import source;
+	/// The kind of namespace
+	enum namespace-kind {
+        /// Main namespace where definitions and imports can be shared
+		///
+		/// `namespace foo` and file name is `_.valkyrie`
+		main,
+		/// Independent namespace, isolated definitions, except public and main definitions
+		///
+		/// `namespace foo`
+		standalone,
+		/// This is a test file, only available in the test environment
+		///
+		/// `namespace? foo`
+		test,
+		/// Temporarily remove a file
+		///
+		/// `namespace* foo`
+		hide,
+	}
 	enum asynchronous-kind {
 		auto,
 		asynchronous,

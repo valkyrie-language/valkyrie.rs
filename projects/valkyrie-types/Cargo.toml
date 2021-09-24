@@ -24,7 +24,10 @@ image = { version = "0.25.5", features = [] }
 jupyter-types = "0.0.*"
 convert_case = "0.6.0"
 valkyrie-error = { workspace = true }
-
+wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 
 [features]
 default = []
+
+[package.metadata.component.bindings]
+derives = ["Hash"]

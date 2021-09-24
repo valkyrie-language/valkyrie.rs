@@ -1,28 +1,22 @@
 [package]
 name = "valkyrie-parser"
-version = "0.2.5"
-authors = ["192608617@qq.com"]
-description = "The hand write parser of valkyrie language"
-repository = "https://github.com/nyar-lang/NyarNative"
-documentation = "https://docs.rs/valkyrie-parser"
-license = "MPL-2.0"
+version = "0.1.0"
 edition = "2021"
+authors = ["Nyar Team"]
+description = "Valkyrie language parser built on nyar platform"
+license = "MIT"
+repository = "https://github.com/nyar-lang/nyar-vm"
 
 [dependencies]
-pratt = "0.4.0"
-num-bigint = "0.4.6"
-valkyrie-types = { workspace = true }
-valkyrie-ast = { workspace = true }
-
-[dependencies.yggdrasil-rt]
-version = "0.1.3"
-#path = 'C:\Users\Dell\CLionProjects\yggdrasil.rs\projects\ygg-rt'
-
-[features]
-serde = ["valkyrie-ast/serde"]
+nyar-ast = { path = "../nyar-ast" }
+nyar-core = { path = "../nyar-core" }
+nyar-error = { path = "../nyar-error" }
+chumsky = "0.9"
+tracing = "0.1"
 
 [dev-dependencies]
-anyhow = "1.0.95"
+criterion = "0.5"
 
-
-[build-dependencies]
+[[bench]]
+name = "parser_performance"
+harness = false

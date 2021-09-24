@@ -1,0 +1,39 @@
+package valkyrie:compiler-types;
+
+interface ast {
+	/// The kind of namespace
+	enum namespace-kind {
+        /// Main namespace where definitions and imports can be shared
+		///
+		/// `namespace foo` and file name is `_.valkyrie`
+		main,
+		/// Independent namespace, isolated definitions, except public and main definitions
+		///
+		/// `namespace foo`
+		standalone,
+		/// This is a test file, only available in the test environment
+		///
+		/// `namespace? foo`
+		test,
+		/// Temporarily remove a file
+		///
+		/// `namespace* foo`
+		hide,
+	}
+
+	enum asynchronous-kind {
+		auto,
+		asynchronous,
+		synchronous
+	}
+	enum function-kind {
+	    /// A function that lazy evaluate the arguments
+	    ///
+	    /// `macro function(args)`
+		macro,
+	    /// A function that eager evaluates the arguments
+	    ///
+	    /// `micro function(args)`
+		micro,
+	}
+}

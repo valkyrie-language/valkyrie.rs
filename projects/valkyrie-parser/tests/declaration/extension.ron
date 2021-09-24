@@ -1,7 +1,0 @@
-ApplyCallNode {
-    monadic: false,
-    caller: extension,
-    arguments: [],
-    body: None,
-    span: 10..15,
-}

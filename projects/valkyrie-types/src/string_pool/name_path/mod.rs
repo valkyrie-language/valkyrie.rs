@@ -1,4 +1,5 @@
 use super::*;
+use crate::string_pool2::STRING_POOL;
 use std::fmt::Formatter;
 
 impl Debug for NamePath {

@@ -1,3 +1,4 @@
+use crate::string_pool2::STRING_POOL;
 use lasso::{Spur, ThreadedRodeo};
 use std::{
     fmt::{Debug, Display, Formatter, Write},
@@ -6,13 +7,8 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-pub mod identifier;
 mod name_path;
-mod string_id;
-mod string_pool;
 pub mod variable;
-
-pub static STRING_POOL: LazyLock<StringPool> = std::sync::LazyLock::new(|| StringPool::default());
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct NamePath {
@@ -47,8 +43,4 @@ impl Location {
     pub fn with_range(self, range: &Range<u32>) -> Self {
         Self { file: self.file, start: range.start, end: range.end }
     }
-}
-
-pub struct StringPool {
-    pool: Arc<ThreadedRodeo<Spur>>,
 }

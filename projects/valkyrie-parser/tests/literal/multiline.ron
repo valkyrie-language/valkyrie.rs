@@ -1,7 +1,0 @@
-NamespaceDeclaration {
-    kind: Standalone,
-    path: std∷create∷test,
-}
-i'\r\nx\r\n{1 2 3 4 5 6 7 8 9}\r\n{x + 2}\r\n'
-json'\r\n{\r\n    x: 1,\r\n    y: 2\r\n}\r\n'
-json5'\r\n{\r\n    -- comments\r\n    unquoted: \'and you can quote me on that\',\r\n    singleQuotes: \'I can use "double quotes" here\',\r\n    lineBreaks: "Look, Mom! \\\r\nNo \\\\n\'s!",\r\n    hexadecimal: 0xdecaf,\r\n    leadingDecimalPoint: .8675309, andTrailing: 8675309.,\r\n    positiveSign: +1,\r\n    trailingComma: \'in objects\', andIn: [\'arrays\',],\r\n    "backwardsCompatible": "with JSON",\r\n}\r\n'

@@ -1,0 +1,91 @@
+[package]
+name = "nyar_valkyrie"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nyar Team"]
+description = "Unified runtime system for Nyar compiler infrastructure"
+license = "MIT"
+repository = "https://github.com/nyar-lang/nyar-vm"
+keywords = ["compiler", "runtime", "interpreter", "query"]
+categories = ["compilers", "development-tools"]
+
+[dependencies]
+# Core Nyar infrastructure
+nyar-core = { path = "../nyar-core" }
+nyar-ast = { path = "../nyar-ast" }
+nyar-hir = { path = "../nyar-hir" }
+nyar-lir = { path = "../nyar-lir" }
+nyar-error = { path = "../nyar-error" }
+nyar-query = { path = "../nyar-query" }
+
+# Interpreter components
+# nyar-interpreter = { path = "../nyar-interpreter", optional = true }
+
+# Code generation backends
+nyar-wasm = { path = "../nyar-wasm", optional = true }
+# nyar-js = { path = "../nyar-js", optional = true }
+
+# Async and concurrency
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3"
+parking_lot = "0.12"
+dashmap = "5.5"
+
+# Serialization and data handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Error handling and diagnostics
+miette = { version = "7.0", features = ["fancy"] }
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Memory management and performance
+bytes = "1.5"
+smallvec = "1.11"
+once_cell = "1.19"
+
+[features]
+default = ["query", "wasm-backend"]
+
+# Core features
+# interpreter = ["dep:nyar-interpreter"]
+query = []
+diagnostics = []
+
+# Backend features
+wasm-backend = ["dep:nyar-wasm"]
+# js-backend = ["dep:nyar-js"]
+
+# Development and debugging features
+debug-info = []
+profiling = []
+
+# All features for comprehensive runtime
+full = [
+    # "interpreter",
+    "query", 
+    "diagnostics",
+    "wasm-backend",
+    # "js-backend",
+    "debug-info",
+    "profiling"
+]
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = "0.5"
+proptest = "1.4"
+
+# [[bench]]
+# name = "runtime_benchmarks"
+# harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

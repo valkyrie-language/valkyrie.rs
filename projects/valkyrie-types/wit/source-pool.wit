@@ -1,0 +1,15 @@
+package valkyrie:compiler-types;
+
+interface source-pool {
+	resource source-pool {
+
+	}
+	resource source-id {
+
+	}
+	record source-span {
+		file: source-id,
+		start: u32,
+		end: u32,
+	}
+}

@@ -1,6 +1,0 @@
-(call/generic Object (generic))
-(call/generic Object (generic T))
-(call/generic Object (generic T U))
-(call/generic Object (generic))
-(call/generic Object (generic T))
-(call/apply (call/generic Object (generic T U)) (apply 1 2))

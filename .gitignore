@@ -9,10 +9,12 @@ target/
 Cargo.lock
 Untitled.ipynb
 .ipynb_checkpoints/
-package-lock.json
+
 
 # Node
 node_modules/
+cache/
+package-lock.json
 *.wasm
 
 # Antlr

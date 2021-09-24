@@ -19,7 +19,7 @@ mod string_like;
 pub(crate) mod utils;
 
 pub use crate::{
-    bindings::{AsynchronousKind, FunctionKind},
+    bindings::{AsynchronousKind, FunctionKind, NamespaceKind},
     control_flow::{
         control::{ControlKind, ControlNode, LabelNode},
         do_catch::{MatchCallNode, MatchKind, MatchStatement},
@@ -65,7 +65,7 @@ pub use crate::{
         },
         labeled::{GotoStatement, LabelStatement},
         let_bind::{LetBindNode, VariableDeclaration},
-        namespace::{NamespaceDeclaration, NamespaceKind},
+        namespace::NamespaceDeclaration,
         program::ProgramRoot,
         statements::{StatementContext, StatementKind},
         traits::{TraitDeclaration, TraitKind, TraitTerm},
