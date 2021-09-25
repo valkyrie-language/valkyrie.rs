@@ -8,13 +8,8 @@ const config = defineConfig({
     description: 'Valkyrie - A modern programming language',
     
     vite: {
-        resolve: {
-            alias: {
-                'dayjs': 'dayjs/esm/index.js'
-            }
-        },
         optimizeDeps: {
-            include: ['dayjs']
+            include: ['dayjs', 'mermaid']
         }
     },
 
@@ -83,8 +78,21 @@ const config = defineConfig({
                         {text: 'Effect 系统', link: '/language/effect-system'},
                         {text: '错误处理', link: '/language/error-handler'},
                         {text: '协程和 Yield', link: '/language/coroutine'},
-                        {text: '语法基础', link: '/language/basics'},
-                        {text: '类型系统', link: '/language/types'},
+                        {
+                            text: '类型系统',
+                            link: '/language/type-system/',
+                            items: [
+                                {text: '基本类型', link: '/language/type-system/'},
+                                {text: '高阶类型', link: '/language/type-system/hkt'}
+                            ]
+                        },
+                        {
+                            text: '元编程',
+                            link: '/language/meta-programming/',
+                            items: [
+                                {text: '概述', link: '/language/meta-programming/'}
+                            ]
+                        },
                         {text: '服务定义', link: '/language/services'},
                         {text: '装饰器系统', link: '/language/decorators'},
                         {text: '模块系统', link: '/language/modules'},

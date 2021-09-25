@@ -40,7 +40,7 @@ A: Valkyrie 支持丰富的类型系统：
 - **基础类型**：Int, Float, String, Bool, Unit
 - **容器类型**：List<T>, Array<T>, Map<K,V>, Set<T>
 - **可选类型**：Option<T> (Some(value) | None)
-- **结果类型**：Result<T,E> (Ok(value) | Err(error))
+- **结果类型**：Result<T,E> (Fine(value) | Fail(error))
 - **函数类型**：(A, B) -> C
 - **代数数据类型**：自定义的 sum 和 product 类型
 - **效应类型**：带有效应标注的函数类型
@@ -53,7 +53,7 @@ A: 使用 `type` 关键字定义：
 
 ```valkyrie
 // Sum 类型（联合类型）
-type Result<T, E> = Ok(T) | Err(E)
+type Result<T, E> = Fine(T) | Fail(E)
 
 // Product 类型（记录类型）
 type User = {
@@ -64,8 +64,8 @@ type User = {
 
 // 模式匹配
 match result {
-    Ok(value) -> println("成功: ${value}"),
-    Err(error) -> println("错误: ${error}")
+    Fine(value): println("成功: ${value}"),
+    Fail(error): println("错误: ${error}")
 }
 ```
 
@@ -79,13 +79,13 @@ effect Async {
 }
 
 fn fetch_user_data(id: Int) -> User {
-    let response = perform Async.await(fetch(`/api/users/${id}`));
+    let response = fetch(`/api/users/${id}`).await;
     parse_json(response)
 }
 
 // 处理异步效应
 handle fetch_user_data(42) with Async {
-    await(promise) -> resume(await promise)
+    await(promise) -> resume(promise.await)
 }
 ```
 
@@ -97,9 +97,9 @@ A: Valkyrie 提供多种错误处理方式：
 // 1. 使用 Result 类型
 fn divide(a: Float, b: Float) -> Result<Float, String> {
     if b == 0.0 {
-        Err("除零错误")
+        Fail("除零错误")
     } else {
-        Ok(a / b)
+        Fine(a / b)
     }
 }
 

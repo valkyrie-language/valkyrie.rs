@@ -1,279 +1,399 @@
-# 快速开始
+# Valkyrie 语言快速入门
 
-欢迎使用 Valkyrie 语言！Valkyrie 是一个现代化的函数式编程语言，专为构建高性能、类型安全的应用程序而设计，具有强大的代数效应系统。
+欢迎使用 Valkyrie 语言！Valkyrie 是一个现代化的编程语言，基于 Nyar 编译工具平台构建，提供强大的类型系统、灵活的模块系统和丰富的语言特性。
 
 ## 什么是 Valkyrie？
 
-Valkyrie 是一个函数式编程语言，它提供：
+Valkyrie 是一个多范式编程语言，它提供：
 
-- 🎯 **代数效应系统**：优雅地处理副作用，如异步操作、错误处理、状态管理
-- 🚀 **多后端支持**：编译到 WebAssembly 和 JavaScript，适应不同部署场景
-- 🔒 **类型安全**：强大的类型系统，编译时保证程序正确性
-- ⚡ **高性能**：通过多阶段编译优化，生成高效的目标代码
-- 🔧 **现代语法**：简洁直观的语法，易于学习和使用
+- 🎯 **强大的类型系统**：支持泛型、高阶类型、类型推导等高级特性
+- 🚀 **现代语法**：简洁直观的语法，支持模式匹配、闭包等现代特性
+- 🔒 **内存安全**：垃圾回收器自动管理内存，避免内存泄漏
+- ⚡ **高性能**：零成本抽象，编译时优化
+- 🔧 **灵活的模块系统**：基于命名空间的模块组织方式
 
-## 5分钟快速体验
+## 基本语法
 
-### 1. 安装 Valkyrie 编译器
-
-```bash
-# 使用 Cargo 安装
-cargo install valkyrie-cli
-
-# 或者从源码构建
-git clone https://github.com/valkyrie-lang/valkyrie-vm.git
-cd valkyrie-vm
-cargo build --release
-```
-
-### 2. 创建你的第一个 Valkyrie 程序
-
-创建 `hello.vk`：
+### 变量定义
 
 ```valkyrie
-// 定义一个简单的问候函数
-fn greet(name: String) -> String {
-    "Hello, " + name + "!"
+$ 不可变变量
+let name = "Alice"
+let age = 30
+let is_active = true
+
+$ 可变变量
+let mut counter = 0
+let mut items = []
+
+$ 显式类型注解
+let score: i32 = 95
+let price: f64 = 29.99
+let message: String = "Hello"
+```
+
+### 函数定义
+
+```valkyrie
+$ 基本函数定义
+micro greet() {
+    print("Hello, World!")
 }
 
-// 使用代数效应处理异步操作
-effect Http {
-    fn get(url: String) -> String
+$ 带参数和返回值的函数
+micro add(a: i32, b: i32) -> i32 {
+    a + b
 }
 
-// 异步获取用户信息
-fn fetch_user_info(user_id: i32) -> String {
-    let url = "https://api.example.com/users/" + user_id.to_string();
-    perform Http::get(url)
+$ 多参数函数
+micro calculate(x: f64, y: f64, operation: String) -> f64 {
+    if operation == "add" {
+        x + y
+    } else if operation == "multiply" {
+        x * y
+    } else {
+        0.0
+    }
+}
+```
+
+### 基本数据类型
+
+```valkyrie
+$ 整数类型
+let a: i32 = 42
+let b: u64 = 100
+
+$ 浮点类型
+let x: f32 = 3.14
+let y: f64 = 2.718281828
+
+$ 布尔类型
+let flag: bool = true
+
+$ 字符和字符串
+let ch: char = 'A'
+let text: String = "Hello, World!"
+
+$ 数组类型
+let numbers: [i32; 5] = [1, 2, 3, 4, 5]
+let dynamic: [String] = ["a", "b", "c"]
+
+$ 元组类型
+let point: (f64, f64) = (3.0, 4.0)
+let mixed: (String, i32, bool) = ("test", 42, true)
+```
+
+## 控制流
+
+### 条件语句
+
+```valkyrie
+$ if 语句
+if x > 0 {
+    print("正数")
+} else {
+    print("非正数")
 }
 
-// 主函数展示效应处理
-fn main() {
-    let greeting = greet("Nyar");
-    println(greeting);
+$ if 表达式
+let result = if x > 0 { "positive" } else { "non-positive" }
+
+$ 多重条件
+if score >= 90 {
+    grade = "A"
+} else if score >= 80 {
+    grade = "B"
+} else {
+    grade = "F"
+}
+```
+
+### 循环语句
+
+```valkyrie
+$ while 循环
+while counter < 10 {
+    print(counter)
+    counter = counter + 1
+}
+
+$ for 循环
+for i in 0..10 {
+    print(i)
+}
+
+$ 遍历数组
+for item in items {
+    print(item)
+}
+
+$ 无限循环
+loop {
+    if should_break {
+        break
+    }
+}
+```
+
+## 模式匹配
+
+```valkyrie
+$ 基本模式匹配
+match value {
+    with [branches];
+    case 1: "one"
+    case 2: "two"
+    case 3: "three"
+    else: "other"
+}
+
+$ 范围匹配
+match score {
+    with [grade];
+    case 90..=100: "A"
+    case 80..=89: "B"
+    case 70..=79: "C"
+    else: "F"
+}
+
+$ 元组解构
+match point {
+    with [coordinate_check];
+    case (0, 0): "Origin"
+    case (x, 0): f"On X-axis at {x}"
+    case (0, y): f"On Y-axis at {y}"
+    case (x, y): f"Point at ({x}, {y})"
+}
+```
+
+## 类型定义
+
+### 记录类型
+
+```valkyrie
+$ 基本记录类型
+type Point = {
+    x: f64,
+    y: f64,
+}
+
+$ 泛型记录类型
+type Container<T> = {
+    value: T,
+    metadata: String,
+}
+```
+
+### 联合类型
+
+```valkyrie
+$ 基本联合类型
+union Result<T, E> {
+    Ok { value: T },
+    Err { error: E },
+}
+
+$ 使用联合类型
+let result: Result<i32, String> = Ok { value: 42 }
+match result {
+    with [result_check];
+    case Ok { value }: print(f"Success: {value}")
+    case Err { error }: print(f"Error: {error}")
+}
+```
+
+### 类定义
+
+```valkyrie
+$ 基本类定义
+class Person {
+    name: String
+    age: i32
     
-    // 处理HTTP效应
-    handle {
-        let user_info = fetch_user_info(123);
-        println(user_info);
-    } with Http {
-        get(url) -> resume => {
-            // 模拟HTTP请求
-            let response = "User data for: " + url;
-            resume(response)
-        }
+    new(name: String, age: i32) -> Self {
+        Self { name, age }
+    }
+    
+    greet(self) {
+        print("Hello, I'm ${self.name}")
+    }
+    
+    get_info(self) -> String {
+        "${self.name} is ${self.age} years old"
+    }
+}
+
+$ 使用类
+let person = Person::new("Alice", 30)
+person.greet()
+let info = person.get_info()
+```
+
+## 模块系统
+
+### 命名空间声明
+
+```valkyrie
+$ 声明命名空间
+namespace math.geometry {
+    struct Point {
+        x: f64,
+        y: f64,
+    }
+    
+    fn distance(p1: Point, p2: Point) -> f64 {
+        let dx = p1.x - p2.x
+        let dy = p1.y - p2.y
+        (dx * dx + dy * dy).sqrt()
     }
 }
 ```
 
-### 3. 编译和运行
-
-```bash
-# 编译到 WebAssembly (生产环境)
-valkyrie compile hello.vk --target wasm --output hello.wasm
-
-# 编译到 JavaScript (开发环境)
-valkyrie compile hello.vk --target js --output hello.js
-
-# 直接运行 (解释执行)
-valkyrie run hello.vk
-
-# 查看编译过程的中间表示
-valkyrie compile hello.vk --emit-hir --emit-mir --emit-lir
-```
-
-### 4. 在不同环境中使用
-
-#### 在 Web 浏览器中使用 (WebAssembly)
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Valkyrie WebAssembly Demo</title>
-</head>
-<body>
-    <script type="module">
-        import init, { run_valkyrie_program } from './hello.js';
-        
-        async function main() {
-            await init();
-            
-            // 运行编译后的 Valkyrie 程序
-            const result = run_valkyrie_program();
-            console.log('Valkyrie program output:', result);
-        }
-        
-        main();
-    </script>
-</body>
-</html>
-```
-
-#### 在 Node.js 中使用 (JavaScript)
-
-```javascript
-// 导入编译后的 JavaScript 代码
-const { greet, fetch_user_info, main } = require('./hello.js');
-
-// 直接调用函数
-console.log(greet('World'));
-
-// 运行主程序
-main();
-```
-
-## 核心概念
-
-### 类型系统
-
-Valkyrie 提供了强大的函数式类型系统：
+### 导入系统
 
 ```valkyrie
-// 基础类型
-type UserId = Int
-type Email = String
+$ 导入整个命名空间
+using math.geometry
 
-// 可选类型 (Maybe monad)
-type OptionalField = Maybe<String>
+$ 选择性导入
+using math.geometry.{Point, distance}
 
-// 列表类型
-type Tags = List<String>
+$ 重命名导入
+using math.geometry.Point as GeomPoint
 
-// 记录类型
-type User = {
-    id: UserId,
-    name: String,
-    email: Email,
-}
-
-// 联合类型 (Sum types)
-type Status = Active | Inactive | Pending
-
-// 泛型类型
-type Result<T, E> = Ok(T) | Err(E)
-```
-
-### 代数效应系统
-
-Valkyrie 使用代数效应来优雅地处理副作用：
-
-```valkyrie
-// 定义效应
-effect State<T> {
-    fn get() -> T
-    fn put(value: T) -> ()
-}
-
-effect IO {
-    fn read_file(path: String) -> String
-    fn write_file(path: String, content: String) -> ()
-}
-
-effect Error<E> {
-    fn throw(error: E) -> Never
-}
-
-// 使用效应
-fn process_file(input_path: String, output_path: String) -> () {
-    let content = perform IO::read_file(input_path);
-    let processed = content.to_uppercase();
-    perform IO::write_file(output_path, processed)
-}
-
-// 处理效应
+$ 使用导入的内容
 fn main() {
-    handle {
-        process_file("input.txt", "output.txt")
-    } with IO {
-        read_file(path) -> resume => {
-            // 实际的文件读取逻辑
-            let content = std::fs::read_to_string(path)?;
-            resume(content)
-        },
-        write_file(path, content) -> resume => {
-            // 实际的文件写入逻辑
-            std::fs::write(path, content)?;
-            resume(())
-        }
-    }
+    let p1 = Point { x: 0.0, y: 0.0 }
+    let p2 = Point { x: 3.0, y: 4.0 }
+    let dist = distance(p1, p2)
+    println("Distance: ${dist}")
 }
 ```
 
-### 函数式编程特性
+## 字面量
+
+### 数值字面量
 
 ```valkyrie
-// 高阶函数
-fn map<A, B>(f: A -> B, list: List<A>) -> List<B> {
-    match list {
-        [] => [],
-        [head, ...tail] => [f(head), ...map(f, tail)]
+$ 整数字面量
+42
+0xFF        $ 十六进制
+0b1010      $ 二进制
+0o755       $ 八进制
+1_000_000   $ 带分隔符
+
+$ 浮点数字面量
+3.14
+1.23e4      $ 科学计数法
+3.141_592_653  $ 带分隔符
+```
+
+### 字符串字面量
+
+```valkyrie
+$ 普通字符串
+"Hello, World!"
+'单引号字符串'
+
+$ 转义序列
+"换行符：\n"
+"制表符：\t"
+"Unicode：\u{1F600}"  $ 😀 表情符号
+
+$ 原始字符串
+r"C:\Users\Name\Documents"
+r"""多行原始字符串
+不处理转义序列"""
+
+$ 字符串插值
+let name = "Alice"
+let age = 30
+let message = "Hello, ${name}! You are ${age} years old."
+```
+
+### 其他字面量
+
+```valkyrie
+$ 数组字面量
+[1, 2, 3, 4, 5]
+["a", "b", "c"]
+
+$ 对象字面量
+{
+    name: "Alice",
+    age: 30,
+    active: true
+}
+
+$ 元组字面量
+(1, 2, 3)
+("name", 30, true)
+
+$ 范围字面量
+0..=100     $ 包含范围
+1..<10      $ 排除范围
+
+$ 正则表达式字面量
+re"hello"
+re"\d+"
+re"[a-zA-Z]+"
+```
+
+## 闭包和高阶函数
+
+```valkyrie
+$ 基本闭包语法
+let square = { $x * $x }
+let add = { $x + $y }
+
+$ 显式参数类型
+let multiply = { $x: i32, $y: i32 -> $x * $y }
+
+$ 多语句闭包
+let complex = {
+    let result = $x * 2
+    result + 1
+}
+
+$ 高阶函数使用
+let numbers = [1, 2, 3, 4, 5]
+let squares = numbers.map { $x * $x }
+let evens = numbers.filter { $x % 2 == 0 }
+let sum = numbers.reduce { $acc + $x }
+```
+
+## 类型函数 (mezzo)
+
+```valkyrie
+$ 类型函数定义
+mezzo IsEven(z: Type) -> bool {
+    $ 检查类型 z 是否表示偶数
+    match z {
+        i32 if z % 2 == 0 => true,
+        _ => false
     }
 }
 
-// 柯里化函数
-fn add(x: Int) -> (Int -> Int) {
-    fn(y: Int) -> Int { x + y }
-}
-
-// 模式匹配
-fn process_result<T, E>(result: Result<T, E>) -> String {
-    match result {
-        Ok(value) => "Success: " + value.to_string(),
-        Err(error) => "Error: " + error.to_string()
-    }
-}
-
-// 递归函数
-fn factorial(n: Int) -> Int {
-    match n {
-        0 => 1,
-        n if n > 0 => n * factorial(n - 1),
-        _ => perform Error::throw("Invalid input")
-    }
-}
-
-// 尾递归优化
-fn fibonacci_tail(n: Int, acc1: Int = 0, acc2: Int = 1) -> Int {
-    match n {
-        0 => acc1,
-        1 => acc2,
-        _ => fibonacci_tail(n - 1, acc2, acc1 + acc2)
+$ 类型映射
+mezzo MapType<T>(input: T) -> T {
+    $ 对输入类型进行映射变换
+    match input {
+        i32 => i64,
+        f32 => f64,
+        _ => input
     }
 }
 ```
 
 ## 下一步
 
-现在你已经了解了 VOS 的基础概念，可以继续深入学习：
+现在你已经了解了 Valkyrie 语言的基本语法和特性，可以：
 
-### 📚 学习指南
-- **[开发指南](/development/)**：了解如何开发和扩展 VOS 项目
-- **[维护指南](/maintenance/)**：学习项目架构和维护最佳实践
+1. **深入学习**：查看 [语言特性详细指南](./features.md)
+2. **类型系统**：了解 [类型系统](../language/type-system/index.md) 的高级特性
+3. **模式匹配**：掌握 [模式匹配](../language/pattern-match.md) 的强大功能
+4. **模块系统**：学习 [模块系统](../language/modules.md) 的组织方式
+5. **元编程**：探索 [元编程](../language/meta-programming/index.md) 的高级用法
 
-### 🔧 技术参考
-- **[语言规范](/language/)**：完整的 VOS 语言参考
-- **[中间件系统](/guide/middleware/)**：了解请求处理管道
-- **[认证系统](/guide/auth)**：配置身份验证
-- **[授权系统](/guide/acl)**：设置访问控制
-- **[配置管理](/guide/config)**：服务配置最佳实践
-
-### 🎯 实践示例
-- **[示例项目](/examples/)**：查看完整的项目示例
-- **[电商 API](/examples/ecommerce)**：复杂业务场景示例
-- **[用户服务](/examples/user-service)**：认证授权示例
-
-## 社区和支持
-
-- **GitHub**: [vos-lang/vos-rs](https://github.com/vos-lang/vos-rs)
-- **文档**: 你正在阅读的这份文档
-- **问题反馈**: [GitHub Issues](https://github.com/vos-lang/vos-rs/issues)
-
-恭喜！你已经成功创建了第一个 Valkyrie 程序。现在你可以：
-
-- 📖 查看 [核心概念](./core-concepts.md) 了解 Valkyrie 的设计理念和代数效应系统
-- 🛠️ 学习 [最佳实践](./best-practices.md) 编写高质量的 Valkyrie 代码
-- 🔧 探索 [配置选项](./config.md) 自定义编译器行为
-- 🚀 深入 [开发指南](./development.md) 了解高级特性和工具链开发
-
-开始你的 Valkyrie 之旅吧！🚀
+开始你的 Valkyrie 编程之旅吧！

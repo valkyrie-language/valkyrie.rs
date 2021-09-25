@@ -75,9 +75,9 @@ fn main() {
 
 // 模式匹配和类型安全
 match user {
-    Some(u) if u.age >= 18 -> println("成年用户: ${u.name}"),
-    Some(u) -> println("未成年用户: ${u.name}"),
-    None -> println("用户不存在")
+    Some(u) if u.age >= 18: println("成年用户: ${u.name}"),
+    Some(u): println("未成年用户: ${u.name}"),
+    None: println("用户不存在")
 }
 ```
 

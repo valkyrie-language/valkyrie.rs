@@ -15,18 +15,22 @@ if condition {
 # if-else 语句
 if x > 0 {
     print("正数")
-} else {
+}
+else {
     print("非正数")
 }
 
 # if-else if-else 链
 if score >= 90 {
     grade = "A"
-} else if score >= 80 {
+}
+else if score >= 80 {
     grade = "B"
-} else if score >= 70 {
+}
+else if score >= 70 {
     grade = "C"
-} else {
+}
+else {
     grade = "F"
 }
 
@@ -36,9 +40,11 @@ let result = if x > 0 { "positive" } else { "non-positive" }
 # 多行 if 表达式
 let message = if user.is_admin {
     "管理员用户"
-} else if user.is_premium {
+}
+else if user.is_premium {
     "高级用户"
-} else {
+}
+else {
     "普通用户"
 }
 ```
@@ -141,7 +147,7 @@ until let None = optional_value {
 
 ```valkyrie
 # 范围循环
-for i in 0..10 {
+for i in 0..<10 {
     print(i)  # 输出 0 到 9
 }
 
@@ -177,8 +183,8 @@ for item in collection where item.is_valid() {
 }
 
 # 嵌套循环
-for i in 0..3 {
-    for j in 0..3 {
+for i in 0..<3 {
+    for j in 0..<3 {
         print(f"({i}, {j})")
     }
 }
@@ -231,8 +237,8 @@ match person {
 
 # 枚举匹配
 match result {
-    Ok(value) => print(f"成功: {value}"),
-    Err(error) => print(f"错误: {error}")
+    Fine(value): print("成功: ${value}"),
+    Fail(error): print("错误: ${error}")
 }
 
 # 守卫条件
@@ -247,7 +253,7 @@ match number {
 
 ```valkyrie
 # 数组解构
-let [first, second, ..rest] = array
+let [first, second, ..rest] = array  # 解构数组到kvs
 let [a, _, c] = [1, 2, 3]  # 忽略第二个元素
 
 # 元组解构
@@ -257,7 +263,7 @@ let (name, ..) = ("Alice", 25, "Engineer")  # 只取第一个
 # 对象解构
 let { name, age } = person
 let { x: new_x, y: new_y } = point  # 重命名
-let { name, ..rest } = user  # 剩余属性
+let { name, ..rest } = user  # 解构dict到kvs
 ```
 
 ## 异常处理
@@ -283,14 +289,14 @@ catch {
     print(f"未知错误: {error}")
 }
 
-# 带 finally 的异常处理
-catch {
-    file_operation()
-} handle IOError(msg) {
-    print(f"IO错误: {msg}")
-} finally {
-    cleanup_resources()
-}
+# 带资源管理的异常处理
+using resource = acquire_resource() {
+    catch {
+        file_operation()
+    } handle IOError(msg) {
+        print("IO错误: ${msg}")
+    }
+}  # resource会自动清理
 
 # 异常处理表达式
 let result = catch {
@@ -319,7 +325,7 @@ catch {
 micro process_file(path: String) -> Result<String, IOError> {
     let content = read_file(path)?  # 如果失败则提前返回错误
     let processed = transform(content)?
-    Ok(processed)
+    Fine(processed)
 }
 
 # 手动抛出异常
@@ -330,7 +336,7 @@ micro validate_age(age: i32) -> Result<(), ValidationError> {
     if age > 150 {
         throw ValidationError("年龄不能超过150")
     }
-    Ok(())
+    Fine(())
 }
 ```
 
@@ -340,7 +346,7 @@ micro validate_age(age: i32) -> Result<(), ValidationError> {
 
 ```valkyrie
 # break 跳出循环
-for i in 0..10 {
+for i in 0..<10 {
     if i == 5 {
         break  # 跳出循环
     }
@@ -348,7 +354,7 @@ for i in 0..10 {
 }
 
 # continue 跳过当前迭代
-for i in 0..10 {
+for i in 0..<10 {
     if i % 2 == 0 {
         continue  # 跳过偶数
     }
@@ -356,8 +362,8 @@ for i in 0..10 {
 }
 
 # 带标签的 break 和 continue
-'outer: for i in 0..3 {
-    'inner: for j in 0..3 {
+'outer: for i in 0..<3 {
+'inner: for j in 0..<3 {
         if i == 1 && j == 1 {
             break 'outer  # 跳出外层循环
         }
