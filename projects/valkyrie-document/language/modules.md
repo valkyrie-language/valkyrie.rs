@@ -46,9 +46,9 @@ namespace graphics {
             b: u8,
         }
         
-        let RED = RGB { r: 255, g: 0, b: 0 }
-        let GREEN = RGB { r: 0, g: 255, b: 0 }
-        let BLUE = RGB { r: 0, g: 0, b: 255 }
+        let RED: RGB = class { r: 255, g: 0, b: 0 }
+        let GREEN: RGB = class { r: 0, g: 255, b: 0 }
+        let BLUE: RGB = class { r: 0, g: 0, b: 255 }
     }
 }
 ```
@@ -59,7 +59,7 @@ namespace graphics {
 
 ```valkyrie
 # 导入整个命名空间
-using math.geometry
+using math.geometry.*
 
 micro main() {
     let p1 = Point { x: 0.0, y: 0.0 }
@@ -116,7 +116,7 @@ namespace database {
     }
     
     # 包内可见
-    pub(package) class InternalConfig {
+    class InternalConfig {
         secret_key: String,
     }
     
@@ -130,9 +130,9 @@ namespace database {
     pub micro connect(host: String, port: u16) -> Result<Connection, Error> {
         let conn = Connection { host, port, timeout: Duration::seconds(30) }
         if validate_connection(&conn) {
-            Fine { value: conn }
+            Fine(conn)
         } else {
-            Fail { error: Error::InvalidConnection }
+            Fail(Error::InvalidConnection)
         }
     }
 }
@@ -357,7 +357,7 @@ namespace database {
     pub micro initialize(config: DatabaseConfig) -> Result<(), Error> {
         unsafe {
             if CONNECTION_POOL.is_some() {
-                return Fail { error: Error::AlreadyInitialized }
+                return Fail(Error::AlreadyInitialized)
             }
             
             let pool = ConnectionPool::new(config)?

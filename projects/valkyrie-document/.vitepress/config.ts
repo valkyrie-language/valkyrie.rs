@@ -35,21 +35,18 @@ const config = defineConfig({
                 text: '快速开始',
                 items: [
                     {text: '快速开始', link: '/guide/'},
-                    {text: '开发指南', link: '/development/'},
-                    {text: '维护指南', link: '/maintenance/'},
                     {text: '查看示例', link: '/examples/'}
                 ]
             },
             {
                 text: '语言规范',
                 items: [
-                    {text: '语言规范', link: '/language/'},
-
+                    {text: '核心概念', link: '/language/'},
+                    {text: '维护指南', link: '/maintenance/'},
                 ]
             },
             {text: '常见问题', link: '/faq'}
         ],
-
         sidebar: {
             '/guide/': [
                 {
@@ -82,7 +79,14 @@ const config = defineConfig({
                             link: '/language/object-oriented/',
                             items: [
                                 {text: '对象模型', link: '/language/object-oriented/'},
-                                {text: '匿名类', link: '/language/object-oriented/anonymous-classes'}
+                                {text: '匿名类', link: '/language/object-oriented/anonymous-classes'},
+                                {text: '值类', link: '/language/object-oriented/value-class'},
+                                {text: '属性系统', link: '/language/object-oriented/property'},
+                                {text: '继承', link: '/language/object-oriented/inheritance'},
+                                {text: 'Trait 系统', link: '/language/object-oriented/trait-system'},
+                                {text: '事件系统', link: '/language/object-oriented/events'},
+                                {text: '神经网络', link: '/language/object-oriented/neural'},
+                                {text: '组件系统', link: '/language/object-oriented/widget'}
                             ]
                         },
                         {
@@ -94,13 +98,16 @@ const config = defineConfig({
                                 {text: '模式匹配', link: '/language/function-oriented/pattern-match'}
                             ]
                         },
-                        {text: '协程和 Yield', link: '/language/coroutine'},
                         {
                             text: '效应式编程',
                             link: '/language/effect-system/',
                             items: [
                                 {text: 'Effect 系统', link: '/language/effect-system/'},
                                 {text: '错误处理', link: '/language/effect-system/error-handler'},
+                                {text: '生成器', link: '/language/effect-system/generator'},
+                                {text: '协程', link: '/language/effect-system/coroutine'},
+                                {text: '面向切面编程', link: '/language/effect-system/aop'},
+                                {text: '控制反转', link: '/language/effect-system/ioc'},
                             ]
                         },
                         {
@@ -114,14 +121,6 @@ const config = defineConfig({
                         },
                         {text: '模块系统', link: '/language/modules'},
                         {text: 'Trait 系统', link: '/language/trait-system'}
-                    ]
-                }
-            ],
-            '/development/': [
-                {
-                    text: '开发指南',
-                    items: [
-                        {text: '概述', link: '/development/'}
                     ]
                 }
             ],
@@ -170,4 +169,4 @@ export default withMermaid({
     mermaidPlugin: {
         class: "mermaid my-class", // set additional css classes for parent container
     },
-});
+})

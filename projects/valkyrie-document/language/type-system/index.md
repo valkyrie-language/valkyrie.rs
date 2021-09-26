@@ -36,7 +36,7 @@ let point: (f64, f64) = (3.0, 4.0)
 let mixed: (String, i32, bool) = ("test", 42, true)
 
 # 可选类型
-let maybe_value: Option<i32> = Some { value: 42 }
+let maybe_value: Option<i32> = Some(42)
 let empty: Option<String> = None
 ```
 
@@ -73,14 +73,14 @@ type Person = {
 ```valkyrie
 # 基本联合类型
 union Result<T, E> {
-    Ok { value: T },
-    Err { error: E },
+    Fine { value: T },
+Fail { error: E },
 }
 
 # 复杂联合类型
 union Expression {
-    Literal { value: i32 },
-    Variable { name: String },
+    Literal(i32),
+Variable(String),
     Binary {
         left: Expression,
         operator: String,

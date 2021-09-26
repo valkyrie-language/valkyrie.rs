@@ -38,9 +38,9 @@ fn counter() -> Int {
 
 A: Valkyrie 支持丰富的类型系统：
 - **基础类型**：Int, Float, String, Bool, Unit
-- **容器类型**：List<T>, Array<T>, Map<K,V>, Set<T>
-- **可选类型**：Option<T> (Some(value) | None)
-- **结果类型**：Result<T,E> (Fine(value) | Fail(error))
+- **容器类型**：List&lt;T&gt;, Array&lt;T&gt;, Map&lt;K,V&gt;, Set&lt;T&gt;
+- **可选类型**：Option&lt;T&gt; (Some(value) | None)
+- **结果类型**：Result&lt;T,E&gt; (Fine(value) | Fail(error))
 - **函数类型**：(A, B) -> C
 - **代数数据类型**：自定义的 sum 和 product 类型
 - **效应类型**：带有效应标注的函数类型

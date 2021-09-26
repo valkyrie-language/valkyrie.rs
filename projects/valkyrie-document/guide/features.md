@@ -39,7 +39,7 @@ let text: String = "Hello, World!"
 $ 复合类型
 let numbers: [i32; 5] = [1, 2, 3, 4, 5]
 let point: (f64, f64) = (3.0, 4.0)
-let maybe_value: Option<i32> = Some { value: 42 }
+let maybe_value: Option<i32> = Some(42)
 ```
 
 #### 泛型和类型参数
@@ -85,7 +85,7 @@ impl Monad<Option> {
     bind(opt, f) {
         match opt {
             with [monad_bind];
-            case Some { value }: f(value)
+            case Some(value): f(value)
             case None: None
         }
     }
@@ -182,7 +182,7 @@ $ 对象解构
 match person {
     with [person_info];
     case { name: "Alice", age }: f"Alice is {age} years old"
-    case { name, age: 18..=25 }: f"Young adult: {name}"
+    case { name, age: 18..=25 }: f"Young adult: ${name}"
     case { name, age }: f"{name} is {age} years old"
 }
 ```
@@ -193,14 +193,14 @@ match person {
 $ Result 类型匹配
 match result {
     with [result_handling];
-    case Ok { value }: f"Success: {value}"
-    case Err { error }: f"Error: {error}"
+    case Fine { value }: f"Success: {value}"
+case Fail { error }: f"Error: {error}"
 }
 
 $ 复杂联合类型
 union Expression {
-    Literal { value: i32 },
-    Variable { name: String },
+    Literal(i32),
+Variable(String),
     Binary {
         left: Expression,
         operator: String,
@@ -210,14 +210,14 @@ union Expression {
 
 match expr {
     with [expression_evaluation];
-    case Literal { value }: value
-    case Variable { name }: lookup_variable(name)
-    case Binary { left, operator: "+", right }: {
-        evaluate(left) + evaluate(right)
-    }
-    case Binary { left, operator: "*", right }: {
-        evaluate(left) * evaluate(right)
-    }
+    case Literal(value): value
+case Variable(name): lookup_variable(name)
+case Binary { left, operator: "+", right }: {
+    evaluate(left) + evaluate(right)
+}
+case Binary { left, operator: "*", right }: {
+    evaluate(left) * evaluate(right)
+}
     else: 0
 }
 ```
@@ -443,9 +443,9 @@ namespace graphics {
             b: u8,
         }
         
-        let RED = RGB { r: 255, g: 0, b: 0 }
-        let GREEN = RGB { r: 0, g: 255, b: 0 }
-        let BLUE = RGB { r: 0, g: 0, b: 255 }
+        let RED: RGB = class { r: 255, g: 0, b: 0 }
+let GREEN: RGB = class { r: 0, g: 255, b: 0 }
+let BLUE: RGB = class { r: 0, g: 0, b: 255 }
     }
 }
 ```
@@ -454,7 +454,7 @@ namespace graphics {
 
 ```valkyrie
 $ 完整导入
-using math
+using math.*
 
 micro calculate_circle_area(radius: f64) -> f64 {
     math.PI * radius * radius
@@ -592,7 +592,7 @@ micro divide(a: f64, b: f64) -> Result<f64, String> {
     if b == 0.0 {
         Err { error: "Division by zero" }
     } else {
-        Ok { value: a / b }
+        Fine { value: a / b }
     }
 }
 
@@ -609,8 +609,8 @@ let result = divide(10.0, 2.0)
 
 match result {
     with [error_handling];
-    case Ok { value }: print(f"Result: {value}")
-    case Err { error }: print(f"Error: {error}")
+    case Fine { value }: print(f"Result: {value}")
+case Fail { error }: print(f"Error: {error}")
 }
 ```
 
@@ -693,7 +693,7 @@ $ 当所有引用都离开作用域时自动释放
 $ 异步函数
 async micro fetch_data(url: String) -> Result<String, Error> {
     let response = http_client.get(url).await?
-    Ok { value: response.text().await? }
+    Fine { value: response.text().await? }
 }
 
 $ 并发执行

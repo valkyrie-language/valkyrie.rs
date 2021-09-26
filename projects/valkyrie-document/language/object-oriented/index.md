@@ -1,6 +1,11 @@
 
 ## 面向对象编程
 
+### 特殊类类型
+
+- [神经网络类型 (Neural)](./neural.md) - 用于机器学习的特殊类类型
+- [界面组件类型 (Widget)](./widget.md) - 用于 UI 开发的特殊类类型
+
 ### 字段定义
 
 ```valkyrie
@@ -148,67 +153,7 @@ class BankAccount {
 }
 ```
 
-## 联合类型 (union)
 
-### 基本联合类型
-
-```valkyrie
-# 简单联合类型
-union Result<T, E> {
-    Fine { value: T },
-    Fail { error: E }
-}
-
-# 选项类型
-union Option<T> {
-    Some { value: T },
-    None
-}
-
-# 复杂联合类型
-union JsonValue {
-    Null,
-    Bool { value: bool },
-    Number { value: f64 },
-    String { value: String },
-    Array { items: [JsonValue] },
-    Object { fields: {String: JsonValue} }
-}
-```
-
-### 联合类型方法
-
-```valkyrie
-union Result<T, E> {
-    Fine { value: T },
-    Fail { error: E },
-    
-    # 关联方法
-    micro is_ok(self) -> bool {
-        if let Fine { .. } = self {
-            true
-        } else {
-            false
-        }
-    }
-    
-    micro unwrap(self) -> T {
-        if let Fine { value } = self {
-            value
-        } else {
-            panic("Called unwrap on Fail")
-        }
-    }
-    
-    micro map<U>(self, f: micro(T) -> U) -> Result<U, E> {
-        if let Fine { value } = self {
-            Fine { value: f(value) }
-        } else if let Fail { error } = self {
-            Fail { error }
-        }
-    }
-}
-```
 
 ## 标志类型 (flags)
 

@@ -1,72 +1,6 @@
-# 协程和 Yield
+# 协程
 
-Valkyrie 提供了强大的协程支持，通过 `yield` 关键字实现协作式多任务处理。协程允许函数在执行过程中暂停和恢复，非常适合处理异步操作、生成器和状态机。
-
-## 基本 Yield 语法
-
-### 简单生成器
-
-```valkyrie
-# 基本生成器函数
-micro count_up(max: i32) {
-    let mut i = 0
-    while i < max {
-        yield i
-        i += 1
-    }
-}
-
-# 使用生成器
-let counter = count_up(5)
-for value in counter {
-    print(value)  # 输出: 0, 1, 2, 3, 4
-}
-```
-
-### 无限生成器
-
-```valkyrie
-# 斐波那契数列生成器
-micro fibonacci() {
-    let mut a = 0
-    let mut b = 1
-    loop {
-        yield a
-        let temp = a + b
-        a = b
-        b = temp
-    }
-}
-
-# 获取前10个斐波那契数
-let fib = fibonacci()
-for i in 0..<10 {
-    print(fib.next())  # 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
-}
-```
-
-### 带返回值的生成器
-
-```valkyrie
-# 生成器可以有最终返回值
-micro process_items(items: [String]) -> i32 {
-    let mut count = 0
-    for item in items {
-        if item.is_valid() {
-            yield item.process()
-            count += 1
-        }
-    }
-    count  # 最终返回处理的项目数量
-}
-
-# 使用
-let processor = process_items(["item1", "item2", "item3"])
-for result in processor {
-    print("Processed: ${ result }")
-}
-let total_count = processor.return_value()  # 获取最终返回值
-```
+Valkyrie 提供了强大的协程支持，通过 `yield` 关键字实现协作式多任务处理。协程允许函数在执行过程中暂停和恢复，非常适合处理异步操作和状态机。协程与生成器的主要区别在于协程更注重控制流的暂停和恢复，而不仅仅是产生值序列。
 
 ## 协程状态管理
 
@@ -110,23 +44,33 @@ print(coro.state())  # Completed
 
 ```valkyrie
 # 手动控制协程执行
-micro controlled_generator() {
-    let mut value = 0
+micro controlled_coroutine() {
+    let mut state = "idle"
     loop {
-        let input = yield value
-        if input != null {
-            value = input  # 接收外部输入
-        } else {
-            value += 1     # 默认递增
+        let command = yield state
+        command.match {
+            case "start": {
+                state = "running"
+            }
+            case "pause": {
+                state = "paused"
+            }
+            case "stop": {
+                state = "stopped"
+                break
+            }
+            case _: {
+                state = "unknown_command"
+            }
         }
     }
 }
 
-let gen = controlled_generator()
-print(gen.next())        # 0
-print(gen.send(10))      # 10 (发送值给协程)
-print(gen.next())        # 11
-print(gen.send(100))     # 100
+let coro = controlled_coroutine()
+print(coro.next())           # "idle"
+print(coro.send("start"))    # "running"
+print(coro.send("pause"))    # "paused"
+print(coro.send("stop"))     # "stopped"
 ```
 
 ## 异步协程
@@ -198,41 +142,6 @@ async micro run_concurrent() {
 ```
 
 ## 高级协程模式
-
-### 协程管道
-
-```valkyrie
-# 协程管道处理
-micro pipeline_stage1(input: Iterator<i32>) {
-    for value in input {
-        yield value * 2  # 第一阶段：乘以2
-    }
-}
-
-micro pipeline_stage2(input: Iterator<i32>) {
-    for value in input {
-        if value % 4 == 0 {
-            yield value  # 第二阶段：过滤4的倍数
-        }
-    }
-}
-
-micro pipeline_stage3(input: Iterator<i32>) {
-    for value in input {
-        yield "Result: ${ value }"  # 第三阶段：格式化
-    }
-}
-
-# 构建管道
-let numbers = [1, 2, 3, 4, 5, 6, 7, 8]
-let stage1 = pipeline_stage1(numbers.iter())
-let stage2 = pipeline_stage2(stage1)
-let stage3 = pipeline_stage3(stage2)
-
-for result in stage3 {
-    print(result)  # "Result: 4", "Result: 8", "Result: 12", "Result: 16"
-}
-```
 
 ### 状态机协程
 
@@ -454,3 +363,76 @@ async micro test_async_generator() {
     @.assert_equal(final_result.len(), 5)
 }
 ```
+
+## 异步块：async { }
+
+在异步函数之外或之内，都可以使用 `async { ... }` 创建一个可执行的异步任务对象（可视为一个延迟执行的协程/Promise）。该块内可以使用 `await` 等待其它异步结果。
+
+```valkyrie
+# 创建一个异步任务（不会立即阻塞当前线程）
+let task = async {
+    let user = await fetch_user(42)
+    let posts = await fetch_posts(user.id)
+    (user, posts)
+}
+
+# 任务可被组合
+let composed = async {
+    let (u, p) = await task
+    render(u, p)
+}
+```
+
+特点：
+- `async { ... }` 是表达式，返回一个任务句柄，可被存入变量、作为参数传递或进一步组合。
+- 任务不会自动阻塞当前线程，如何“运行”由下节的 run.* 与 `awake` 控制。
+
+## 运行控制：run.await / run.block / run.awake / awake
+
+为统一控制异步任务的执行与结果获取，约定任务句柄提供 `run` 控制器：
+
+- `task.run.await`：在异步上下文中挂起当前协程，直至任务完成并返回结果。
+- `task.run.block`：在同步上下文中阻塞当前线程直至任务完成，返回结果（适合 CLI、测试入口等）。
+- `task.run.awake`：将任务调度到执行器上异步启动，但不等待结果，返回轻量句柄或 Unit。
+- `awake <expr>`：语法糖，等价于对 `<expr>` 产生的任务执行“fire-and-forget”，即触发后忽略结果与错误（可用于日志、遥测等非关键路径）。
+
+### 使用示例
+
+```valkyrie
+# 同步入口中（阻塞等待）
+micro main() {
+    let task = async {
+        compute_heavy()  # 假设是计算密集操作
+    }
+    let result = task.run.block
+    print("结果: ${ result }")
+}
+```
+
+```valkyrie
+# 异步上下文中（协作式等待）
+async micro handle_request(id: i64) -> String {
+    let task = async {
+        let data = await fetch_by_id(id)
+        transform(data)
+    }
+    let out = task.run.await
+    out
+}
+```
+
+```valkyrie
+# 调度但不关心结果（fire-and-forget）
+awake async {
+    audit("user_login")
+}
+
+let bg = async { refresh_cache() }
+_bg = bg.run.awake   # 触发后台刷新并忽略结果
+```
+
+### 与现有 await 语法的关系
+
+- 在异步函数内，`await task` 可理解为 `task.run.await` 的简写，两者语义一致。
+- 在同步函数内，若需要等待结果，使用 `task.run.block`；不等待则使用 `awake task` 或 `task.run.awake`。
+- `awake` 的语义为 “fire then ignore”，适合非关键路径、可重试或可丢弃的任务。

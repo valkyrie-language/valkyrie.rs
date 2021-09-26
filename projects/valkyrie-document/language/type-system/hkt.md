@@ -90,13 +90,13 @@ impl Monad<Option> {
 # Result 单子实现
 impl<E> Monad<Result<_, E>> {
     micro pure<A>(value: A) -> Result<A, E> {
-        Ok(value)
+        Fine { value }
     }
     
     micro bind<A, B>(self: Result<A, E>, f: micro(A) -> Result<B, E>) -> Result<B, E> {
         match self {
-            Ok(value) => f(value),
-            Err(error) => Err(error),
+            Fine { value } => f(value),
+Fail { error } => Fail { error },
         }
     }
 }
