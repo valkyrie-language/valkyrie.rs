@@ -119,24 +119,24 @@ r"""
 # 基本字符串插值
 let name = "Alice"
 let age = 30
-let message = "Hello, ${ name }! You are ${ age } years old."
+let message = "Hello, #{ name }! You are #{ age } years old."
 
 # 表达式插值
 let x = 10
 let y = 20
-let result = "The sum of ${ x } and ${ y } is ${ x + y }"
+let result = "The sum of #{ x } and #{ y } is #{ x + y }"
 
 # 复杂表达式插值
 let user = { name: "Bob", score: 95 }
-let status = "User ${ user.name } has a score of ${ user.score }%"
+let status = "User #{ user.name } has a score of #{ user.score }%"
 
 # 方法调用插值
 let items = ["apple", "banana", "cherry"]
-let info = "We have ${ items.length() } items: ${ items.join(", ") }"
+let info = "We have #{ items.length() } items: #{ items.join(", ") }"
 
 # 条件表达式插值
 let temperature = 25
-let weather = "It's ${ if temperature > 20 { "warm" } else { "cool" } } today"
+let weather = "It's #{ if temperature > 20 { "warm" } else { "cool" } } today"
 ```
 
 ## 字符字面量

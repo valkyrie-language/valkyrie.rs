@@ -137,7 +137,7 @@ micro read_and_parse(path: String) -> Result<Config, AppError> {
 
 # 手动错误转换
 let result = try Result<Data> {
-    fetch_data().map_err(|e| AppError::Network(e))?
+    fetch_data().map_err({ $e => AppError::Network($e) })?
 }
 ```
 
@@ -211,9 +211,9 @@ let data = try Result<Data> {
 ```valkyrie
 # 处理部分失败
 let results = try Result<Vec<ProcessedItem>> {
-    items.map(|item| {
+    items.map({ $item =>
         try Result<ProcessedItem> {
-            process_item(item)?
+            process_item($item)?
         }
         .catch {
             case ProcessingError(msg): {
@@ -222,7 +222,7 @@ let results = try Result<Vec<ProcessedItem>> {
             }
             else: None
         }
-    }).filter_map(|x| x).collect()
+    }).filter_map({ $x => $x }).collect()
 }
 ```
 
@@ -240,7 +240,7 @@ union ValidationError {
 }
 
 # 上下文信息
-struct ContextualError {
+class ContextualError {
     operation: String,
     context: Map<String, String>,
     source: Box<dyn Error>
@@ -286,7 +286,7 @@ micro main() {
 
 ```valkyrie
 # 使用 RAII 模式
-struct FileHandle {
+class FileHandle {
     path: String,
     handle: File
 }

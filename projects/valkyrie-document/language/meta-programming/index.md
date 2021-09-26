@@ -40,7 +40,7 @@ let CONFIG_KEY: String = @const_eval(@format("app.{}.version", @env("BUILD_TARGE
 ```valkyrie
 // 标记为编译时函数
 @.const_fn
-fn fibonacci(n: i32) -> i32 {
+micro fibonacci(n: i32) -> i32 {
     n.match {
         case 0 | 1: n
         case _: fibonacci(n-1) + fibonacci(n-2)
@@ -49,7 +49,7 @@ fn fibonacci(n: i32) -> i32 {
 
 // 编译时数据结构操作
 @.const_fn
-fn build_state_machine() -> StateMachine {
+micro build_state_machine() -> StateMachine {
     let mut sm = StateMachine::new()
     sm.add_state("start")
     sm.add_state("processing")
@@ -66,17 +66,17 @@ fn build_state_machine() -> StateMachine {
 ```valkyrie
 // 模式匹配宏
 macro vec_of {
-    ($elem:expr; $n:expr) => {
+    (#elem:expr; #n:expr) => {
         {
             let mut v = Vec::new()
-            for _ in 0..<$n {
-                v.push($elem)
+            for _ in 0..<#n {
+                v.push(#elem)
             }
             v
         }
     }
-    ($($x:expr),+ $(,)?) => {
-        @vec($($x),+)
+    (#(#x:expr),+ #(,)?) => {
+        @vec(#(#x),+)
     }
 }
 
@@ -89,7 +89,7 @@ let numbers = @vec_of(1, 2, 3, 4, 5)
 ```valkyrie
 // 自定义派生宏
 @.derive(Serialize, Deserialize, Debug)
-struct User {
+class User {
     id: u64,
     name: String,
     email: String,
@@ -97,7 +97,7 @@ struct User {
 
 // 属性宏
 @.api_endpoint(method: "GET", path: "/users/{id}")
-fn get_user(id: u64) -> Result<User, ApiError> {
+micro get_user(id: u64) -> Result<User, ApiError> {
     // 自动生成路由注册和参数验证代码
     database::find_user(id)
 }
@@ -119,19 +119,19 @@ let sql_query = @sql(
     params: [Entity: Type, Key: Type],
     body: {
         impl CrudOperations<{{Key}}> for {{Entity}} {
-            fn create(data: {{Entity}}) -> Result<{{Key}}, Error> {
+            micro create(data: {{Entity}}) -> Result<{{Key}}, Error> {
                 // 生成创建逻辑
             }
             
-            fn read(id: {{Key}}) -> Result<{{Entity}}, Error> {
+            micro read(id: {{Key}}) -> Result<{{Entity}}, Error> {
                 // 生成读取逻辑
             }
             
-            fn update(id: {{Key}}, data: {{Entity}}) -> Result<(), Error> {
+            micro update(id: {{Key}}, data: {{Entity}}) -> Result<(), Error> {
                 // 生成更新逻辑
             }
             
-            fn delete(id: {{Key}}) -> Result<(), Error> {
+            micro delete(id: {{Key}}) -> Result<(), Error> {
                 // 生成删除逻辑
             }
         }
@@ -150,7 +150,7 @@ let sql_query = @sql(
 ```valkyrie
 // 自动生成序列化代码
 @.auto_serialize
-struct Config {
+class Config {
     database_url: String,
     port: u16,
     debug: bool,
@@ -158,7 +158,7 @@ struct Config {
 
 // 编译时生成的代码
 impl Serialize for Config {
-    fn serialize(self) -> SerializedData {
+    micro serialize(self) -> SerializedData {
         let mut data = SerializedData::new()
         data.insert("database_url", self.database_url)
         data.insert("port", self.port)
@@ -185,7 +185,7 @@ type Length(list: List<T>) -> Nat {
 }
 
 // 编译时类型验证
-fn safe_array_access<const N: usize, const I: usize>(arr: [i32; N]) -> i32 
+micro safe_array_access<const N: usize, const I: usize>(arr: [i32; N]) -> i32 
 where
     Assert<LessThan<I, N>>: True
 {
@@ -196,16 +196,16 @@ where
 **依赖类型支持**:
 ```valkyrie
 // 长度依赖的向量类型
-struct Vec<T, const N: usize> {
+class Vec<T, const N: usize> {
     data: [T; N],
 }
 
 impl<T, const N: usize> Vec<T, N> {
-    fn push<const M: usize>(self, item: T) -> Vec<T, {N + 1}> {
+    micro push<const M: usize>(self, item: T) -> Vec<T, {N + 1}> {
         // 类型级别保证长度正确性
     }
     
-    fn concat<const M: usize>(self, other: Vec<T, M>) -> Vec<T, {N + M}> {
+    micro concat<const M: usize>(self, other: Vec<T, M>) -> Vec<T, {N + M}> {
         // 编译时计算结果长度
     }
 }
@@ -217,21 +217,21 @@ impl<T, const N: usize> Vec<T, N> {
 ```valkyrie
 // 性能监控注解
 @.monitor_performance
-fn expensive_computation(data: [f64]) -> f64 {
+micro expensive_computation(data: [f64]) -> f64 {
     // 自动插入性能监控代码
-    data.iter().map(|x| x.powi(2)).sum()
+    data.iter().map({ $x => $x.powi(2) }).sum()
 }
 
 // 缓存注解
 @.cache(ttl: "1h", key: "user_profile_{id}")
-fn get_user_profile(id: UserId) -> UserProfile {
+micro get_user_profile(id: UserId) -> UserProfile {
     // 自动生成缓存逻辑
     database::load_user_profile(id)
 }
 
 // 验证注解
 @.validate(email: "valid_email", age: "min:18,max:120")
-struct UserRegistration {
+class UserRegistration {
     email: String,
     age: u8,
     name: String,
@@ -242,14 +242,14 @@ struct UserRegistration {
 ```valkyrie
 // 安全性分析
 @.security_analysis(check: "sql_injection,xss")
-fn handle_user_input(input: String) -> String {
+micro handle_user_input(input: String) -> String {
     // 编译时静态分析潜在安全问题
     sanitize_input(input)
 }
 
 // 内存安全注解
 @.memory_safe
-fn process_buffer(buffer: mut [u8]) {
+micro process_buffer(buffer: mut [u8]) {
     // 编译时验证内存访问安全性
 }
 ```
@@ -270,7 +270,7 @@ Nyar 平台提供了隔离的编译时执行环境：
 
 // 编译时资源管理
 @.const_fn
-fn load_config_file() -> Config {
+micro load_config_file() -> Config {
     let content = @compile_time_read_file("config.toml")
     parse_toml(content)
 }
@@ -286,10 +286,10 @@ macro recursive_macro {
 }
 
 // 宏卫生性保证
-macro hygienic_macro($var) {
+macro hygienic_macro(var) {
     {
-        let $var = 42  // 不会与调用处的变量冲突
-        $var * 2
+        let var = 42  // 不会与调用处的变量冲突
+        var * 2
     }
 }
 ```
@@ -300,7 +300,7 @@ macro hygienic_macro($var) {
 // 生成代码缓存配置
 @.code_generation(cache: true, cache_key: "struct_hash")
 @.derive(Serialize)
-struct CachedStruct {
+class CachedStruct {
     // 结构体定义
 }
 ```
@@ -313,9 +313,9 @@ Nyar 平台为不同语言提供统一的元编程接口：
 
 ```valkyrie
 // Valkyrie 语言的宏
-macro debug_print($args...) {
+macro debug_print(#args...) {
     @.cfg(debug_assertions)
-    println("DEBUG: {}", @format($args...))
+    println("DEBUG: {}", @format(#args...))
 }
 
 // 对应的 Python 风格宏（假设支持）
@@ -337,15 +337,15 @@ macro debugPrint(...args) {
 ```valkyrie
 // 接口定义
 trait UserService {
-    fn get_user(id: UserId) -> Result<User, Error>
-    fn create_user(data: CreateUserRequest) -> Result<User, Error>
-    fn update_user(id: UserId, data: UpdateUserRequest) -> Result<User, Error>
-    fn delete_user(id: UserId) -> Result<(), Error>
+    micro get_user(id: UserId) -> Result<User, Error>
+micro create_user(data: CreateUserRequest) -> Result<User, Error>
+micro update_user(id: UserId, data: UpdateUserRequest) -> Result<User, Error>
+micro delete_user(id: UserId) -> Result<(), Error>
 }
 
 // 自动生成多语言绑定
 @.generate_bindings(languages: ["rust", "javascript", "python"])
-struct UserServiceBindings
+class UserServiceBindings
 ```
 
 ## 性能和安全性
@@ -379,6 +379,46 @@ macro complex_macro {
 @.trace_const_eval
 const RESULT: i32 = complex_computation()
 ```
+
+
+## 条件编译
+
+Valkyrie 使用 staging 机制进行编译期计算和条件编译：
+
+```valkyrie
+# 编译时条件
+<# if DEBUG #>
+    print("调试模式")
+<# else #>
+    print("发布模式")
+<# end if #>
+
+# 编译期值计算
+<# x.value #>
+
+# 平台特定代码
+<# if PLATFORM == "windows" #>
+    use windows_api
+<# else if PLATFORM == "linux" #>
+    use linux_api
+<# else #>
+    use generic_api
+<# end if #>
+
+# 复杂编译期表达式
+<# if feature_enabled && version >= "2.0" #>
+    # 新功能代码
+    advanced_feature()
+<# end if #>
+```
+
+## 控制流最佳实践
+
+1. **优先使用表达式形式**：当控制流有返回值时，使用表达式形式更简洁
+2. **合理使用标签**：在嵌套循环中使用标签提高代码可读性
+3. **异常处理要具体**：针对不同类型的异常进行具体处理
+4. **避免深层嵌套**：使用提前返回和守卫条件减少嵌套层次
+5. **模式匹配优于多重 if**：对于复杂条件判断，使用 match 更清晰
 
 ### **代码生成可视化**
 

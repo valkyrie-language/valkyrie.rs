@@ -9,12 +9,12 @@ Valkyrie 采用基于命名空间（namespace）和导入（using）的模块系
 ```valkyrie
 # 声明命名空间
 namespace math.geometry {
-    struct Point {
+    class Point {
         x: f64,
         y: f64,
     }
     
-    fn distance(p1: Point, p2: Point) -> f64 {
+    micro distance(p1: Point, p2: Point) -> f64 {
         let dx = p1.x - p2.x
         let dy = p1.y - p2.y
         (dx * dx + dy * dy).sqrt()
@@ -27,12 +27,12 @@ namespace math.geometry {
 ```valkyrie
 namespace graphics {
     namespace shapes {
-        struct Circle {
+        class Circle {
             center: Point,
             radius: f64,
         }
         
-        struct Rectangle {
+        class Rectangle {
             top_left: Point,
             width: f64,
             height: f64,
@@ -40,7 +40,7 @@ namespace graphics {
     }
     
     namespace colors {
-        struct RGB {
+        class RGB {
             r: u8,
             g: u8,
             b: u8,
@@ -61,7 +61,7 @@ namespace graphics {
 # 导入整个命名空间
 using math.geometry
 
-fn main() {
+micro main() {
     let p1 = Point { x: 0.0, y: 0.0 }
     let p2 = Point { x: 3.0, y: 4.0 }
     let dist = distance(p1, p2)
@@ -80,7 +80,7 @@ using graphics.colors.{RED, GREEN, BLUE}
 using math.geometry.Point as GeomPoint
 using graphics.shapes.Point as ShapePoint
 
-fn create_points() {
+micro create_points() {
     let geom_point = GeomPoint { x: 1.0, y: 2.0 }
     let shape_point = ShapePoint { x: 3.0, y: 4.0 }
 }
@@ -94,7 +94,7 @@ using math.geometry.*
 using graphics.colors.*
 
 # 谨慎使用，可能导致命名冲突
-fn example() {
+micro example() {
     let point = Point { x: 0.0, y: 0.0 }
     let color = RED
 }
@@ -107,7 +107,7 @@ fn example() {
 ```valkyrie
 namespace database {
     # 公开结构体
-    pub struct Connection {
+    pub class Connection {
         # 私有字段
         host: String,
         port: u16,
@@ -116,18 +116,18 @@ namespace database {
     }
     
     # 包内可见
-    pub(package) struct InternalConfig {
+    pub(package) class InternalConfig {
         secret_key: String,
     }
     
     # 私有函数
-    fn validate_connection(conn: &Connection) -> bool {
+    micro validate_connection(conn: &Connection) -> bool {
         # 内部验证逻辑
         true
     }
     
     # 公开函数
-    pub fn connect(host: String, port: u16) -> Result<Connection, Error> {
+    pub micro connect(host: String, port: u16) -> Result<Connection, Error> {
         let conn = Connection { host, port, timeout: Duration::seconds(30) }
         if validate_connection(&conn) {
             Fine { value: conn }
@@ -147,7 +147,7 @@ namespace api {
     pub using auth.{User, Session}
     
     # 提供统一的 API 接口
-    pub fn create_authenticated_connection(credentials: Credentials) -> Result<(Connection, Session), Error> {
+    pub micro create_authenticated_connection(credentials: Credentials) -> Result<(Connection, Session), Error> {
         let session = auth::login(credentials)?
         let connection = database::connect("localhost", 5432)?
         Fine { value: (connection, session) }
@@ -164,17 +164,17 @@ Valkyrie 的模块系统不依赖文件路径，而是基于逻辑命名空间�
 ```valkyrie
 # 文件: src/geometry.val
 namespace math.geometry {
-    pub struct Point { x: f64, y: f64 }
+    pub class Point { x: f64, y: f64 }
 }
 
 # 文件: src/algebra.val  
 namespace math.algebra {
-    pub struct Matrix { data: [[f64]] }
+    pub class Matrix { data: [[f64]] }
 }
 
 # 文件: src/utils.val
 namespace math.geometry {  # 扩展已存在的命名空间
-    pub fn origin() -> Point {
+    pub micro origin() -> Point {
         Point { x: 0.0, y: 0.0 }
     }
 }
@@ -187,14 +187,14 @@ namespace math.geometry {  # 扩展已存在的命名空间
 # 声明模块的公开接口
 module math {
     pub namespace geometry {
-        pub struct Point
-        pub fn distance(Point, Point) -> f64
-        pub fn origin() -> Point
+        pub class Point
+        pub micro distance(Point, Point) -> f64
+        pub micro origin() -> Point
     }
     
     pub namespace algebra {
-        pub struct Matrix
-        pub fn multiply(Matrix, Matrix) -> Matrix
+        pub class Matrix
+        pub micro multiply(Matrix, Matrix) -> Matrix
     }
 }
 ```
@@ -206,24 +206,24 @@ module math {
 ```valkyrie
 namespace network {
     # 基础网络功能
-    pub struct TcpStream { /* ... */ }
+    pub class TcpStream { /* ... */ }
     
     # 异步功能（需要 async 特性）
-    @cfg(feature = "async")
+    @.cfg(feature = "async")
     pub namespace async {
-        pub struct AsyncTcpStream { /* ... */ }
+        pub class AsyncTcpStream { /* ... */ }
         
-        pub fn connect_async(addr: SocketAddr) -> Future<Result<AsyncTcpStream, Error>> {
+        pub micro connect_async(addr: SocketAddr) -> Future<Result<AsyncTcpStream, Error>> {
             # 异步连接实现
         }
     }
     
     # TLS 支持（需要 tls 特性）
-    @cfg(feature = "tls")
+    @.cfg(feature = "tls")
     pub namespace tls {
-        pub struct TlsStream { /* ... */ }
+        pub class TlsStream { /* ... */ }
         
-        pub fn wrap_tls(stream: TcpStream, config: TlsConfig) -> Result<TlsStream, TlsError> {
+        pub micro wrap_tls(stream: TcpStream, config: TlsConfig) -> Result<TlsStream, TlsError> {
             # TLS 包装实现
         }
     }
@@ -236,29 +236,29 @@ namespace network {
 namespace platform {
     # 通用接口
     pub trait FileSystem {
-        fn read_file(path: String) -> Result<String, IoError>
-        fn write_file(path: String, content: String) -> Result<(), IoError>
+        micro read_file(path: String) -> Result<String, IoError>
+        micro write_file(path: String, content: String) -> Result<(), IoError>
     }
     
     # Windows 实现
-    @cfg(target_os = "windows")
+    @.cfg(target_os = "windows")
     pub namespace windows {
-        pub struct WindowsFileSystem
+        pub class WindowsFileSystem
         
         impl FileSystem for WindowsFileSystem {
-            fn read_file(path: String) -> Result<String, IoError> {
+            micro read_file(path: String) -> Result<String, IoError> {
                 # Windows 特定实现
             }
         }
     }
     
     # Unix 实现
-    @cfg(any(target_os = "linux", target_os = "macos"))
+    @.cfg(any(target_os = "linux", target_os = "macos"))
     pub namespace unix {
-        pub struct UnixFileSystem
+        pub class UnixFileSystem
         
         impl FileSystem for UnixFileSystem {
-            fn read_file(path: String) -> Result<String, IoError> {
+            micro read_file(path: String) -> Result<String, IoError> {
                 # Unix 特定实现
             }
         }
@@ -285,18 +285,18 @@ using serde.{Serialize, Deserialize}
 using tokio.runtime.Runtime
 using log.{info, warn, error}
 
-@derive(Serialize, Deserialize)
-struct Config {
+@.derive(Serialize, Deserialize)
+class Config {
     host: String,
     port: u16,
 }
 
-fn main() {
+micro main() {
     let rt = Runtime::new().unwrap()
     rt.block_on(async_main())
 }
 
-async fn async_main() {
+async micro async_main() {
     info("Starting application")
     # 异步逻辑
 }
@@ -340,7 +340,7 @@ namespace config {
     pub static MAX_CONNECTIONS: i32 = 100
     
     # 延迟初始化
-    pub static LOGGER: Lazy<Logger> = Lazy::new(|| {
+    pub static LOGGER: Lazy<Logger> = Lazy::new({
         Logger::new()
             .with_level(LogLevel::Info)
             .with_output(Output::Stdout)
@@ -354,7 +354,7 @@ namespace config {
 namespace database {
     static mut CONNECTION_POOL: Option<ConnectionPool> = None
     
-    pub fn initialize(config: DatabaseConfig) -> Result<(), Error> {
+    pub micro initialize(config: DatabaseConfig) -> Result<(), Error> {
         unsafe {
             if CONNECTION_POOL.is_some() {
                 return Fail { error: Error::AlreadyInitialized }
@@ -366,7 +366,7 @@ namespace database {
         }
     }
     
-    pub fn get_connection() -> Result<Connection, Error> {
+    pub micro get_connection() -> Result<Connection, Error> {
         unsafe {
             CONNECTION_POOL
                 .as_ref()
@@ -383,30 +383,30 @@ namespace database {
 
 ```valkyrie
 namespace math.geometry {
-    pub fn distance(p1: Point, p2: Point) -> f64 {
+    pub micro distance(p1: Point, p2: Point) -> f64 {
         let dx = p1.x - p2.x
         let dy = p1.y - p2.y
         (dx * dx + dy * dy).sqrt()
     }
     
     # 测试模块
-    @cfg(test)
+    @.cfg(test)
     namespace tests {
         using super.*
         
-        @test
-        fn test_distance_same_point() {
+        @.test
+        micro test_distance_same_point() {
             let p = Point { x: 1.0, y: 2.0 }
             let dist = distance(p, p)
-            @assert_equal(dist, 0.0)
+            @.assert_equal(dist, 0.0)
         }
         
-        @test
-        fn test_distance_different_points() {
+        @.test
+        micro test_distance_different_points() {
             let p1 = Point { x: 0.0, y: 0.0 }
             let p2 = Point { x: 3.0, y: 4.0 }
             let dist = distance(p1, p2)
-            @assert_equal(dist, 5.0)
+            @.assert_equal(dist, 5.0)
         }
     }
 }
@@ -419,18 +419,18 @@ namespace math.geometry {
 using myapp.api.*
 using myapp.database.*
 
-@test
-fn test_full_workflow() {
+@.test
+micro test_full_workflow() {
     # 设置测试环境
     let config = TestConfig::default()
     initialize_test_database(config)
     
     # 执行测试
     let user = create_user("alice", "alice@example.com")
-    @assert_true(user.is_ok())
+    @.assert_true(user.is_ok())
     
     let found_user = find_user_by_email("alice@example.com")
-    @assert_true(found_user.is_some())
+    @.assert_true(found_user.is_some())
     
     # 清理
     cleanup_test_database()
@@ -477,30 +477,30 @@ namespace myapp {
 namespace api {
     # 版本化 API
     namespace v1 {
-        pub struct User {
+        pub class User {
             id: i64,
             name: String,
         }
         
-        pub fn get_user(id: i64) -> Option<User> {
+        pub micro get_user(id: i64) -> Option<User> {
             # v1 实现
         }
     }
     
     namespace v2 {
-        pub struct User {
+        pub class User {
             id: i64,
             name: String,
             email: String,  # 新增字段
         }
         
-        pub fn get_user(id: i64) -> Option<User> {
+        pub micro get_user(id: i64) -> Option<User> {
             # v2 实现
         }
         
         # 向后兼容
-        pub fn get_user_v1(id: i64) -> Option<v1::User> {
-            get_user(id).map(|u| v1::User {
+        pub micro get_user_v1(id: i64) -> Option<v1::User> {
+            get_user(id).map({ v1::User {
                 id: u.id,
                 name: u.name,
             })

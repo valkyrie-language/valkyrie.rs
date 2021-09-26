@@ -407,7 +407,7 @@ micro sum_squares(numbers: [i32]) -> i32 {
     numbers
         .iter()
         .map { $x * $x }
-        .filter(|&x| x > 10)
+        .filter({ $x > 10 })
         .sum()
 }
 

@@ -38,12 +38,12 @@
     "comments": {
       "patterns": [
         {
-          "name": "comment.line.documentation.vos",
+          "name": "comment.line.documentation.valkyrie",
           "match": "#\\?.*$"
         },
         {
           "name": "comment.line.number-sign.valkyrie",
-          "match": "\\$.*$"
+          "match": "#.*$"
         }
       ]
     },

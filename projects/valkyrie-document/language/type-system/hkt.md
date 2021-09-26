@@ -69,7 +69,7 @@ trait Monad<M> where M: * -> * {
     
     # 便利方法：map 可以通过 bind 和 pure 实现
     micro map<A, B>(self: M<A>, f: micro(A) -> B) -> M<B> {
-        self.bind(|x| M::pure(f(x)))
+        self.bind({ M::pure(f($x)) })
     }
 }
 
@@ -113,8 +113,8 @@ namespace monad_combinators {
     {
         list.iter().fold(
             M::pure(Vec::new()),
-            |acc, item| acc.bind(|mut vec| 
-                item.map(|x| {
+            { $acc, $item; $acc.bind({ $mut_vec;
+     $item.map({ $x;
                     vec.push(x)
                     vec
                 })
@@ -135,8 +135,8 @@ namespace monad_combinators {
     {
         list.into_iter().fold(
             M::pure(Vec::new()),
-            |acc, item| acc.bind(|mut vec|
-                predicate(item).map(|keep| {
+            { $acc, $item; $acc.bind({ $mut_vec;
+     predicate($item).map({ $keep;
                     if keep {
                         vec.push(item)
                     }
@@ -183,20 +183,20 @@ impl Applicative<Option> {
 
 # 使用应用函子进行并行验证
 micro validate_user(name: String, email: String, age: i32) -> Option<User> {
-    let validate_name = |n: String| {
+    let validate_name = { $n: String;
         if n.len() > 0 { Some(n) } else { None }
     }
     
-    let validate_email = |e: String| {
+    let validate_email = { $e: String;
         if e.contains('@') { Some(e) } else { None }
     }
     
-    let validate_age = |a: i32| {
+    let validate_age = { $a: i32;
         if a >= 0 && a <= 150 { Some(a) } else { None }
     }
     
     Option::lift3(
-        |n, e, a| User { name: n, email: e, age: a },
+        { User { name: $n, email: $e, age: $a } },
         validate_name(name),
         validate_email(email),
         validate_age(age)
@@ -225,7 +225,7 @@ impl<F> Monad<Free<F, _>> where F: Functor {
         match self {
             Free::Pure { value } => f(value),
             Free::Free { fa } => Free::Free { 
-                fa: fa.map(|free_a| free_a.bind(f))
+                fa: fa.map({ $free_a.bind(f) })
             },
         }
     }
@@ -241,9 +241,9 @@ impl Functor<FileOp> {
     micro map<A, B>(self: FileOp<A>, f: micro(A) -> B) -> FileOp<B> {
         match self {
             FileOp::ReadFile { path, cont } => 
-                FileOp::ReadFile { path, cont: |s| f(cont(s)) },
+                FileOp::ReadFile { path, cont: { f(cont($s)) } },
             FileOp::WriteFile { path, content, cont } => 
-                FileOp::WriteFile { path, content, cont: |()| f(cont(())) },
+                FileOp::WriteFile { path, content, cont: { f(cont($unit)) } },
         }
     }
 }
@@ -255,7 +255,7 @@ micro read_file(path: String) -> FileProgram<String> {
     Free::Free { 
         fa: FileOp::ReadFile { 
             path, 
-            cont: |content| Free::Pure { value: content }
+            cont: { $content => Free::Pure { value: $content } }
         }
     }
 }
@@ -265,14 +265,14 @@ micro write_file(path: String, content: String) -> FileProgram<()> {
         fa: FileOp::WriteFile {
             path,
             content,
-            cont: |()| Free::Pure { value: () }
+            cont: { $unit => Free::Pure { value: $unit } }
         }
     }
 }
 
 # 使用 DSL
 micro copy_file(src: String, dst: String) -> FileProgram<()> {
-    read_file(src).bind(|content|
+    read_file(src).bind({ $content =>
         write_file(dst, content)
     )
 }
@@ -346,7 +346,7 @@ type instance Length(Nil) = Zero
 type instance Length(Cons<H, T>) = Succ<Length(T)>
 
 # 长度索引的向量
-struct Vec<T, N> {
+class Vec<T, N> {
     data: [T],
     _phantom: PhantomData<N>,
 }
@@ -379,12 +379,12 @@ impl<N> NonZero for Succ<N> {}
 
 ```valkyrie
 # 状态机状态
-struct Closed
-struct Open
-struct Locked
+class Closed
+class Open
+class Locked
 
 # 状态机
-struct Door<S> {
+class Door<S> {
     _state: PhantomData<S>,
 }
 
@@ -435,13 +435,13 @@ micro door_example() {
 
 ```valkyrie
 # 查询构建器状态
-struct NoTable
-struct HasTable<T>
-struct NoWhere
-struct HasWhere
+class NoTable
+class HasTable<T>
+class NoWhere
+class HasWhere
 
 # 查询构建器
-struct QueryBuilder<Table, Where> {
+class QueryBuilder<Table, Where> {
     query: String,
     _phantom: PhantomData<(Table, Where)>,
 }
@@ -510,7 +510,7 @@ micro map_option<A, B>(opt: Option<A>, f: micro(A) -> B) -> Option<B> {
 micro generic_computation<M, A>(m: M<A>) -> M<i32>
 where M: Monad
 {
-    m.bind(|_| M::pure(42))
+    m.bind({ $_ => M::pure(42) })
 }
 
 # 编译器为每个具体类型生成专门的版本
@@ -522,12 +522,12 @@ where M: Monad
 
 ```valkyrie
 # 编译时展开单子链
-@.const_eval
+@const_eval
 micro compile_time_monad() -> Option<i32> {
     Some(1)
-        .bind(|x| Some(x + 1))
-        .bind(|x| Some(x * 2))
-        .bind(|x| Some(x - 1))
+        .bind({ $x => Some($x + 1) })
+    .bind({ $x => Some($x * 2) })
+    .bind({ $x => Some($x - 1) })
     # 编译时计算结果：Some(3)
 }
 

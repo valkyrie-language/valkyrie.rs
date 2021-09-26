@@ -451,7 +451,7 @@ class SortedList<T> where T: Ord {
     
     insert(mut self, item: T) {
         # 保持排序插入
-        let pos = self.items.binary_search(&item).unwrap_or_else(|e| e)
+        let pos = self.items.binary_search(&item).unwrap_or_else({ $e })
         self.items.insert(pos, item)
     }
 }
@@ -461,24 +461,26 @@ class SortedList<T> where T: Ord {
 
 ```valkyrie
 # 属性装饰器
-@derive(Debug, Clone, PartialEq)
+@.derive(Debug, Clone, PartialEq)
 class Point {
     x: f64
     y: f64
 }
 
-@test
+@.test
 micro test_addition() {
-    @assert_equal(2 + 2, 4)
+    @.assert_equal(2 + 2, 4)
 }
 
-@deprecated("Use new_function instead")
+@.deprecated("Use new_function instead")
 micro old_function() {
     # 已废弃的函数
 }
 
-@inline
+@.inline
 micro fast_calculation(x: i32) -> i32 {
     x * x + 2 * x + 1
 }
 ```
+
+

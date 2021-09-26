@@ -434,13 +434,13 @@ micro test_generator() {
     let gen = count_up(3)
     
     # 测试生成的值
-    @assert_equal(gen.next(), Some(0))
-@assert_equal(gen.next(), Some(1))
-@assert_equal(gen.next(), Some(2))
-@assert_equal(gen.next(), None)
+    @.assert_equal(gen.next(), Some(0))
+@.assert_equal(gen.next(), Some(1))
+@.assert_equal(gen.next(), Some(2))
+@.assert_equal(gen.next(), None)
     
     # 测试状态
-    @assert_equal(gen.state(), CoroutineState::Completed)
+    @.assert_equal(gen.state(), CoroutineState::Completed)
 }
 
 # 异步协程测试
@@ -451,6 +451,6 @@ async micro test_async_generator() {
     assert!(first_result.is_some())
     
     let final_result = await gen.collect_all()
-    @assert_equal(final_result.len(), 5)
+    @.assert_equal(final_result.len(), 5)
 }
 ```

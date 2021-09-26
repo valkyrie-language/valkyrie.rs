@@ -39,20 +39,19 @@ match day {
 
 ```valkyrie
 # 表达式形式的 match
-let result = value
-    .match {
-        case 1: "one"
-        case 2: "two"
-        case 3: "three"
-        else: "other"
-    }
+let result = value.match {
+    case 1: "one"
+    case 2: "two"
+    case 3: "three"
+    else: "other"
+}
 
 # 链式调用
 let processed = input
     .transform()
     .match {
-        case Fine(value): value * 2
-        case Fail(error): 0
+        case Ok(value): value * 2
+        case Err(error): 0
     }
     .to_string()
 ```
@@ -131,16 +130,16 @@ match user {
 ```valkyrie
 match operation_result {
     with [result_handling];
-    case Fine(value): "Success: ${value}"
-    case Fail(error): "Error: ${error}"
+    case Ok(value): f"Success: {value}"
+    case Err(error): f"Error: {error}"
 }
 
 # 嵌套 Result 匹配
 match nested_result {
     with [nested_result_handling];
-    case Fine(Fine(value)): "Double success: ${value}"
-    case Fine(Fail(inner_error)): "Inner error: ${inner_error}"
-    case Fail(outer_error): "Outer error: ${outer_error}"
+    case Ok(Ok(value)): f"Double success: {value}"
+    case Ok(Err(inner_error)): f"Inner error: {inner_error}"
+    case Err(outer_error): f"Outer error: {outer_error}"
 }
 ```
 
@@ -277,8 +276,8 @@ match boolean_value {
 # 联合类型的穷尽性
 match result {
     with [result_exhaustive];
-    case Fine(value): handle_success(value)
-    case Fail(error): handle_error(error)
+    case Ok(value): handle_success(value)
+    case Err(error): handle_error(error)
     # 编译器确保所有变体都被处理
 }
 ```
@@ -349,13 +348,13 @@ match complex_data {
 let result = input
     .parse()
     .match {
-        case Fine(parsed): parsed
-        case Fail(error): return Fail("Parse error: ${error}")
+        case Ok(parsed): parsed
+        case Err(error): return Err(f"Parse error: {error}")
     }
     .validate()
     .match {
-        case Fine(validated): validated
-        case Fail(error): return Fail("Validation error: ${error}")
+        case Ok(validated): validated
+        case Err(error): return Err(f"Validation error: {error}")
     }
 ```
 
@@ -364,9 +363,9 @@ let result = input
 ```valkyrie
 match (result1, result2, result3) {
     with [multi_result_handling];
-    case (Fine(a), Fine(b), Fine(c)): Fine((a, b, c))
-    case (Fail(e), _, _): Fail(e)
-    case (_, Fail(e), _): Fail(e)
-    case (_, _, Fail(e)): Fail(e)
+    case (Ok(a), Ok(b), Ok(c)): Ok((a, b, c))
+    case (Err(e), _, _): Err(e)
+    case (_, Err(e), _): Err(e)
+    case (_, _, Err(e)): Err(e)
 }
 ```

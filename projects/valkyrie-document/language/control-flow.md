@@ -196,56 +196,56 @@ for i in 0..<3 {
 
 ```valkyrie
 # 基本 match
-match value {
-    1 => print("一"),
-    2 => print("二"),
-    3 => print("三"),
-    _ => print("其他")
+value.match {
+    case 1: print("一"),
+    case 2: print("二"),
+    case 3: print("三"),
+    case _: print("其他")
 }
 
 # match 表达式
-let result = match status {
-    "success" => "成功",
-    "error" => "错误",
-    "pending" => "等待中",
-    _ => "未知状态"
+let result = status.match {
+    case "success": "成功",
+    case "error": "错误",
+    case "pending": "等待中",
+    case _: "未知状态"
 }
 
 # 范围匹配
-match age {
-    0..=12 => "儿童",
-    13..=17 => "青少年",
-    18..=64 => "成年人",
-    65.. => "老年人"
+age.match {
+    case 0..=12: "儿童",
+    case 13..=17: "青少年",
+    case 18..=64: "成年人",
+    case 65..: "老年人"
 }
 
 # 多值匹配
-match (x, y) {
-    (0, 0) => "原点",
-    (0, _) => "Y轴",
-    (_, 0) => "X轴",
-    (a, b) if a == b => "对角线",
-    _ => "其他位置"
+(x, y).match {
+    case (0, 0): "原点",
+    case (0, _): "Y轴",
+    case (_, 0): "X轴",
+    case (a, b) if a == b: "对角线",
+    case _: "其他位置"
 }
 
 # 结构体匹配
-match person {
-    Person { name: "Alice", age } => print(f"Alice, {age} 岁"),
-    Person { name, age: 18..=25 } => print(f"年轻人 {name}"),
-    Person { name, .. } => print(f"其他人 {name}")
+person.match {
+    case Person { name: "Alice", age }: print(f"Alice, {age} 岁"),
+    case Person { name, age: 18..=25 }: print(f"年轻人 {name}"),
+    case Person { name, .. }: print(f"其他人 {name}")
 }
 
 # 枚举匹配
-match result {
-    Fine(value): print("成功: ${value}"),
-    Fail(error): print("错误: ${error}")
+result.match {
+    case Fine(value): print("成功: ${value}"),
+    case Fail(error): print("错误: ${error}")
 }
 
 # 守卫条件
-match number {
-    n if n < 0 => "负数",
-    n if n == 0 => "零",
-    n if n > 0 => "正数"
+number.match {
+    case n if n < 0: "负数",
+    case n if n == 0: "零",
+    case n if n > 0: "正数"
 }
 ```
 
@@ -405,42 +405,3 @@ micro log_message(msg: String) {
     print(msg)
 }
 ```
-
-## 条件编译
-
-Valkyrie 使用 staging 机制进行编译期计算和条件编译：
-
-```valkyrie
-# 编译时条件
-<$ if DEBUG $>
-    print("调试模式")
-<$ else $>
-    print("发布模式")
-<$ end if $>
-
-# 编译期值计算
-<$ x.value $>
-
-# 平台特定代码
-<$ if PLATFORM == "windows" $>
-    use windows_api
-<$ else if PLATFORM == "linux" $>
-    use linux_api
-<$ else $>
-    use generic_api
-<$ end if $>
-
-# 复杂编译期表达式
-<$ if feature_enabled && version >= "2.0" $>
-    # 新功能代码
-    advanced_feature()
-<$ end if $>
-```
-
-## 控制流最佳实践
-
-1. **优先使用表达式形式**：当控制流有返回值时，使用表达式形式更简洁
-2. **合理使用标签**：在嵌套循环中使用标签提高代码可读性
-3. **异常处理要具体**：针对不同类型的异常进行具体处理
-4. **避免深层嵌套**：使用提前返回和守卫条件减少嵌套层次
-5. **模式匹配优于多重 if**：对于复杂条件判断，使用 match 更清晰
