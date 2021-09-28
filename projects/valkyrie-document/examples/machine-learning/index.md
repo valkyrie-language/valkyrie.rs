@@ -645,6 +645,525 @@ let tscv = TimeSeriesSplit::new(n_splits: 5)
 let cv_scores = cross_val_score(arima, ts_data, cv: tscv)
 ```
 
+## 强化学习 (Reinforcement Learning)
+
+### Q-Learning 算法
+
+```valkyrie
+struct QLearning {
+    q_table: Array<f64, 2>,  # 状态-动作价值表
+    α: f64,                  # 学习率
+    γ: f64,                  # 折扣因子
+    ε: f64,                  # 探索率
+    state_size: usize,
+    action_size: usize,
+}
+
+impl QLearning {
+    fn new(state_size: usize, action_size: usize, α: f64, γ: f64, ε: f64) -> Self {
+        Self {
+            q_table: Array::zeros([state_size, action_size]),
+            α, γ, ε, state_size, action_size,
+        }
+    }
+    
+    # ε-贪婪策略选择动作
+    fn choose_action(&self, state: usize) -> usize {
+        if random::<f64>() < self.ε {
+            # 探索：随机选择动作
+            random::<usize>() % self.action_size
+        } else {
+            # 利用：选择最优动作
+            self.q_table.row(state).argmax()
+        }
+    }
+    
+    # 更新Q值
+    fn update(&mut self, state: usize, action: usize, reward: f64, next_state: usize) {
+        let current_q = self.q_table[[state, action]]
+        let max_next_q = self.q_table.row(next_state).max()
+        let target = reward + self.γ * max_next_q
+        
+        # Q-learning更新规则
+        self.q_table[[state, action]] = current_q + self.α * (target - current_q)
+    }
+    
+    # 训练智能体
+    fn train<E: Environment>(&mut self, env: &mut E, episodes: usize) {
+        for episode in 0..episodes {
+            let mut state = env.reset()
+            let mut total_reward = 0.0
+            
+            loop {
+                let action = self.choose_action(state)
+                let (next_state, reward, done) = env.step(action)
+                
+                self.update(state, action, reward, next_state)
+                
+                state = next_state
+                total_reward += reward
+                
+                if done { break }
+            }
+            
+            # 衰减探索率
+            self.ε *= 0.995
+            
+            if episode % 100 == 0 {
+                println!("Episode {}: Total Reward = {:.2}", episode, total_reward)
+            }
+        }
+    }
+}
+```
+
+### 深度Q网络 (DQN)
+
+```valkyrie
+struct DQN {
+    network: NeuralNetwork,
+    target_network: NeuralNetwork,
+    replay_buffer: ReplayBuffer,
+    γ: f64,
+    ε: f64,
+    ε_decay: f64,
+    ε_min: f64,
+    batch_size: usize,
+    update_frequency: usize,
+}
+
+struct Experience {
+    state: Tensor,
+    action: usize,
+    reward: f64,
+    next_state: Tensor,
+    done: bool,
+}
+
+struct ReplayBuffer {
+    buffer: VecDeque<Experience>,
+    capacity: usize,
+}
+
+impl ReplayBuffer {
+    fn new(capacity: usize) -> Self {
+        Self {
+            buffer: VecDeque::with_capacity(capacity),
+            capacity,
+        }
+    }
+    
+    fn push(&mut self, experience: Experience) {
+        if self.buffer.len() >= self.capacity {
+            self.buffer.pop_front()
+        }
+        self.buffer.push_back(experience)
+    }
+    
+    fn sample(&self, batch_size: usize) -> Vec<Experience> {
+        let mut rng = thread_rng()
+        self.buffer.iter()
+            .choose_multiple(&mut rng, batch_size)
+            .into_iter()
+            .cloned()
+            .collect()
+    }
+}
+
+impl DQN {
+    fn new(state_dim: usize, action_dim: usize, hidden_dims: &[usize]) -> Self {
+        let network = NeuralNetwork::new()
+            .add_layer(Dense::new(state_dim, hidden_dims[0]).activation(ReLU))
+            .add_layer(Dense::new(hidden_dims[0], hidden_dims[1]).activation(ReLU))
+            .add_layer(Dense::new(hidden_dims[1], action_dim))
+        
+        let target_network = network.clone()
+        
+        Self {
+            network,
+            target_network,
+            replay_buffer: ReplayBuffer::new(10000),
+            γ: 0.99,
+            ε: 1.0,
+            ε_decay: 0.995,
+            ε_min: 0.01,
+            batch_size: 32,
+            update_frequency: 100,
+        }
+    }
+    
+    fn choose_action(&mut self, state: &Tensor) -> usize {
+        if random::<f64>() < self.ε {
+            random::<usize>() % self.network.output_size()
+        } else {
+            let q_values = self.network.forward(state)
+            q_values.argmax()
+        }
+    }
+    
+    fn train_step(&mut self) {
+        if self.replay_buffer.buffer.len() < self.batch_size {
+            return
+        }
+        
+        let batch = self.replay_buffer.sample(self.batch_size)
+        
+        let states = Tensor::stack(&batch.iter().map(|e| &e.state).collect::<Vec<_>>())
+        let actions = Tensor::from_vec(batch.iter().map(|e| e.action as f64).collect())
+        let rewards = Tensor::from_vec(batch.iter().map(|e| e.reward).collect())
+        let next_states = Tensor::stack(&batch.iter().map(|e| &e.next_state).collect::<Vec<_>>())
+        let dones = Tensor::from_vec(batch.iter().map(|e| if e.done { 1.0 } else { 0.0 }).collect())
+        
+        # 计算当前Q值
+        let current_q_values = self.network.forward(&states)
+        let current_q = current_q_values.gather(&actions)
+        
+        # 计算目标Q值
+        let next_q_values = self.target_network.forward(&next_states)
+        let max_next_q = next_q_values.max(dim: 1)
+        let target_q = rewards + self.γ * max_next_q * (1.0 - dones)
+        
+        # 计算损失并反向传播
+        let loss = mse_loss(&current_q, &target_q)
+        self.network.backward(&loss)
+        self.network.step()
+        
+        # 衰减探索率
+        if self.ε > self.ε_min {
+            self.ε *= self.ε_decay
+        }
+    }
+    
+    fn update_target_network(&mut self) {
+        self.target_network = self.network.clone()
+    }
+}
+```
+
+### 策略梯度算法 (REINFORCE)
+
+```valkyrie
+struct PolicyGradient {
+    policy_network: NeuralNetwork,
+    γ: f64,
+    α: f64,  # 学习率
+}
+
+struct Episode {
+    states: Vec<Tensor>,
+    actions: Vec<usize>,
+    rewards: Vec<f64>,
+}
+
+impl PolicyGradient {
+    fn new(state_dim: usize, action_dim: usize, hidden_dim: usize) -> Self {
+        let policy_network = NeuralNetwork::new()
+            .add_layer(Dense::new(state_dim, hidden_dim).activation(ReLU))
+            .add_layer(Dense::new(hidden_dim, hidden_dim).activation(ReLU))
+            .add_layer(Dense::new(hidden_dim, action_dim).activation(Softmax))
+        
+        Self {
+            policy_network,
+            γ: 0.99,
+            α: 0.001,
+        }
+    }
+    
+    fn choose_action(&self, state: &Tensor) -> usize {
+        let action_probs = self.policy_network.forward(state)
+        
+        # 根据概率分布采样动作
+        let mut rng = thread_rng()
+        let dist = WeightedIndex::new(&action_probs.to_vec()).unwrap()
+        dist.sample(&mut rng)
+    }
+    
+    fn compute_returns(&self, rewards: &[f64]) -> Vec<f64> {
+        let mut returns = vec![0.0; rewards.len()]
+        let mut running_return = 0.0
+        
+        # 从后往前计算折扣回报
+        for i in (0..rewards.len()).rev() {
+            running_return = rewards[i] + self.γ * running_return
+            returns[i] = running_return
+        }
+        
+        returns
+    }
+    
+    fn train(&mut self, episode: Episode) {
+        let returns = self.compute_returns(&episode.rewards)
+        
+        # 标准化回报
+        let mean_return = returns.iter().sum::<f64>() / returns.len() as f64
+        let std_return = (returns.iter().map(|r| (r - mean_return).powi(2)).sum::<f64>() / returns.len() as f64).sqrt()
+        let normalized_returns: Vec<f64> = returns.iter().map(|r| (r - mean_return) / (std_return + 1e-8)).collect()
+        
+        let mut total_loss = 0.0
+        
+        for (i, (state, action)) in episode.states.iter().zip(&episode.actions).enumerate() {
+            let action_probs = self.policy_network.forward(state)
+            let log_prob = action_probs[*action].ln()
+            
+            # 策略梯度损失
+            let loss = -log_prob * normalized_returns[i]
+            total_loss += loss
+        }
+        
+        # 反向传播
+        self.policy_network.backward(&Tensor::scalar(total_loss))
+        self.policy_network.step()
+    }
+}
+```
+
+### Actor-Critic 算法
+
+```valkyrie
+struct ActorCritic {
+    actor: NeuralNetwork,   # 策略网络
+    critic: NeuralNetwork,  # 价值网络
+    γ: f64,
+    α_actor: f64,
+    α_critic: f64,
+}
+
+impl ActorCritic {
+    fn new(state_dim: usize, action_dim: usize, hidden_dim: usize) -> Self {
+        let actor = NeuralNetwork::new()
+            .add_layer(Dense::new(state_dim, hidden_dim).activation(ReLU))
+            .add_layer(Dense::new(hidden_dim, action_dim).activation(Softmax))
+        
+        let critic = NeuralNetwork::new()
+            .add_layer(Dense::new(state_dim, hidden_dim).activation(ReLU))
+            .add_layer(Dense::new(hidden_dim, 1))
+        
+        Self {
+            actor,
+            critic,
+            γ: 0.99,
+            α_actor: 0.001,
+            α_critic: 0.005,
+        }
+    }
+    
+    fn choose_action(&self, state: &Tensor) -> usize {
+        let action_probs = self.actor.forward(state)
+        let mut rng = thread_rng()
+        let dist = WeightedIndex::new(&action_probs.to_vec()).unwrap()
+        dist.sample(&mut rng)
+    }
+    
+    fn train_step(&mut self, state: &Tensor, action: usize, reward: f64, next_state: &Tensor, done: bool) {
+        # 计算TD误差
+        let current_value = self.critic.forward(state)[0]
+        let next_value = if done { 0.0 } else { self.critic.forward(next_state)[0] }
+        let td_target = reward + self.γ * next_value
+        let td_error = td_target - current_value
+        
+        # 更新Critic
+        let critic_loss = td_error.powi(2)
+        self.critic.backward(&Tensor::scalar(critic_loss))
+        self.critic.step()
+        
+        # 更新Actor
+        let action_probs = self.actor.forward(state)
+        let log_prob = action_probs[action].ln()
+        let actor_loss = -log_prob * td_error  # 使用TD误差作为优势函数
+        
+        self.actor.backward(&Tensor::scalar(actor_loss))
+        self.actor.step()
+    }
+}
+```
+
+### 多智能体强化学习
+
+```valkyrie
+struct MultiAgentEnvironment {
+    agents: Vec<Box<dyn Agent>>,
+    state_size: usize,
+    action_sizes: Vec<usize>,
+    current_state: Tensor,
+}
+
+trait Agent {
+    fn choose_action(&mut self, state: &Tensor, agent_id: usize) -> usize
+    fn update(&mut self, experience: &MultiAgentExperience)
+}
+
+struct MultiAgentExperience {
+    states: Vec<Tensor>,
+    actions: Vec<usize>,
+    rewards: Vec<f64>,
+    next_states: Vec<Tensor>,
+    done: bool,
+}
+
+struct MADDPG {
+    actors: Vec<NeuralNetwork>,
+    critics: Vec<NeuralNetwork>,
+    target_actors: Vec<NeuralNetwork>,
+    target_critics: Vec<NeuralNetwork>,
+    replay_buffer: MultiAgentReplayBuffer,
+}
+
+impl MADDPG {
+    fn new(state_dims: &[usize], action_dims: &[usize]) -> Self {
+        let num_agents = state_dims.len()
+        let mut actors = Vec::new()
+        let mut critics = Vec::new()
+        
+        for i in 0..num_agents {
+            # Actor网络：输入单个智能体状态，输出动作
+            let actor = NeuralNetwork::new()
+                .add_layer(Dense::new(state_dims[i], 128).activation(ReLU))
+                .add_layer(Dense::new(128, 64).activation(ReLU))
+                .add_layer(Dense::new(64, action_dims[i]).activation(Tanh))
+            
+            # Critic网络：输入所有智能体的状态和动作
+            let total_state_dim: usize = state_dims.iter().sum()
+            let total_action_dim: usize = action_dims.iter().sum()
+            let critic = NeuralNetwork::new()
+                .add_layer(Dense::new(total_state_dim + total_action_dim, 128).activation(ReLU))
+                .add_layer(Dense::new(128, 64).activation(ReLU))
+                .add_layer(Dense::new(64, 1))
+            
+            actors.push(actor)
+            critics.push(critic)
+        }
+        
+        let target_actors = actors.clone()
+        let target_critics = critics.clone()
+        
+        Self {
+            actors,
+            critics,
+            target_actors,
+            target_critics,
+            replay_buffer: MultiAgentReplayBuffer::new(100000),
+        }
+    }
+    
+    fn choose_actions(&mut self, states: &[Tensor]) -> Vec<Tensor> {
+        self.actors.iter().zip(states)
+            .map(|(actor, state)| actor.forward(state))
+            .collect()
+    }
+    
+    fn train(&mut self) {
+        let batch = self.replay_buffer.sample(64)
+        
+        for agent_id in 0..self.actors.len() {
+            self.train_agent(agent_id, &batch)
+        }
+        
+        # 软更新目标网络
+        self.soft_update_targets(0.01)
+    }
+    
+    fn train_agent(&mut self, agent_id: usize, batch: &[MultiAgentExperience]) {
+        # 训练Critic
+        let states = self.concat_states(&batch.iter().map(|e| &e.states).collect::<Vec<_>>())
+        let actions = self.concat_actions(&batch.iter().map(|e| &e.actions).collect::<Vec<_>>())
+        let rewards = Tensor::from_vec(batch.iter().map(|e| e.rewards[agent_id]).collect())
+        let next_states = self.concat_states(&batch.iter().map(|e| &e.next_states).collect::<Vec<_>>())
+        
+        # 使用目标网络计算目标Q值
+        let next_actions = self.get_target_actions(&next_states)
+        let next_state_actions = Tensor::concat(&[next_states, next_actions], dim: 1)
+        let target_q = self.target_critics[agent_id].forward(&next_state_actions)
+        let y = rewards + 0.99 * target_q
+        
+        let current_state_actions = Tensor::concat(&[states, actions], dim: 1)
+        let current_q = self.critics[agent_id].forward(&current_state_actions)
+        
+        let critic_loss = mse_loss(&current_q, &y)
+        self.critics[agent_id].backward(&critic_loss)
+        self.critics[agent_id].step()
+        
+        # 训练Actor
+        let predicted_actions = self.get_predicted_actions(&states, agent_id)
+        let actor_loss = -self.critics[agent_id].forward(&Tensor::concat(&[states, predicted_actions], dim: 1)).mean()
+        
+        self.actors[agent_id].backward(&actor_loss)
+        self.actors[agent_id].step()
+    }
+}
+```
+
+### 环境接口
+
+```valkyrie
+trait Environment {
+    type State
+    type Action
+    type Reward
+    
+    fn reset(&mut self) -> Self::State
+    fn step(&mut self, action: Self::Action) -> (Self::State, Self::Reward, bool)
+    fn render(&self)
+}
+
+# 经典的CartPole环境
+struct CartPole {
+    x: f64,           # 小车位置
+    x_dot: f64,       # 小车速度
+    θ: f64,           # 杆子角度
+    θ_dot: f64,       # 杆子角速度
+    steps: usize,
+    max_steps: usize,
+}
+
+impl Environment for CartPole {
+    type State = Tensor
+    type Action = usize  # 0: 左, 1: 右
+    type Reward = f64
+    
+    fn reset(&mut self) -> Self::State {
+        self.x = random::<f64>() * 0.1 - 0.05
+        self.x_dot = random::<f64>() * 0.1 - 0.05
+        self.θ = random::<f64>() * 0.1 - 0.05
+        self.θ_dot = random::<f64>() * 0.1 - 0.05
+        self.steps = 0
+        
+        Tensor::from_vec(vec![self.x, self.x_dot, self.θ, self.θ_dot])
+    }
+    
+    fn step(&mut self, action: Self::Action) -> (Self::State, Self::Reward, bool) {
+        let force = if action == 0 { -10.0 } else { 10.0 }
+        
+        # 物理仿真
+        let cos_θ = self.θ.cos()
+        let sin_θ = self.θ.sin()
+        
+        let temp = (force + 0.1 * self.θ_dot * self.θ_dot * sin_θ) / 1.1
+        let θ_acc = (9.8 * sin_θ - cos_θ * temp) / (0.5 * (4.0/3.0 - 0.1 * cos_θ * cos_θ / 1.1))
+        let x_acc = temp - 0.1 * θ_acc * cos_θ / 1.1
+        
+        # 更新状态
+        self.x += 0.02 * self.x_dot
+        self.x_dot += 0.02 * x_acc
+        self.θ += 0.02 * self.θ_dot
+        self.θ_dot += 0.02 * θ_acc
+        
+        self.steps += 1
+        
+        let state = Tensor::from_vec(vec![self.x, self.x_dot, self.θ, self.θ_dot])
+        
+        # 检查终止条件
+        let done = self.x.abs() > 2.4 || self.θ.abs() > 0.2 || self.steps >= self.max_steps
+        let reward = if done { 0.0 } else { 1.0 }
+        
+        (state, reward, done)
+    }
+    
+    fn render(&self) {
+        println!("Cart: x={:.2}, θ={:.2}°", self.x, self.θ.to_degrees())
+    }
+}
+```
+
 ## 最佳实践
 
 ### 1. 数据预处理管道

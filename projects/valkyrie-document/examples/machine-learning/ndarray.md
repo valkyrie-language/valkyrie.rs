@@ -1,6 +1,16 @@
 # N维数组 (NDArray)
 
-Valkyrie 提供了强大的N维数组类型，支持高效的数值计算和科学计算操作。数组类型包括一维、二维和N维数组，并支持多种内存布局包括GPU布局。
+Valkyrie 提供了强大的N维数组类型，支持高效的数值计算和科学计算操作。
+
+## 数组类型体系
+
+- `Array` 是一段内存中的数据的抽象表示
+- `Array<T, N>` 是 `[T; N]` 的语法糖，表示固定大小的数组  
+- `ArrayND` 是异构计算、机器学习、深度学习的基础多维数组类型
+- `Array1D` 是 `ArrayND` 的 type alias，专门用于一维数组操作
+- `Array2D` 是 `ArrayND` 的 type alias，专门用于二维数组操作
+
+数组类型支持多种内存布局包括GPU布局，这些都是内置类型，专注于提供人类友好且机器开销小的接口。
 
 ## 基本数组类型
 
@@ -71,13 +81,30 @@ let arr4d = ArrayND::ones([2, 3, 4, 5])  # 四维数组
 let data = vec![1, 2, 3, 4, 5, 6, 7, 8]
 let reshaped = ArrayND::from_vec(data, [2, 2, 2])  # 重塑为2x2x2
 
+# 命名索引 - 为维度指定语义化名称
+let image_batch = ArrayND::zeros([32, 3, 224, 224])
+    .with_axis_names(["batch", "channel", "height", "width"])
+
+# 使用命名索引访问
+let first_image = image_batch.select("batch", 0)  # 选择第一个样本
+let red_channel = image_batch.select("channel", 0)  # 选择红色通道
+let center_crop = image_batch.slice("height", 50..174)
+                            .slice("width", 50..174)  # 中心裁剪
+
+# 命名轴操作
+let batch_mean = image_batch.mean_along("batch")     # 沿batch轴求均值
+let spatial_sum = image_batch.sum_along(["height", "width"])  # 空间维度求和
+
+# 轴重排序
+let transposed = image_batch.transpose(["batch", "height", "width", "channel"])  # BHWC格式
+
 # 形状操作
 let shape = arr3d.shape()  # 获取形状
 let ndim = arr3d.ndim()    # 获取维数
 let flattened = arr3d.flatten()  # 展平为一维
 let reshaped = arr3d.reshape([3, 2, 4])  # 重塑形状
 
-# 轴操作
+# 轴操作（数字索引）
 let sum_axis0 = arr3d.sum_axis(0)  # 沿第0轴求和
 let mean_axis1 = arr3d.mean_axis(1)  # 沿第1轴求均值
 let max_axis2 = arr3d.max_axis(2)   # 沿第2轴求最大值
