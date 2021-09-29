@@ -99,9 +99,11 @@ class PaymentService {
             perform MetricsAspect.record_metric("payment_duration", duration.as_millis())
             
             receipt
-        } catch error {
-            perform LogAspect.on_error("PaymentService", "process_payment", error)
-            raise error
+        }
+        .catch {
+            case _:
+                perform LogAspect.on_error("PaymentService", "process_payment", error)
+                raise error
         }
     }
     
@@ -186,12 +188,14 @@ class AspectComposer {
                     }
                     
                     result
-                } catch error {
-                    # 执行异常通知
-                    for aspect in aspects.reverse() {
-                        perform aspect.on_error(context, error)
-                    }
-                    raise error
+                }
+                .catch {
+                    case _:
+                        # 执行异常通知
+                        for aspect in aspects.reverse() {
+                            perform aspect.on_error(context, error)
+                        }
+                        raise error
                 }
             }
         }
@@ -233,11 +237,13 @@ class DynamicAspectManager {
             }
             
             result
-        } catch error {
-            for aspect in self.aspects.reverse() {
-                perform aspect.on_error(context, error)
-            }
-            raise error
+        }
+        .catch {
+            case _:
+                for aspect in self.aspects.reverse() {
+                    perform aspect.on_error(context, error)
+                }
+                raise error
         }
     }
 }

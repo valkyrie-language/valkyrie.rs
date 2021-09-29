@@ -574,13 +574,15 @@ $ 捕获异常
 try {
     validate_age(-5)
     risky_operation()
-} catch error: String {
-    print(f"String error: {error}")
-} catch error: NetworkError {
-    print(f"Network error: {error.message}")
-    retry_connection()
-} catch error {
-    print(f"Unknown error: {error}")
+}
+.catch {
+    case error: String:
+        print(f"String error: {error}")
+    case error: NetworkError:
+        print(f"Network error: {error.message}")
+        retry_connection()
+    case error:
+        print(f"Unknown error: {error}")
 }
 ```
 

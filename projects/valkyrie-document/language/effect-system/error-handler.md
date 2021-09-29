@@ -52,14 +52,12 @@ let config = try Result<Config> {
 }
 .catch {
     case FileNotFound(path): create_default_config(path)
-    case ParseError(msg): {
+    case ParseError(msg):
         log_error(msg)
         Config::default()
-    }
-    case error: {
+    case error:
         print("Unexpected error: ${error}")
         Config::empty()
-    }
 }
 
 # 命名 catch
@@ -69,10 +67,9 @@ let data = try Result<Data> {
 catch network_error {
     case TimeoutError: retry_with_backoff()
     case ConnectionError(msg): use_cached_data()
-    case error: {
+    case error:
         log_error(error)
         Data::empty()
-    }
 }
 ```
 
@@ -85,19 +82,16 @@ let user_data = try Result<UserData> {
     validate_and_parse(raw)?
 }
 .catch {
-    case ValidationError { field, message }: {
+    case ValidationError { field, message }:
         show_field_error(field, message)
         UserData::guest()
-    }
-    case NetworkError { code, .. } if code >= 500: {
+    case NetworkError { code, .. } if code >= 500:
         # 服务器错误，稍后重试
         schedule_retry()
         UserData::cached(user_id)
-    }
-    case NetworkError { code, .. } if code >= 400: {
+    case NetworkError { code, .. } if code >= 400:
         # 客户端错误
         UserData::error(code)
-    }
     else: UserData::unknown_error()
 }
 ```
@@ -195,14 +189,12 @@ let data = try Result<Data> {
     fetch_with_retry(url, max_retries = 3)?
 }
 .catch {
-    case RetryExhausted(attempts): {
+    case RetryExhausted(attempts):
         log_error("Failed after ${attempts} attempts")
         use_fallback_data()
-    }
-    case error: {
+    case error:
         log_error("Unexpected error: ${error}")
         Data::empty()
-    }
 }
 ```
 
@@ -216,10 +208,9 @@ let results = try Result<Vector<ProcessedItem>> {
             process_item($item)?
         }
         .catch {
-            case ProcessingError(msg): {
+            case ProcessingError(msg):
                 log_warning("Skipping item: ${msg}")
                 None  # 跳过失败的项目
-            }
             else: None
         }
     }).filter_map({ $x => $x }).collect()
@@ -256,7 +247,7 @@ micro validate_user_input(input: UserInput) -> Result<ValidatedInput, Validation
         let email = validate_email(input.email)?
         let age = validate_age(input.age)?
         let name = validate_name(input.name)?
-        ValidatedInput { email, age, name }
+        class: ValidatedInput { email, age, name }
     }
 }
 
@@ -266,18 +257,15 @@ micro main() {
         run_application()?
     }
     .catch {
-        case ConfigError(msg): {
+        case ConfigError(msg):
             eprintln("Configuration error: ${msg}")
             exit(1)
-        }
-        case NetworkError(msg): {
+        case NetworkError(msg):
             eprintln("Network error: ${msg}")
             exit(2)
-        }
-        case error: {
+        case error:
             eprintln("Unexpected error: ${error}")
             exit(99)
-        }
     }
 }
 ```

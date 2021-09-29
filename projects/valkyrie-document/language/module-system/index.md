@@ -398,7 +398,7 @@ namespace math.geometry {
         micro test_distance_same_point() {
             let p = Point { x: 1.0, y: 2.0 }
             let dist = distance(p, p)
-            @.assert_equal(dist, 0.0)
+            @assert_equal(dist, 0.0)
         }
         
         @.test
@@ -406,7 +406,7 @@ namespace math.geometry {
             let p1 = Point { x: 0.0, y: 0.0 }
             let p2 = Point { x: 3.0, y: 4.0 }
             let dist = distance(p1, p2)
-            @.assert_equal(dist, 5.0)
+            @assert_equal(dist, 5.0)
         }
     }
 }

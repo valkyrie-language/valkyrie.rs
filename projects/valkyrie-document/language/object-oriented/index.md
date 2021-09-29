@@ -414,7 +414,7 @@ class Point {
 
 @.test
 micro test_addition() {
-    @.assert_equal(2 + 2, 4)
+    @assert_equal(2 + 2, 4)
 }
 
 @.deprecated("Use new_function instead")

@@ -292,9 +292,11 @@ micro error_prone_generator() {
         }
         
         yield "处理成功"
-    } catch error {
-        yield "发生错误: ${ error }"
-        raise error  # 重新抛出异常
+    }
+    .catch {
+        case _:
+            yield "发生错误: ${ error }"
+            raise error  # 重新抛出异常
     }
 }
 
@@ -304,8 +306,10 @@ try {
     for status in gen {
         print(status)
     }
-} catch error {
-    print("生成器异常: ${ error }")
+}
+.catch {
+    case _:
+        print("生成器异常: ${ error }")
 }
 ```
 
@@ -380,13 +384,13 @@ micro test_generator() {
     let gen = count_up(3)
     
     # 测试生成的值
-    @.assert_equal(gen.next(), Some(0))
-    @.assert_equal(gen.next(), Some(1))
-    @.assert_equal(gen.next(), Some(2))
-    @.assert_equal(gen.next(), None)
+    @assert_equal(gen.next(), Some(0))
+    @assert_equal(gen.next(), Some(1))
+    @assert_equal(gen.next(), Some(2))
+    @assert_equal(gen.next(), None)
     
     # 测试状态
-    @.assert_equal(gen.state(), GeneratorState::Completed)
+    @assert_equal(gen.state(), GeneratorState::Completed)
 }
 
 # 生成器集成测试
@@ -395,7 +399,7 @@ micro test_pipeline() {
     let pipeline = pipeline_stage1(input.iter())
     let results = pipeline.collect()
     
-    @.assert_equal(results, [2, 4, 6, 8])
+    @assert_equal(results, [2, 4, 6, 8])
 }
 ```
 

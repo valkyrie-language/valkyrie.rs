@@ -1,3 +1,18 @@
+# 效果系统
+
+Valkyrie 的效果系统提供了强大的副作用管理和控制流机制，包括异常处理、协程、生成器、反应式编程、面向切面编程和依赖注入等功能。
+
+## 效果系统组件
+
+- **[异常处理](./error-handler.md)** - 灵活的错误处理和异常传播机制
+- **[协程](./coroutine.md)** - 协作式多任务处理和异步编程
+- **[生成器](./generator.md)** - 惰性计算和值序列生成
+- **[反应式编程](./reactive.md)** - 数据流和变化传播的编程范式
+- **[面向切面编程](./aop.md)** - 横切关注点的分离和管理
+- **[依赖注入](./ioc.md)** - 控制反转和依赖管理
+
+---
+
 # 异常处理系统
 
 Valkyrie 中任何对象都可以作为异常被抛出和捕获。这提供了一种灵活的错误处理机制，允许程序以结构化的方式处理各种异常情况。
@@ -30,20 +45,21 @@ raise NetworkError {
 # 基本异常捕获
 try {
     risky_operation()
-} catch error {
-    print("Caught error: ${error}")
+}
+.catch {
+    case _: print("Caught error: ${error}")
 }
 
 # 类型特定的异常捕获
 try {
     network_request()
-} catch error: NetworkError {
-    print("Network error: ${error.message}")
-    retry_connection()
-} catch error: String {
-    print("String error: ${error}")
-} catch error {
-    print("Unknown error: ${error}")
+}
+.catch {
+    case NetworkError:
+            print("Network error: ${error.message}")
+            retry_connection()
+        case String: print("String error: ${error}")
+    else: print("Unknown error: ${error}")
 }
 ```
 
@@ -64,8 +80,9 @@ micro validate_age(age: i32) {
 
 try {
     validate_age(-5)
-} catch message: String {
-    print("Validation error: ${message}")
+}
+.catch {
+    case message: String: print("Validation error: ${message}")
 }
 ```
 
@@ -88,8 +105,10 @@ micro http_request(url: String) {
 
 try {
     http_request("invalid-url")
-} catch code: i32 {
-    match code {
+}
+.catch {
+    case code: i32 {
+        match code {
         400 => print("Bad request")
         401 => print("Unauthorized")
         404 => print("Not found")
@@ -128,8 +147,9 @@ micro save_user(user: User) {
     # 数据库操作
     try {
         database.insert(user)
-    } catch db_error {
-        raise DatabaseError {
+    }
+    .catch {
+        case db_error: raise DatabaseError {
             query: "INSERT INTO users...",
             error_code: db_error.code,
             message: db_error.message,
@@ -141,11 +161,12 @@ micro save_user(user: User) {
 # 处理不同类型的异常
 try {
     save_user(invalid_user)
-} catch error: ValidationError {
-    print("Validation failed for field '${error.field}': ${error.constraint}")
-} catch error: DatabaseError {
-    print("Database error at ${error.timestamp}: ${error.message}")
-    log_error(error)
+}
+.catch {
+    case ValidationError: print("Validation failed for field '${error.field}': ${error.constraint}")
+        case DatabaseError:
+        print("Database error at ${error.timestamp}: ${error.message}")
+        log_error(error)
 }
 ```
 
@@ -169,8 +190,9 @@ micro level1() {
 
 try {
     level1()
-} catch error {
-    print("Caught at top level: ${error}")
+}
+.catch {
+    case _: print("Caught at top level: ${error}")
 }
 ```
 
@@ -181,8 +203,9 @@ try {
 micro parse_config(content: String) -> Config {
     try {
         json.parse(content)
-    } catch parse_error {
-        raise ConfigError {
+    }
+    .catch {
+        case parse_error: raise ConfigError {
             message: "Failed to parse configuration",
             cause: parse_error,
             content_preview: content.substring(0, 100)
@@ -224,9 +247,12 @@ micro database_transaction() {
         
         transaction.commit()
         defer.cancel()  # 取消回滚
-    } catch error {
-        # 异常时自动回滚
-        raise error
+    }
+    .catch {
+        case error {
+            # 异常时自动回滚
+            raise error
+        }
     }
 }
 ```
@@ -272,8 +298,10 @@ micro retry<T>(max_attempts: i32, operation: () -> T) -> T {
     loop {
         try {
             return operation()
-        } catch error {
-            attempts += 1
+        }
+        .catch {
+            case error {
+                attempts += 1
             if attempts >= max_attempts {
                 raise RetryExhausted {
                     attempts: attempts,
@@ -291,8 +319,9 @@ try {
         unreliable_network_call()
     })
     print("Success: ${result}")
-} catch error: RetryExhausted {
-    print("Failed after ${error.attempts} attempts: ${error.last_error}")
+}
+.catch {
+    case RetryExhausted: print("Failed after ${error.attempts} attempts: ${error.last_error}")
 }
 ```
 
@@ -312,9 +341,12 @@ class CircuitBreaker {
                     let result = operation()
                     self.reset()
                     result
-                } catch error {
-                    self.record_failure()
-                    raise error
+                }
+                .catch {
+                    case error {
+                        self.record_failure()
+                        raise error
+                    }
                 }
             }
             CircuitState.Open => {
@@ -332,9 +364,12 @@ class CircuitBreaker {
                     let result = operation()
                     self.reset()
                     result
-                } catch error {
-                    self.state = CircuitState.Open
-                    raise error
+                }
+                .catch {
+                    case error {
+                        self.state = CircuitState.Open
+                        raise error
+                    }
                 }
             }
         }
@@ -364,8 +399,9 @@ micro process_batch(items: Vector<Item>) {
     for item in items {
         try {
             process_item(item)
-        } catch error {
-            errors.add(error)
+        }
+        .catch {
+            case _: errors.add(error)
         }
     }
     
@@ -411,8 +447,9 @@ class FileProcessingError {
 micro parse_csv(filename: String) {
     try {
         # 解析逻辑
-    } catch error {
-        raise FileProcessingError {
+    }
+    .catch {
+        case _: raise FileProcessingError {
             filename: filename,
             line_number: current_line,
             column: current_column,
@@ -430,18 +467,20 @@ micro parse_csv(filename: String) {
 micro application_main() {
     try {
         run_application()
-    } catch error: ConfigurationError {
-        print("Configuration error: ${error.message}")
-        print("Please check your configuration file")
-        exit(1)
-    } catch error: NetworkError {
-        print("Network error: ${error.message}")
-        print("Please check your internet connection")
-        exit(2)
-    } catch error {
-        print("Unexpected error: ${error}")
-        log_error(error)
-        exit(99)
+    }
+    .catch {
+        case ConfigurationError:
+            print("Configuration error: ${error.message}")
+            print("Please check your configuration file")
+            exit(1)
+        case NetworkError:
+            print("Network error: ${error.message}")
+            print("Please check your internet connection")
+            exit(2)
+        else:
+            print("Unexpected error: ${error}")
+            log_error(error)
+            exit(99)
     }
 }
 
@@ -449,8 +488,11 @@ micro application_main() {
 micro bad_example() {
     try {
         some_operation()
-    } catch error {
-        # 什么都不做，隐藏了错误
+    }
+    .catch {
+        case error {
+            # 什么都不做，隐藏了错误
+        }
     }
 }
 ```
@@ -465,9 +507,11 @@ micro test_validation_error() {
     try {
         save_user(invalid_user)
         assert(false, "Expected ValidationError")
-    } catch error: ValidationError {
-        @.assert_equal(error.field, "email")
-@.assert_equal(error.constraint, "Email cannot be empty")
+    }
+    .catch {
+        case ValidationError:
+            @assert_equal(error.field, "email")
+            @assert_equal(error.constraint, "Email cannot be empty")
     }
 }
 
@@ -481,9 +525,11 @@ micro test_retry_exhausted() {
             raise "Always fails"
         })
         assert(false, "Expected RetryExhausted")
-    } catch error: RetryExhausted {
-        @.assert_equal(error.attempts, 3)
-@.assert_equal(call_count, 3)
+    }
+    .catch {
+        case RetryExhausted:
+            @assert_equal(error.attempts, 3)
+            @assert_equal(call_count, 3)
     }
 }
 ```

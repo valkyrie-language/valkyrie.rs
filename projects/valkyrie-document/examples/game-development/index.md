@@ -263,6 +263,13 @@ impl Animation {
 }
 ```
 
+## 图形编程与 Shader 开发
+
+Valkyrie 原生支持图形编程，可以直接编写 shader 代码替代 GLSL，并提供完整的 wgpu 集成。
+
+- [图形编程与 Shader 开发](graphics-shader.md) - 完整的图形编程指南，包括 shader 编写、wgpu 集成、高级渲染技术等
+- [GPU 计算与并行编程](gpu-compute.md) - GPGPU 编程、并行算法、物理模拟、机器学习加速等
+
 ## 3D 游戏开发
 
 ### 3D 渲染管线
