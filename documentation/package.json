@@ -1,0 +1,29 @@
+{
+    "name": "valkyrie-documentation",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc -b && vite build",
+        "preview": "vite preview",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "@monaco-editor/react": "^4.7.0",
+        "@valkyrie-language/viking-script": "file:../../valkyrie.ts/projects/viking-script",
+        "monaco-editor": "^0.55.1",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "react-router-dom": "^7.5.0",
+        "react-markdown": "^10.1.0",
+        "remark-gfm": "^4.0.1",
+        "rehype-highlight": "^7.0.2"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "@vitejs/plugin-react": "^5.1.0",
+        "typescript": "~5.9.0",
+        "vite": "npm:rolldown-vite@7.2.5"
+    }
+}
