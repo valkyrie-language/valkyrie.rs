@@ -210,7 +210,7 @@ let data = try Result<Data> {
 
 ```valkyrie
 # 处理部分失败
-let results = try Result<Vec<ProcessedItem>> {
+let results = try Result<Vector<ProcessedItem>> {
     items.map({ $item =>
         try Result<ProcessedItem> {
             process_item($item)?

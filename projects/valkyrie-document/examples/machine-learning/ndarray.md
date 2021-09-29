@@ -1,206 +1,122 @@
-# N维数组 (NDArray)
+# 数组操作统一指南
 
-Valkyrie 提供了强大的N维数组类型，支持高效的数值计算和科学计算操作。
+Valkyrie 提供了完整的多维数组操作体系，这是所有数值计算、机器学习和深度学习应用的基础。本指南涵盖了从基础数组操作到高级数值计算的完整内容。
 
-## 数组类型体系
+## 核心数组类型
 
-- `Array` 是一段内存中的数据的抽象表示
-- `Array<T, N>` 是 `[T; N]` 的语法糖，表示固定大小的数组  
-- `ArrayND` 是异构计算、机器学习、深度学习的基础多维数组类型
-- `Array1D` 是 `ArrayND` 的 type alias，专门用于一维数组操作
-- `Array2D` 是 `ArrayND` 的 type alias，专门用于二维数组操作
+- `Array1D<T>` - 一维数组，向量运算的基础
+- `Array2D<T>` - 二维数组，矩阵运算和图像处理
+- `ArrayND<T>` - N维数组，张量运算和深度学习
 
-数组类型支持多种内存布局包括GPU布局，这些都是内置类型，专注于提供人类友好且机器开销小的接口。
+所有数组类型都支持泛型、高效内存管理和丰富的数学运算API。
 
-## 基本数组类型
+## 数组创建
 
-### Array1D - 一维数组
+### 基础创建方法
 
 ```valkyrie
-# 创建一维数组
-let arr1d = Array1D::new([1, 2, 3, 4, 5])
-let zeros = Array1D::zeros(100)
-let ones = Array1D::ones(50)
-let range = Array1D::range(0, 10, 1)  # 从0到10，步长为1
+# 一维数组创建
+let vector = Array1D::new([1, 2, 3, 4, 5])
+let zeros_1d = Array1D::zeros(100)
+let ones_1d = Array1D::ones(50)
+let range_1d = Array1D::range(0, 10, 1)
+
+# 二维数组创建
+let matrix = Array2D::new([[1, 2, 3], [4, 5, 6]])
+let zeros_2d = Array2D::zeros([3, 4])
+let identity = Array2D::eye(3)
+
+# N维数组创建
+let tensor = ArrayND::zeros([2, 3, 4, 5])
+let from_data = ArrayND::from_vec(data, [2, 3, 4])
 
 # 随机数组
-let random = Array1D::random(1000)  # 1000个随机数
-let normal = Array1D::normal(500, 0.0, 1.0)  # 正态分布
+let random_1d = Array1D::random(1000)
+let normal_2d = Array2D::normal([100, 50], 0.0, 1.0)
+let uniform_nd = ArrayND::uniform([2, 3, 4], -1.0, 1.0)
+```
 
-# 基本操作
-let length = arr1d.len()
-let sum = arr1d.sum()
-let mean = arr1d.mean()
-let max_val = arr1d.max()
-let min_val = arr1d.min()
+## 数组操作
+
+### 基本操作
+
+```valkyrie
+# 形状和属性
+let shape = array.shape()        # 获取形状
+let ndim = array.ndim()          # 获取维数
+let size = array.size()          # 总元素数
+let dtype = array.dtype()        # 数据类型
 
 # 索引和切片
-let element = arr1d[2]
-let slice = arr1d[1..4]  # 切片操作
-let filtered = arr1d.filter({ $x -> $x > 2 })  # 条件过滤
+let element = array[2]           # 一维索引
+let element_2d = matrix[[1, 2]]  # 二维索引
+let slice = array[1..4]          # 切片
+let subarray = tensor[[0..2, 1..3, :]]  # 多维切片
+
+# 统计运算
+let sum = array.sum()
+let mean = array.mean()
+let std = array.std()
+let max_val = array.max()
+let min_val = array.min()
+
+# 沿轴运算
+let sum_axis0 = array.sum_axis(0)
+let mean_axis1 = array.mean_axis(1)
 ```
 
-### Array2D - 二维数组
+### 形状操作
 
 ```valkyrie
-# 创建二维数组
-let arr2d = Array2D::new([
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, 9]
-])
+# 形状变换
+let flattened = array.flatten()           # 展平为一维
+let reshaped = array.reshape([3, 2, 4])   # 重塑形状
+let transposed = matrix.transpose()       # 转置
+let swapped = tensor.swap_axes(0, 2)      # 交换轴
 
-let zeros_2d = Array2D::zeros([3, 4])  # 3行4列的零矩阵
-let ones_2d = Array2D::ones([2, 5])    # 2行5列的单位矩阵
-let identity = Array2D::eye(4)         # 4x4单位矩阵
+# 维度操作
+let expanded = array.expand_dims(1)       # 在指定位置增加维度
+let squeezed = array.squeeze()            # 移除长度为1的维度
+let unsqueezed = array.unsqueeze(0)       # 在指定位置增加长度为1的维度
 
-# 形状信息
-let [rows, cols] = arr2d.shape()
-let total_elements = arr2d.size()
-
-# 索引操作
-let element = arr2d[[1, 2]]  # 第1行第2列
-let row = arr2d.row(0)       # 第0行
-let col = arr2d.col(1)       # 第1列
-let submatrix = arr2d[[0..2, 1..3]]  # 子矩阵
-
-# 矩阵运算
-let transposed = arr2d.transpose()
-let dot_product = arr2d.dot(other_matrix)
-let element_wise = arr2d * scalar_value
-```
-
-### ArrayND - N维数组
-
-```valkyrie
-# 创建N维数组
-let arr3d = ArrayND::zeros([2, 3, 4])  # 2x3x4的三维数组
-let arr4d = ArrayND::ones([2, 3, 4, 5])  # 四维数组
-
-# 从现有数据创建
-let data = vec![1, 2, 3, 4, 5, 6, 7, 8]
-let reshaped = ArrayND::from_vec(data, [2, 2, 2])  # 重塑为2x2x2
-
-# 命名索引 - 为维度指定语义化名称
+# 命名轴操作（高级特性）
 let image_batch = ArrayND::zeros([32, 3, 224, 224])
     .with_axis_names(["batch", "channel", "height", "width"])
 
-# 使用命名索引访问
-let first_image = image_batch.select("batch", 0)  # 选择第一个样本
-let red_channel = image_batch.select("channel", 0)  # 选择红色通道
-let center_crop = image_batch.slice("height", 50..174)
-                            .slice("width", 50..174)  # 中心裁剪
-
-# 命名轴操作
-let batch_mean = image_batch.mean_along("batch")     # 沿batch轴求均值
-let spatial_sum = image_batch.sum_along(["height", "width"])  # 空间维度求和
-
-# 轴重排序
-let transposed = image_batch.transpose(["batch", "height", "width", "channel"])  # BHWC格式
-
-# 形状操作
-let shape = arr3d.shape()  # 获取形状
-let ndim = arr3d.ndim()    # 获取维数
-let flattened = arr3d.flatten()  # 展平为一维
-let reshaped = arr3d.reshape([3, 2, 4])  # 重塑形状
-
-# 轴操作（数字索引）
-let sum_axis0 = arr3d.sum_axis(0)  # 沿第0轴求和
-let mean_axis1 = arr3d.mean_axis(1)  # 沿第1轴求均值
-let max_axis2 = arr3d.max_axis(2)   # 沿第2轴求最大值
-```
-
-## 数组布局 (Array Layout)
-
-### CPU布局
-
-```valkyrie
-# 行主序布局 (Row-major, C-style)
-let row_major = Array2D::with_layout(data, [3, 4], Layout::RowMajor)
-
-# 列主序布局 (Column-major, Fortran-style)
-let col_major = Array2D::with_layout(data, [3, 4], Layout::ColMajor)
-
-# 自定义步长
-let custom_layout = Array2D::with_strides(data, [3, 4], [4, 1])
-```
-
-### GPU布局
-
-```valkyrie
-use gpu::*
-
-# GPU内存布局
-let gpu_array = Array2D::with_layout(data, [1000, 1000], Layout::GPU {
-    device: GPUDevice::cuda(0),  # CUDA设备0
-    memory_type: GPUMemory::Global,
-    alignment: 256  # 内存对齐
-})
-
-# GPU计算
-let gpu_result = gpu_array.matmul(other_gpu_array)
-let cpu_result = gpu_result.to_cpu()  # 传回CPU
-
-# 异步GPU操作
-let future_result = gpu_array.async_matmul(other_gpu_array)
-let result = future_result.await
-```
-
-### 混合布局
-
-```valkyrie
-# 分块布局，适合大型矩阵
-let blocked_layout = Layout::Blocked {
-    block_size: [64, 64],
-    storage: StorageType::CPU
-}
-
-let large_matrix = Array2D::with_layout(data, [4096, 4096], blocked_layout)
-
-# 分布式布局
-let distributed_layout = Layout::Distributed {
-    nodes: vec!["node1", "node2", "node3"],
-    partition_strategy: PartitionStrategy::ByRows
-}
+let first_image = image_batch.select("batch", 0)
+let red_channel = image_batch.select("channel", 0)
+let batch_mean = image_batch.mean_along("batch")
 ```
 
 ## 数学运算
 
-### 基本运算
+### 基础运算
 
 ```valkyrie
-let a = Array2D::new([[1, 2], [3, 4]])
-let b = Array2D::new([[5, 6], [7, 8]])
-
 # 元素级运算
-let add = a + b
-let sub = a - b
-let mul = a * b  # 元素级乘法
-let div = a / b
-
-# 矩阵运算
-let matmul = a.dot(b)  # 矩阵乘法
-let power = a.pow(2)   # 矩阵幂
+let add = a + b              # 加法
+let sub = a - b              # 减法
+let mul = a * b              # 元素级乘法
+let div = a / b              # 除法
+let pow = a.pow(2)           # 幂运算
 
 # 数学函数
 let sin_a = a.sin()
+let cos_a = a.cos()
 let exp_a = a.exp()
 let log_a = a.log()
 let sqrt_a = a.sqrt()
+let abs_a = a.abs()
+
+# 矩阵运算
+let matmul = matrix_a.dot(matrix_b)  # 矩阵乘法
+let outer = vector_a.outer(vector_b) # 外积
 ```
 
 ### 线性代数
 
 ```valkyrie
-use linalg::*
-
-let matrix = Array2D::new([
-    [4.0, 2.0, 1.0],
-    [2.0, 5.0, 3.0],
-    [1.0, 3.0, 6.0]
-])
-
-# 分解
+# 矩阵分解
 let lu = matrix.lu_decomposition()
 let qr = matrix.qr_decomposition()
 let svd = matrix.svd()
@@ -213,218 +129,187 @@ let x = matrix.solve(b)  # 求解 Ax = b
 # 矩阵性质
 let det = matrix.determinant()
 let rank = matrix.rank()
-let cond = matrix.condition_number()
-let norm = matrix.norm(NormType::Frobenius)
-```
-
-### 统计运算
-
-```valkyrie
-let data = Array2D::random([100, 50])
-
-# 描述性统计
-let mean = data.mean()
-let std = data.std()
-let var = data.var()
-let median = data.median()
-
-# 沿轴统计
-let row_means = data.mean_axis(1)  # 每行的均值
-let col_stds = data.std_axis(0)    # 每列的标准差
-
-# 相关性分析
-let corr_matrix = data.correlation()
-let cov_matrix = data.covariance()
+let inv = matrix.inverse()
+let norm = matrix.norm()
 ```
 
 ## 高级操作
 
-### 广播 (Broadcasting)
+### 广播机制
 
 ```valkyrie
+# 自动广播
 let matrix = Array2D::ones([3, 4])
 let vector = Array1D::new([1, 2, 3, 4])
-
-# 自动广播
 let result = matrix + vector  # vector自动广播到每一行
 
 # 显式广播
 let broadcasted = vector.broadcast_to([3, 4])
 let manual_result = matrix + broadcasted
+
+# 广播规则检查
+let compatible = Array::broadcast_compatible(shape_a, shape_b)
 ```
 
-### 索引和掩码
+### 索引和条件操作
 
 ```valkyrie
-let arr = Array2D::new([
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, 9]
-])
-
 # 布尔索引
-let mask = arr > 5
-let filtered = arr.where(mask)  # 获取大于5的元素
+let mask = array > 5.0
+let filtered = array.where(mask)  # 获取满足条件的元素
+let masked_array = array.mask(mask)  # 应用掩码
 
 # 花式索引
-let indices = Array1D::new([0, 2])
-let selected_rows = arr.take_rows(indices)
+let indices = Array1D::new([0, 2, 4])
+let selected = array.take(indices)  # 按索引选择元素
+let selected_rows = matrix.take_rows(indices)
 
 # 条件赋值
-arr.where_assign(mask, 0)  # 将大于5的元素设为0
+array.where_assign(mask, 0.0)  # 将满足条件的元素设为0
+array.clip(0.0, 1.0)  # 将值限制在[0, 1]范围内
+
+# 查找操作
+let max_indices = array.argmax()  # 最大值索引
+let min_indices = array.argmin()  # 最小值索引
+let nonzero = array.nonzero()     # 非零元素索引
 ```
 
-### 窗口操作
+### 数据处理
 
 ```valkyrie
-let signal = Array1D::random(1000)
+# 排序操作
+let sorted = array.sort()           # 排序
+let argsorted = array.argsort()     # 排序索引
+let sorted_axis = matrix.sort_axis(0)  # 沿轴排序
 
-# 滑动窗口
-let windowed = signal.sliding_window(10)  # 窗口大小为10
-let window_means = windowed.map({ $window -> $window.mean() })
+# 唯一值操作
+let unique = array.unique()         # 唯一值
+let counts = array.value_counts()   # 值计数
 
-# 卷积
-let kernel = Array1D::new([0.25, 0.5, 0.25])  # 平滑核
-let smoothed = signal.convolve(kernel)
+# 数据变换
+let normalized = array.normalize()  # 归一化到[0,1]
+let standardized = array.standardize()  # 标准化(零均值单位方差)
+let centered = array - array.mean()  # 中心化
 
-# 二维卷积
-let image = Array2D::random([256, 256])
-let edge_kernel = Array2D::new([
-    [-1, -1, -1],
-    [-1,  8, -1],
-    [-1, -1, -1]
-])
-let edges = image.convolve2d(edge_kernel)
+# 缺失值处理
+let filled = array.fill_nan(0.0)   # 填充NaN值
+let dropped = array.drop_nan()      # 删除NaN值
+let interpolated = array.interpolate()  # 插值填充
 ```
 
-## 性能优化
+## 内存管理
 
-### 内存管理
+### 高效内存操作
 
 ```valkyrie
 # 预分配内存
 let mut result = Array2D::uninitialized([1000, 1000])
-result.fill_with({ Array2D::random([1000, 1000]) })
+result.fill_with_fn(|i, j| (i + j) as f64)
 
 # 就地操作
-let mut arr = Array2D::ones([500, 500])
-arr.add_assign(other_array)  # 就地加法，避免分配新内存
-arr.mul_assign(2.0)          # 就地标量乘法
+let mut array = Array2D::ones([500, 500])
+array.add_assign(other_array)  # 就地加法，避免分配新内存
+array.mul_assign(2.0)          # 就地标量乘法
 
 # 视图操作
-let view = arr.view([100..400, 200..300])  # 创建视图，不复制数据
-let mut_view = arr.view_mut([0..100, 0..100])  # 可变视图
+let view = array.view([100..400, 200..300])  # 创建视图，不复制数据
+let mut_view = array.view_mut([0..100, 0..100])  # 可变视图
+
+# 内存布局控制
+let row_major = Array2D::with_layout(data, shape, Layout::RowMajor)
+let col_major = Array2D::with_layout(data, shape, Layout::ColMajor)
 ```
 
-### 并行计算
+## 数据导入导出
+
+### 文件操作
 
 ```valkyrie
-use parallel::*
+# CSV文件操作
+let csv_data = Array2D::from_csv("data.csv")
+array.to_csv("output.csv")
 
-# 并行元素操作
-let large_array = Array2D::random([10000, 10000])
-let parallel_result = large_array.par_map({ $x -> $x.sin() })
+# 二进制格式
+let binary_data = array.to_bytes()
+let restored = Array2D::from_bytes(binary_data, shape)
 
-# 并行归约
-let parallel_sum = large_array.par_sum()
-let parallel_max = large_array.par_max()
+# NumPy兼容格式
+let numpy_array = Array2D::from_npy("data.npy")
+array.to_npy("output.npy")
 
-# 并行矩阵乘法
-let a = Array2D::random([2000, 1500])
-let b = Array2D::random([1500, 1000])
-let parallel_matmul = a.par_dot(b)
+# JSON格式
+let json_data = array.to_json()
+let from_json = Array2D::from_json(json_data)
 ```
 
-### SIMD优化
+### 数据转换
 
 ```valkyrie
-# 启用SIMD优化
-let arr = Array1D::random(10000).with_simd(true)
+# 与其他类型转换
+let vec_data: Vector<f64> = array.to_vec()
+let from_vec = Array1D::from_vec(vec_data)
 
-# SIMD友好的操作
-let vectorized_add = arr.simd_add(other_array)
-let vectorized_mul = arr.simd_mul(scalar)
+# 类型转换
+let float_array = int_array.cast::<f64>()
+let int_array = float_array.cast::<i32>()
 
-# 自动向量化
-#[simd_optimize]
-fn custom_operation(arr: Array1D<f32>) -> Array1D<f32> {
-    arr.map({ $x -> $x * $x + 2.0 * $x + 1.0 })
-}
+# 与标准库集成
+let slice: &[f64] = array.as_slice()
+let mut_slice: &mut [f64] = array.as_mut_slice()
 ```
 
-## 互操作性
+## 性能优化
 
-### 与其他库的集成
-
-```valkyrie
-# 从NumPy数组导入
-let numpy_array = import_numpy("data.npy")
-let valkyrie_array = Array2D::from_numpy(numpy_array)
-
-# 导出到NumPy
-let exported = valkyrie_array.to_numpy()
-export_numpy(exported, "result.npy")
-
-# 与Rust ndarray互操作
-let rust_ndarray = ndarray::Array2::zeros((100, 100))
-let valkyrie_array = Array2D::from_ndarray(rust_ndarray)
-```
-
-### 序列化
+### 高效编程模式
 
 ```valkyrie
-# 二进制序列化
-let arr = Array2D::random([1000, 1000])
-let serialized = arr.serialize_binary()
-let deserialized = Array2D::deserialize_binary(serialized)
+# 选择合适的数据类型
+let high_precision = Array2D::<f64>::zeros([1000, 1000])  # 双精度
+let fast_computation = Array2D::<f32>::zeros([1000, 1000])  # 单精度，更快
+let integer_data = Array2D::<i32>::zeros([1000, 1000])     # 整数
 
-# HDF5格式
-let hdf5_file = HDF5File::create("data.h5")
-hdf5_file.write_array("dataset", arr)
-let loaded = hdf5_file.read_array::<Array2D<f64>>("dataset")
-```
-
-## 最佳实践
-
-### 1. 选择合适的布局
-
-```valkyrie
-# 根据访问模式选择布局
-let row_access_matrix = Array2D::with_layout(data, shape, Layout::RowMajor)
-let col_access_matrix = Array2D::with_layout(data, shape, Layout::ColMajor)
-
-# GPU密集计算使用GPU布局
-let gpu_matrix = Array2D::with_layout(data, shape, Layout::GPU {
-    device: GPUDevice::best_available(),
-    memory_type: GPUMemory::Global,
-    alignment: 256
-})
-```
-
-### 2. 内存效率
-
-```valkyrie
 # 避免不必要的复制
-fn efficient_computation(arr: &Array2D<f64>) -> Array2D<f64> {
-    # 使用视图而不是复制
-    let view = arr.view([100..900, 100..900])
-    
-    # 就地操作
-    let mut result = view.to_owned()
-    result.add_assign(1.0)
-    result
-}
+let view = array.view([100..900, 100..900])  # 使用视图
+let mut result = view.to_owned()  # 仅在需要时复制
+
+# 批量操作
+let arrays = vec![array1, array2, array3]
+let batch_sum = arrays.iter().fold(Array2D::zeros(shape), |acc, arr| acc + arr)
+
+# 数值稳定性
+let max_val = array.max()
+let stable_result = (array - max_val).exp()  # 防止溢出
 ```
 
-### 3. 数值稳定性
+## 应用场景
+
+### 常见用例
 
 ```valkyrie
-# 使用数值稳定的算法
-fn stable_matrix_inverse(matrix: Array2D<f64>) -> Array2D<f64> {
-    # 使用SVD而不是直接求逆
-    let svd = matrix.svd()
-    svd.pseudo_inverse()
-}
+# 图像处理
+let image = Array2D::from_image("photo.jpg")
+let resized = image.resize([224, 224])
+let normalized = (resized.cast::<f32>() / 255.0 - 0.5) / 0.5
+
+# 数据分析
+let data = Array2D::from_csv("dataset.csv")
+let correlation = data.correlation_matrix()
+let pca_result = data.pca(n_components: 10)
+
+# 科学计算
+let signal = Array1D::linspace(0.0, 10.0, 1000)
+let fft_result = signal.fft()
+let filtered = fft_result.filter_frequencies(cutoff: 5.0).ifft()
 ```
 
-N维数组为 Valkyrie 提供了强大的数值计算基础，支持从简单的向量运算到复杂的张量操作，并通过多种布局优化满足不同场景的性能需求。
+## 总结
+
+Valkyrie 的数组系统提供了完整的数值计算基础设施：
+
+- **统一的API设计** - 一维、二维和N维数组使用一致的接口
+- **高效的内存管理** - 支持视图、就地操作和自定义布局
+- **丰富的数学运算** - 从基础运算到高级线性代数
+- **灵活的数据处理** - 索引、条件操作、数据变换
+- **广泛的兼容性** - 支持多种文件格式和数据转换
+
+这些特性使得 Valkyrie 数组成为机器学习、深度学习、科学计算和数据分析的理想选择。

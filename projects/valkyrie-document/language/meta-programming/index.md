@@ -196,16 +196,16 @@ where
 **依赖类型支持**:
 ```valkyrie
 // 长度依赖的向量类型
-class Vec<T, const N: usize> {
+class Vector<T, const N: usize> {
     data: [T; N],
 }
 
-impl<T, const N: usize> Vec<T, N> {
-    micro push<const M: usize>(self, item: T) -> Vec<T, {N + 1}> {
+impl<T, const N: usize> Vector<T, N> {
+    micro push<const M: usize>(self, item: T) -> Vector<T, {N + 1}> {
         // 类型级别保证长度正确性
     }
     
-    micro concat<const M: usize>(self, other: Vec<T, M>) -> Vec<T, {N + M}> {
+    micro concat<const M: usize>(self, other: Vector<T, M>) -> Vector<T, {N + M}> {
         // 编译时计算结果长度
     }
 }

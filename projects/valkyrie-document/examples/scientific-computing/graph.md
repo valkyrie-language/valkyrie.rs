@@ -54,7 +54,7 @@ let successors = digraph.successors(start)
 
 ```valkyrie
 # 自定义边权重类型
-struct EdgeWeight {
+class EdgeWeight {
     distance: f64,
     cost: f64,
     capacity: i32,
@@ -411,7 +411,7 @@ let large_graph = CompressedGraph::new()
 
 ```valkyrie
 # 根据图的特性选择算法
-fn choose_shortest_path_algorithm(graph: &Graph) -> ShortestPathResult {
+micro choose_shortest_path_algorithm(graph: &Graph) -> ShortestPathResult {
     if graph.has_negative_weights() {
         graph.bellman_ford(start)
     } else if graph.is_sparse() {
@@ -426,7 +426,7 @@ fn choose_shortest_path_algorithm(graph: &Graph) -> ShortestPathResult {
 
 ```valkyrie
 # 流式处理大图
-fn process_large_graph(graph_stream: GraphStream) {
+micro process_large_graph(graph_stream: GraphStream) {
     for chunk in graph_stream.chunks(1000) {
         let subgraph = Graph::from_edges(chunk)
         let result = subgraph.compute_metrics()

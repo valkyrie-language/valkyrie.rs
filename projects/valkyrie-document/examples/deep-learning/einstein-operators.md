@@ -88,7 +88,7 @@ class PatchEmbedding {
     patch_size: Integer
     embed_dim: Integer
     
-    method forward(self, images: ArrayND) -> ArrayND {
+    forward(self, images: ArrayND) -> ArrayND {
         # 将图像分割为patches
         let patches = rearrange(images, 
             "n (h p1) (w p2) c -> n (h w) (p1 p2 c)",
@@ -101,7 +101,7 @@ class PatchEmbedding {
 }
 
 # 多尺度特征融合
-method multi_scale_fusion(features: List<ArrayND>) -> ArrayND {
+micro multi_scale_fusion(features: List<ArrayND>) -> ArrayND {
     let unified_features = []
     
     for (i, feat) in features.enumerate() {
@@ -129,7 +129,7 @@ class MultiHeadAttention {
     num_heads: Integer
     head_dim: Integer
     
-    method forward(self, x: ArrayND) -> ArrayND {
+    forward(self, x: ArrayND) -> ArrayND {
         let n, s, d = x.shape()
         
         # 计算Q, K, V
@@ -158,7 +158,7 @@ class MultiHeadAttention {
 
 ```valkyrie
 # 动态形状处理
-method adaptive_pooling(x: ArrayND, target_size: Tuple<Integer, Integer>) -> ArrayND {
+micro adaptive_pooling(x: ArrayND, target_size: Tuple<Integer, Integer>) -> ArrayND {
     let n, c, h, w = x.shape()
     let th, tw = target_size
     
@@ -175,7 +175,7 @@ method adaptive_pooling(x: ArrayND, target_size: Tuple<Integer, Integer>) -> Arr
 }
 
 # 序列到序列的注意力
-method seq2seq_attention(encoder_out: ArrayND, decoder_hidden: ArrayND) -> ArrayND {
+micro seq2seq_attention(encoder_out: ArrayND, decoder_hidden: ArrayND) -> ArrayND {
     # encoder_out: [batch, enc_seq, hidden]
     # decoder_hidden: [batch, dec_seq, hidden]
     
@@ -190,7 +190,7 @@ method seq2seq_attention(encoder_out: ArrayND, decoder_hidden: ArrayND) -> Array
 }
 
 # 图卷积网络的邻接矩阵操作
-method graph_convolution(node_features: ArrayND, adjacency: ArrayND) -> ArrayND {
+micro graph_convolution(node_features: ArrayND, adjacency: ArrayND) -> ArrayND {
     # node_features: [batch, nodes, features]
     # adjacency: [batch, nodes, nodes]
     
@@ -210,7 +210,7 @@ method graph_convolution(node_features: ArrayND, adjacency: ArrayND) -> ArrayND 
 
 ```valkyrie
 # 内存高效的操作
-method memory_efficient_attention(q: ArrayND, k: ArrayND, v: ArrayND, 
+micro memory_efficient_attention(q: ArrayND, k: ArrayND, v: ArrayND, 
                                  chunk_size: Integer = 1024) -> ArrayND {
     let b, h, s, d = q.shape()
     let output = ArrayND::zeros([b, h, s, d])
@@ -232,7 +232,7 @@ method memory_efficient_attention(q: ArrayND, k: ArrayND, v: ArrayND,
 }
 
 # GPU优化的批量操作
-method batch_matrix_multiply(a: ArrayND, b: ArrayND) -> ArrayND {
+micro batch_matrix_multiply(a: ArrayND, b: ArrayND) -> ArrayND {
     # 使用einops确保正确的批量维度对齐
     let a_reshaped = rearrange(a, "... i j -> (...) i j")
     let b_reshaped = rearrange(b, "... j k -> (...) j k")

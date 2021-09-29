@@ -85,17 +85,17 @@ impl Clone for Point {
 ### 泛型实现
 
 ```valkyrie
-impl<T: Display> Display for Vec<T> {
+impl<T: Display> Display for Vector<T> {
     micro fmt(self) -> String {
         let items = self.iter()
             .map({ $item.fmt() })
-            .collect::<Vec<String>>()
+            .collect::<Vector<String>>()
             .join(", ")
         @format("[{}]", items)
     }
 }
 
-impl<T: Clone> Clone for Vec<T> {
+impl<T: Clone> Clone for Vector<T> {
     micro clone(self) -> Self {
         self.iter().map({ $item.clone() }).collect()
     }
@@ -105,7 +105,7 @@ impl<T: Clone> Clone for Vec<T> {
 ### 条件实现
 
 ```valkyrie
-impl<T: PartialEq> PartialEq for Vec<T> {
+impl<T: PartialEq> PartialEq for Vector<T> {
     micro eq(self, other: &Self) -> bool {
         self.len() == other.len() && 
         self.iter().zip(other.iter()).all({ $a.eq($b) })
@@ -198,7 +198,7 @@ impl Animal for Cat {
 }
 
 # 使用 trait 对象
-let animals: Vec<Box<dyn Animal>> = vec![
+let animals: Vector<Box<dyn Animal>> = vec![
     Box::new(Dog { name: "Buddy".to_string() }),
     Box::new(Cat { name: "Whiskers".to_string() }),
 ]
@@ -263,7 +263,7 @@ let area = Calculator::circle_area(5.0)
 
 ```valkyrie
 # 高阶 trait 边界
-micro map_closure<F, T, U>(items: Vec<T>, f: F) -> Vec<U>
+micro map_closure<F, T, U>(items: Vector<T>, f: F) -> Vector<U>
 where
     F: for<'a> Fn(&'a T) -> U,
 {
@@ -361,7 +361,7 @@ trait From<T> {
 # String 可以从多种类型转换
 impl From<&str> for String { ... }
 impl From<char> for String { ... }
-impl From<Vec<char>> for String { ... }
+impl From<Vector<char>> for String { ... }
 ```
 
 ### 3. 错误处理

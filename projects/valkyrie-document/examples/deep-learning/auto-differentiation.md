@@ -50,21 +50,21 @@ let grad_y = y.grad()
 
 ```valkyrie
 # 前向模式 - 适合输入维度较少的情况
-struct ForwardDual {
-    value: f64,
-    derivative: f64,
+class ForwardDual {
+    value: f64
+    derivative: f64
 }
 
 impl ForwardDual {
-    fn new(value: f64, derivative: f64) -> Self {
+    micro new(value: f64, derivative: f64) -> Self {
         Self { value, derivative }
     }
     
-    fn variable(value: f64) -> Self {
+    micro variable(value: f64) -> Self {
         Self::new(value, 1.0)  # 种子向量
     }
     
-    fn constant(value: f64) -> Self {
+    micro constant(value: f64) -> Self {
         Self::new(value, 0.0)
     }
 }
@@ -73,7 +73,7 @@ impl ForwardDual {
 impl Add for ForwardDual {
     type Output = Self
     
-    fn add(self, other: Self) -> Self {
+    micro add(self, other: Self) -> Self {
         Self {
             value: self.value + other.value,
             derivative: self.derivative + other.derivative
@@ -84,7 +84,7 @@ impl Add for ForwardDual {
 impl Mul for ForwardDual {
     type Output = Self
     
-    fn mul(self, other: Self) -> Self {
+    micro mul(self, other: Self) -> Self {
         Self {
             value: self.value * other.value,
             derivative: self.derivative * other.value + self.value * other.derivative
@@ -104,33 +104,33 @@ println!("f(2) = {}, f'(2) = {}", result.value, result.derivative)
 
 ```valkyrie
 # 反向模式 - 适合输出维度较少的情况
-struct ReverseTape {
-    operations: Vec<Operation>,
-    variables: Vec<Variable>,
+class ReverseTape {
+    operations: Vec<Operation>
+    variables: Vec<Variable>
 }
 
-enum Operation {
-    Add { inputs: [usize; 2], output: usize },
-    Mul { inputs: [usize; 2], output: usize },
-    Sin { input: usize, output: usize },
-    Exp { input: usize, output: usize },
+union Operation {
+    Add { inputs: [usize; 2] output: usize }
+    Mul { inputs: [usize; 2] output: usize }
+    Sin { input: usize output: usize }
+    Exp { input: usize output: usize }
 }
 
 impl ReverseTape {
-    fn new() -> Self {
+    micro new() -> Self {
         Self {
             operations: Vec::new(),
             variables: Vec::new(),
         }
     }
     
-    fn variable(&mut self, value: f64) -> VariableId {
+    micro variable(&mut self, value: f64) -> VariableId {
         let id = self.variables.len()
         self.variables.push(Variable::new(value))
         VariableId(id)
     }
     
-    fn add(&mut self, a: VariableId, b: VariableId) -> VariableId {
+    micro add(&mut self, a: VariableId, b: VariableId) -> VariableId {
         let output = self.variable(self.variables[a.0].value + self.variables[b.0].value)
         self.operations.push(Operation::Add {
             inputs: [a.0, b.0],
@@ -139,7 +139,7 @@ impl ReverseTape {
         output
     }
     
-    fn backward(&mut self, output: VariableId) {
+    micro backward(&mut self, output: VariableId) {
         # 初始化梯度
         let mut gradients = vec![0.0; self.variables.len()]
         gradients[output.0] = 1.0
@@ -222,51 +222,51 @@ let grad_x = x.grad()  # 输入梯度
 
 ```valkyrie
 # 全连接层
-struct LinearLayer {
-    weight: MatrixVariable,
-    bias: VectorVariable,
+class LinearLayer {
+    weight: MatrixVariable
+    bias: VectorVariable
 }
 
 impl LinearLayer {
-    fn new(input_size: usize, output_size: usize) -> Self {
+    micro new(input_size: usize, output_size: usize) -> Self {
         Self {
             weight: MatrixVariable::random([output_size, input_size]),
             bias: VectorVariable::zeros(output_size),
         }
     }
     
-    fn forward(&self, input: VectorVariable) -> VectorVariable {
+    micro forward(&self, input: VectorVariable) -> VectorVariable {
         self.weight.matmul(input) + self.bias
     }
 }
 
 # 激活函数
 trait Activation {
-    fn forward(&self, x: VectorVariable) -> VectorVariable
+    micro forward(&self, x: VectorVariable) -> VectorVariable
 }
 
-struct ReLU;
+class ReLU;
 impl Activation for ReLU {
-    fn forward(&self, x: VectorVariable) -> VectorVariable {
+    micro forward(&self, x: VectorVariable) -> VectorVariable {
         x.max(VectorVariable::zeros(x.len()))
     }
 }
 
-struct Sigmoid;
+class Sigmoid;
 impl Activation for Sigmoid {
-    fn forward(&self, x: VectorVariable) -> VectorVariable {
+    micro forward(&self, x: VectorVariable) -> VectorVariable {
         1.0 / (1.0 + (-x).exp())
     }
 }
 
 # 多层感知机
-struct MLP {
-    layers: Vec<LinearLayer>,
-    activations: Vec<Box<dyn Activation>>,
+class MLP {
+    layers: Vec<LinearLayer>
+    activations: Vec<Box<dyn Activation>>
 }
 
 impl MLP {
-    fn forward(&self, mut x: VectorVariable) -> VectorVariable {
+    micro forward(&self, mut x: VectorVariable) -> VectorVariable {
         for (layer, activation) in zip(self.layers, self.activations) {
             x = layer.forward(x)
             x = activation.forward(x)
@@ -280,15 +280,15 @@ impl MLP {
 
 ```valkyrie
 # 卷积操作
-struct Conv2D {
-    kernel: TensorVariable,  # [out_channels, in_channels, kernel_h, kernel_w]
-    bias: VectorVariable,
-    stride: [usize; 2],
-    padding: [usize; 2],
+class Conv2D {
+    kernel: TensorVariable  # [out_channels, in_channels, kernel_h, kernel_w]
+    bias: VectorVariable
+    stride: [usize; 2]
+    padding: [usize; 2]
 }
 
 impl Conv2D {
-    fn forward(&self, input: TensorVariable) -> TensorVariable {
+    micro forward(&self, input: TensorVariable) -> TensorVariable {
         # input: [batch, in_channels, height, width]
         let output = input.conv2d(self.kernel, self.stride, self.padding)
         output + self.bias.unsqueeze([0, 2, 3])  # 广播偏置
@@ -296,13 +296,13 @@ impl Conv2D {
 }
 
 # 池化层
-struct MaxPool2D {
-    kernel_size: [usize; 2],
-    stride: [usize; 2],
+class MaxPool2D {
+    kernel_size: [usize; 2]
+    stride: [usize; 2]
 }
 
 impl MaxPool2D {
-    fn forward(&self, input: TensorVariable) -> TensorVariable {
+    micro forward(&self, input: TensorVariable) -> TensorVariable {
         input.max_pool2d(self.kernel_size, self.stride)
     }
 }
@@ -312,18 +312,18 @@ impl MaxPool2D {
 
 ```valkyrie
 # 均方误差损失
-fn mse_loss(predictions: VectorVariable, targets: VectorVariable) -> Variable {
+micro mse_loss(predictions: VectorVariable, targets: VectorVariable) -> Variable {
     (predictions - targets).pow(2).mean()
 }
 
 # 交叉熵损失
-fn cross_entropy_loss(logits: VectorVariable, targets: VectorVariable) -> Variable {
+micro cross_entropy_loss(logits: VectorVariable, targets: VectorVariable) -> Variable {
     let softmax = logits.softmax()
     -(targets * softmax.log()).sum()
 }
 
 # 二元交叉熵损失
-fn binary_cross_entropy_loss(predictions: VectorVariable, targets: VectorVariable) -> Variable {
+micro binary_cross_entropy_loss(predictions: VectorVariable, targets: VectorVariable) -> Variable {
     -(targets * predictions.log() + (1.0 - targets) * (1.0 - predictions).log()).mean()
 }
 ```
@@ -332,14 +332,14 @@ fn binary_cross_entropy_loss(predictions: VectorVariable, targets: VectorVariabl
 
 ```valkyrie
 # SGD优化器
-struct SGD {
-    learning_rate: f64,
-    momentum: f64,
-    velocity: HashMap<VariableId, Tensor>,
+class SGD {
+    learning_rate: f64
+    momentum: f64
+    velocity: HashMap<VariableId, Tensor>
 }
 
 impl SGD {
-    fn step(&mut self, parameters: &[Variable]) {
+    micro step(&mut self, parameters: &[Variable]) {
         for param in parameters {
             if let Some(grad) = param.grad() {
                 # 动量更新
@@ -359,18 +359,18 @@ impl SGD {
 }
 
 # Adam优化器
-struct Adam {
-    learning_rate: f64,
-    beta1: f64,
-    beta2: f64,
-    epsilon: f64,
-    t: i32,  # 时间步
-    m: HashMap<VariableId, Tensor>,  # 一阶矩估计
-    v: HashMap<VariableId, Tensor>,  # 二阶矩估计
+class Adam {
+    learning_rate: f64
+    beta1: f64
+    beta2: f64
+    epsilon: f64
+    t: i32  # 时间步
+    m: HashMap<VariableId, Tensor>  # 一阶矩估计
+    v: HashMap<VariableId, Tensor>  # 二阶矩估计
 }
 
 impl Adam {
-    fn step(&mut self, parameters: &[Variable]) {
+    micro step(&mut self, parameters: &[Variable]) {
         self.t += 1
         
         for param in parameters {
@@ -406,7 +406,7 @@ impl Adam {
 
 ```valkyrie
 # 完整的训练循环
-fn train_model(model: &mut MLP, 
+micro train_model(model: &mut MLP, 
                optimizer: &mut dyn Optimizer,
                train_data: &[(VectorVariable, VectorVariable)],
                epochs: usize) {
@@ -493,12 +493,12 @@ neural MultiLayerPerceptron {
 
 ```valkyrie
 # 计算图融合
-struct GraphOptimizer {
-    fusion_rules: Vec<FusionRule>,
+class GraphOptimizer {
+    fusion_rules: Vec<FusionRule>
 }
 
 impl GraphOptimizer {
-    fn optimize(&self, graph: &mut ComputationGraph) {
+    micro optimize(&self, graph: &mut ComputationGraph) {
         # 算子融合
         self.fuse_operations(graph)
         
@@ -509,7 +509,7 @@ impl GraphOptimizer {
         self.parallelize(graph)
     }
     
-    fn fuse_operations(&self, graph: &mut ComputationGraph) {
+    micro fuse_operations(&self, graph: &mut ComputationGraph) {
         # 融合连续的线性操作
         # 例如：MatMul + Add -> FusedLinear
         for rule in &self.fusion_rules {
@@ -523,12 +523,12 @@ impl GraphOptimizer {
 
 ```valkyrie
 # 梯度检查点
-struct GradientCheckpointing {
-    checkpoint_layers: Vec<usize>,
+class GradientCheckpointing {
+    checkpoint_layers: Vec<usize>
 }
 
 impl GradientCheckpointing {
-    fn forward_with_checkpointing(&self, model: &MLP, input: TensorVariable) -> TensorVariable {
+    micro forward_with_checkpointing(&self, model: &MLP, input: TensorVariable) -> TensorVariable {
         let mut activations = vec![input]
         let mut checkpoints = HashMap::new()
         
@@ -553,7 +553,7 @@ impl GradientCheckpointing {
 
 ```valkyrie
 # 数值稳定的softmax
-fn stable_softmax(logits: TensorVariable) -> TensorVariable {
+micro stable_softmax(logits: TensorVariable) -> TensorVariable {
     let max_logits = logits.max(dim: -1, keepdim: true)
     let shifted = logits - max_logits
     let exp_shifted = shifted.exp()
@@ -561,7 +561,7 @@ fn stable_softmax(logits: TensorVariable) -> TensorVariable {
 }
 
 # 数值稳定的log-sum-exp
-fn log_sum_exp(x: TensorVariable) -> Variable {
+micro log_sum_exp(x: TensorVariable) -> Variable {
     let max_x = x.max()
     max_x + (x - max_x).exp().sum().log()
 }
@@ -571,7 +571,7 @@ fn log_sum_exp(x: TensorVariable) -> Variable {
 
 ```valkyrie
 # 梯度范数裁剪
-fn clip_grad_norm(parameters: &[Variable], max_norm: f64) {
+micro clip_grad_norm(parameters: &[Variable], max_norm: f64) {
     let total_norm = parameters.iter()
         .filter_map(|p| p.grad())
         .map(|g| g.norm().pow(2))
@@ -593,18 +593,18 @@ fn clip_grad_norm(parameters: &[Variable], max_norm: f64) {
 
 ```valkyrie
 # 就地操作减少内存分配
-fn efficient_update(param: &mut TensorVariable, grad: &TensorVariable, lr: f64) {
+micro efficient_update(param: &mut TensorVariable, grad: &TensorVariable, lr: f64) {
     param.sub_assign(lr * grad)  # 就地更新，避免临时张量
 }
 
 # 梯度累积
-struct GradientAccumulator {
-    accumulated_steps: usize,
-    target_steps: usize,
+class GradientAccumulator {
+    accumulated_steps: usize
+    target_steps: usize
 }
 
 impl GradientAccumulator {
-    fn accumulate_and_step(&mut self, loss: Variable, optimizer: &mut dyn Optimizer, parameters: &[Variable]) {
+    micro accumulate_and_step(&mut self, loss: Variable, optimizer: &mut dyn Optimizer, parameters: &[Variable]) {
         # 缩放损失
         let scaled_loss = loss / self.target_steps as f64
         scaled_loss.backward()

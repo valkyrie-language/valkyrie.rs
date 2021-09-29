@@ -437,10 +437,10 @@ namespace graphics {
     }
     
     namespace colors {
-        struct RGB {
-            r: u8,
-            g: u8,
-            b: u8,
+        class RGB {
+            r: u8
+            g: u8
+            b: u8
         }
         
         let RED: RGB = class { r: 255, g: 0, b: 0 }
@@ -630,12 +630,10 @@ debug_print!(x + y)
 $ 展开为: println("DEBUG: x + y = {}", x + y)
 
 $ 复杂宏
-macro create_struct($name, $($field:$type),*) {
-    struct $name {
+macro create_class($name, $($field:$type),*) {
+    class $name {
         $($field: $type,)*
-    }
-    
-    impl $name {
+        
         new($($field: $type),*) -> Self {
             Self {
                 $($field,)*
@@ -645,7 +643,7 @@ macro create_struct($name, $($field:$type),*) {
 }
 
 $ 使用复杂宏
-create_struct!(Person, name: String, age: i32)
+create_class!(Person, name: String, age: i32)
 ```
 
 #### 编译时计算
@@ -665,9 +663,9 @@ let fib_10 = fibonacci_const(10)  $ 编译时计算
 
 $ 编译时类型生成
 @.derive(Debug, Clone, PartialEq)
-struct Point {
-    x: f64,
-    y: f64,
+class Point {
+    x: f64
+    y: f64
 }
 ```
 

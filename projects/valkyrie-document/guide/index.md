@@ -233,12 +233,12 @@ let info = person.get_info()
 ```valkyrie
 # 声明命名空间
 namespace math.geometry {
-    struct Point {
-        x: f64,
-        y: f64,
+    class Point {
+        x: f64
+        y: f64
     }
     
-    fn distance(p1: Point, p2: Point) -> f64 {
+    micro distance(p1: Point, p2: Point) -> f64 {
         let dx = p1.x - p2.x
         let dy = p1.y - p2.y
         (dx * dx + dy * dy).sqrt()
@@ -259,7 +259,7 @@ using math.geometry.{Point, distance}
 using math.geometry.Point as GeomPoint
 
 # 使用导入的内容
-fn main() {
+micro main() {
     let p1 = Point { x: 0.0, y: 0.0 }
 let p2 = Point { x: 3.0, y: 4.0 }
     let dist = distance(p1, p2)

@@ -178,10 +178,10 @@ trait Collect<T> {
 }
 
 # 实现关联类型
-impl Collect<i32> for Vec<i32> {
-    type Output = Vec<i32>
+impl Collect<i32> for Vector<i32> {
+    type Output = Vector<i32>
     
-    micro collect(mut self, items: [i32]) -> Vec<i32> {
+    micro collect(mut self, items: [i32]) -> Vector<i32> {
         for item in items {
             self.push(item)
         }
@@ -246,7 +246,7 @@ let container: Container<_> = Container {
 # 函数返回类型推导
 micro create_vec() {
     let mut v = Vec::new()  // 类型待定
-    v.push(1)               // 现在推导为 Vec<i32>
+    v.push(1)               // 现在推导为 Vector<i32>
     v
 }
 ```
@@ -259,12 +259,12 @@ let x: f64 = 42 as f64
 let y = 42.0 as i32
 
 # 类型提示
-let numbers: Vec<i32> = (0..10).collect()
+let numbers: Vector<i32> = (0..10).collect()
 let result = parse::<i32>("42")
 
 # 涡轮鱼语法
 let parsed = "42".parse::<i32>()
-let collected = iterator.collect::<Vec<_>>()
+let collected = iterator.collect::<Vector<_>>()
 ```
 
 ## 高级类型特性

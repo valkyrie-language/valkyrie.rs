@@ -8,14 +8,14 @@ Valkyrie 提供了现代化的网页开发框架，支持服务端渲染、客�
 
 ```valkyrie
 # HTTP 服务器核心
-struct WebServer {
+class WebServer {
     router: Router,
-    middleware_stack: Vec<Box<dyn Middleware>>,
+    middleware_stack: Vector<Box<dyn Middleware>>,
     config: ServerConfig,
     thread_pool: ThreadPool,
 }
 
-struct ServerConfig {
+class ServerConfig {
     host: String,
     port: u16,
     max_connections: usize,
@@ -25,7 +25,7 @@ struct ServerConfig {
 }
 
 impl WebServer {
-    fn new(config: ServerConfig) -> Self {
+    micro new(config: ServerConfig) -> Self {
         WebServer {
             router: Router::new(),
             middleware_stack: Vec::new(),
@@ -34,36 +34,36 @@ impl WebServer {
         }
     }
     
-    fn route(&mut self, method: HttpMethod, path: &str, handler: impl Handler + 'static) {
+    micro route(&mut self, method: HttpMethod, path: &str, handler: impl Handler + 'static) {
         self.router.add_route(method, path, Box::new(handler))
     }
     
-    fn get(&mut self, path: &str, handler: impl Handler + 'static) {
+    micro get(&mut self, path: &str, handler: impl Handler + 'static) {
         self.route(HttpMethod::GET, path, handler)
     }
     
-    fn post(&mut self, path: &str, handler: impl Handler + 'static) {
+    micro post(&mut self, path: &str, handler: impl Handler + 'static) {
         self.route(HttpMethod::POST, path, handler)
     }
     
-    fn put(&mut self, path: &str, handler: impl Handler + 'static) {
+    micro put(&mut self, path: &str, handler: impl Handler + 'static) {
         self.route(HttpMethod::PUT, path, handler)
     }
     
-    fn delete(&mut self, path: &str, handler: impl Handler + 'static) {
+    micro delete(&mut self, path: &str, handler: impl Handler + 'static) {
         self.route(HttpMethod::DELETE, path, handler)
     }
     
-    fn use_middleware(&mut self, middleware: impl Middleware + 'static) {
+    micro use_middleware(&mut self, middleware: impl Middleware + 'static) {
         self.middleware_stack.push(Box::new(middleware))
     }
     
-    fn serve_static(&mut self, path: &str, dir: &str) {
+    micro serve_static(&mut self, path: &str, dir: &str) {
         let static_handler = StaticFileHandler::new(dir)
         self.get(&format!("{}/*", path), static_handler)
     }
     
-    async fn listen(&self) -> Result<(), ServerError> {
+    async micro listen(&self) -> Result<(), ServerError> {
         let addr = format!("{}:{}", self.config.host, self.config.port)
         let listener = TcpListener::bind(&addr).await?
         
@@ -84,10 +84,10 @@ impl WebServer {
 }
 
 # 请求处理
-async fn handle_connection(
+async micro handle_connection(
     mut stream: TcpStream,
     router: Router,
-    middleware: Vec<Box<dyn Middleware>>
+    middleware: Vector<Box<dyn Middleware>>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024]
     stream.read(&mut buffer).await?
@@ -127,39 +127,39 @@ async fn handle_connection(
 
 ```valkyrie
 # 路由器
-struct Router {
-    routes: Vec<Route>,
-    groups: Vec<RouteGroup>,
+class Router {
+    routes: Vector<Route>,
+    groups: Vector<RouteGroup>,
 }
 
-struct Route {
+class Route {
     method: HttpMethod,
     pattern: PathPattern,
     handler: Box<dyn Handler>,
-    middleware: Vec<Box<dyn Middleware>>,
+    middleware: Vector<Box<dyn Middleware>>,
 }
 
-struct RouteGroup {
+class RouteGroup {
     prefix: String,
-    routes: Vec<Route>,
-    middleware: Vec<Box<dyn Middleware>>,
+    routes: Vector<Route>,
+    middleware: Vector<Box<dyn Middleware>>,
 }
 
 enum PathPattern {
     Static(String),
-    Dynamic(String, Vec<String>),  # 模式和参数名
+    Dynamic(String, Vector<String>),  # 模式和参数名
     Wildcard(String),
 }
 
 impl Router {
-    fn new() -> Self {
+    micro new() -> Self {
         Router {
             routes: Vec::new(),
             groups: Vec::new(),
         }
     }
     
-    fn add_route(&mut self, method: HttpMethod, path: &str, handler: Box<dyn Handler>) {
+    micro add_route(&mut self, method: HttpMethod, path: &str, handler: Box<dyn Handler>) {
         let pattern = PathPattern::parse(path)
         let route = Route {
             method,
@@ -170,11 +170,11 @@ impl Router {
         self.routes.push(route)
     }
     
-    fn group(&mut self, prefix: &str) -> RouteGroupBuilder {
+    micro group(&mut self, prefix: &str) -> RouteGroupBuilder {
         RouteGroupBuilder::new(prefix, self)
     }
     
-    fn find_handler(&self, request: &HttpRequest) -> Option<&dyn Handler> {
+    micro find_handler(&self, request: &HttpRequest) -> Option<&dyn Handler> {
         # 首先检查路由组
         for group in &self.groups {
             if request.path.starts_with(&group.prefix) {
@@ -199,7 +199,7 @@ impl Router {
 }
 
 impl PathPattern {
-    fn parse(path: &str) -> Self {
+    micro parse(path: &str) -> Self {
         if path.contains(':') {
             let mut params = Vec::new()
             let pattern = path.split('/').map(|segment| {
@@ -209,7 +209,7 @@ impl PathPattern {
                 } else {
                     regex::escape(segment)
                 }
-            }).collect::<Vec<_>>().join("/")
+            }).collect::<Vector<_>>().join("/")
             
             PathPattern::Dynamic(pattern, params)
         } else if path.ends_with("*") {
@@ -219,7 +219,7 @@ impl PathPattern {
         }
     }
     
-    fn matches(&self, path: &str) -> bool {
+    micro matches(&self, path: &str) -> bool {
         match self {
             PathPattern::Static(pattern) => pattern == path,
             PathPattern::Dynamic(pattern, _) => {
@@ -230,7 +230,7 @@ impl PathPattern {
         }
     }
     
-    fn extract_params(&self, path: &str) -> HashMap<String, String> {
+    micro extract_params(&self, path: &str) -> HashMap<String, String> {
         let mut params = HashMap::new()
         
         if let PathPattern::Dynamic(pattern, param_names) = self {
@@ -253,17 +253,17 @@ impl PathPattern {
 
 ```valkyrie
 # HTTP 请求
-struct HttpRequest {
-    method: HttpMethod,
-    path: String,
-    query_params: HashMap<String, String>,
-    headers: HashMap<String, String>,
-    body: Vec<u8>,
-    params: HashMap<String, String>,  # 路由参数
+class HttpRequest {
+    method: HttpMethod
+    path: String
+    query_params: HashMap<String, String>
+    headers: HashMap<String, String>
+    body: Vector<u8>
+    params: HashMap<String, String>  # 路由参数
 }
 
 #[derive(Clone, PartialEq)]
-enum HttpMethod {
+union HttpMethod {
     GET,
     POST,
     PUT,
@@ -274,22 +274,22 @@ enum HttpMethod {
 }
 
 impl HttpRequest {
-    fn parse(buffer: &[u8]) -> Result<Self, ParseError> {
+    micro parse(buffer: &[u8]) -> Result<Self, ParseError> {
         let request_str = String::from_utf8_lossy(buffer)
-        let lines: Vec<&str> = request_str.lines().collect()
+        let lines: Vector<&str> = request_str.lines().collect()
         
         if lines.is_empty() {
             return Err(ParseError::InvalidRequest)
         }
         
         # 解析请求行
-        let request_line_parts: Vec<&str> = lines[0].split_whitespace().collect()
+        let request_line_parts: Vector<&str> = lines[0].split_whitespace().collect()
         if request_line_parts.len() < 3 {
             return Err(ParseError::InvalidRequestLine)
         }
         
-        let method = HttpMethod::from_str(request_line_parts[0])?;
-        let url_parts: Vec<&str> = request_line_parts[1].splitn(2, '?').collect()
+        let method = HttpMethod::from_str(request_line_parts[0])?
+        let url_parts: Vector<&str> = request_line_parts[1].splitn(2, '?').collect()
         let path = url_parts[0].to_string()
         
         # 解析查询参数
@@ -333,23 +333,23 @@ impl HttpRequest {
         })
     }
     
-    fn get_header(&self, name: &str) -> Option<&String> {
+    micro get_header(&self, name: &str) -> Option<&String> {
         self.headers.get(&name.to_lowercase())
     }
     
-    fn get_param(&self, name: &str) -> Option<&String> {
+    micro get_param(&self, name: &str) -> Option<&String> {
         self.params.get(name)
     }
     
-    fn get_query(&self, name: &str) -> Option<&String> {
+    micro get_query(&self, name: &str) -> Option<&String> {
         self.query_params.get(name)
     }
     
-    fn json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
+    micro json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_slice(&self.body)
     }
     
-    fn form_data(&self) -> HashMap<String, String> {
+    micro form_data(&self) -> HashMap<String, String> {
         if let Some(content_type) = self.get_header("content-type") {
             if content_type.contains("application/x-www-form-urlencoded") {
                 let body_str = String::from_utf8_lossy(&self.body)
@@ -361,15 +361,15 @@ impl HttpRequest {
 }
 
 # HTTP 响应
-struct HttpResponse {
-    status_code: u16,
-    status_text: String,
-    headers: HashMap<String, String>,
-    body: Vec<u8>,
+class HttpResponse {
+    status_code: u16
+    status_text: String
+    headers: HashMap<String, String>
+    body: Vector<u8>
 }
 
 impl HttpResponse {
-    fn new(status_code: u16) -> Self {
+    micro new(status_code: u16) -> Self {
         let status_text = match status_code {
             200 => "OK",
             201 => "Created",
@@ -389,55 +389,55 @@ impl HttpResponse {
         }
     }
     
-    fn ok() -> Self {
+    micro ok() -> Self {
         Self::new(200)
     }
     
-    fn created() -> Self {
+    micro created() -> Self {
         Self::new(201)
     }
     
-    fn bad_request() -> Self {
+    micro bad_request() -> Self {
         Self::new(400)
     }
     
-    fn not_found() -> Self {
+    micro not_found() -> Self {
         Self::new(404)
     }
     
-    fn internal_error() -> Self {
+    micro internal_error() -> Self {
         Self::new(500)
     }
     
-    fn with_header(mut self, name: &str, value: &str) -> Self {
+    micro with_header(mut self, name: &str, value: &str) -> Self {
         self.headers.insert(name.to_string(), value.to_string())
         self
     }
     
-    fn with_json<T: Serialize>(mut self, data: &T) -> Result<Self, serde_json::Error> {
+    micro with_json<T: Serialize>(mut self, data: &T) -> Result<Self, serde_json::Error> {
         let json_str = serde_json::to_string(data)?
         self.body = json_str.into_bytes()
         self.headers.insert("Content-Type".to_string(), "application/json".to_string())
         Ok(self)
     }
     
-    fn with_html(mut self, html: &str) -> Self {
+    micro with_html(mut self, html: &str) -> Self {
         self.body = html.as_bytes().to_vec()
         self.headers.insert("Content-Type".to_string(), "text/html; charset=utf-8".to_string())
         self
     }
     
-    fn with_text(mut self, text: &str) -> Self {
+    micro with_text(mut self, text: &str) -> Self {
         self.body = text.as_bytes().to_vec()
         self.headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string())
         self
     }
     
-    fn redirect(location: &str) -> Self {
+    micro redirect(location: &str) -> Self {
         Self::new(302).with_header("Location", location)
     }
     
-    fn to_bytes(&self) -> Vec<u8> {
+    micro to_bytes(&self) -> Vector<u8> {
         let mut response = format!(
             "HTTP/1.1 {} {}\r\n",
             self.status_code,
@@ -467,17 +467,17 @@ impl HttpResponse {
 ```valkyrie
 # 中间件特征
 trait Middleware: Send + Sync {
-    async fn process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError>
+    async micro process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError>
 }
 
-struct RequestContext {
-    request: HttpRequest,
-    response: Option<HttpResponse>,
-    data: HashMap<String, Box<dyn Any + Send + Sync>>,
+class RequestContext {
+    request: HttpRequest
+    response: Option<HttpResponse>
+    data: HashMap<String, Box<dyn Any + Send + Sync>>
 }
 
 impl RequestContext {
-    fn new(request: HttpRequest) -> Self {
+    micro new(request: HttpRequest) -> Self {
         RequestContext {
             request,
             response: None,
@@ -485,22 +485,22 @@ impl RequestContext {
         }
     }
     
-    fn set_data<T: Any + Send + Sync>(&mut self, key: &str, value: T) {
+    micro set_data<T: Any + Send + Sync>(&mut self, key: &str, value: T) {
         self.data.insert(key.to_string(), Box::new(value))
     }
     
-    fn get_data<T: Any + Send + Sync>(&self, key: &str) -> Option<&T> {
+    micro get_data<T: Any + Send + Sync>(&self, key: &str) -> Option<&T> {
         self.data.get(key)?.downcast_ref::<T>()
     }
 }
 
 # 日志中间件
-struct LoggingMiddleware {
-    format: String,
+class LoggingMiddleware {
+    format: String
 }
 
 impl LoggingMiddleware {
-    fn new() -> Self {
+    micro new() -> Self {
         LoggingMiddleware {
             format: "{method} {path} - {status} ({duration}ms)".to_string(),
         }
@@ -508,7 +508,7 @@ impl LoggingMiddleware {
 }
 
 impl Middleware for LoggingMiddleware {
-    async fn process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
+    async micro process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
         let start_time = std::time::Instant::now()
         
         # 记录请求开始
@@ -526,15 +526,15 @@ impl Middleware for LoggingMiddleware {
 }
 
 # CORS 中间件
-struct CorsMiddleware {
-    allowed_origins: Vec<String>,
-    allowed_methods: Vec<HttpMethod>,
-    allowed_headers: Vec<String>,
-    max_age: u32,
+class CorsMiddleware {
+    allowed_origins: Vector<String>
+    allowed_methods: Vector<HttpMethod>
+    allowed_headers: Vector<String>
+    max_age: u32
 }
 
 impl CorsMiddleware {
-    fn new() -> Self {
+    micro new() -> Self {
         CorsMiddleware {
             allowed_origins: vec!["*".to_string()],
             allowed_methods: vec![HttpMethod::GET, HttpMethod::POST, HttpMethod::PUT, HttpMethod::DELETE],
@@ -543,25 +543,25 @@ impl CorsMiddleware {
         }
     }
     
-    fn allow_origin(mut self, origin: &str) -> Self {
+    micro allow_origin(mut self, origin: &str) -> Self {
         self.allowed_origins = vec![origin.to_string()]
         self
     }
     
-    fn allow_methods(mut self, methods: Vec<HttpMethod>) -> Self {
+    micro allow_methods(mut self, methods: Vector<HttpMethod>) -> Self {
         self.allowed_methods = methods
         self
     }
 }
 
 impl Middleware for CorsMiddleware {
-    async fn process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
+    async micro process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
         # 处理预检请求
         if context.request.method == HttpMethod::OPTIONS {
             let response = HttpResponse::ok()
                 .with_header("Access-Control-Allow-Origin", &self.allowed_origins.join(", "))
                 .with_header("Access-Control-Allow-Methods", 
-                    &self.allowed_methods.iter().map(|m| m.as_str()).collect::<Vec<_>>().join(", "))
+                    &self.allowed_methods.iter().map(|m| m.as_str()).collect::<Vector<_>>().join(", "))
                 .with_header("Access-Control-Allow-Headers", &self.allowed_headers.join(", "))
                 .with_header("Access-Control-Max-Age", &self.max_age.to_string())
             
@@ -580,25 +580,25 @@ impl Middleware for CorsMiddleware {
 }
 
 # 认证中间件
-struct AuthMiddleware {
+class AuthMiddleware {
     secret_key: String,
-    protected_paths: Vec<String>,
+    protected_paths: Vector<String>,
 }
 
 impl AuthMiddleware {
-    fn new(secret_key: &str) -> Self {
+    micro new(secret_key: &str) -> Self {
         AuthMiddleware {
             secret_key: secret_key.to_string(),
             protected_paths: Vec::new(),
         }
     }
     
-    fn protect_path(mut self, path: &str) -> Self {
+    micro protect_path(mut self, path: &str) -> Self {
         self.protected_paths.push(path.to_string())
         self
     }
     
-    fn verify_token(&self, token: &str) -> Result<Claims, AuthError> {
+    micro verify_token(&self, token: &str) -> Result<Claims, AuthError> {
         # JWT 令牌验证逻辑
         jwt::decode::<Claims>(
             token,
@@ -610,7 +610,7 @@ impl AuthMiddleware {
 }
 
 impl Middleware for AuthMiddleware {
-    async fn process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
+    async micro process(&self, context: &mut RequestContext) -> Result<(), MiddlewareError> {
         # 检查路径是否需要保护
         let needs_auth = self.protected_paths.iter()
             .any(|path| context.request.path.starts_with(path))
@@ -645,20 +645,20 @@ impl Middleware for AuthMiddleware {
 
 ```valkyrie
 # 模板引擎
-struct TemplateEngine {
+class TemplateEngine {
     templates: HashMap<String, Template>,
     template_dir: String,
     cache_enabled: bool,
 }
 
-struct Template {
+class Template {
     name: String,
     content: String,
     compiled: CompiledTemplate,
 }
 
-struct CompiledTemplate {
-    blocks: Vec<TemplateBlock>,
+class CompiledTemplate {
+    blocks: Vector<TemplateBlock>,
 }
 
 enum TemplateBlock {
@@ -667,18 +667,18 @@ enum TemplateBlock {
     Loop {
         variable: String,
         items: String,
-        body: Vec<TemplateBlock>,
+        body: Vector<TemplateBlock>,
     },
     Condition {
         expression: String,
-        then_body: Vec<TemplateBlock>,
-        else_body: Option<Vec<TemplateBlock>>,
+        then_body: Vector<TemplateBlock>,
+        else_body: Option<Vector<TemplateBlock>>,
     },
     Include(String),
 }
 
 impl TemplateEngine {
-    fn new(template_dir: &str) -> Self {
+    micro new(template_dir: &str) -> Self {
         TemplateEngine {
             templates: HashMap::new(),
             template_dir: template_dir.to_string(),
@@ -686,7 +686,7 @@ impl TemplateEngine {
         }
     }
     
-    fn load_template(&mut self, name: &str) -> Result<(), TemplateError> {
+    micro load_template(&mut self, name: &str) -> Result<(), TemplateError> {
         let path = format!("{}/{}.html", self.template_dir, name)
         let content = std::fs::read_to_string(&path)
             .map_err(|_| TemplateError::TemplateNotFound(name.to_string()))?;
@@ -703,7 +703,7 @@ impl TemplateEngine {
         Ok(())
     }
     
-    fn render(&mut self, name: &str, context: &TemplateContext) -> Result<String, TemplateError> {
+    micro render(&mut self, name: &str, context: &TemplateContext) -> Result<String, TemplateError> {
         if !self.templates.contains_key(name) {
             self.load_template(name)?
         }
@@ -712,7 +712,7 @@ impl TemplateEngine {
         self.render_blocks(&template.compiled.blocks, context)
     }
     
-    fn compile_template(&self, content: &str) -> Result<CompiledTemplate, TemplateError> {
+    micro compile_template(&self, content: &str) -> Result<CompiledTemplate, TemplateError> {
         let mut blocks = Vec::new()
         let mut chars = content.chars().peekable()
         let mut current_text = String::new()
@@ -759,10 +759,10 @@ impl TemplateEngine {
         Ok(CompiledTemplate { blocks })
     }
     
-    fn parse_expression(&self, expr: &str) -> Result<TemplateBlock, TemplateError> {
+    micro parse_expression(&self, expr: &str) -> Result<TemplateBlock, TemplateError> {
         if expr.starts_with("for ") {
             # 解析循环: for item in items
-            let parts: Vec<&str> = expr.split_whitespace().collect()
+            let parts: Vector<&str> = expr.split_whitespace().collect()
             if parts.len() >= 4 && parts[2] == "in" {
                 return Ok(TemplateBlock::Loop {
                     variable: parts[1].to_string(),
@@ -790,7 +790,7 @@ impl TemplateEngine {
         Err(TemplateError::InvalidExpression(expr.to_string()))
     }
     
-    fn render_blocks(&self, blocks: &[TemplateBlock], context: &TemplateContext) -> Result<String, TemplateError> {
+    micro render_blocks(&self, blocks: &[TemplateBlock], context: &TemplateContext) -> Result<String, TemplateError> {
         let mut result = String::new()
         
         for block in blocks {
@@ -833,7 +833,7 @@ impl TemplateEngine {
 
 # 模板上下文
 #[derive(Clone)]
-struct TemplateContext {
+class TemplateContext {
     variables: HashMap<String, TemplateValue>,
 }
 
@@ -842,32 +842,32 @@ enum TemplateValue {
     String(String),
     Number(f64),
     Boolean(bool),
-    Array(Vec<TemplateValue>),
+    Array(Vector<TemplateValue>),
     Object(HashMap<String, TemplateValue>),
 }
 
 impl TemplateContext {
-    fn new() -> Self {
+    micro new() -> Self {
         TemplateContext {
             variables: HashMap::new(),
         }
     }
     
-    fn set(&mut self, key: &str, value: TemplateValue) {
+    micro set(&mut self, key: &str, value: TemplateValue) {
         self.variables.insert(key.to_string(), value)
     }
     
-    fn get(&self, key: &str) -> Option<&TemplateValue> {
+    micro get(&self, key: &str) -> Option<&TemplateValue> {
         self.variables.get(key)
     }
     
-    fn from_json(json: serde_json::Value) -> Self {
+    micro from_json(json: serde_json::Value) -> Self {
         let mut context = TemplateContext::new()
         context.set("data", Self::json_to_template_value(json))
         context
     }
     
-    fn json_to_template_value(json: serde_json::Value) -> TemplateValue {
+    micro json_to_template_value(json: serde_json::Value) -> TemplateValue {
         match json {
             serde_json::Value::String(s) => TemplateValue::String(s),
             serde_json::Value::Number(n) => TemplateValue::Number(n.as_f64().unwrap_or(0.0)),
@@ -895,38 +895,38 @@ impl TemplateContext {
 
 ```valkyrie
 # WebAssembly 运行时
-struct WasmRuntime {
+class WasmRuntime {
     modules: HashMap<String, WasmModule>,
-    instance_pool: Vec<WasmInstance>,
+    instance_pool: Vector<WasmInstance>,
 }
 
-struct WasmModule {
+class WasmModule {
     name: String,
-    bytecode: Vec<u8>,
-    exports: Vec<WasmExport>,
-    imports: Vec<WasmImport>,
+    bytecode: Vector<u8>,
+    exports: Vector<WasmExport>,
+    imports: Vector<WasmImport>,
 }
 
-struct WasmInstance {
+class WasmInstance {
     module_name: String,
     instance: wasmtime::Instance,
     store: wasmtime::Store<()>,
 }
 
-struct WasmExport {
+class WasmExport {
     name: String,
     function_type: WasmFunctionType,
 }
 
-struct WasmImport {
+class WasmImport {
     module: String,
     name: String,
     function_type: WasmFunctionType,
 }
 
-struct WasmFunctionType {
-    params: Vec<WasmValueType>,
-    results: Vec<WasmValueType>,
+class WasmFunctionType {
+    params: Vector<WasmValueType>,
+    results: Vector<WasmValueType>,
 }
 
 enum WasmValueType {
@@ -937,14 +937,14 @@ enum WasmValueType {
 }
 
 impl WasmRuntime {
-    fn new() -> Self {
+    micro new() -> Self {
         WasmRuntime {
             modules: HashMap::new(),
             instance_pool: Vec::new(),
         }
     }
     
-    fn load_module(&mut self, name: &str, wasm_bytes: Vec<u8>) -> Result<(), WasmError> {
+    micro load_module(&mut self, name: &str, wasm_bytes: Vector<u8>) -> Result<(), WasmError> {
         let engine = wasmtime::Engine::default()
         let module = wasmtime::Module::new(&engine, &wasm_bytes)
             .map_err(|e| WasmError::CompilationFailed(e.to_string()))?;
@@ -964,7 +964,7 @@ impl WasmRuntime {
         Ok(())
     }
     
-    fn create_instance(&mut self, module_name: &str) -> Result<usize, WasmError> {
+    micro create_instance(&mut self, module_name: &str) -> Result<usize, WasmError> {
         let module = self.modules.get(module_name)
             .ok_or_else(|| WasmError::ModuleNotFound(module_name.to_string()))?;
         
@@ -994,12 +994,12 @@ impl WasmRuntime {
         Ok(self.instance_pool.len() - 1)
     }
     
-    fn call_function(
+    micro call_function(
         &mut self,
         instance_id: usize,
         function_name: &str,
-        args: Vec<WasmValue>
-    ) -> Result<Vec<WasmValue>, WasmError> {
+        args: Vector<WasmValue>
+    ) -> Result<Vector<WasmValue>, WasmError> {
         let instance = self.instance_pool.get_mut(instance_id)
             .ok_or(WasmError::InvalidInstance)?;
         
@@ -1008,7 +1008,7 @@ impl WasmRuntime {
             .map_err(|e| WasmError::FunctionNotFound(e.to_string()))?;
         
         # 转换参数
-        let wasm_args: Vec<wasmtime::Val> = args.into_iter().map(|arg| {
+        let wasm_args: Vector<wasmtime::Val> = args.into_iter().map(|arg| {
             match arg {
                 WasmValue::I32(v) => wasmtime::Val::I32(v),
                 WasmValue::I64(v) => wasmtime::Val::I64(v),
@@ -1023,7 +1023,7 @@ impl WasmRuntime {
             .map_err(|e| WasmError::ExecutionFailed(e.to_string()))?;
         
         # 转换结果
-        let wasm_results: Vec<WasmValue> = results.into_iter().map(|val| {
+        let wasm_results: Vector<WasmValue> = results.into_iter().map(|val| {
             match val {
                 wasmtime::Val::I32(v) => WasmValue::I32(v),
                 wasmtime::Val::I64(v) => WasmValue::I64(v),
@@ -1052,13 +1052,13 @@ enum WasmValue {
 
 ```valkyrie
 # WebSocket 服务器
-struct WebSocketServer {
+class WebSocketServer {
     connections: HashMap<ConnectionId, WebSocketConnection>,
     message_handlers: HashMap<String, Box<dyn MessageHandler>>,
     next_connection_id: ConnectionId,
 }
 
-struct WebSocketConnection {
+class WebSocketConnection {
     id: ConnectionId,
     socket: WebSocket,
     user_id: Option<String>,
@@ -1067,25 +1067,25 @@ struct WebSocketConnection {
 }
 
 trait MessageHandler: Send + Sync {
-    async fn handle(&self, connection_id: ConnectionId, message: WebSocketMessage) -> Result<(), WebSocketError>
+    async micro handle(&self, connection_id: ConnectionId, message: WebSocketMessage) -> Result<(), WebSocketError>
 }
 
 #[derive(Clone)]
 enum WebSocketMessage {
     Text(String),
-    Binary(Vec<u8>),
-    Ping(Vec<u8>),
-    Pong(Vec<u8>),
+    Binary(Vector<u8>),
+    Ping(Vector<u8>),
+    Pong(Vector<u8>),
     Close(Option<CloseFrame>),
 }
 
-struct CloseFrame {
+class CloseFrame {
     code: u16,
     reason: String,
 }
 
 impl WebSocketServer {
-    fn new() -> Self {
+    micro new() -> Self {
         WebSocketServer {
             connections: HashMap::new(),
             message_handlers: HashMap::new(),
@@ -1093,11 +1093,11 @@ impl WebSocketServer {
         }
     }
     
-    fn on_message<H: MessageHandler + 'static>(&mut self, message_type: &str, handler: H) {
+    micro on_message<H: MessageHandler + 'static>(&mut self, message_type: &str, handler: H) {
         self.message_handlers.insert(message_type.to_string(), Box::new(handler))
     }
     
-    async fn handle_connection(&mut self, socket: WebSocket) -> Result<(), WebSocketError> {
+    async micro handle_connection(&mut self, socket: WebSocket) -> Result<(), WebSocketError> {
         let connection_id = self.next_connection_id
         self.next_connection_id += 1
         
@@ -1115,7 +1115,7 @@ impl WebSocketServer {
         self.message_loop(connection_id).await
     }
     
-    async fn message_loop(&mut self, connection_id: ConnectionId) -> Result<(), WebSocketError> {
+    async micro message_loop(&mut self, connection_id: ConnectionId) -> Result<(), WebSocketError> {
         loop {
             let connection = self.connections.get_mut(&connection_id)
                 .ok_or(WebSocketError::ConnectionNotFound)?;
@@ -1156,7 +1156,7 @@ impl WebSocketServer {
         Ok(())
     }
     
-    async fn handle_message(
+    async micro handle_message(
         &mut self,
         connection_id: ConnectionId,
         message: WebSocketMessage
@@ -1186,7 +1186,7 @@ impl WebSocketServer {
         Ok(())
     }
     
-    async fn send_to_connection(
+    async micro send_to_connection(
         &mut self,
         connection_id: ConnectionId,
         message: WebSocketMessage
@@ -1212,8 +1212,8 @@ impl WebSocketServer {
             .map_err(|e| WebSocketError::SendFailed(e.to_string()))
     }
     
-    async fn broadcast_to_room(&mut self, room: &str, message: WebSocketMessage) -> Result<(), WebSocketError> {
-        let connection_ids: Vec<ConnectionId> = self.connections
+    async micro broadcast_to_room(&mut self, room: &str, message: WebSocketMessage) -> Result<(), WebSocketError> {
+        let connection_ids: Vector<ConnectionId> = self.connections
             .iter()
             .filter(|(_, conn)| conn.rooms.contains(room))
             .map(|(id, _)| *id)
@@ -1226,7 +1226,7 @@ impl WebSocketServer {
         Ok(())
     }
     
-    fn join_room(&mut self, connection_id: ConnectionId, room: &str) -> Result<(), WebSocketError> {
+    micro join_room(&mut self, connection_id: ConnectionId, room: &str) -> Result<(), WebSocketError> {
         let connection = self.connections.get_mut(&connection_id)
             .ok_or(WebSocketError::ConnectionNotFound)?;
         
@@ -1234,7 +1234,7 @@ impl WebSocketServer {
         Ok(())
     }
     
-    fn leave_room(&mut self, connection_id: ConnectionId, room: &str) -> Result<(), WebSocketError> {
+    micro leave_room(&mut self, connection_id: ConnectionId, room: &str) -> Result<(), WebSocketError> {
         let connection = self.connections.get_mut(&connection_id)
             .ok_or(WebSocketError::ConnectionNotFound)?;
         
@@ -1250,7 +1250,7 @@ impl WebSocketServer {
 
 ```valkyrie
 # 博客应用主函数
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async micro main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ServerConfig {
         host: "127.0.0.1".to_string(),
         port: 8080,
@@ -1288,7 +1288,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 # 博客首页
-async fn blog_index(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
+async micro blog_index(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
     let mut template_engine = TemplateEngine::new("./templates")
     
     # 获取最新文章
@@ -1304,7 +1304,7 @@ async fn blog_index(request: &HttpRequest) -> Result<HttpResponse, HandlerError>
 }
 
 # 文章详情页
-async fn blog_post(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
+async micro blog_post(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
     let post_id = request.get_param("id")
         .ok_or(HandlerError::BadRequest("Missing post ID".to_string()))?;
     
@@ -1322,7 +1322,7 @@ async fn blog_post(request: &HttpRequest) -> Result<HttpResponse, HandlerError> 
 }
 
 # API: 获取文章列表
-async fn api_posts(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
+async micro api_posts(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
     let page = request.get_query("page")
         .and_then(|p| p.parse::<u32>().ok())
         .unwrap_or(1)
@@ -1344,7 +1344,7 @@ async fn api_posts(request: &HttpRequest) -> Result<HttpResponse, HandlerError> 
 }
 
 # API: 创建文章
-async fn api_create_post(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
+async micro api_create_post(request: &HttpRequest) -> Result<HttpResponse, HandlerError> {
     let post_data: CreatePostRequest = request.json()
         .map_err(|e| HandlerError::BadRequest(e.to_string()))?;
     
@@ -1361,34 +1361,34 @@ async fn api_create_post(request: &HttpRequest) -> Result<HttpResponse, HandlerE
 
 # 数据模型
 #[derive(Serialize, Deserialize)]
-struct Post {
-    id: u32,
-    title: String,
-    content: String,
-    author: String,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
+class Post {
+    id: u32
+    title: String
+    content: String
+    author: String
+    created_at: chrono::DateTime<chrono::Utc>
+    updated_at: chrono::DateTime<chrono::Utc>
 }
 
 #[derive(Deserialize)]
-struct CreatePostRequest {
-    title: String,
-    content: String,
-    author: String,
+class CreatePostRequest {
+    title: String
+    content: String
+    author: String
 }
 
 # 数据库操作
-async fn get_recent_posts(limit: u32) -> Result<Vec<Post>, DatabaseError> {
+async micro get_recent_posts(limit: u32) -> Result<Vector<Post>, DatabaseError> {
     # 数据库查询逻辑
     Ok(vec![])
 }
 
-async fn get_post_by_id(id: &str) -> Result<Option<Post>, DatabaseError> {
+async micro get_post_by_id(id: &str) -> Result<Option<Post>, DatabaseError> {
     # 数据库查询逻辑
     Ok(None)
 }
 
-async fn create_post(data: CreatePostRequest) -> Result<Post, DatabaseError> {
+async micro create_post(data: CreatePostRequest) -> Result<Post, DatabaseError> {
     # 数据库插入逻辑
     Ok(Post {
         id: 1,

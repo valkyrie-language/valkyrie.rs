@@ -14,7 +14,7 @@ let x: i32        // i32 的种类是 *
 let y: String     // String 的种类是 *
 
 # 种类 * -> *：一元类型构造器
-type Vec<T>       // Vec 的种类是 * -> *
+type Vector<T>       // Vec 的种类是 * -> *
 type Option<T>    // Option 的种类是 * -> *
 
 # 种类 * -> * -> *：二元类型构造器
@@ -44,7 +44,7 @@ impl Functor<Option> {
 }
 
 impl Functor<Vec> {
-    micro map<A, B>(self: Vec<A>, f: micro(A) -> B) -> Vec<B> {
+    micro map<A, B>(self: Vector<A>, f: micro(A) -> B) -> Vector<B> {
         let mut result = Vec::new()
         for item in self {
             result.push(f(item))
@@ -108,7 +108,7 @@ Fail { error } => Fail { error },
 # 单子组合子库
 namespace monad_combinators {
     # 序列操作
-    micro sequence<M, A>(list: Vec<M<A>>) -> M<Vec<A>> 
+    micro sequence<M, A>(list: Vector<M<A>>) -> M<Vector<A>> 
     where M: Monad
     {
         list.iter().fold(
@@ -123,14 +123,14 @@ namespace monad_combinators {
     }
     
     # 遍历操作
-    micro traverse<M, A, B>(list: Vec<A>, f: micro(A) -> M<B>) -> M<Vec<B>>
+    micro traverse<M, A, B>(list: Vector<A>, f: micro(A) -> M<B>) -> M<Vector<B>>
     where M: Monad
     {
         sequence(list.into_iter().map(f).collect())
     }
     
     # 过滤操作
-    micro filter_m<M, A>(list: Vec<A>, predicate: micro(A) -> M<bool>) -> M<Vec<A>>
+    micro filter_m<M, A>(list: Vector<A>, predicate: micro(A) -> M<bool>) -> M<Vector<A>>
     where M: Monad
     {
         list.into_iter().fold(
@@ -287,7 +287,7 @@ micro copy_file(src: String, dst: String) -> FileProgram<()> {
 type family Element(container: *) -> *
 
 # 类型族实例
-type instance Element(Vec<T>) = T
+type instance Element(Vector<T>) = T
 type instance Element([T; N]) = T
 type instance Element(String) = char
 type instance Element(HashMap<K, V>) = V
@@ -310,7 +310,7 @@ trait Collection {
 }
 
 # 实现关联类型族
-impl<T> Collection for Vec<T> {
+impl<T> Collection for Vector<T> {
     type Element = T
     type Iterator = std::vec::IntoIter<T>
     
@@ -346,14 +346,14 @@ type instance Length(Nil) = Zero
 type instance Length(Cons<H, T>) = Succ<Length(T)>
 
 # 长度索引的向量
-class Vec<T, N> {
+class Vector<T, N> {
     data: [T],
     _phantom: PhantomData<N>,
 }
 
-impl<T, N> Vec<T, N> {
+impl<T, N> Vector<T, N> {
     # 类型安全的连接
-    micro append<M>(self, other: Vec<T, M>) -> Vec<T, Add(N, M)> {
+    micro append<M>(self, other: Vector<T, M>) -> Vector<T, Add(N, M)> {
         let mut result = self.data
         result.extend(other.data)
         Vec {

@@ -766,7 +766,7 @@ widget Animated {
 }
 
 # 预定义动画
-enum Animation {
+union Animation {
     FadeIn,
     FadeOut,
     SlideInLeft,

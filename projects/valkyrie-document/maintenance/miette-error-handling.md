@@ -97,7 +97,7 @@ pub enum TypeError {
         #[label("未定义的变量")]
         span: SourceSpan,
         #[related]
-        similar_names: Vec<SimilarName>,
+        similar_names: Vector<SimilarName>,
     },
 }
 
@@ -105,7 +105,7 @@ pub enum TypeError {
 #[derive(Error, Diagnostic, Debug)]
 #[error("你是否想要使用 '{name}'?")]
 #[diagnostic(code(nyar::suggestion::similar_name))]
-pub struct SimilarName {
+pub class SimilarName {
     pub name: String,
     #[label("定义于此")]
     pub span: SourceSpan,
@@ -140,7 +140,7 @@ pub enum ConfigError {
 use miette::{NamedSource, SourceSpan};
 
 /// 错误报告上下文
-pub struct ErrorContext {
+pub class ErrorContext {
     /// 源文件内容
     pub source: NamedSource<String>,
     /// 文件路径
@@ -148,7 +148,7 @@ pub struct ErrorContext {
 }
 
 impl ErrorContext {
-    pub fn new(file_path: PathBuf, content: String) -> Self {
+    pub micro new(file_path: PathBuf, content: String) -> Self {
         Self {
             source: NamedSource::new(file_path.display().to_string(), content),
             file_path,
@@ -156,7 +156,7 @@ impl ErrorContext {
     }
     
     /// 创建带有源码上下文的错误
-    pub fn error_with_span<E>(&self, error: E, span: SourceSpan) -> miette::Report
+    pub micro error_with_span<E>(&self, error: E, span: SourceSpan) -> miette::Report
     where
         E: Into<Box<dyn Diagnostic + Send + Sync>>,
     {
@@ -174,18 +174,18 @@ impl ErrorContext {
 #[derive(Error, Diagnostic, Debug)]
 #[error("函数调用失败")]
 #[diagnostic(code(nyar::call::failed))]
-pub struct CallError {
+pub class CallError {
     pub function_name: String,
     #[label("函数调用")]
     pub call_span: SourceSpan,
     #[related]
-    pub argument_errors: Vec<ArgumentError>,
+    pub argument_errors: Vector<ArgumentError>,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("参数 {index} 类型错误")]
 #[diagnostic(code(nyar::call::argument_type))]
-pub struct ArgumentError {
+pub class ArgumentError {
     pub index: usize,
     #[label("类型不匹配")]
     pub span: SourceSpan,
@@ -201,7 +201,7 @@ pub struct ArgumentError {
 ```rust
 use miette::{IntoDiagnostic, Result};
 
-fn main() -> Result<()> {
+micro main() -> Result<()> {
     let result = compile_file("example.ny")
         .into_diagnostic()
         .wrap_err("编译失败");
@@ -229,10 +229,10 @@ fn main() -> Result<()> {
 use lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
 /// 将 miette 错误转换为 LSP 诊断
-pub fn miette_to_lsp_diagnostic(
+pub micro miette_to_lsp_diagnostic(
     error: &miette::Report,
     source: &str,
-) -> Vec<Diagnostic> {
+) -> Vector<Diagnostic> {
     let mut diagnostics = Vec::new();
     
     if let Some(span) = error.source_code() {
@@ -251,7 +251,7 @@ pub fn miette_to_lsp_diagnostic(
     diagnostics
 }
 
-fn span_to_lsp_range(span: &SourceSpan, source: &str) -> Range {
+micro span_to_lsp_range(span: &SourceSpan, source: &str) -> Range {
     let start_offset = span.offset();
     let end_offset = start_offset + span.len();
     
@@ -275,7 +275,7 @@ fn span_to_lsp_range(span: &SourceSpan, source: &str) -> Range {
     code(nyar::syntax::missing_semicolon),
     help("在语句末尾添加分号")
 )]
-pub struct MissingSemicolon {
+pub class MissingSemicolon {
     #[label("期望在此处添加分号")]
     pub span: SourceSpan,
     #[suggestion("添加分号", code = ";")]
@@ -288,21 +288,21 @@ pub struct MissingSemicolon {
 编译器可以从错误中恢复，继续分析后续代码：
 
 ```rust
-pub struct Parser {
-    errors: Vec<ParseError>,
+pub class Parser {
+    errors: Vector<ParseError>,
     // ... 其他字段
 }
 
 impl Parser {
     /// 解析时遇到错误，记录并尝试恢复
-    fn recover_from_error(&mut self, error: ParseError) {
+    micro recover_from_error(&mut self, error: ParseError) {
         self.errors.push(error);
         
         // 跳过到下一个可能的恢复点
         self.skip_to_recovery_point();
     }
     
-    fn skip_to_recovery_point(&mut self) {
+    micro skip_to_recovery_point(&mut self) {
         // 跳过到分号、右括号等恢复点
         while !self.is_at_recovery_point() && !self.is_at_end() {
             self.advance();
@@ -320,7 +320,7 @@ use fluent::{FluentBundle, FluentResource};
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", self.localized_message())]
-pub struct LocalizedError {
+pub class LocalizedError {
     pub code: &'static str,
     pub args: HashMap<String, String>,
     #[label("{}", self.localized_label())]
@@ -328,12 +328,12 @@ pub struct LocalizedError {
 }
 
 impl LocalizedError {
-    fn localized_message(&self) -> String {
+    micro localized_message(&self) -> String {
         // 从 fluent 资源中获取本地化消息
         get_localized_message(self.code, &self.args)
     }
     
-    fn localized_label(&self) -> String {
+    micro localized_label(&self) -> String {
         get_localized_label(self.code, &self.args)
     }
 }
@@ -346,12 +346,12 @@ impl LocalizedError {
 错误信息的构建可能很昂贵，使用延迟构建来优化性能：
 
 ```rust
-pub struct LazyError {
+pub class LazyError {
     builder: Box<dyn Fn() -> miette::Report + Send + Sync>,
 }
 
 impl LazyError {
-    pub fn new<F>(builder: F) -> Self
+    pub micro new<F>(builder: F) -> Self
     where
         F: Fn() -> miette::Report + Send + Sync + 'static,
     {
@@ -360,7 +360,7 @@ impl LazyError {
         }
     }
     
-    pub fn build(self) -> miette::Report {
+    pub micro build(self) -> miette::Report {
         (self.builder)()
     }
 }
@@ -371,19 +371,19 @@ impl LazyError {
 收集多个错误后一次性报告：
 
 ```rust
-pub struct ErrorCollector {
-    errors: Vec<miette::Report>,
+pub class ErrorCollector {
+    errors: Vector<miette::Report>,
 }
 
 impl ErrorCollector {
-    pub fn add_error<E>(&mut self, error: E)
+    pub micro add_error<E>(&mut self, error: E)
     where
         E: Into<miette::Report>,
     {
         self.errors.push(error.into());
     }
     
-    pub fn into_result<T>(self, value: T) -> Result<T, Vec<miette::Report>> {
+    pub micro into_result<T>(self, value: T) -> Result<T, Vector<miette::Report>> {
         if self.errors.is_empty() {
             Ok(value)
         } else {
@@ -406,7 +406,7 @@ mod tests {
     use insta::assert_snapshot;
     
     #[test]
-    fn test_type_mismatch_error() {
+    micro test_type_mismatch_error() {
         let source = "let x: i32 = \"hello\";".to_string();
         let error = TypeError::TypeMismatch {
             expected: "i32".to_string(),
@@ -439,13 +439,13 @@ mod tests {
 #[salsa::query_group(ErrorQueries)]
 pub trait ErrorQueries {
     /// 收集文件中的所有错误
-    fn file_errors(&self, file_id: FileId) -> Arc<Vec<miette::Report>>;
+    micro file_errors(&self, file_id: FileId) -> Arc<Vector<miette::Report>>;
     
     /// 收集项目中的所有错误
-    fn project_errors(&self) -> Arc<Vec<miette::Report>>;
+    micro project_errors(&self) -> Arc<Vector<miette::Report>>;
 }
 
-fn file_errors(db: &dyn ErrorQueries, file_id: FileId) -> Arc<Vec<miette::Report>> {
+micro file_errors(db: &dyn ErrorQueries, file_id: FileId) -> Arc<Vector<miette::Report>> {
     let mut errors = Vec::new();
     
     // 收集解析错误

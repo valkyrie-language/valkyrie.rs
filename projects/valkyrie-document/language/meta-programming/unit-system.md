@@ -73,11 +73,11 @@ type Energy = Quantity<[2, 1, -2, 0, 0, 0, 0]>
 type Power = Quantity<[2, 1, -3, 0, 0, 0, 0]>
 
 # 使用量纲类型
-fn calculate_kinetic_energy(mass: Mass, velocity: Velocity) -> Energy {
+micro calculate_kinetic_energy(mass: Mass, velocity: Velocity) -> Energy {
     0.5 * mass * velocity * velocity
 }
 
-fn calculate_power(energy: Energy, time: Time) -> Power {
+micro calculate_power(energy: Energy, time: Time) -> Power {
     energy / time
 }
 ```
@@ -142,27 +142,27 @@ let frequency = 1 / duration      # 频率类型
 
 ```valkyrie
 # 牛顿第二定律: F = ma
-fn newtons_second_law(mass: Mass, acceleration: Acceleration) -> Force {
+micro newtons_second_law(mass: Mass, acceleration: Acceleration) -> Force {
     mass * acceleration
 }
 
 # 动能公式: E = 1/2 * m * v²
-fn kinetic_energy(mass: Mass, velocity: Velocity) -> Energy {
+micro kinetic_energy(mass: Mass, velocity: Velocity) -> Energy {
     0.5 * mass * velocity.pow(2)
 }
 
 # 重力势能: E = mgh
-fn gravitational_potential_energy(mass: Mass, height: Length, g: Acceleration) -> Energy {
+micro gravitational_potential_energy(mass: Mass, height: Length, g: Acceleration) -> Energy {
     mass * g * height
 }
 
 # 功率公式: P = W/t
-fn power_from_work(work: Energy, time: Time) -> Power {
+micro power_from_work(work: Energy, time: Time) -> Power {
     work / time
 }
 
 # 欧姆定律: V = IR
-fn ohms_law(current: Current, resistance: Resistance) -> Voltage {
+micro ohms_law(current: Current, resistance: Resistance) -> Voltage {
     current * resistance
 }
 ```
@@ -198,11 +198,11 @@ let calorie = 1cal      # 4.184J
 let btu = 1BTU          # 1055.06J
 
 # 热力学计算
-fn heat_capacity(heat: Energy, temp_change: Temperature) -> HeatCapacity {
+micro heat_capacity(heat: Energy, temp_change: Temperature) -> HeatCapacity {
     heat / temp_change
 }
 
-fn thermal_conductivity(heat_flow: Power, area: Area, temp_gradient: Temperature, length: Length) -> ThermalConductivity {
+micro thermal_conductivity(heat_flow: Power, area: Area, temp_gradient: Temperature, length: Length) -> ThermalConductivity {
     heat_flow * length / (area * temp_gradient)
 }
 ```
@@ -222,7 +222,7 @@ let speed = distance / time  # 10 m/s，类型正确
 # let wrong_speed = distance * time  # 错误：结果不是速度类型
 
 # 函数参数类型检查
-fn calculate_work(force: Force, distance: Length) -> Energy {
+micro calculate_work(force: Force, distance: Length) -> Energy {
     force * distance
 }
 
@@ -235,12 +235,12 @@ let work = calculate_work(10N, 5m)  # 正确
 
 ```valkyrie
 # 单位转换函数
-struct UnitConverter {
+class UnitConverter {
     conversion_factors: HashMap<(Unit, Unit), f64>,
 }
 
 impl UnitConverter {
-    fn convert<T: Dimension>(&self, value: Quantity<T>, from: Unit, to: Unit) -> Quantity<T> {
+    micro convert<T: Dimension>(&self, value: Quantity<T>, from: Unit, to: Unit) -> Quantity<T> {
         if from == to {
             return value
         }
@@ -267,7 +267,7 @@ let mass_kg = converter.convert(10lb, lb, kg)   # 4.53592kg
 # 定义新的基本单位
 macro_rules! define_unit {
     ($name:ident, $symbol:literal, $dimension:expr) => {
-        pub struct $name;
+        pub class $name;
         
         impl Unit for $name {
             const SYMBOL: &'static str = $symbol;
@@ -318,7 +318,7 @@ compound_unit!(ElectricField = Mass^1 Length^1 Time^-3 Current^-1);  # V/m
 
 ```valkyrie
 # 粒子物理仿真
-struct Particle {
+class Particle {
     mass: Mass,
     position: Vector3<Length>,
     velocity: Vector3<Velocity>,
@@ -326,7 +326,7 @@ struct Particle {
 }
 
 impl Particle {
-    fn apply_force(&mut self, force: Vector3<Force>, dt: Time) {
+    micro apply_force(&mut self, force: Vector3<Force>, dt: Time) {
         # F = ma => a = F/m
         self.acceleration = force / self.mass
         
@@ -335,18 +335,18 @@ impl Particle {
         self.position += self.velocity * dt
     }
     
-    fn kinetic_energy(&self) -> Energy {
+    micro kinetic_energy(&self) -> Energy {
         0.5 * self.mass * self.velocity.magnitude_squared()
     }
 }
 
 # 重力场仿真
-struct GravityField {
+class GravityField {
     g: Acceleration,  # 重力加速度
 }
 
 impl GravityField {
-    fn force_on(&self, particle: &Particle) -> Vector3<Force> {
+    micro force_on(&self, particle: &Particle) -> Vector3<Force> {
         Vector3::new(0, -particle.mass * self.g, 0)
     }
 }
@@ -356,7 +356,7 @@ impl GravityField {
 
 ```valkyrie
 # 结构工程计算
-struct Beam {
+class Beam {
     length: Length,
     cross_section_area: Area,
     moment_of_inertia: MomentOfInertia,
@@ -364,22 +364,22 @@ struct Beam {
 }
 
 impl Beam {
-    fn max_deflection(&self, load: Force) -> Length {
+    micro max_deflection(&self, load: Force) -> Length {
         # 简支梁中点最大挠度公式
         load * self.length.pow(3) / (48 * self.elastic_modulus * self.moment_of_inertia)
     }
     
-    fn max_stress(&self, moment: Moment, distance: Length) -> Pressure {
+    micro max_stress(&self, moment: Moment, distance: Length) -> Pressure {
         moment * distance / self.moment_of_inertia
     }
 }
 
 # 流体力学计算
-fn reynolds_number(density: Density, velocity: Velocity, length: Length, viscosity: DynamicViscosity) -> Dimensionless {
+micro reynolds_number(density: Density, velocity: Velocity, length: Length, viscosity: DynamicViscosity) -> Dimensionless {
     density * velocity * length / viscosity
 }
 
-fn drag_force(drag_coefficient: Dimensionless, density: Density, velocity: Velocity, area: Area) -> Force {
+micro drag_force(drag_coefficient: Dimensionless, density: Density, velocity: Velocity, area: Area) -> Force {
     0.5 * drag_coefficient * density * velocity.pow(2) * area
 }
 ```
@@ -388,28 +388,28 @@ fn drag_force(drag_coefficient: Dimensionless, density: Density, velocity: Veloc
 
 ```valkyrie
 # 电路元件
-struct Resistor {
+class Resistor {
     resistance: Resistance,
 }
 
-struct Capacitor {
+class Capacitor {
     capacitance: Capacitance,
 }
 
-struct Inductor {
+class Inductor {
     inductance: Inductance,
 }
 
 # 电路分析函数
-fn rc_time_constant(resistance: Resistance, capacitance: Capacitance) -> Time {
+micro rc_time_constant(resistance: Resistance, capacitance: Capacitance) -> Time {
     resistance * capacitance
 }
 
-fn lc_resonant_frequency(inductance: Inductance, capacitance: Capacitance) -> Frequency {
+micro lc_resonant_frequency(inductance: Inductance, capacitance: Capacitance) -> Frequency {
     1 / (2 * PI * (inductance * capacitance).sqrt())
 }
 
-fn power_dissipation(voltage: Voltage, current: Current) -> Power {
+micro power_dissipation(voltage: Voltage, current: Current) -> Power {
     voltage * current
 }
 ```
@@ -421,7 +421,7 @@ fn power_dissipation(voltage: Voltage, current: Current) -> Power {
 ```valkyrie
 # 编译时单位消除
 #[inline(always)]
-fn optimized_calculation(distance: Length, time: Time) -> Velocity {
+micro optimized_calculation(distance: Length, time: Time) -> Velocity {
     # 编译后等价于: distance_value / time_value
     distance / time
 }
@@ -438,13 +438,13 @@ const ESCAPE_VELOCITY: Velocity = (2 * GRAVITY * EARTH_RADIUS).sqrt();
 
 ```valkyrie
 # SIMD向量化单位计算
-struct VectorQuantity<T: Dimension, const N: usize> {
+class VectorQuantity<T: Dimension, const N: usize> {
     values: [f64; N],
     _phantom: PhantomData<T>,
 }
 
 impl<T: Dimension, const N: usize> VectorQuantity<T, N> {
-    fn add(&self, other: &Self) -> Self {
+    micro add(&self, other: &Self) -> Self {
         let mut result = [0.0; N];
         for i in 0..N {
             result[i] = self.values[i] + other.values[i];
@@ -452,7 +452,7 @@ impl<T: Dimension, const N: usize> VectorQuantity<T, N> {
         Self { values: result, _phantom: PhantomData }
     }
     
-    fn multiply_scalar(&self, scalar: f64) -> Self {
+    micro multiply_scalar(&self, scalar: f64) -> Self {
         let mut result = [0.0; N];
         for i in 0..N {
             result[i] = self.values[i] * scalar;
@@ -472,19 +472,19 @@ let good_distance = 100m;  # 好的做法
 # let bad_distance = 100;  # 避免无单位数值
 
 # 函数签名明确单位
-fn calculate_area(width: Length, height: Length) -> Area {
+micro calculate_area(width: Length, height: Length) -> Area {
     width * height
 }
 
 # 而不是
-# fn calculate_area(width: f64, height: f64) -> f64
+# micro calculate_area(width: f64, height: f64) -> f64
 ```
 
 ### 2. 单位转换策略
 
 ```valkyrie
 # 在边界处进行单位转换
-fn process_user_input(distance_str: &str, unit_str: &str) -> Result<Length, Error> {
+micro process_user_input(distance_str: &str, unit_str: &str) -> Result<Length, Error> {
     let value: f64 = distance_str.parse()?;
     match unit_str {
         "m" => Ok(value * 1m),
@@ -495,7 +495,7 @@ fn process_user_input(distance_str: &str, unit_str: &str) -> Result<Length, Erro
 }
 
 # 内部计算保持一致单位
-fn internal_calculation(distances: &[Length]) -> Length {
+micro internal_calculation(distances: &[Length]) -> Length {
     distances.iter().sum()  # 自动处理单位
 }
 ```
@@ -511,7 +511,7 @@ enum UnitError {
 }
 
 # 安全的单位操作
-fn safe_divide<T: Dimension, U: Dimension>(numerator: Quantity<T>, denominator: Quantity<U>) -> Result<Quantity<T::Div<U>>, UnitError> {
+micro safe_divide<T: Dimension, U: Dimension>(numerator: Quantity<T>, denominator: Quantity<U>) -> Result<Quantity<T::Div<U>>, UnitError> {
     if denominator.value().abs() < f64::EPSILON {
         return Err(UnitError::InvalidValue(denominator.value()))
     }

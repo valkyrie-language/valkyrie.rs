@@ -28,7 +28,7 @@ effect Http {
     get(url: String): String
 }
 
-fn fetch_user(id: Int) -> User {
+micro fetch_user(id: Int) -> User {
     let response = perform Http.get(`/api/users/${id}`);
     parse_json(response)
 }

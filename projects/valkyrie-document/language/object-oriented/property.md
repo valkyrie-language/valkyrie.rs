@@ -107,7 +107,7 @@ print(person.age)        # 34
 
 ```valkyrie
 class Logger {
-    messages: Vec<String>,
+    messages: Vector<String>,
     
     # 只写属性 - 添加日志消息
     set message(mut self, msg: String) {
@@ -116,7 +116,7 @@ class Logger {
     }
     
     # 获取所有消息的方法
-    micro get_messages(self) -> &Vec<String> {
+    micro get_messages(self) -> &Vector<String> {
         &self.messages
     }
 }
@@ -160,11 +160,11 @@ account.balance = 500.0   # 正常设置
 
 ```valkyrie
 class DataProcessor {
-    raw_data: Vec<String>,
-    processed_data: Option<Vec<ProcessedItem>>,
+    raw_data: Vector<String>,
+    processed_data: Option<Vector<ProcessedItem>>,
     
     # 懒加载的计算属性
-    get processed(mut self) -> &Vec<ProcessedItem> {
+    get processed(mut self) -> &Vector<ProcessedItem> {
         if self.processed_data.is_none() {
             let processed = self.raw_data
                 .iter()
@@ -316,7 +316,7 @@ class Counter {
 ```valkyrie
 # 避免：getter 中有复杂的副作用
 class BadExample {
-    get data(mut self) -> Vec<String> {
+    get data(mut self) -> Vector<String> {
         # 不好：每次访问都重新计算
         expensive_computation()
     }
@@ -324,9 +324,9 @@ class BadExample {
 
 # 推荐：使用懒加载或缓存
 class GoodExample {
-    cached_data: Option<Vec<String>>,
+    cached_data: Option<Vector<String>>,
     
-    get data(mut self) -> &Vec<String> {
+    get data(mut self) -> &Vector<String> {
         if self.cached_data.is_none() {
             self.cached_data = Some(expensive_computation())
         }

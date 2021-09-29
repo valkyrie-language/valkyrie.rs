@@ -211,14 +211,14 @@ let response = json_handler.handle("Hello World")
 ```valkyrie
 # 策略接口
 trait SortStrategy {
-    micro sort(self, data: &mut Vec<i32>)
+    micro sort(self, data: &mut Vector<i32>)
 }
 
 # 使用匿名类实现不同策略
 micro get_sort_strategy(strategy_name: String) -> class: SortStrategy {
     match strategy_name {
         case "bubble" => class: SortStrategy {
-            micro sort(self, data: &mut Vec<i32>) {
+            micro sort(self, data: &mut Vector<i32>) {
                 # 冒泡排序实现
                 for i in 0..data.len() {
                     for j in 0..(data.len() - 1 - i) {
@@ -230,12 +230,12 @@ micro get_sort_strategy(strategy_name: String) -> class: SortStrategy {
             }
         },
         case "quick" => class: SortStrategy {
-            micro sort(self, data: &mut Vec<i32>) {
+            micro sort(self, data: &mut Vector<i32>) {
                 # 快速排序实现
                 self.quick_sort(data, 0, data.len() as i32 - 1)
             }
             
-            micro quick_sort(self, data: &mut Vec<i32>, low: i32, high: i32) {
+            micro quick_sort(self, data: &mut Vector<i32>, low: i32, high: i32) {
                 if low < high {
                     let pi = self.partition(data, low, high)
                     self.quick_sort(data, low, pi - 1)
@@ -243,7 +243,7 @@ micro get_sort_strategy(strategy_name: String) -> class: SortStrategy {
                 }
             }
             
-            micro partition(self, data: &mut Vec<i32>, low: i32, high: i32) -> i32 {
+            micro partition(self, data: &mut Vector<i32>, low: i32, high: i32) -> i32 {
                 # 分区实现
                 let pivot = data[high as usize]
                 let mut i = low - 1
@@ -259,7 +259,7 @@ micro get_sort_strategy(strategy_name: String) -> class: SortStrategy {
             }
         },
         case _ => class: SortStrategy {
-            micro sort(self, data: &mut Vec<i32>) {
+            micro sort(self, data: &mut Vector<i32>) {
                 data.sort()  # 使用默认排序
             }
         }

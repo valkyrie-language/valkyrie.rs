@@ -60,13 +60,13 @@ effect Http {
 }
 
 // 使用效应的函数
-fn fetch_user_data(id: Int) -> User {
-    let response = perform Http.get(`/api/users/${id}`);
+micro fetch_user_data(id: Int) -> User {
+    let response = perform Http.get(`/api/users/${id}`)
     parse_json(response)
 }
 
 // 效应处理器
-fn main() {
+micro main() {
     handle fetch_user_data(42) with Http {
         get(url) -> resume(http_client.get(url)),
         post(url, body) -> resume(http_client.post(url, body))

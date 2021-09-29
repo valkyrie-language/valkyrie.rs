@@ -138,14 +138,14 @@ let x_end: Decimal = 5.0
 let solution = runge_kutta_4(ode_func, x0, y0, x_end, 1000)
 
 # 高阶微分方程组
-struct LorenzSystem {
+class LorenzSystem {
     sigma: Decimal,
     rho: Decimal,
     beta: Decimal,
 }
 
 impl LorenzSystem {
-    fn equations(self, t: Decimal, state: [Decimal; 3]) -> [Decimal; 3] {
+    micro equations(self, t: Decimal, state: [Decimal; 3]) -> [Decimal; 3] {
         let [x, y, z] = state
         [
             self.sigma * (y - x),
@@ -219,14 +219,14 @@ let cdf_value = normal_dist.cdf(test_value)
 
 ```valkyrie
 # 动态精度调整
-struct AdaptivePrecision {
+class AdaptivePrecision {
     min_precision: u32,
     max_precision: u32,
     tolerance: Decimal,
 }
 
 impl AdaptivePrecision {
-    fn compute_with_adaptive_precision<F>(self, f: F, x: Decimal) -> Decimal 
+    micro compute_with_adaptive_precision<F>(self, f: F, x: Decimal) -> Decimal 
     where F: Fn(Decimal) -> Decimal {
         let mut precision = self.min_precision
         let mut prev_result: Decimal = 0.0
@@ -259,7 +259,7 @@ impl AdaptivePrecision {
 use parallel::*
 
 # 并行数值积分
-fn parallel_integration(f: impl Fn(Decimal) -> Decimal + Sync, 
+micro parallel_integration(f: impl Fn(Decimal) -> Decimal + Sync, 
                        a: Decimal, b: Decimal, n_threads: usize) -> Decimal {
     let chunk_size = (b - a) / n_threads as Decimal
     
@@ -267,7 +267,7 @@ fn parallel_integration(f: impl Fn(Decimal) -> Decimal + Sync,
         let start = a + (i as Decimal) * chunk_size
         let end = start + chunk_size
         gauss_legendre(f, start, end, 32)
-    }).collect::<Vec<_>>()
+    }).collect::<Vector<_>>()
     
     results.into_iter().sum()
 }
@@ -288,13 +288,13 @@ let research_precision = 1024   # 研究级计算
 
 ```valkyrie
 # 相对误差和绝对误差控制
-struct ErrorControl {
+class ErrorControl {
     absolute_tolerance: Decimal,
     relative_tolerance: Decimal,
 }
 
 impl ErrorControl {
-    fn check_convergence(self, current: Decimal, previous: Decimal) -> bool {
+    micro check_convergence(self, current: Decimal, previous: Decimal) -> bool {
         let abs_error = (current - previous).abs()
         let rel_error = abs_error / current.abs()
         
@@ -307,7 +307,7 @@ impl ErrorControl {
 
 ```valkyrie
 # 避免不必要的高精度计算
-fn optimize_computation(x: f64) -> Decimal {
+micro optimize_computation(x: f64) -> Decimal {
     # 先用普通精度估算
     let estimate = x.sin()
     

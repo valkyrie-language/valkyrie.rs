@@ -28,7 +28,7 @@ Nyar 承认并拥抱软件开发的不同阶段和不同场景对执行环境有
 
 ```rust
 /// Nyar 解释器的核心结构
-pub struct NyarInterpreter {
+pub class NyarInterpreter {
     /// 内建的垃圾收集器
     gc: GarbageCollector,
     /// 对象模型和运行时
@@ -41,12 +41,12 @@ pub struct NyarInterpreter {
 
 impl NyarInterpreter {
     /// 执行 MIR 程序
-    pub fn execute(&mut self, program: &mir::Program) -> Result<Value, RuntimeError> {
+    pub micro execute(&mut self, program: &mir::Program) -> Result<Value, RuntimeError> {
         self.execute_function(&program.main_function)
     }
     
     /// 执行单个函数
-    fn execute_function(&mut self, function: &mir::Function) -> Result<Value, RuntimeError> {
+    micro execute_function(&mut self, function: &mir::Function) -> Result<Value, RuntimeError> {
         let mut frame = StackFrame::new(function);
         
         loop {
@@ -72,15 +72,15 @@ impl NyarInterpreter {
 
 ```rust
 /// 标记-清除垃圾收集器
-pub struct GarbageCollector {
+pub class GarbageCollector {
     heap: Heap,
-    roots: Vec<ObjectRef>,
+    roots: Vector<ObjectRef>,
     allocation_threshold: usize,
 }
 
 impl GarbageCollector {
     /// 分配新对象
-    pub fn allocate<T>(&mut self, value: T) -> ObjectRef
+    pub micro allocate<T>(&mut self, value: T) -> ObjectRef
     where
         T: GcObject,
     {
@@ -95,7 +95,7 @@ impl GarbageCollector {
     }
     
     /// 执行垃圾收集
-    fn collect(&mut self) {
+    micro collect(&mut self) {
         // 标记阶段：从根对象开始标记所有可达对象
         self.mark_phase();
         
@@ -103,7 +103,7 @@ impl GarbageCollector {
         self.sweep_phase();
     }
     
-    fn mark_phase(&mut self) {
+    micro mark_phase(&mut self) {
         let mut worklist = self.roots.clone();
         
         while let Some(obj_ref) = worklist.pop() {
@@ -123,7 +123,7 @@ impl GarbageCollector {
 
 ```rust
 /// WebAssembly 外部函数接口引擎
-pub struct WasmEngine {
+pub class WasmEngine {
     /// 已加载的 Wasm 模块
     modules: HashMap<String, WasmModule>,
     /// Wasm 运行时实例
@@ -132,14 +132,14 @@ pub struct WasmEngine {
 
 impl WasmEngine {
     /// 加载外部 Wasm 模块
-    pub fn load_module(&mut self, name: String, bytes: &[u8]) -> Result<(), WasmError> {
+    pub micro load_module(&mut self, name: String, bytes: &[u8]) -> Result<(), WasmError> {
         let module = WasmModule::from_bytes(&self.runtime, bytes)?;
         self.modules.insert(name, module);
         Ok(())
     }
     
     /// 调用外部 Wasm 函数
-    pub fn call_extern_function(
+    pub micro call_extern_function(
         &mut self,
         module_name: &str,
         function_name: &str,
@@ -152,7 +152,7 @@ impl WasmEngine {
             .ok_or_else(|| WasmError::FunctionNotFound(function_name.to_string()))?;
         
         // 转换 Nyar 值为 Wasm 值
-        let wasm_args = args.iter().map(|v| self.nyar_to_wasm_value(v)).collect::<Result<Vec<_>, _>>()?;
+        let wasm_args = args.iter().map(|v| self.nyar_to_wasm_value(v)).collect::<Result<Vector<_>, _>>()?;
         
         // 调用 Wasm 函数
         let wasm_result = function.call(&wasm_args)?;
@@ -168,28 +168,28 @@ impl WasmEngine {
 ```rust
 /// 代数效应的运行时表示
 #[derive(Debug, Clone)]
-pub struct Effect {
+pub class Effect {
     pub name: String,
-    pub args: Vec<Value>,
+    pub args: Vector<Value>,
 }
 
 /// 效应处理器
-pub struct EffectHandler {
+pub class EffectHandler {
     pub effect_name: String,
     pub handler_function: mir::FunctionId,
 }
 
 /// 延续对象
-pub struct Continuation {
+pub class Continuation {
     /// 捕获的栈帧
-    pub frames: Vec<StackFrame>,
+    pub frames: Vector<StackFrame>,
     /// 恢复点
     pub resume_point: ResumePoint,
 }
 
 impl NyarInterpreter {
     /// 处理代数效应
-    fn handle_effect(
+    micro handle_effect(
         &mut self,
         effect: &Effect,
         args: &[mir::Operand],
@@ -217,7 +217,7 @@ impl NyarInterpreter {
     }
     
     /// 恢复延续
-    pub fn resume_continuation(
+    pub micro resume_continuation(
         &mut self,
         continuation: Continuation,
         value: Value,
@@ -244,20 +244,20 @@ impl NyarInterpreter {
 
 ```rust
 /// 调试器接口
-pub struct Debugger {
+pub class Debugger {
     interpreter: NyarInterpreter,
     breakpoints: HashSet<mir::Location>,
-    watch_expressions: Vec<String>,
+    watch_expressions: Vector<String>,
 }
 
 impl Debugger {
     /// 设置断点
-    pub fn set_breakpoint(&mut self, location: mir::Location) {
+    pub micro set_breakpoint(&mut self, location: mir::Location) {
         self.breakpoints.insert(location);
     }
     
     /// 单步执行
-    pub fn step(&mut self) -> Result<DebugState, RuntimeError> {
+    pub micro step(&mut self) -> Result<DebugState, RuntimeError> {
         let current_location = self.interpreter.current_location();
         
         // 执行一条指令
@@ -272,7 +272,7 @@ impl Debugger {
     }
     
     /// 检查变量值
-    pub fn inspect_variable(&self, name: &str) -> Option<Value> {
+    pub micro inspect_variable(&self, name: &str) -> Option<Value> {
         self.interpreter.current_frame().get_local(name)
     }
 }
@@ -290,7 +290,7 @@ impl Debugger {
 
 ```rust
 /// LIR 到 WasmGC 的代码生成器
-pub struct WasmGCCodeGen {
+pub class WasmGCCodeGen {
     module: wasm_encoder::Module,
     type_section: wasm_encoder::TypeSection,
     function_section: wasm_encoder::FunctionSection,
@@ -298,7 +298,7 @@ pub struct WasmGCCodeGen {
 
 impl WasmGCCodeGen {
     /// 生成 WasmGC 类型定义
-    fn generate_gc_types(&mut self, program: &lir::Program) {
+    micro generate_gc_types(&mut self, program: &lir::Program) {
         for type_def in &program.type_definitions {
             match type_def {
                 lir::TypeDef::Struct { name, fields } => {
@@ -329,7 +329,7 @@ impl WasmGCCodeGen {
     }
     
     /// 生成函数代码
-    fn generate_function(&mut self, function: &lir::Function) {
+    micro generate_function(&mut self, function: &lir::Function) {
         let mut func_body = wasm_encoder::Function::new(vec![]);
         
         for instruction in &function.instructions {
@@ -368,7 +368,7 @@ impl WasmGCCodeGen {
 
 ```rust
 /// 内建函数优化器
-pub struct IntrinsicOptimizer {
+pub class IntrinsicOptimizer {
     intrinsics: HashMap<String, IntrinsicHandler>,
 }
 
@@ -376,7 +376,7 @@ pub struct IntrinsicOptimizer {
 type IntrinsicHandler = fn(&mut WasmGCCodeGen, &[lir::Operand]) -> Result<(), CodeGenError>;
 
 impl IntrinsicOptimizer {
-    pub fn new() -> Self {
+    pub micro new() -> Self {
         let mut intrinsics = HashMap::new();
         
         // i32 加法直接映射到 Wasm 指令
@@ -398,7 +398,7 @@ impl IntrinsicOptimizer {
     }
     
     /// 尝试优化函数调用为内建指令
-    pub fn try_optimize_call(
+    pub micro try_optimize_call(
         &self,
         codegen: &mut WasmGCCodeGen,
         function_name: &str,
@@ -418,13 +418,13 @@ impl IntrinsicOptimizer {
 
 ```rust
 /// 延续传递风格 (CPS) 变换器
-pub struct CpsTransformer {
+pub class CpsTransformer {
     continuation_type_id: u32,
 }
 
 impl CpsTransformer {
     /// 将带有效应的函数转换为 CPS 形式
-    pub fn transform_function(&mut self, function: &mir::Function) -> lir::Function {
+    pub micro transform_function(&mut self, function: &mir::Function) -> lir::Function {
         let mut lir_function = lir::Function::new(function.name.clone());
         
         // 为每个可能抛出效应的函数添加延续参数
@@ -445,7 +445,7 @@ impl CpsTransformer {
     }
     
     /// 转换基本块
-    fn transform_basic_block(&mut self, block: &mir::BasicBlock) -> lir::BasicBlock {
+    micro transform_basic_block(&mut self, block: &mir::BasicBlock) -> lir::BasicBlock {
         let mut lir_block = lir::BasicBlock::new();
         
         // 转换语句
@@ -487,20 +487,20 @@ impl CpsTransformer {
 
 ```rust
 /// Wasm 模块导入/导出管理器
-pub struct WasmInterop {
-    imports: Vec<WasmImport>,
-    exports: Vec<WasmExport>,
+pub class WasmInterop {
+    imports: Vector<WasmImport>,
+    exports: Vector<WasmExport>,
 }
 
 #[derive(Debug, Clone)]
-pub struct WasmImport {
+pub class WasmImport {
     pub module: String,
     pub name: String,
     pub ty: WasmType,
 }
 
 #[derive(Debug, Clone)]
-pub struct WasmExport {
+pub class WasmExport {
     pub name: String,
     pub internal_name: String,
     pub ty: WasmType,
@@ -508,7 +508,7 @@ pub struct WasmExport {
 
 impl WasmInterop {
     /// 处理 extern 块
-    pub fn process_extern_block(&mut self, extern_block: &hir::ExternBlock) {
+    pub micro process_extern_block(&mut self, extern_block: &hir::ExternBlock) {
         match extern_block.abi.as_str() {
             "wasm" => {
                 for item in &extern_block.items {
@@ -534,7 +534,7 @@ impl WasmInterop {
     }
     
     /// 生成导入段
-    pub fn generate_import_section(&self) -> wasm_encoder::ImportSection {
+    pub micro generate_import_section(&self) -> wasm_encoder::ImportSection {
         let mut import_section = wasm_encoder::ImportSection::new();
         
         for import in &self.imports {
@@ -568,13 +568,13 @@ pub enum ExecutionTarget {
 }
 
 /// 统一的编译接口
-pub struct Compiler {
+pub class Compiler {
     database: NyarDatabase,
 }
 
 impl Compiler {
     /// 编译到指定目标
-    pub fn compile(
+    pub micro compile(
         &self,
         source: &str,
         target: ExecutionTarget,
@@ -609,7 +609,7 @@ impl Compiler {
 ```rust
 /// 项目配置
 #[derive(Debug, Clone)]
-pub struct ProjectConfig {
+pub class ProjectConfig {
     pub name: String,
     pub version: String,
     pub development: DevelopmentConfig,
@@ -617,7 +617,7 @@ pub struct ProjectConfig {
 }
 
 #[derive(Debug, Clone)]
-pub struct DevelopmentConfig {
+pub class DevelopmentConfig {
     /// 使用解释器进行快速开发
     pub use_interpreter: bool,
     /// 启用调试信息
@@ -627,7 +627,7 @@ pub struct DevelopmentConfig {
 }
 
 #[derive(Debug, Clone)]
-pub struct ProductionConfig {
+pub class ProductionConfig {
     /// 目标平台
     pub target: ExecutionTarget,
     /// 优化级别

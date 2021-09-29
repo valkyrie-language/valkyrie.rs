@@ -1,12 +1,12 @@
 # 异构计算
 
-在 Valkyrie 中，异构计算通过统一的数组抽象实现跨设备的高性能计算。
+在 Valkyrie 中，异构计算通过统一的数组抽象实现跨设备的高性能计算，专注于传统机器学习算法的加速。
 
 ## 数组类型体系
 
 - `Array` 是一段内存中的数据
 - `Array<T, N>` 是 `[T; N]` 的语法糖，表示固定大小数组
-- `ArrayND` 是异构计算、机器学习、深度学习的基础多维数组类型
+- `ArrayND` 是异构计算、机器学习的基础多维数组类型
 - `Array1D` 是 `ArrayND` 的 type alias，专门用于一维数组操作
 
 ArrayND 可以选择不同的设备 (device) 和布局 (layout)，系统会自动进行优化。
@@ -60,7 +60,7 @@ let col_major = a.with_layout(Layout::ColMajor)
 
 ```valkyrie
 # 异步设备间传输
-async fn process_large_data() {
+async micro process_large_data() {
     let data = ArrayND::load("dataset.bin")
     let gpu_data = data.to_device_async(Device::GPU).await
     
@@ -97,539 +97,282 @@ let std_dev = a.std()
 
 ## 机器学习应用
 
-### 神经网络训练
+### 线性回归
 
 ```valkyrie
-# 简单的线性层
-struct LinearLayer {
+# 线性回归模型
+class LinearRegression {
     weights: ArrayND,
-    bias: ArrayND,
+    bias: f32,
 }
 
-impl LinearLayer {
-    fn new(input_size: usize, output_size: usize) -> Self {
+impl LinearRegression {
+    micro new(n_features: usize) -> Self {
         Self {
-            weights: ArrayND::random([input_size, output_size]).on_device(Device::GPU),
-            bias: ArrayND::zeros([output_size]).on_device(Device::GPU),
+            weights: ArrayND::zeros([n_features]),
+            bias: 0.0,
         }
     }
     
-    fn forward(&self, input: &ArrayND) -> ArrayND {
-        input.matmul(&self.weights) + &self.bias
+    micro fit(&mut self, X: &ArrayND, y: &ArrayND, learning_rate: f32, epochs: usize) {
+        let n_samples = X.shape()[0] as f32
+        
+        for _ in 0..epochs {
+            # 预测
+            let predictions = X.matmul(&self.weights) + self.bias
+            
+            # 计算梯度
+            let error = predictions - y
+            let grad_w = X.transpose().matmul(&error) / n_samples
+            let grad_b = error.mean()
+            
+            # 更新参数
+            self.weights = &self.weights - learning_rate * &grad_w
+            self.bias -= learning_rate * grad_b
+        }
     }
     
-    fn backward(&mut self, grad_output: &ArrayND, input: &ArrayND, learning_rate: f32) {
-        # 计算梯度
-        let grad_weights = input.transpose().matmul(grad_output)
-        let grad_bias = grad_output.sum_axis(0)
-        
-        # 更新参数
-        self.weights = &self.weights - learning_rate * &grad_weights
-        self.bias = &self.bias - learning_rate * &grad_bias
+    micro predict(&self, X: &ArrayND) -> ArrayND {
+        X.matmul(&self.weights) + self.bias
     }
 }
 ```
 
-### 批处理训练
+### 支持向量机 (SVM)
 
 ```valkyrie
-# 批量处理数据
-fn train_batch(model: &mut LinearLayer, batch_x: &ArrayND, batch_y: &ArrayND, lr: f32) {
-    # 前向传播
-    let predictions = model.forward(batch_x)
-    
-    # 计算损失梯度
-    let loss_grad = predictions - batch_y
-    
-    # 反向传播
-    model.backward(&loss_grad, batch_x, lr)
+# SVM 分类器
+class SVM {
+    weights: ArrayND,
+    bias: f32,
+    C: f32,  # 正则化参数
 }
 
-# 完整训练循环
-fn train_model(train_data: &[(ArrayND, ArrayND)], epochs: usize) {
-    let mut model = LinearLayer::new(784, 10)  # MNIST分类
-    
-    for epoch in 0..epochs {
-        for (batch_x, batch_y) in train_data {
-            train_batch(&mut model, batch_x, batch_y, 0.01)
+impl SVM {
+    micro new(n_features: usize, C: f32) -> Self {
+        Self {
+            weights: ArrayND::zeros([n_features]),
+            bias: 0.0,
+            C,
         }
-        println!("Epoch {} completed", epoch)
+    }
+    
+    micro fit(&mut self, X: &ArrayND, y: &ArrayND, learning_rate: f32, epochs: usize) {
+        for _ in 0..epochs {
+            for i in 0..X.shape()[0] {
+                let xi = X.row(i)
+                let yi = y[i]
+                
+                let decision = xi.dot(&self.weights) + self.bias
+                
+                if yi * decision < 1.0 {
+                    # 支持向量，更新参数
+                    self.weights = &self.weights + learning_rate * (yi * &xi - 2.0 * self.C * &self.weights)
+                    self.bias += learning_rate * yi
+                } else {
+                    # 正确分类，只应用正则化
+                    self.weights = &self.weights - learning_rate * 2.0 * self.C * &self.weights
+                }
+            }
+        }
+    }
+    
+    micro predict(&self, X: &ArrayND) -> ArrayND {
+        (X.matmul(&self.weights) + self.bias).sign()
     }
 }
 ```
 
 ## 多设备并行
 
-### 数据并行训练
+### K-Means 聚类并行化
 
 ```valkyrie
-# 在多个GPU上并行训练
-fn parallel_training(data: &[ArrayND], num_gpus: usize) {
-    let batch_size = data.len() / num_gpus
-    let mut models = Vec::new()
-    
-    # 在每个GPU上创建模型副本
-    for i in 0..num_gpus {
-        let model = LinearLayer::new(784, 10).on_device(Device::GPU(i))
-        models.push(model)
+# 并行 K-Means 聚类
+class ParallelKMeans {
+    centroids: ArrayND,
+    k: usize,
+    devices: Vector<Device>,
+}
+
+impl ParallelKMeans {
+    micro fit(&mut self, data: &ArrayND, max_iters: usize) {
+        let n_devices = self.devices.len()
+        let chunk_size = data.shape()[0] / n_devices
+        
+        for _ in 0..max_iters {
+            # 并行计算距离和分配
+            let assignments: Vector<ArrayND> = data.chunks(chunk_size)
+                .zip(&self.devices)
+                .par_iter()
+                .map(|(chunk, device)| {
+                    let chunk_gpu = chunk.to_device(device)
+                    let centroids_gpu = self.centroids.to_device(device)
+                    
+                    # 计算距离矩阵
+                    let distances = chunk_gpu.cdist(&centroids_gpu)
+                    distances.argmin(1)  # 最近质心索引
+                })
+                .collect()
+            
+            # 更新质心
+            self.update_centroids(data, &assignments)
+        }
     }
     
-    # 并行处理数据批次
-    for chunk in data.chunks(batch_size) {
-        let results = models.par_iter_mut()
-            .zip(chunk.par_iter())
-            .map(|(model, batch)| {
-                model.forward(batch)
-            })
-            .collect::<Vec<_>>()
-        
-        # 聚合结果
-        let averaged = results.iter().fold(ArrayND::zeros([10]), |acc, x| acc + x) / num_gpus as f32
+    micro update_centroids(&mut self, data: &ArrayND, assignments: &[ArrayND]) {
+        for k in 0..self.k {
+            let mask = assignments.iter()
+                .map(|assign| assign.eq(k))
+                .reduce(|acc, x| acc.concat(&x))
+                .unwrap()
+            
+            let cluster_points = data.masked_select(&mask)
+            if cluster_points.shape()[0] > 0 {
+                self.centroids.row_mut(k).copy_from(&cluster_points.mean(0))
+            }
+        }
     }
 }
 ```
 
-### 模型并行
+### 随机森林并行化
 
 ```valkyrie
-# 将大模型分布到多个设备
-struct DistributedModel {
-    layers: Vec<LinearLayer>,
-    devices: Vec<Device>,
+# 并行随机森林
+class ParallelRandomForest {
+    trees: Vector<DecisionTree>,
+    n_trees: usize,
 }
 
-impl DistributedModel {
-    fn forward(&self, input: ArrayND) -> ArrayND {
-        let mut x = input
+impl ParallelRandomForest {
+    micro fit(&mut self, X: &ArrayND, y: &ArrayND) {
+        # 并行训练决策树
+        self.trees = (0..self.n_trees)
+            .into_par_iter()
+            .map(|_| {
+                # 自助采样
+                let (X_sample, y_sample) = bootstrap_sample(X, y)
+                
+                # 训练单棵树
+                let mut tree = DecisionTree::new()
+                tree.fit(&X_sample, &y_sample)
+                tree
+            })
+            .collect()
+    }
+    
+    micro predict(&self, X: &ArrayND) -> ArrayND {
+        # 并行预测
+        let predictions: Vector<ArrayND> = self.trees
+            .par_iter()
+            .map(|tree| tree.predict(X))
+            .collect()
         
-        for (layer, device) in self.layers.iter().zip(&self.devices) {
-            # 传输到对应设备
-            x = x.to_device(device)
-            
-            # 执行计算
-            x = layer.forward(&x)
-        }
-        
-        x
+        # 投票聚合
+        majority_vote(&predictions)
     }
 }
 ```
 
 ## 内存优化策略
 
-### 梯度检查点
+### 数据分块处理
 
 ```valkyrie
-struct GradientCheckpointing {
-    checkpoint_layers: HashSet<LayerId>,
-    recompute_cache: HashMap<LayerId, Tensor>,
+# 大数据集分块处理
+class ChunkedProcessor {
+    chunk_size: usize,
+    memory_limit: usize,
 }
 
-impl GradientCheckpointing {
-    # 前向传播时选择性保存中间结果
-    fn forward_with_checkpointing(&mut self, model: &Model, input: Tensor) -> Tensor {
-        let mut activations = HashMap::new()
-        let mut current = input
+impl ChunkedProcessor {
+    micro process_large_dataset(&self, data: &ArrayND, algorithm: &dyn Algorithm) -> ArrayND {
+        let total_size = data.shape()[0]
+        let mut results = Vec::new()
         
-        for (i, layer) in model.layers.iter().enumerate() {
-            current = layer.forward(current)
+        for start in (0..total_size).step_by(self.chunk_size) {
+            let end = (start + self.chunk_size).min(total_size)
+            let chunk = data.slice([start..end, ..])
             
-            # 只在检查点层保存激活值
-            if self.checkpoint_layers.contains(&LayerId(i)) {
-                activations.insert(LayerId(i), current.clone())
+            # 处理单个数据块
+            let chunk_result = algorithm.process(&chunk)
+            results.push(chunk_result)
+            
+            # 检查内存使用
+            if self.get_memory_usage() > self.memory_limit {
+                self.gc_collect()  # 强制垃圾回收
             }
         }
         
-        self.recompute_cache = activations
-        current
+        # 合并结果
+        ArrayND::concat(&results, 0)
     }
     
-    # 反向传播时重新计算中间结果
-    fn backward_with_recomputation(&mut self, model: &Model, grad_output: Tensor) -> Tensor {
-        let mut grad = grad_output
-        
-        for (i, layer) in model.layers.iter().enumerate().rev() {
-            let layer_id = LayerId(i)
-            
-            # 如果需要激活值但没有保存，则重新计算
-            let activation = if let Some(cached) = self.recompute_cache.get(&layer_id) {
-                cached.clone()
-            } else {
-                self.recompute_activation(model, layer_id)
-            }
-            
-            grad = layer.backward(grad, &activation)
-        }
-        
-        grad
+    micro get_memory_usage(&self) -> usize {
+        # 获取当前内存使用量
+        std::mem::size_of_val(self) + self.estimate_array_memory()
     }
 }
 ```
 
-### 动态内存管理
+### 内存使用检查
 
 ```valkyrie
-struct DynamicMemoryManager {
-    memory_pools: HashMap<ComputeDevice, MemoryPool>,
-    allocation_strategy: AllocationStrategy,
+# 简单的内存使用监控
+micro check_memory_usage() {
+    let cpu_arrays = ArrayND::get_cpu_memory_usage()
+    let gpu_arrays = ArrayND::get_gpu_memory_usage()
+    
+    println!("CPU 内存使用: {:.2} MB", cpu_arrays as f64 / 1024.0 / 1024.0)
+    println!("GPU 内存使用: {:.2} MB", gpu_arrays as f64 / 1024.0 / 1024.0)
+    
+    # 内存不足时的处理
+    if gpu_arrays > 8 * 1024 * 1024 * 1024 {  # 8GB
+        println!("GPU 内存不足，建议使用 CPU 或减少批次大小")
+    }
 }
 
-enum AllocationStrategy {
-    FirstFit,
-    BestFit,
-    WorstFit,
-    Buddy,
-}
-
-impl DynamicMemoryManager {
-    # 智能内存分配
-    fn allocate_tensor<T>(&mut self, shape: &[usize], device: &ComputeDevice) -> Result<Tensor<T>, MemoryError> {
-        let size = shape.iter().product::<usize>() * std::mem::size_of::<T>()
-        let pool = self.memory_pools.get_mut(device).unwrap()
-        
-        match self.allocation_strategy {
-            AllocationStrategy::FirstFit => {
-                pool.allocate_first_fit(size)
-            },
-            AllocationStrategy::BestFit => {
-                pool.allocate_best_fit(size)
-            },
-            AllocationStrategy::Buddy => {
-                pool.allocate_buddy(size)
-            },
-            _ => pool.allocate_first_fit(size)
-        }
-    }
+# 自动内存清理
+micro auto_cleanup() {
+    # 清理未使用的数组
+    ArrayND::gc_collect()
     
-    # 内存压缩和整理
-    fn compact_memory(&mut self, device: &ComputeDevice) {
-        if let Some(pool) = self.memory_pools.get_mut(device) {
-            pool.defragment()
-            pool.compact()
-        }
-    }
-    
-    # 自适应策略调整
-    fn adapt_strategy(&mut self, device: &ComputeDevice, allocation_pattern: &AllocationPattern) {
-        let current_fragmentation = self.measure_fragmentation(device)
-        
-        self.allocation_strategy = match allocation_pattern {
-            AllocationPattern::ManySmallAllocations if current_fragmentation > 0.3 => {
-                AllocationStrategy::Buddy
-            },
-            AllocationPattern::FewLargeAllocations => {
-                AllocationStrategy::FirstFit
-            },
-            AllocationPattern::MixedSizes => {
-                AllocationStrategy::BestFit
-            },
-            _ => self.allocation_strategy
-        }
-    }
+    # 释放临时缓存
+    ArrayND::clear_cache()
 }
 ```
 
 ## 性能监控和调优
 
-### 性能分析器
+### 简单性能测试
 
 ```valkyrie
-struct PerformanceProfiler {
-    kernel_times: HashMap<String, Vec<Duration>>,
-    memory_usage: HashMap<ComputeDevice, Vec<usize>>,
-    bandwidth_usage: HashMap<(ComputeDevice, ComputeDevice), Vec<f64>>,
-}
-
-impl PerformanceProfiler {
-    # 记录内核执行时间
-    fn profile_kernel<F, R>(&mut self, kernel_name: &str, device: &ComputeDevice, f: F) -> R 
-    where F: FnOnce() -> R {
-        let start = Instant::now()
-        let result = f()
-        let duration = start.elapsed()
-        
-        self.kernel_times.entry(kernel_name.to_string())
-            .or_insert_with(Vec::new)
-            .push(duration)
-        
-        result
-    }
+# 测试算法性能
+micro benchmark_algorithm<F>(name: &str, f: F) -> Duration 
+where F: FnOnce() {
+    let start = std::time::Instant::now()
+    f()
+    let duration = start.elapsed()
     
-    # 生成性能报告
-    fn generate_report(&self) -> PerformanceReport {
-        let mut report = PerformanceReport::new()
-        
-        # 内核性能统计
-        for (kernel, times) in &self.kernel_times {
-            let avg_time = times.iter().sum::<Duration>() / times.len() as u32
-            let max_time = times.iter().max().unwrap()
-            let min_time = times.iter().min().unwrap()
-            
-            report.add_kernel_stats(kernel, KernelStats {
-                average_time: avg_time,
-                max_time: *max_time,
-                min_time: *min_time,
-                call_count: times.len(),
-            })
-        }
-        
-        # 内存使用统计
-        for (device, usage) in &self.memory_usage {
-            let peak_usage = usage.iter().max().unwrap_or(&0)
-            let avg_usage = usage.iter().sum::<usize>() / usage.len().max(1)
-            
-            report.add_memory_stats(device, MemoryStats {
-                peak_usage: *peak_usage,
-                average_usage: avg_usage,
-            })
-        }
-        
-        report
-    }
+    println!("{} 耗时: {:.2}ms", name, duration.as_millis())
+    duration
+}
+
+# 比较不同设备性能
+micro compare_devices() {
+    let data = ArrayND::random([1000, 1000])
     
-    # 自动调优建议
-    fn suggest_optimizations(&self) -> Vec<OptimizationSuggestion> {
-        let mut suggestions = Vec::new()
-        
-        # 检查内核性能
-        for (kernel, times) in &self.kernel_times {
-            let avg_time = times.iter().sum::<Duration>() / times.len() as u32
-            
-            if avg_time > Duration::from_millis(100) {
-                suggestions.push(OptimizationSuggestion::SlowKernel {
-                    kernel_name: kernel.clone(),
-                    average_time: avg_time,
-                    recommendation: "考虑使用更高效的算法或增加并行度".to_string(),
-                })
-            }
-        }
-        
-        # 检查内存使用
-        for (device, usage) in &self.memory_usage {
-            let peak = usage.iter().max().unwrap_or(&0)
-            let device_memory = self.get_device_memory(device)
-            
-            if *peak as f64 / device_memory as f64 > 0.9 {
-                suggestions.push(OptimizationSuggestion::HighMemoryUsage {
-                    device: device.clone(),
-                    usage_ratio: *peak as f64 / device_memory as f64,
-                    recommendation: "考虑使用梯度检查点或模型并行来减少内存使用".to_string(),
-                })
-            }
-        }
-        
-        suggestions
-    }
-}
-```
-
-## Unicode 希腊字母支持
-
-Valkyrie 原生支持 Unicode 希腊字母，使数学表达式更加直观和符合学术标准：
-
-```valkyrie
-# 基础希腊字母变量
-let α = 0.01      # alpha - 学习率
-let β = 0.9       # beta - 动量参数
-let γ = 0.99      # gamma - 折扣因子
-let δ = 1e-6      # delta - 数值稳定性
-let ε = 1e-8      # epsilon - 小量
-let ζ = 0.1       # zeta - 正则化强度
-let η = 0.001     # eta - 学习率调度
-let θ = Matrix::random([784, 128])  # theta - 模型参数
-let λ = 0.01      # lambda - 正则化系数
-let μ = Array::zeros([128])         # mu - 均值
-let ν = Array::ones([128])          # nu - 方差
-let ξ = Random::normal(0.0, 1.0)    # xi - 随机变量
-let π = 3.14159265359               # pi - 圆周率
-let ρ = 0.95      # rho - 相关系数
-let σ = 0.1       # sigma - 标准差
-let τ = 1.0       # tau - 时间常数
-let φ = 1.618     # phi - 黄金比例
-let χ = Array::random([64])         # chi - 卡方分布
-let ψ = Matrix::identity(128)       # psi - 波函数
-let ω = 2.0 * π   # omega - 角频率
-
-# 带下标的希腊字母
-let β₁ = 0.9      # Adam优化器第一动量
-let β₂ = 0.999    # Adam优化器第二动量
-let σ₁ = 0.1      # 第一层标准差
-let σ₂ = 0.05     # 第二层标准差
-let θᵢ = Matrix::random([256, 128]) # 第i层参数
-let μₜ = Array::zeros([128])        # t时刻均值
-let νₜ = Array::zeros([128])        # t时刻方差
-
-# 在神经网络中使用希腊字母
-struct NeuralNetwork {
-    θ: Vec<Tensor>,  # 参数向量
-    ∇θ: Vec<Tensor>, # 梯度向量
-    μ: Vec<Tensor>,  # 动量项
-    ν: Vec<Tensor>,  # 二阶动量项
-}
-
-impl NeuralNetwork {
-    # 使用希腊字母的梯度下降
-    fn gradient_descent(&mut self, α: f32) {
-        for (θᵢ, ∇θᵢ) in self.θ.iter_mut().zip(&self.∇θ) {
-            *θᵢ = θᵢ - α * ∇θᵢ
-        }
-    }
+    # CPU 计算
+    let cpu_time = benchmark_algorithm("CPU 矩阵乘法", || {
+        let result = data.matmul(&data)
+    })
     
-    # Adam 优化器
-    fn adam_step(&mut self, α: f32, β₁: f32, β₂: f32, ε: f32, t: usize) {
-        for i in 0..self.θ.len() {
-            let m = β₁ * self.μ[i] + (1.0 - β₁) * self.∇θ[i]
-            let v = β₂ * self.ν[i] + (1.0 - β₂) * self.∇θ[i].powi(2)
-            
-            let m̂ = m / (1.0 - β₁.powi(t as i32))
-            let v̂ = v / (1.0 - β₂.powi(t as i32))
-            
-            self.θ[i] = self.θ[i] - α * m̂ / (v̂.sqrt() + ε)
-            self.μ[i] = m
-            self.ν[i] = v
-        }
-    }
+    # GPU 计算
+    let gpu_time = benchmark_algorithm("GPU 矩阵乘法", || {
+        let data_gpu = data.to_device(&Device::GPU(0))
+        let result = data_gpu.matmul(&data_gpu)
+    })
     
-    # 带正则化的损失函数
-    fn regularized_loss(&self, ŷ: &Tensor, y: &Tensor, λ: f32) -> f32 {
-        let ℒ = self.cross_entropy_loss(ŷ, y)
-        let Ω = self.l2_regularization(λ)
-        ℒ + Ω
-    }
-}
-
-# 数学函数使用希腊字母
-fn σ(x: f64) -> f64 {  # Sigmoid激活函数
-    1.0 / (1.0 + (-x).exp())
-}
-
-fn φ(x: f64) -> f64 {  # 标准正态分布CDF
-    0.5 * (1.0 + (x / 2.0_f64.sqrt()).erf())
-}
-
-fn ψ(x: &Array, θ: &Matrix) -> Array {  # 神经网络前向传播
-    σ(x.matmul(θ))
-}
-
-# 损失函数
-fn ℒ(ŷ: &Array, y: &Array) -> f64 {  # 交叉熵损失
-    let n = y.len() as f64
-    -((y * ŷ.log()).sum() + ((1.0 - y) * (1.0 - ŷ).log()).sum()) / n
-}
-
-# 正则化项
-fn Ω(θ: &Matrix, λ: f64) -> f64 {  # L2正则化
-    λ * (θ * θ).sum() / 2.0
-}
-
-# 梯度计算
-fn ∇ℒ(θ: &Matrix, x: &Array, y: &Array) -> Matrix {  # 损失函数梯度
-    let ŷ = ψ(x, θ)
-    let δ = ŷ - y
-    x.transpose().matmul(&δ)
-}
-
-# 物理常数使用希腊字母
-const π = 3.14159265358979323846
-const φ = 1.618033988749895  # 黄金比例
-const γ = 0.5772156649015329  # 欧拉常数
-const Δ = 4.669201609102990  # Feigenbaum常数
-
-# 高斯分布
-fn gaussian(x: f64, μ: f64, σ: f64) -> f64 {
-    let coefficient = 1.0 / (σ * (2.0 * π).sqrt())
-    let exponent = -0.5 * ((x - μ) / σ).powi(2)
-    coefficient * exponent.exp()
-}
-
-# 统计分布参数
-struct BetaDistribution {
-    α: f64,  # 形状参数1
-    β: f64,  # 形状参数2
-}
-
-struct GammaDistribution {
-    α: f64,  # 形状参数
-    β: f64,  # 率参数
-}
-
-struct DirichletDistribution {
-    α: Vec<f64>,  # 浓度参数向量
-}
-
-# 概率密度函数
-impl BetaDistribution {
-    fn pdf(&self, x: f64) -> f64 {
-        let Β = gamma_function(self.α) * gamma_function(self.β) / gamma_function(self.α + self.β)
-        x.powf(self.α - 1.0) * (1.0 - x).powf(self.β - 1.0) / Β
-    }
-}
-
-# 优化算法中的希腊字母
-struct SGDOptimizer {
-    α: f32,  # 学习率
-    μ: f32,  # 动量系数
-}
-
-struct AdamOptimizer {
-    α: f32,   # 学习率
-    β₁: f32,  # 一阶动量衰减率
-    β₂: f32,  # 二阶动量衰减率
-    ε: f32,   # 数值稳定性参数
-}
-
-struct RMSpropOptimizer {
-    α: f32,  # 学习率
-    ρ: f32,  # 衰减率
-    ε: f32,  # 数值稳定性参数
-}
-```
-
-## 最佳实践
-
-### 1. 设备选择策略
-
-```valkyrie
-# 根据计算复杂度自动选择设备
-fn auto_device_selection(operation: &Operation, input_size: usize) -> ComputeDevice {
-    match operation {
-        Operation::MatMul if input_size > 1024 * 1024 => ComputeDevice::GPU,
-        Operation::ElementWise => ComputeDevice::CPU,
-        Operation::Convolution => ComputeDevice::GPU,
-        Operation::FFT if input_size > 4096 => ComputeDevice::GPU,
-        _ => ComputeDevice::CPU,
-    }
-}
-```
-
-### 2. 内存布局优化
-
-```valkyrie
-# 根据访问模式选择最优布局
-fn optimize_layout(access_pattern: AccessPattern) -> MemoryLayout {
-    match access_pattern {
-        AccessPattern::RowWise => MemoryLayout::RowMajor,
-        AccessPattern::ColumnWise => MemoryLayout::ColumnMajor,
-        AccessPattern::Random => MemoryLayout::Blocked,
-        AccessPattern::Sequential => MemoryLayout::RowMajor,
-    }
-}
-```
-
-### 3. 异步计算流水线
-
-```valkyrie
-# 重叠计算和通信
-async fn pipelined_computation(data_stream: DataStream) {
-    let mut pipeline = ComputePipeline::new()
-    
-    pipeline
-        .stage("load", |batch| batch.to_device_async(GPU))
-        .stage("compute", |batch| model.forward_async(batch))
-        .stage("store", |result| result.to_device_async(CPU))
-    
-    pipeline.run(data_stream).await
-}
-```
-
-通过这种统一的抽象，Valkyrie 能够无缝地在不同的计算设备和内存布局之间切换，为开发者提供了强大而灵活的异构计算能力。
+    println!("GPU 加速比: {:.2}x", cpu_time.as_millis() as f64 / gpu_time.as_millis() as f64)
+}```

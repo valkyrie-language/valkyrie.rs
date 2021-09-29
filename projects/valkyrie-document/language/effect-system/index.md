@@ -347,7 +347,7 @@ class CircuitBreaker {
 ```valkyrie
 # 收集多个异常
 class AggregateException {
-    exceptions: Vec<Any>
+    exceptions: Vector<Any>
     
     micro add(exception: Any) {
         self.exceptions.push(exception)
@@ -358,7 +358,7 @@ class AggregateException {
     }
 }
 
-micro process_batch(items: Vec<Item>) {
+micro process_batch(items: Vector<Item>) {
     let errors = AggregateException { exceptions: [] }
     
     for item in items {

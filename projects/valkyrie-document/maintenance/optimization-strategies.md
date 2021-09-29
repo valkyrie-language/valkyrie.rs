@@ -80,11 +80,11 @@ Nyar 编译器的强大之处不仅在于各层的优化能力，更在于它们
 ```nyar
 const SCALE_FACTOR: i32 = 2;
 
-fn scale(value: i32) -> i32 {
+micro scale(value: i32) -> i32 {
     value * SCALE_FACTOR
 }
 
-fn process() {
+micro process() {
     let result = scale(5);
     // ... use result
 }
@@ -242,17 +242,17 @@ Nyar 编译器支持不同的优化级别（如 `-O0`, `-O1`, `-O2`, `-O3`），
 *   **内联的协同效应示例**
     假设有以下代码：
     ```nyar
-    fn is_valid(code: i32) -> bool {
+    micro is_valid(code: i32) -> bool {
         code > 0
     }
 
-    fn process_code(code: i32) {
+    micro process_code(code: i32) {
         if is_valid(code) {
             // ...
         }
     }
 
-    fn main() {
+    micro main() {
         process_code(10);
     }
     ```

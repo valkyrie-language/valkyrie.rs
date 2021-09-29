@@ -311,7 +311,7 @@ class Application {
 
 ```valkyrie
 # 定义服务作用域
-enum ServiceScope {
+union ServiceScope {
     Singleton,    # 单例
     Transient,    # 瞬态
     Scoped,       # 作用域

@@ -27,9 +27,9 @@ effect State<T> {
     set(value: T): Unit
 }
 
-fn counter() -> Int {
-    let current = perform State.get();
-    perform State.set(current + 1);
+micro counter() -> Int {
+    let current = perform State.get()
+    perform State.set(current + 1)
     current + 1
 }
 ```
@@ -78,8 +78,8 @@ effect Async {
     await<T>(promise: Promise<T>): T
 }
 
-fn fetch_user_data(id: Int) -> User {
-    let response = fetch(`/api/users/${id}`).await;
+micro fetch_user_data(id: Int) -> User {
+    let response = fetch(`/api/users/${id}`).await
     parse_json(response)
 }
 
@@ -95,7 +95,7 @@ A: Valkyrie 提供多种错误处理方式：
 
 ```valkyrie
 // 1. 使用 Result 类型
-fn divide(a: Float, b: Float) -> Result<Float, String> {
+micro divide(a: Float, b: Float) -> Result<Float, String> {
     if b == 0.0 {
         Fail("除零错误")
     } else {
@@ -108,7 +108,7 @@ effect Exception {
     throw(message: String): Never
 }
 
-fn safe_divide(a: Float, b: Float) -> Float {
+micro safe_divide(a: Float, b: Float) -> Float {
     if b == 0.0 {
         perform Exception.throw("除零错误")
     } else {
@@ -147,12 +147,12 @@ import { fetch } from "@std/fetch"
 import { console } from "@std/console"
 
 // 导出给 JavaScript 使用
-export fn greet(name: String) -> String {
+export micro greet(name: String) -> String {
     `Hello, ${name}!`
 }
 
 // 使用 JavaScript 对象
-fn process_data(data: JSObject) -> JSObject {
+micro process_data(data: JSObject) -> JSObject {
     // 处理逻辑
     data
 }
