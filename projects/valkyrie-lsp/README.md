@@ -100,18 +100,26 @@ lspconfig.valkyrie_lsp.setup{}
 [dependencies]
 valkyrie-lsp = { path = "../valkyrie-lsp" }
 tokio = { version = "1.0", features = ["full"] }
-tower-lsp = "0.20"
+oak-lsp = { path = "../../../oaks/projects/oak-lsp" }
 ```
 
 使用示例：
 
 ```rust
-use valkyrie_lsp::{start_lsp_server, ServerMode};
+use oak_lsp::LspServer;
+use valkyrie_lsp::ValkyrieBackend;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 启动 stdio 模式的 LSP 服务器
-    start_lsp_server(ServerMode::Stdio, None).await
+    let backend = Arc::new(ValkyrieBackend::new());
+    let server = LspServer::new(backend);
+
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
+
+    server.run(stdin, stdout).await?;
+    Ok(())
 }
 ```
 

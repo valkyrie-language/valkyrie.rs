@@ -1,0 +1,16 @@
+[package]
+name = "valkyrie-compiler"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Valkyrie language compiler with Chomsky optimization framework"
+license.workspace = true
+repository = "https://github.com/valkyrie-language/valkyrie.rs"
+
+[dependencies]
+valkyrie-parser = { workspace = true }
+valkyrie-types = { workspace = true }
+nyar-types = { workspace = true }
+ordered-float = { workspace = true }
+
+[dev-dependencies]

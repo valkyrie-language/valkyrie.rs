@@ -1,0 +1,1 @@
+mod renamed_inheritance;

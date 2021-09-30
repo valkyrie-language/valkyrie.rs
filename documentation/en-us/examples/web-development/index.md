@@ -51,7 +51,7 @@ widget Counter {
             "-"
         }
         
-        span { "Count: ${count.get()}" }
+        span { "Count: {count.get()}" }
         
         button {
             on_click { count.update { $ + 1 } }
@@ -104,7 +104,7 @@ widget UserPage {
     }
     
     div {
-        h1 { "User: ${id}" }
+        h1 { "User: {id}" }
         # User details
     }
 }

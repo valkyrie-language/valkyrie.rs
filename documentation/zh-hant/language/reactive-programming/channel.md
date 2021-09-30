@@ -20,7 +20,7 @@ go {
 # 在主流程中消費資料
 # rx 本身就是一個非同步流 (Stream)
 loop item in rx {
-    print("Received: ${item}")
+    print("Received: {item}")
 }
 ```
 

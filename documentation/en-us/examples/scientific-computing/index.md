@@ -39,7 +39,7 @@ micro integrate(f: micro(f64) -> f64, a: f64, b: f64, n: i32) -> f64 {
 
 # Calculate π using integration
 let pi_approx = integrate({ 4 / (1 + $ * $) }, 0, 1, 1000)
-print("π ≈ ${pi_approx}")
+print("π ≈ {pi_approx}")
 ```
 
 ## Example: Matrix Operations

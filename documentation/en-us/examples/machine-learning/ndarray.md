@@ -28,10 +28,10 @@ let linspace = NDArray.linspace(0, 1, 11)    # [0, 0.1, 0.2, ..., 1.0]
 ```valkyrie
 let a = NDArray.from([[1, 2, 3], [4, 5, 6]])
 
-print("Shape: ${a.shape}")        # (2, 3)
-print("Dimensions: ${a.ndim}")     # 2
-print("Size: ${a.size}")           # 6
-print("Dtype: ${a.dtype}")         # f64
+print("Shape: {a.shape}")        # (2, 3)
+print("Dimensions: {a.ndim}")     # 2
+print("Size: {a.size}")           # 6
+print("Dtype: {a.dtype}")         # f64
 ```
 
 ## Indexing and Slicing

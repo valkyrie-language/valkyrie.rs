@@ -1,0 +1,11 @@
+[package]
+name = "nyar"
+version.workspace = true
+edition.workspace = true
+description = "Shared backend infrastructure for Nyar-family compilers"
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+miette = { workspace = true }
+serde = { workspace = true }

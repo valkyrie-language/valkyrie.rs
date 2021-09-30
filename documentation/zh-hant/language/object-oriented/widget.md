@@ -12,7 +12,7 @@ widget Greeting {
     name: string
     
     view {
-        Text("Hello, ${self.name}!")
+        Text("Hello, {self.name}!")
     }
 }
 ```
@@ -44,7 +44,7 @@ widget Counter {
     
     view {
         Column {
-            Text("Count: ${self.count}")
+            Text("Count: {self.count}")
             Button {
                 text: "Increment"
                 on_click: { self.count += 1 }

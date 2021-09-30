@@ -54,7 +54,7 @@ X-Grammar 使用标签来描述 UI 结构。所有的交互和数据流动都通
     - **标识符简写**：`name=variable`。
     - **表达式求值**：`name=(expression)`。
 - **闭包属性 `{ }`**：用于传递逻辑块（闭包）。在底层，这通常对应于 Widget 的事件注册方法（如 `on_click`）。
-- **内容插值 `${ }` / `$ident`**：在标签文本内容中，使用 `$` 引导进行动态插值。
+- **内容插值 `{ }`**：在标签文本内容中，使用 `{expr}` 进行动态插值。
 
 ```xml
 <div class="container">
@@ -68,7 +68,7 @@ X-Grammar 使用标签来描述 UI 结构。所有的交互和数据流动都通
     <!-- 事件转发：本质上就是将父组件传入的闭包 prop 传递给子组件 -->
     <CustomWidget on_click=on_click />
     
-    <p>当前进度：${progress}%</p>
+    <p>当前进度：{progress}%</p>
 </div>
 ```
 
@@ -100,7 +100,7 @@ X-Grammar 使用标签来描述 UI 结构。所有的交互和数据流动都通
 支持 `loop ... in ...` 语法。由于作为关键字处理，Parser 可以更精确地解析迭代器和解构赋值。
 ```xml
 <loop (item, index) in (list)>
-    <li key=index>${item.name}</li>
+    <li key=index>{item.name}</li>
 <else/>
     <p>列表为空</p>
 </loop>
@@ -190,7 +190,7 @@ X-Grammar 没有任何“魔法指令”，它的所有标签 and 属性都会 1
 | :--- | :--- | :--- |
 | `name=(val)` | 属性赋值 (立即) | `.name(val)` 或 `name = val` |
 | `name={...}` | 闭包传递 (延迟) | `name { ... }` 或 `on_name { ... }` |
-| `$ident` / `${expr}` | 文本插值 | 转换为字符串并渲染 |
+| `{expr}` | 文本插值 | 转换为字符串并渲染 |
 | `<if (cond)>` | 条件分支 | `if cond { ... }` |
 | `<match (val)>` | 模式匹配 | `match val { ... }` |
 | `<loop (i) in (L)>` | 循环迭代 | `loop i in L { ... }` |
@@ -208,7 +208,7 @@ Valkyrie 不需要 `v-bind`, `on:` 或 `v-if` 这种“属性指令”，因为 
 - **回归编程本质**：如果一个 Widget 有 `on_click` 方法或 `disabled` 字段，你就在 X-Grammar 里直接写 `on_click` 或 `disabled`。
 - **Valkyrie 的统一方案**：
     - **逻辑归关键字**：`<if>`, `<loop>`, `<slot>` 等逻辑容器直接处理结构控制。
-    - **内容归插值**：使用 `$ident` 或 `${expr}` 进行动态文本注入。
+    - **内容归插值**：使用 `{expr}` 进行动态文本注入。
     - **片段归属性**：所有的“插槽传递”在 Valkyrie 中都被统一为**带块的属性赋值**。
 
 #### 场景 1：直接在标签内定义 (Inline Slot)

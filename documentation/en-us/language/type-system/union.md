@@ -57,17 +57,17 @@ unite Expression {
 # Basic pattern matching
 let result: Result⟨i32, string⟩ = Fine { value: 42 }
 match result {
-    case Fine { value }: print("Success: ${value}")
-    case Fail { error }: print("Failure: ${error}")
+    case Fine { value }: print("Success: {value}")
+    case Fail { error }: print("Failure: {error}")
 }
 ```
 
 # Nested pattern matching
 let nested: Result⟨Option⟨i32⟩, string⟩ = Fine { value: Some { value: 42 } }
 match nested {
-    case Fine { value: Some { value } }: print("Value: ${value}")
+    case Fine { value: Some { value } }: print("Value: {value}")
     case Fine { value: None }: print("No value")
-    case Fail { error }: print("Error: ${error}")
+    case Fail { error }: print("Error: {error}")
 }
 ```
 
@@ -76,7 +76,7 @@ match nested {
 ```valkyrie
 # Simplified pattern matching
 if let Fine { value } = result {
-    print("Successfully got value: ${value}")
+    print("Successfully got value: {value}")
 }
 
 # With else branch

@@ -1,0 +1,13 @@
+{
+    name: "test_clr_hello",
+    version: "0.1.0",
+    dependencies: {
+        "std": false,
+        "core": false
+    },
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}

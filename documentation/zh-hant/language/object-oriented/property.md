@@ -98,7 +98,7 @@ class BankAccount {
     }
     
     private micro on_balance_changed(self, old: f64, new: f64) {
-        print("Balance changed from ${old} to ${new}")
+        print("Balance changed from {old} to {new}")
     }
 }
 ```

@@ -1,17 +1,28 @@
 {
-    "name": "native-nyar",
+    "name": "@valkyrie/rusty-valkyrie",
     "private": true,
     "scripts": {
         "build:pre": "cargo run --release --color=always --package nyar-prebuild --bin nyar-prebuild && cargo fmt --all",
-        "build": "cargo build --release",
+        "build": "tsx scripts/build.ts",
+        "build:lsp": "tsx scripts/build.ts lsp",
+        "build:legion": "tsx scripts/build.ts legion",
+        "wasm:build": "cargo component build --release --target wasm32-wasip2 --package valkyrie-wasm32-wasi && npx jco transpile target/wasm32-wasip2/release/valkyrie_wasm32_wasi.wasm -o projects/valkyrie-playground/src/lib --map \"valkyrie:wasm32-wasi/*=./*\" --no-typescript",
         "test": "cargo build",
         "fmt": "cargo fmt --all",
+        "coverage": "cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info",
+        "coverage:html": "cargo llvm-cov --all-features --workspace --html",
         "push": "yarn test && git push",
         "reset": "git reset Head~ --soft",
-        "u": "cargo upgrade --incompatible"
+        "u": "cargo upgrade --incompatible",
+        "play": "pnpm --filter valkyrie-playground dev"
     },
     "dependencies": {
         "@bytecodealliance/jco": "^1.8.1"
+    },
+    "devDependencies": {
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.3",
+        "@types/node": "^22.13.1"
     },
     "packageManager": "pnpm@10.12.2"
 }

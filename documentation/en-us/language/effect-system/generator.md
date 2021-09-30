@@ -63,7 +63,7 @@ micro process_items(items: [utf8]) -> i32 {
 # Usage
 let processor = process_items(["item1", "item2", "item3"])
 for result in processor {
-    print("Processed: ${result}")
+    print("Processed: {result}")
 }
 let total_count = processor.return_value()  # Get final return value
 ```
@@ -215,7 +215,7 @@ micro pipeline_stage2(input: Iterator⟨i32⟩) {
 
 micro pipeline_stage3(input: Iterator⟨i32⟩) {
     for value in input {
-        yield "Result: ${ value }"  # Stage 3: format
+        yield "Result: {value}"  # Stage 3: format
     }
 }
 
@@ -308,7 +308,7 @@ micro read_lines(filename: utf8) {
 
 # Usage
 for line in read_lines("data.txt") {
-    print("Line: ${ line }")
+    print("Line: {line}")
 }
 ```
 
@@ -359,7 +359,7 @@ micro error_prone_generator() {
     }
     .catch {
         case _:
-            yield "Error occurred: ${ error }"
+            yield "Error occurred: {error}"
             raise error  # Re-throw exception
     }
 }
@@ -373,7 +373,7 @@ try {
 }
 .catch {
     case _:
-        print("Generator exception: ${ error }")
+        print("Generator exception: {error}")
 }
 ```
 

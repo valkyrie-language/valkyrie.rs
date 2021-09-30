@@ -23,7 +23,7 @@ let point = class {
     }
 }
 
-print("Distance: ${point.distance()}")
+print("Distance: {point.distance()}")
 ```
 
 ### As a Return Value (Recommended Approach) (As a Return Value)
@@ -47,7 +47,7 @@ micro create_circle(radius: f64) -> Shape {
         }
         
         micro draw(self) {
-            print("Drawing circle with radius ${self.radius}")
+            print("Drawing circle with radius {self.radius}")
         }
     }
 }
@@ -285,7 +285,7 @@ micro configure_logger(config: class {
     level: string,
     output: string,
 }) {
-    print("Logging to ${config.output} at level ${config.level}")
+    print("Logging to {config.output} at level {config.level}")
 }
 
 # Pass an anonymous object during call

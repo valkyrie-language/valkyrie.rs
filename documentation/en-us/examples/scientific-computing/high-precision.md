@@ -42,7 +42,7 @@ micro factorial(n: i32) -> BigInt {
 
 # Calculate 100!
 let fact_100 = factorial(100)
-print("100! = ${fact_100}")
+print("100! = {fact_100}")
 ```
 
 ## Arbitrary-Precision Decimals
@@ -90,7 +90,7 @@ micro compound_interest(
 let initial = BigDecimal.from("10000.00")
 let rate = BigDecimal.from("5.5")
 let final_amount = compound_interest(initial, rate, 10, 12)
-print("Final amount: $${final_amount}")
+print("Final amount: ${final_amount}")
 ```
 
 ## Fixed-Point Arithmetic
@@ -108,7 +108,7 @@ let quantity: Money = FixedPoint.from("3")
 let total = price * quantity
 
 # No floating-point errors!
-print("Total: ${total}")  # Exactly 59.97
+print("Total: {total}")  # Exactly 59.97
 ```
 
 ## Rational Numbers
@@ -173,7 +173,7 @@ PrecisionContext.set_default(Precision::bits(256))
 # Scoped precision
 PrecisionContext.with_precision(Precision::decimal(100)) {
     let precise_pi = compute_pi()
-    print("π with 100 decimal places: ${precise_pi}")
+    print("π with 100 decimal places: {precise_pi}")
 }
 ```
 
@@ -189,7 +189,7 @@ let b = Interval.new(2.0, 0.002)  # 2.0 ± 0.002
 let sum = a + b  # 3.0 ± 0.003
 let product = a * b  # 2.0 ± error bounds computed
 
-print("Result: ${product.value} ± ${product.error}")
+print("Result: {product.value} ± {product.error}")
 ```
 
 ## Performance Optimization

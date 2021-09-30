@@ -90,7 +90,7 @@ non-exclusive license:
 
 * **(a)** under intellectual property rights (other than patent or trademark)
     Licensable by such Contributor to use, reproduce, make available,
-    modify, display, perform, distribute, and otherwise exploit its
+    modify, display, raise, distribute, and otherwise exploit its
     Contributions, either on an unmodified basis, with Modifications, or
     as part of a Larger Work; and
 * **(b)** under Patent Claims of such Contributor to make, use, sell, offer

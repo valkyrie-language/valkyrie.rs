@@ -2,10 +2,18 @@
 # shellcheck disable=SC2103
 cd projects || cd ../projects
 
-cd nyar-ast
-cargo publish --allow-dirty || cargo bump patch
+cd valkyrie-types
+cargo publish
 cd ..
 
-cd valkyrie-parser
-cargo publish --allow-dirty || cargo bump patch
+cd valkyrie-compiler
+cargo publish
+cd ..
+
+cd valkyrie-interpreter
+cargo publish
+cd ..
+
+cd valkyrie
+cargo publish
 cd ..

@@ -118,5 +118,5 @@ The generated HTML will be compact:
 | :--- | :--- | :--- | :--- |
 | **Positioning** | Text/Code Generation | UI Visual Projection | Object DSL Construction |
 | **Delimiters** | `<% ... %>` | `<tag> ... </tag>` | `{ ... }` |
-| **Interpolation** | `{ expr }` | `$ident` / `${expr}` | `${expr}` |
+| **Interpolation** | `{ expr }` | `{expr}` | `{expr}` |
 | **Logic** | `<% for ... %>` | `<for ...>` | `for ... { ... }` |

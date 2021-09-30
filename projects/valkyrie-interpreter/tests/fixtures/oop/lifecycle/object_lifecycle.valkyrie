@@ -1,0 +1,123 @@
+trait Finalize {
+    micro finalize(mut self)
+}
+
+class Resource {
+    name: utf8
+    handle: i32
+    
+    initiate(mut self, name: utf8) {
+        self.name = name
+        self.handle = open_resource(name)
+        print("Resource '{self.name}' created with handle {self.handle}")
+    }
+}
+
+imply Resource: Finalize {
+    micro finalize(mut self) {
+        print("Resource '{self.name}' finalizing...")
+        close_resource(self.handle)
+        self.handle = -1
+    }
+}
+
+class FileWrapper {
+    path: utf8
+    handle: i32 = -1
+    
+    initiate(mut self, path: utf8) {
+        self.path = path
+        self.handle = open_file(path)
+        print("File '{self.path}' opened with handle {self.handle}")
+    }
+}
+
+imply FileWrapper: Finalize {
+    micro finalize(mut self) {
+        if self.handle >= 0 {
+            print("File '{self.path}' closing...")
+            close_file(self.handle)
+            self.handle = -1
+        }
+    }
+}
+
+class ConnectionPool {
+    connections: i32
+    active: i32 = 0
+    
+    initiate(mut self, max_connections: i32) {
+        self.connections = max_connections
+        print("Connection pool created with {self.connections} slots")
+    }
+    
+    micro acquire(mut self) -> i32 {
+        if self.active < self.connections {
+            self.active += 1
+            print("Connection acquired: {self.active}/{self.connections}")
+            self.active
+        } else {
+            print("No available connections")
+            -1
+        }
+    }
+    
+    micro release(mut self) {
+        if self.active > 0 {
+            self.active -= 1
+            print("Connection released: {self.active}/{self.connections}")
+        }
+    }
+}
+
+imply ConnectionPool: Finalize {
+    micro finalize(mut self) {
+        print("Connection pool shutting down, active: {self.active}")
+        loop self.active > 0 {
+            self.release()
+        }
+    }
+}
+
+micro open_resource(name: utf8) -> i32 {
+    let hash = name.length as i32 + 1000
+    hash
+}
+
+micro close_resource(handle: i32) {
+    print("Closing resource handle {handle}")
+}
+
+micro open_file(path: utf8) -> i32 {
+    path.length as i32 + 2000
+}
+
+micro close_file(handle: i32) {
+    print("Closing file handle {handle}")
+}
+
+micro main() {
+    print("=== Testing Resource Lifecycle ===")
+    
+    let resource = Resource { name: "database" }
+    print("Using resource {resource.name}")
+    resource.finalize()
+    
+    print("")
+    print("=== Testing File Lifecycle ===")
+    
+    let file = FileWrapper { path: "/data/config.json" }
+    print("Reading file {file.path}")
+    file.finalize()
+    
+    print("")
+    print("=== Testing Connection Pool Lifecycle ===")
+    
+    let pool = ConnectionPool { max_connections: 3 }
+    pool.acquire()
+    pool.acquire()
+    pool.acquire()
+    pool.acquire()
+    pool.release()
+    pool.finalize()
+}

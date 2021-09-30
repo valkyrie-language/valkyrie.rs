@@ -40,15 +40,15 @@ effect MetricsAspect {
 class ConsoleLogHandler {
     handle LogAspect {
         before_method(class_name, method_name, args) {
-            print("→ ${class_name}.${method_name}(${args})")
+            print("→ {class_name}.{method_name}({args})")
         }
         
         after_method(class_name, method_name, result) {
-            print("← ${class_name}.${method_name} = ${result}")
+            print("← {class_name}.{method_name} = {result}")
         }
         
         on_error(class_name, method_name, error) {
-            print("× ${class_name}.${method_name} throws ${error}")
+            print("× {class_name}.{method_name} throws {error}")
         }
     }
 }

@@ -59,16 +59,16 @@ class Temperature {
 
 # Usage
 let mut temp = Temperature { celsius: 25.0 }
-print("Celsius: ${temp.celsius}")     # 25.0
-print("Fahrenheit: ${temp.fahrenheit}")   # 77.0
-print("Kelvin: ${temp.kelvin}")      # 298.15
+print("Celsius: {temp.celsius}")     # 25.0
+print("Fahrenheit: {temp.fahrenheit}")   # 77.0
+print("Kelvin: {temp.kelvin}")      # 298.15
 
 # Modify temperature via setter
 temp.fahrenheit = 86.0  # Set Fahrenheit
-print("Celsius: ${temp.celsius}")     # 30.0
+print("Celsius: {temp.celsius}")     # 30.0
 
 temp.kelvin = 300.0     # Set Kelvin
-print("Celsius: ${temp.celsius}")     # 26.85
+print("Celsius: {temp.celsius}")     # 26.85
 ```
 
 ## Read-only and Write-only Properties (Read-only and Write-only Properties)
@@ -83,7 +83,7 @@ class Person {
     
     # Read-only property - full name
     get full_name(self) -> utf8 {
-        "${self.first_name} ${self.last_name}"
+        "{self.first_name} {self.last_name}"
     }
     
     # Read-only property - age (based on current year)
@@ -112,7 +112,7 @@ class Logger {
     # Write-only property - add log message
     set message(mut self, msg: string) {
         let timestamp = get_current_timestamp()
-        self.messages.push("[${timestamp}] ${msg}")
+        self.messages.push("[{timestamp}] {msg}")
     }
     
     # Method to get all messages
@@ -137,7 +137,7 @@ class BankAccount {
     # Setter with validation
     set balance(mut self, value: f64) {
         if value < self.min_balance {
-            panic("Balance cannot be lower than minimum limit: ${self.min_balance}")
+            panic("Balance cannot be lower than minimum limit: {self.min_balance}")
         }
         self.balance = value
     }

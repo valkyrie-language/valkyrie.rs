@@ -92,18 +92,18 @@ using std::unicode::{UnicodeProperties, GeneralCategory}
 micro analyze_text(text: string) {
     for char in text.chars() {
         if char.is_letter() {
-            print("'${char}' is a letter")
+            print("'{char}' is a letter")
         }
         if char.is_digit() {
-            print("'${char}' is a digit")
+            print("'{char}' is a digit")
         }
         if char.is_emoji() {
-            print("'${char}' is an emoji")
+            print("'{char}' is an emoji")
         }
         
         # Get Unicode category
         let category = char.general_category()
-        print("'${char}' category: ${category}")
+        print("'{char}' category: {category}")
     }
 }
 ```

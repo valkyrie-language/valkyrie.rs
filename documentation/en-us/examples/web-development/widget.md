@@ -10,7 +10,7 @@ widget Greeting {
     
     div {
         class = "greeting"
-        h1 { "Hello, ${name}!" }
+        h1 { "Hello, {name}!" }
         p { "Welcome to Valkyrie." }
     }
 }
@@ -30,7 +30,7 @@ widget Counter {
             "-"
         }
         
-        span { " ${count.get()} " }
+        span { " {count.get()} " }
         
         button {
             on_click { count.update { $ + 1 } }
@@ -52,7 +52,7 @@ widget Button {
     on_click: Option⟨micro()⟩ = None
     
     button {
-        class = "btn btn-${variant}"
+        class = "btn btn-{variant}"
         disabled = disabled
         on_click { on_click?() }
         text
@@ -159,8 +159,8 @@ widget ShoppingCart {
         
         div {
             class = "cart-summary"
-            span { "Items: ${self.item_count()}" }
-            span { "Total: $${self.total()}" }
+            span { "Items: {self.item_count()}" }
+            span { "Total: ${self.total()}" }
         }
     }
 }

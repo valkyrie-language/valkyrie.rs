@@ -1,221 +1,175 @@
-//! Valkyrie Language Server Protocol Implementation
-//!
-//! 这是基于 Nyar 编译器基础设施的 Valkyrie 语言 LSP 实现。
-//!
-//! ## 设计理念
-//!
-//! Nyar 作为编译器本身不提供 LSP 服务，而是为宿主语言（如 Valkyrie）
-//! 提供统一的 LSP 查询体系。这种设计有以下优势：
-//!
-//! 1. **模块化**：编译器核心与 LSP 服务分离
-//! 2. **可复用**：多个宿主语言可以共享相同的基础设施
-//! 3. **可扩展**：每个宿主语言可以定制自己的 LSP 功能
-//!
-//! ## 架构概览
-//!
-//! ```text
-//! ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-//! │   IDE Client    │◄──►│  Valkyrie LSP   │◄──►│ Nyar Compiler   │
-//! │                 │    │                 │    │ Infrastructure  │
-//! │ - VS Code       │    │ - Protocol      │    │                 │
-//! │ - IntelliJ      │    │ - Handlers      │    │ - AST/HIR/MIR   │
-//! │ - Vim/Neovim    │    │ - Diagnostics   │    │ - Query Engine  │
-//! │ - Emacs         │    │ - State Mgmt    │    │ - Error System  │
-//! └─────────────────┘    └─────────────────┘    └─────────────────┘
-//! ```
-//!
-//! ## 功能特性
-//!
-//! - **完整的 LSP 支持**：实现了 LSP 3.17 规范的大部分功能
-//! - **实时诊断**：基于 Nyar 编译器的错误和警告系统
-//! - **智能补全**：上下文感知的代码补全
-//! - **符号导航**：定义跳转、引用查找、符号搜索
-//! - **代码操作**：快速修复、重构建议
-//! - **语义高亮**：基于语义分析的语法高亮
-//! - **自定义扩展**：Valkyrie 特定的 LSP 扩展方法
-//!
-//! ## 使用示例
-//!
-//! ### 作为独立服务器运行
-//!
-//! ```bash
-//! # 标准输入输出模式（默认）
-//! valkyrie-lsp --stdio
-//!
-//! # TCP 模式（用于调试）
-//! valkyrie-lsp --tcp 9257
-//! ```
-//!
-//! ### 作为库使用
-//!
-//! ```rust
-//! use tower_lsp::{LspService, Server};
-//! use valkyrie_lsp::{start_lsp_server, ValkyrieBackend};
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let (service, socket) = LspService::build(|client| ValkyrieBackend::new(client)).finish();
-//!
-//!     let stdin = tokio::io::stdin();
-//!     let stdout = tokio::io::stdout();
-//!
-//!     Server::new(stdin, stdout, socket).serve(service).await;
-//!     Ok(())
-//! }
-//! ```
+#![doc = include_str!("readme.md")]
+#![warn(missing_docs)]
+#![feature(new_range_api)]
+
+use oak_lsp::LspServer;
+use std::sync::Arc;
+use tokio::net::{TcpListener, TcpStream};
+use tracing::{info, warn, Level};
+use tracing_subscriber::FmtSubscriber;
 
 pub mod backend;
-pub mod capabilities;
-pub mod diagnostics;
-pub mod handlers;
-pub mod state;
+mod capabilities;
+mod diagnostics;
+mod errors;
+mod handlers;
+mod legion;
+mod state;
+pub mod types;
 
-// 重新导出主要类型
-pub use backend::ValkyrieBackend;
-pub use capabilities::server_capabilities;
-pub use diagnostics::{DiagnosticFilterConfig, DiagnosticStats, DiagnosticsManager};
-pub use state::{DocumentState, ServerState, SymbolInfo};
+pub use backend::ValkyrieLanguageService;
 
-// 重新导出处理器
-pub use handlers::{CodeActionHandler, DocumentSymbolHandler, FormattingHandler, RenameHandler, WorkspaceSymbolHandler};
+/// 日志级别配置
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LogLevel {
+    /// 关闭日志
+    Off,
+    /// 错误级别
+    Error,
+    /// 警告级别
+    Warn,
+    /// 信息级别（默认）
+    #[default]
+    Info,
+    /// 调试级别
+    Debug,
+    /// 跟踪级别
+    Trace,
+}
 
-/// LSP 服务器版本信息
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// LSP 服务器名称
-pub const SERVER_NAME: &str = "valkyrie-lsp";
-
-/// 支持的文件扩展名
-pub const SUPPORTED_EXTENSIONS: &[&str] = &[".vk", ".valkyrie"];
-
-/// 便捷函数：启动 LSP 服务器
-///
-/// 这个函数提供了一个简单的方式来启动 Valkyrie LSP 服务器。
-///
-/// # 参数
-///
-/// * `mode` - 服务器模式（stdio 或 tcp）
-/// * `port` - TCP 端口（仅在 TCP 模式下使用）
-///
-/// # 示例
-///
-/// ```rust
-/// use valkyrie_lsp::{start_lsp_server, ServerMode};
-///
-/// #[tokio::main]
-/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     start_lsp_server(ServerMode::Stdio, None).await
-/// }
-/// ```
-pub async fn start_lsp_server(mode: ServerMode, port: Option<u16>) -> Result<(), Box<dyn std::error::Error>> {
-    use tokio::net::TcpListener;
-    use tower_lsp::{LspService, Server};
-    use tracing::info;
-
-    match mode {
-        ServerMode::Stdio => {
-            let stdin = tokio::io::stdin();
-            let stdout = tokio::io::stdout();
-
-            let (service, socket) = LspService::build(|client| ValkyrieBackend::new(client))
-                .custom_method("valkyrie/getAst", ValkyrieBackend::get_ast)
-                .custom_method("valkyrie/getHir", ValkyrieBackend::get_hir)
-                .custom_method("valkyrie/querySymbol", ValkyrieBackend::query_symbol)
-                .finish();
-
-            info!("Valkyrie LSP Server started on stdio");
-            Server::new(stdin, stdout, socket).serve(service).await;
+impl LogLevel {
+    /// 转换为 tracing::Level
+    pub fn to_tracing_level(self) -> Option<Level> {
+        match self {
+            LogLevel::Off => None,
+            LogLevel::Error => Some(Level::ERROR),
+            LogLevel::Warn => Some(Level::WARN),
+            LogLevel::Info => Some(Level::INFO),
+            LogLevel::Debug => Some(Level::DEBUG),
+            LogLevel::Trace => Some(Level::TRACE),
         }
-        ServerMode::Tcp => {
-            let port = port.unwrap_or(9257);
-            let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
-            info!("Valkyrie LSP Server listening on 127.0.0.1:{}", port);
+    }
 
-            loop {
-                let (stream, addr) = listener.accept().await?;
-                info!("New connection from {}", addr);
+    /// 从字符串解析日志级别
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "off" => Some(LogLevel::Off),
+            "error" => Some(LogLevel::Error),
+            "warn" | "warning" => Some(LogLevel::Warn),
+            "info" => Some(LogLevel::Info),
+            "debug" => Some(LogLevel::Debug),
+            "trace" => Some(LogLevel::Trace),
+            _ => None,
+        }
+    }
+}
 
-                tokio::spawn(async move {
-                    let (read, write) = tokio::io::split(stream);
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LogLevel::Off => write!(f, "off"),
+            LogLevel::Error => write!(f, "error"),
+            LogLevel::Warn => write!(f, "warn"),
+            LogLevel::Info => write!(f, "info"),
+            LogLevel::Debug => write!(f, "debug"),
+            LogLevel::Trace => write!(f, "trace"),
+        }
+    }
+}
 
-                    let (service, socket) = LspService::build(|client| ValkyrieBackend::new(client))
-                        .custom_method("valkyrie/getAst", ValkyrieBackend::get_ast)
-                        .custom_method("valkyrie/getHir", ValkyrieBackend::get_hir)
-                        .custom_method("valkyrie/querySymbol", ValkyrieBackend::query_symbol)
-                        .finish();
+/// LSP 服务器启动配置
+#[derive(Debug, Clone, Default)]
+pub struct LspOptions {
+    /// 是否使用标准输入输出模式
+    pub stdio: bool,
+    /// TCP 模式下的端口（如果提供则启用 TCP 模式）
+    pub tcp_port: Option<u16>,
+    /// 日志级别配置
+    pub log_level: LogLevel,
+    /// 日志输出文件路径（可选）
+    pub log_file: Option<std::path::PathBuf>,
+}
 
-                    let server = Server::new(read, write, socket);
+/// 初始化日志订阅器
+fn init_logging(options: &LspOptions) -> Result<(), Box<dyn std::error::Error>> {
+    if options.log_level == LogLevel::Off {
+        return Ok(());
+    }
 
-                    if let Err(e) = server.serve(service).await {
-                        tracing::warn!("Connection error: {}", e);
-                    }
-                });
-            }
+    let level = options.log_level.to_tracing_level();
+
+    if let Some(lvl) = level {
+        if let Some(ref log_file) = options.log_file {
+            let file = std::fs::File::create(log_file)?;
+            let subscriber = FmtSubscriber::builder()
+                .with_max_level(lvl)
+                .with_writer(file)
+                .with_ansi(false)
+                .finish();
+            tracing::subscriber::set_global_default(subscriber)
+                .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
+        } else {
+            let subscriber = FmtSubscriber::builder()
+                .with_max_level(lvl)
+                .with_writer(std::io::stderr)
+                .with_ansi(true)
+                .finish();
+            tracing::subscriber::set_global_default(subscriber)
+                .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
         }
     }
 
     Ok(())
 }
 
-/// LSP 服务器运行模式
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ServerMode {
-    /// 标准输入输出模式
-    Stdio,
-    /// TCP 模式
-    Tcp,
-}
+/// 启动 LSP 服务器
+pub async fn start_lsp_server(options: LspOptions) -> Result<(), Box<dyn std::error::Error>> {
+    init_logging(&options)?;
 
-/// LSP 服务器配置
-#[derive(Debug, Clone)]
-pub struct ServerConfig {
-    /// 服务器模式
-    pub mode: ServerMode,
-    /// TCP 端口（仅在 TCP 模式下使用）
-    pub port: Option<u16>,
-    /// 日志级别
-    pub log_level: tracing::Level,
-    /// 诊断过滤配置
-    pub diagnostic_filter: DiagnosticFilterConfig,
-    /// 是否启用自定义扩展方法
-    pub enable_custom_methods: bool,
-}
+    info!("Starting Valkyrie LSP Server (log level: {})", options.log_level);
 
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            mode: ServerMode::Stdio,
-            port: None,
-            log_level: tracing::Level::INFO,
-            diagnostic_filter: DiagnosticFilterConfig::default(),
-            enable_custom_methods: true,
-        }
+    if let Some(port) = options.tcp_port {
+        start_tcp_server(port).await
+    } else {
+        start_stdio_server().await
     }
 }
 
-/// 使用配置启动 LSP 服务器
-pub async fn start_lsp_server_with_config(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>> {
-    // 初始化日志系统
-    tracing_subscriber::fmt().with_max_level(config.log_level).init();
+/// 启动基于标准输入输出的 LSP 服务器
+pub async fn start_stdio_server() -> Result<(), Box<dyn std::error::Error>> {
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
 
-    start_lsp_server(config.mode, config.port).await
+    let backend = Arc::new(ValkyrieLanguageService::new());
+    let server = LspServer::new(backend);
+
+    info!("Valkyrie LSP Server started on stdio");
+    server.run(stdin, stdout).await?;
+
+    Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// 启动基于 TCP 的 LSP 服务器（用于调试）
+pub async fn start_tcp_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
+    info!("Valkyrie LSP Server listening on 127.0.0.1:{}", port);
 
-    #[test]
-    fn test_server_config_default() {
-        let config = ServerConfig::default();
-        assert_eq!(config.mode, ServerMode::Stdio);
-        assert_eq!(config.port, None);
-        assert!(config.enable_custom_methods);
+    loop {
+        let (stream, addr) = listener.accept().await?;
+        info!("New connection from {}", addr);
+
+        tokio::spawn(handle_connection(stream));
     }
+}
 
-    #[test]
-    fn test_supported_extensions() {
-        assert!(SUPPORTED_EXTENSIONS.contains(&".vk"));
-        assert!(SUPPORTED_EXTENSIONS.contains(&".valkyrie"));
+/// 处理单个 TCP 连接
+async fn handle_connection(stream: TcpStream) {
+    let (read, write) = tokio::io::split(stream);
+
+    let backend = Arc::new(ValkyrieLanguageService::new());
+    let server = LspServer::new(backend);
+
+    if let Err(e) = server.run(read, write).await {
+        warn!("Error handling connection: {}", e);
     }
 }

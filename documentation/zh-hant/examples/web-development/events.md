@@ -35,8 +35,8 @@ class MyProcessor {
         // 訂閱單點事件
         op.on_completed = micro(result) {
             match result {
-                case Fine { value }: print("操作完成: ${value}")
-                case Fail { error }: print("操作失敗: ${error}")
+                case Fine { value }: print("操作完成: {value}")
+                case Fail { error }: print("操作失敗: {error}")
             }
         }
         op.start()
@@ -79,13 +79,13 @@ class Button {
 
 class Logger {
     micro log_click(self, sender: &Button, args: &ClickEventArgs) {
-        print("日誌：按鈕 '${sender.id}' 被點击。")
+        print("日誌：按鈕 '{sender.id}' 被點击。")
     }
 }
 
 class Analytics {
     micro track_click(self, sender: &Button, args: &ClickEventArgs) {
-        print("分析：記錄按鈕 '${sender.id}' 的點击事件。")
+        print("分析：記錄按鈕 '{sender.id}' 的點击事件。")
     }
 }
 

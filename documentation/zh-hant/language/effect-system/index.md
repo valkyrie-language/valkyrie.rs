@@ -48,7 +48,7 @@ try {
     risky_operation()
 }
 .catch {
-    case Fail(error): print("Caught error: ${error}")
+    case Fail(error): print("Caught error: {error}")
 }
 
 # 型別特定的異常捕獲
@@ -57,9 +57,9 @@ try {
 }
 .catch {
     case Fail(error: NetworkError):
-            print("Network error: ${error.message}")
+            print("Network error: {error.message}")
             retry_connection()
-    case Fail(error: string): print("String error: ${error}")
+    case Fail(error: string): print("String error: {error}")
     else: print("Unknown error")
 }
 ```
@@ -83,7 +83,7 @@ try {
     validate_age(-5)
 }
 .catch {
-    case message: string: print("Validation error: ${message}")
+    case message: string: print("Validation error: {message}")
 }
 ```
 
@@ -113,7 +113,7 @@ try {
         400 => print("Bad request")
         401 => print("Unauthorized")
         404 => print("Not found")
-        _ => print("HTTP error: ${code}")
+        _ => print("HTTP error: {code}")
     }
 }
 ```
@@ -164,9 +164,9 @@ try {
     save_user(invalid_user)
 }
 .catch {
-    case ValidationError: print("Validation failed for field '${error.field}': ${error.constraint}")
+    case ValidationError: print("Validation failed for field '{error.field}': {error.constraint}")
         case DatabaseError:
-        print("Database error at ${error.timestamp}: ${error.message}")
+        print("Database error at {error.timestamp}: {error.message}")
         log_error(error)
 }
 ```
@@ -193,7 +193,7 @@ try {
     level1()
 }
 .catch {
-    case _: print("Caught at top level: ${error}")
+    case _: print("Caught at top level: {error}")
 }
 ```
 
@@ -319,10 +319,10 @@ try {
     let result = retry(3, { =>
         unreliable_network_call()
     })
-    print("Success: ${result}")
+    print("Success: {result}")
 }
 .catch {
-    case RetryExhausted: print("Failed after ${error.attempts} attempts: ${error.last_error}")
+    case RetryExhausted: print("Failed after {error.attempts} attempts: {error.last_error}")
 }
 ```
 
@@ -471,15 +471,15 @@ micro application_main() {
     }
     .catch {
         case ConfigurationError:
-            print("Configuration error: ${error.message}")
+            print("Configuration error: {error.message}")
             print("Please check your configuration file")
             exit(1)
         case NetworkError:
-            print("Network error: ${error.message}")
+            print("Network error: {error.message}")
             print("Please check your internet connection")
             exit(2)
         else:
-            print("Unexpected error: ${error}")
+            print("Unexpected error: {error}")
             log_error(error)
             exit(99)
     }

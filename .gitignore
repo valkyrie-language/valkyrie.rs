@@ -16,7 +16,25 @@ node_modules/
 cache/
 package-lock.json
 *.wasm
+dist/
+pkg/
+lib/
+
+# Coverage
+lcov.info
+coverage/
+*.profraw
+htmlcov/
 
 # Antlr
 .antlr/
 *.jar
+
+
+*.txt
+*.log
+
+# Binary
+*.exe
+*.wasm
+*.wasi

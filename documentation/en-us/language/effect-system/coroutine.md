@@ -79,7 +79,7 @@ print(coro.send("stop"))     # "stopped"
 ```valkyrie
 # Async coroutine
 micro fetch_data(url: utf8) -> utf8 {
-    print("Starting request: ${ url }")
+    print("Starting request: {url}")
     let response = http_get(url).await?
     yield "Request sent"  # Can use yield in async functions
     
@@ -87,7 +87,7 @@ micro fetch_data(url: utf8) -> utf8 {
         yield "Request successful"
         response.body
     } else {
-        raise "Request failed: ${ response.status }"
+        raise "Request failed: {response.status}"
     }
 }
 
@@ -97,17 +97,17 @@ micro main() {
     
     # Handle intermediate states
     for status in fetcher {
-        print("Status: ${ status }")
+        print("Status: {status}")
     }
     
     # Get final result
     try {
         let data = fetcher.await?
-        print("Data: ${ data }")
+        print("Data: {data}")
     }
     .catch {
         case _:
-            print("Error: ${ error }")
+            print("Error: {error}")
     }
 }
 ```
@@ -117,9 +117,9 @@ micro main() {
 ```valkyrie
 # Execute multiple coroutines concurrently
 micro concurrent_processing(items: [utf8]) {
-    let promises = items.map {
-        let result = process_item($)
-        yield "Processing complete: ${ $ }"
+    let promises = items.map { item ->
+        let result = process_item(item)
+        yield "Processing complete: {item}"
         result
     }
     
@@ -138,7 +138,7 @@ micro run_concurrent() {
     }
     
     let final_results = processor.await?
-    print("Final results: ${ final_results }")
+    print("Final results: {final_results}")
 }
 ```
 
@@ -222,7 +222,7 @@ class CoroutinePool {
             for coro in self.coroutines {
                 if coro.state() == CoroutineState::Suspended {
                     let result = coro.resume()
-                    yield "Coroutine progress: ${ result }"
+                    yield "Coroutine progress: {result}"
                     
                     if coro.state() == CoroutineState::Completed {
                         self.active_count -= 1
@@ -256,7 +256,7 @@ micro error_prone_generator() {
     }
     .catch {
         case _:
-            yield "Error occurred: ${ error }"
+            yield "Error occurred: {error}"
             raise error  # Re-throw exception
     }
 }
@@ -270,7 +270,7 @@ try {
 }
 .catch {
     case _:
-        print("Coroutine exception: ${ error }")
+        print("Coroutine exception: {error}")
 }
 ```
 

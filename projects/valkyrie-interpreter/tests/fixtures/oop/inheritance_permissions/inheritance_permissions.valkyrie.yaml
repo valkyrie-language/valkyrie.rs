@@ -1,0 +1,9 @@
+success: true
+stdout:
+  - 10
+  - 20
+  - 60
+  - 120
+stderr: []
+errors: []
+result: null

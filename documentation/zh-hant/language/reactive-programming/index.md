@@ -57,7 +57,7 @@ micro main() {
         compute_heavy()  # 假設是計算密集操作
     }
     let result = promise.block?
-    print("結果: ${result}")
+    print("結果: {result}")
 }
 ```
 
@@ -133,11 +133,11 @@ micro wrap_callback_api(url: string) -> Promise⟨string⟩ {
 micro fetch_data() {
     try {
         let data = wrap_callback_api("https://api.example.com").await?
-        print("獲取資料: ${ data }")
+        print("獲取資料: {data}")
     }
     .catch {
         case _:
-            print("請求失敗: ${ error }")
+            print("請求失敗: {error}")
     }
 }
 ```
@@ -175,11 +175,11 @@ sleep(5000ms) {
 # 等待結果或取消
 try {
     let result = promise.await?
-    print("結果: ${ result }")
+    print("結果: {result}")
 }
 .catch {
     case _:
-        print("操作被取消或失敗: ${ error }")
+        print("操作被取消或失敗: {error}")
 }
 ```
 
@@ -234,7 +234,7 @@ trait Stream⟨T⟩ {
 micro fetch_pages(base_url: string) -> Stream⟨string⟩ {
     let mut page = 1
     loop {
-        let url = "${ base_url }?page=${ page }"
+        let url = "{base_url}?page={page}"
         let response = http_get(url).await?
         
         if response.is_empty() {
@@ -257,7 +257,7 @@ micro process_all_pages() {
         }
         .catch {
             case NetworkError(e):
-                print("網路錯誤，跳過: ${ e }")
+                print("網路錯誤，跳過: {e}")
                 continue
             case _:
                 break  # 其他錯誤則停止處理
@@ -291,7 +291,7 @@ micro handle_concurrent() {
     let results = Promise.all(futures.collect()).await?
     
     loop result in results {
-        print("結果: ${ result }")
+        print("結果: {result}")
     }
 }
 ```
@@ -344,7 +344,7 @@ micro resilient_processing() {
         }
         .catch {
             case ProcessingError(e):
-                log_error("處理失敗，跳過: ${ e }")
+                log_error("處理失敗，跳過: {e}")
                 continue
             case _:
                 break  # 嚴重錯誤則停止
@@ -396,7 +396,7 @@ micro stream_operations() {
         .buffer(3)  # 緩衝3個並行請求
     
     let results = processed_stream.collect().await?
-    print("處理完成: ${ results.length } 個結果")
+    print("處理完成: {results.length} 個結果")
 }
 ```
 

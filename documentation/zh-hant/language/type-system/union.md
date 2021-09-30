@@ -57,17 +57,17 @@ unite Expression {
 # 基本模式匹配
 let result: Result⟨i32, string⟩ = Fine { value: 42 }
 match result {
-    case Fine { value }: print("成功: ${value}")
-    case Fail { error }: print("失敗: ${error}")
+    case Fine { value }: print("成功: {value}")
+    case Fail { error }: print("失敗: {error}")
 }
 ```
 
 # 嵌套模式匹配
 let nested: Result⟨Option⟨i32⟩, string⟩ = Fine { value: Some { value: 42 } }
 match nested {
-    case Fine { value: Some { value } }: print("值: ${value}")
+    case Fine { value: Some { value } }: print("值: {value}")
     case Fine { value: None }: print("無值")
-    case Fail { error }: print("錯誤: ${error}")
+    case Fail { error }: print("錯誤: {error}")
 }
 ```
 
@@ -76,7 +76,7 @@ match nested {
 ```valkyrie
 # 簡化的模式匹配
 if let Fine { value } = result {
-    print("成功獲得值: ${value}")
+    print("成功獲得值: {value}")
 }
 
 # 带 else 分支

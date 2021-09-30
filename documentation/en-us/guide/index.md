@@ -158,9 +158,9 @@ match score {
 # Tuple destructuring
 match point {
     case (0, 0): "Origin"
-    case (x, 0): "On X-axis at ${ x }"
-    case (0, y): "On Y-axis at ${ y }"
-    case (x, y): "Point at (${ x }, ${ y })"
+    case (x, 0): "On X-axis at {x}"
+    case (0, y): "On Y-axis at {y}"
+    case (x, y): "Point at ({x}, {y})"
 }
 ```
 
@@ -194,8 +194,8 @@ union Result<T, E> {
 # Using union type
 let result: Result<i32, String> = Fine { value: 42 }
 match result {
-    case Fine { value }: print("Success: ${ value }")
-    case Fail { error }: print("Error: ${ error }")
+    case Fine { value }: print("Success: {value}")
+    case Fail { error }: print("Error: {error}")
 }
 ```
 
@@ -212,11 +212,11 @@ class Person {
     }
     
     greet(self) {
-        print("Hello, I'm ${self.name}")
+        print("Hello, I'm {self.name}")
     }
     
     get_info(self) -> String {
-        "${self.name} is ${self.age} years old"
+        "{self.name} is {self.age} years old"
     }
 }
 
@@ -300,12 +300,15 @@ let p2 = Point { x: 3.0, y: 4.0 }
 # Raw string
 r"C:\Users\Name\Documents"
 r"""Multi-line raw string
-Escape sequences not processed"""
+Escape sequences and interpolation are not processed"""
 
 # String interpolation
 let name = "Alice"
 let age = 30
-let message = "Hello, ${name}! You are ${age} years old."
+let message = "Hello, {name}! You are {age} years old."
+
+# Literal braces
+"Template: \{name\}"
 ```
 
 ### Other Literals

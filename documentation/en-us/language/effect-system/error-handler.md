@@ -57,7 +57,7 @@ let config = try Result⟨Config⟩ {
         log_error(msg)
         Config::default()
     case Fail(error):
-        print("Unexpected error: ${error}")
+        print("Unexpected error: {error}")
         Config::empty()
 }
 
@@ -132,7 +132,7 @@ micro read_and_parse(path: string) -> Result⟨Config, AppError⟩ {
 
 # Manual error transformation
 let result = try Result⟨Data⟩ {
-    fetch_data().map_err { $e -> AppError::Network($e) }?
+    fetch_data().map_err { error -> AppError::Network(error) }?
 }
 ```
 
@@ -191,10 +191,10 @@ let data = try Result⟨Data⟩ {
 }
 .catch {
     case Fail(RetryExhausted(attempts)):
-        log_error("Failed after ${attempts} attempts")
+        log_error("Failed after {attempts} attempts")
         use_fallback_data()
     case Fail(error):
-        log_error("Unexpected error: ${error}")
+        log_error("Unexpected error: {error}")
         Data::empty()
 }
 ```
@@ -210,7 +210,7 @@ let results = try Result⟨[ProcessedItem]⟩ {
         }
         .catch {
             case ProcessingError(msg):
-                log_warning("Skipping item: ${msg}")
+                log_warning("Skipping item: {msg}")
                 None  # Skip failed items
             else: None
         }
@@ -286,13 +286,13 @@ micro main() {
     }
     .catch {
         case ConfigError(msg):
-            print("Configuration error: ${msg}")
+            print("Configuration error: {msg}")
             exit(1)
         case NetworkError(msg):
-            print("Network error: ${msg}")
+            print("Network error: {msg}")
             exit(2)
         case error:
-            print("Unexpected error: ${error}")
+            print("Unexpected error: {error}")
             exit(99)
     }
 }

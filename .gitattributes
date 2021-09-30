@@ -1,1 +1,1 @@
-*.vk diff=coq linguist-language=coq
+*.v diff=coq linguist-language=coq

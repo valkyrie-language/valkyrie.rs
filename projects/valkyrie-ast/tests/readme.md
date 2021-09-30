@@ -1,6 +1,0 @@
-## Tests
-
-```bash
-wee test
-```
-

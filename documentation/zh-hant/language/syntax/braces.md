@@ -113,10 +113,12 @@ ApplyBlock 語法廣泛應用於建構嵌套的宣告式結構。透過利用 Ap
 
 ## 4. 字串插值 (String Interpolation)
 
-在字串中使用 `${}` 嵌入表達式。由 Lexer 處理，不進入 Pratt 解析邏輯。
+在普通字串中使用 `{}` 嵌入表達式。由 Lexer 處理，不進入 Pratt 解析邏輯。
+原始字串不做插值；若要輸出字面量花括號，使用 `\{` 與 `\}`。
 
 ```valkyrie
-print("Hello, ${name}!")
+print("Hello, {name}!")
+print("Template: \{name\}")
 ```
 
 ## 5. 集合字面量 (Collection Literals) - 預留

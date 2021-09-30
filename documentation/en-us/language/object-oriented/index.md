@@ -40,7 +40,7 @@ class Person {
     }
 
     micro greet(self) {
-        print("Hello, I'm ${self.name}")
+        print("Hello, I'm {self.name}")
     }
 }
 ```
@@ -51,7 +51,7 @@ class Person {
 imply Person {
     # Instance method
     micro say_hello(self) {
-        print("Hello, I'm ${self.name}")
+        print("Hello, I'm {self.name}")
     }
 
     # Mutable method
@@ -66,7 +66,7 @@ imply Person {
 
     # Method with return value
     micro get_info(self) -> utf8 {
-        "${self.name} is ${self.age} years old"
+        "{self.name} is {self.age} years old"
     }
 }
 ```
@@ -232,13 +232,13 @@ trait Iterator<T> {
 # Implementing a trait for a type
 imply Person: Display {
     micro to_string(self) -> utf8 {
-        "${self.name} (${self.age} years old)"
+        "{self.name} ({self.age} years old)"
     }
 }
 
 imply Person: Debug {
     micro debug(self) -> utf8 {
-        "Person { name: \"${self.name}\", age: ${self.age} }"
+        "Person \{ name: \"{self.name}\", age: {self.age} \}"
     }
 }
 
@@ -246,7 +246,7 @@ imply Person: Debug {
 imply<T> T?: Display where T: Display {
     micro to_string(self) -> utf8 {
         match self {
-            value? => "Some(${value.to_string()})",
+            value? => "Some({value.to_string()})",
             _ => "None"
         }
     }
@@ -269,7 +269,7 @@ where
     T: Display + Debug + Clone 
 {
     let cloned = value.clone()
-    "Display: ${value.to_string()}, Debug: ${cloned.debug()}"
+    "Display: {value.to_string()}, Debug: {cloned.debug()}"
 }
 
 # Associated types

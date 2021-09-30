@@ -150,24 +150,24 @@ match day {
 # Tuple destructuring
 match point {
     case (0, 0): "Origin"
-    case (x, 0): "On X-axis at ${x}"
-    case (0, y): "On Y-axis at ${y}"
-    case (x, y) if x == y: "Diagonal at ${x}"
-    case (x, y): "Point at (${x}, ${y})"
+    case (x, 0): "On X-axis at {x}"
+    case (0, y): "On Y-axis at {y}"
+    case (x, y) if x == y: "Diagonal at {x}"
+    case (x, y): "Point at ({x}, {y})"
 }
 
 # Array destructuring
 match array {
     case []: "Empty"
-    case [x]: "Single element: ${x}"
-    case [first, ..rest]: "First: ${first}, Rest: ${rest.length} items"
+    case [x]: "Single element: {x}"
+    case [first, ..rest]: "First: {first}, Rest: {rest.length} items"
 }
 
 # Object destructuring
 match person {
-    case { name: "Alice", age }: "Alice is ${age} years old"
-    case { name, age: 18..=25 }: "Young adult: ${name}"
-    case { name, age }: "${name} is ${age} years old"
+    case { name: "Alice", age }: "Alice is {age} years old"
+    case { name, age: 18..=25 }: "Young adult: {name}"
+    case { name, age }: "{name} is {age} years old"
 }
 ```
 
@@ -176,8 +176,8 @@ match person {
 ```valkyrie
 # Result type matching
 match result {
-    case Fine(value): "Success: ${value}"
-    case Fail(error): "Error: ${error}"
+    case Fine(value): "Success: {value}"
+    case Fail(error): "Error: {error}"
 }
 
 # Complex union type
@@ -307,11 +307,11 @@ class Animal {
     }
     
     speak(self) {
-        print("${self.name} makes a sound")
+        print("{self.name} makes a sound")
     }
     
     get_info(self) -> utf8 {
-        "${self.name} is ${self.age} years old"
+        "{self.name} is {self.age} years old"
     }
 }
 
@@ -328,11 +328,11 @@ class Dog extends Animal {
     }
     
     speak(self) {
-        print("${self.name} barks: Woof!")
+        print("{self.name} barks: Woof!")
     }
     
     fetch(self, item: utf8) {
-        print("${self.name} fetches the ${item}")
+        print("{self.name} fetches the {item}")
     }
 }
 ```
@@ -361,7 +361,7 @@ class Circle {
 
 impl Drawable for Circle {
     draw(self) {
-        print("Drawing circle with radius ${self.radius}")
+        print("Drawing circle with radius {self.radius}")
     }
     
     get_area(self) -> f64 {

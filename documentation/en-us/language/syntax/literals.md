@@ -65,7 +65,8 @@ Valkyrie's string syntax (S-Grammar) supports interpolation, raw strings, and mu
 ```valkyrie
 let simple = "Hello"
 let raw = r"C:\path"
-let interpolated = "Hello, $name or Hello, ${name}"
+let interpolated = "Hello, {name}"
+let literal_braces = "Hello, \{name\}"
 ```
 
 For detailed information on string syntax, please refer to [S-Grammar](./s-grammar.md).

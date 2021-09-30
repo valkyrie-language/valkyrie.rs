@@ -54,7 +54,7 @@ X-Grammar uses tags to describe UI structures. All interaction and data flow are
     - **Identifier Shorthand**: `name=variable`.
     - **Expression Evaluation**: `name=(expression)`.
 - **Closure Attributes `{ }`**: Used to pass logic blocks (closures). Under the hood, this usually corresponds to a Widget's event registration method (e.g., `on_click`).
-- **Content Interpolation `${ }` / `$ident`**: In tag text content, use `$` for dynamic interpolation.
+- **Content Interpolation `{ }`**: In tag text content, use `{expr}` for dynamic interpolation.
 
 ```xml
 <div class="container">
@@ -68,7 +68,7 @@ X-Grammar uses tags to describe UI structures. All interaction and data flow are
     <!-- Event forwarding: essentially passing a closure prop from the parent to the child -->
     <CustomWidget on_click=on_click />
     
-    <p>Current progress: ${progress}%</p>
+    <p>Current progress: {progress}%</p>
 </div>
 ```
 
@@ -100,7 +100,7 @@ Maps directly to Valkyrie's `match` statement, supporting type matching and dest
 Supports `for ... in ...` syntax. Since it's handled as a keyword, the Parser can more accurately parse iterators and destructuring assignments.
 ```xml
 <for (item, index) in (list)>
-    <li key=index>${item.name}</li>
+    <li key=index>{item.name}</li>
 <else/>
     <p>List is empty</p>
 </for>
@@ -190,7 +190,7 @@ X-Grammar has no "magic directives"; all its tags and attributes are converted 1
 | :--- | :--- | :--- |
 | `name=(val)` | Attribute assignment (immediate) | `.name(val)` or `name = val` |
 | `name={...}` | Closure passing (deferred) | `name { ... }` or `on_name { ... }` |
-| `$ident` / `${expr}` | Text interpolation | Converted to string and rendered |
+| `{expr}` | Text interpolation | Converted to string and rendered |
 | `<if (cond)>` | Conditional branch | `if cond { ... }` |
 | `<match (val)>` | Pattern matching | `match val { ... }` |
 | `<for (i) in (L)>` | Iteration | `for i in L { ... }` |

@@ -260,7 +260,7 @@ class RobotsAwareCrawler {
         let domain = parse_domain(url)
         
         if !self.rules.contains(domain) {
-            let robots_url = "https://${domain}/robots.txt"
+            let robots_url = "https://{domain}/robots.txt"
             let rules = robots::fetch(robots_url).await
             self.rules.insert(domain, rules)
         }
@@ -301,7 +301,7 @@ async micro crawl_paginated(base_url: string) -> [Article] {
     let mut has_more = true
     
     while has_more {
-        let url = "${base_url}?page=${page}"
+        let url = "{base_url}?page={page}"
         let html = fetch_page(url).await?
         let articles = extract_articles(html)
         

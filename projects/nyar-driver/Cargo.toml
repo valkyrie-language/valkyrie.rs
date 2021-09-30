@@ -1,0 +1,17 @@
+[package]
+name = "nyar-driver"
+version.workspace = true
+edition.workspace = true
+
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+clr-backend = { workspace = true }
+jvm-backend = { workspace = true }
+miette = { workspace = true }
+native-backend = { workspace = true }
+nyar = { workspace = true }
+valkyrie-compiler = { workspace = true }
+valkyrie-parser = { workspace = true }
+wasi-backend = { workspace = true }

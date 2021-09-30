@@ -67,7 +67,7 @@ let doubled = Memo { count * 2 }
 
 # 在 Effect 區塊中讀取，自動建立訂閱
 Effect {
-    print("Value: ${count}, Double: ${doubled}")
+    print("Value: {count}, Double: {doubled}")
 }
 
 # 像普通變數一樣賦值，觸發細粒度更新
@@ -123,7 +123,7 @@ export let server_status = raise Bridge("status", "Initializing")
 let status = raise Bridge("status")
 
 Effect {
-    print("伺服器狀態即時感知: ${status}")
+    print("伺服器狀態即時感知: {status}")
 }
 ```
 

@@ -109,7 +109,7 @@ impl Add for Meters {
 
 impl Display for Meters {
     micro display(self) -> string {
-        "${self.value}m"
+        "{self.value}m"
     }
 }
 

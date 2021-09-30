@@ -1,0 +1,3 @@
+name: anonymous_generic
+description: Test generic anonymous classes implementing generic traits
+version: 1.0.0

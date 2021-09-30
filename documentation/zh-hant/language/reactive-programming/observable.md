@@ -40,7 +40,7 @@ Valkyrie 支援流式的運算子來處理這些值：
 ```valkyrie
 let processed = obs1
     .filter { $ % 2 == 0 }
-    .map { "Value: ${$}" }
+    .map { value -> "Value: {value}" }
     .debounce(Duration.ms(300))
 ```
 
@@ -49,8 +49,8 @@ let processed = obs1
 當不再需要監聽時，可以顯式取消訂閱：
 
 ```valkyrie
-let sub = obs.subscribe {
-    print("Received: ${$}")
+let sub = obs.subscribe { value ->
+    print("Received: {value}")
 }
 
 # 稍後取消

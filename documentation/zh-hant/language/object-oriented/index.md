@@ -75,7 +75,7 @@ trait Serializable {
 
 impl Serializable for Dog {
     micro to_json(self) -> string {
-        f"{\"name\": \"${self.name}\", \"breed\": \"${self.breed}\"}"
+        f"\{\"name\": \"{self.name}\", \"breed\": \"{self.breed}\"\}"
     }
 }
 ```

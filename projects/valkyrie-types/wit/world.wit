@@ -1,8 +1,0 @@
-package valkyrie:compiler-types;
-
-world types {
-	export string-pool;
-	export source-pool;
-	import ast;
-}
-

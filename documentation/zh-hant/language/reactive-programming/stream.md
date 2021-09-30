@@ -24,7 +24,7 @@ trait Stream⟨T⟩ {
 let stream = get_user_stream()
 
 loop user in stream {
-    print("Processing user: ${user.name}")
+    print("Processing user: {user.name}")
 }
 ```
 

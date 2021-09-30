@@ -128,7 +128,7 @@ for result in risky_stream() {
         case Fine(value):
             print(value)
         case Fail(error):
-            print("Error: ${error}")
+            print("Error: {error}")
     }
 }
 ```

@@ -1,33 +1,18 @@
 [package]
 name = "valkyrie-types"
-version = "0.0.8"
-authors = ["Aster <192607617@qq.com>"]
-description = "Shard types for valkyrie language"
-repository = "https://github.com/nyar-vm/valkyrie.rs"
-documentation = "https://docs.rs/valkyrie-types"
-readme = "Readme.md"
-license = "MPL-2.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Core type system and HIR definitions for Valkyrie language"
+license.workspace = true
+repository = "https://github.com/valkyrie-language/valkyrie.rs"
 
 [dependencies]
-tracing = "0.1.41"
-lasso = { version = "0.7.3", features = ["inline-more", "multi-threaded"] }
-serde = "1.0.216"
-im = "15.1.0"
-ordered-float = "4.6.0"
-xxhash-rust = { version = "0.8.14", features = ["xxh3", "const_xxh3"] }
-smallvec = "2.0.0-alpha.9"
-dashmap = "6.1.0"
-indexmap = "2.7.0"
-itertools = "0.13.0"
-image = { version = "0.25.5", features = [] }
-jupyter-types = "0.0.*"
-convert_case = "0.6.0"
-valkyrie-error = { workspace = true }
-wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
+ordered-float = { workspace = true }
+miette = { workspace = true }
+serde = { workspace = true, optional = true }
+nyar-types = { workspace = true }
 
 [features]
 default = []
-
-[package.metadata.component.bindings]
-derives = ["Hash"]
+serde = ["dep:serde", "ordered-float/serde"]

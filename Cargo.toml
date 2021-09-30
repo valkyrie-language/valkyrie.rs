@@ -1,47 +1,53 @@
 [workspace]
 resolver = "2"
-members = ["projects/*"]
-default-members = [
+members = [
+    "projects/nyar",
+    "projects/nyar-binary-format",
+    "projects/nyar-driver",
+    "projects/nyar-types",
+    "projects/legion",
+    "projects/von-parser",
     "projects/valkyrie-types",
     "projects/valkyrie-parser",
-    "projects/valkyrie-ast",
-    "projects/valkyrie-hir",
-    "projects/valkyrie-mir",
+    "projects/valkyrie-compiler",
+    "projects/nyar-clr-backend",
+    "projects/nyar-jvm-backend",
+    "projects/nyar-wasi-backend",
+    "projects/nyar-native-backend",
 ]
-exclude = [
-    "projects/valkyrie-wasm32-wasi"
+default-members = [
+    "projects/legion",
+    "projects/valkyrie-compiler",
 ]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Nyar Team"]
+license = "MIT"
+repository = "https://github.com/valkyrie-language/valkyrie.rs"
+
+[workspace.dependencies]
+nyar = { path = "projects/nyar" }
+nyar-binary-format = { path = "projects/nyar-binary-format" }
+nyar-driver = { path = "projects/nyar-driver" }
+nyar-types = { path = "projects/nyar-types" }
+von-parser = { path = "projects/von-parser" }
+valkyrie-types = { path = "projects/valkyrie-types" }
+valkyrie-parser = { path = "projects/valkyrie-parser" }
+valkyrie-compiler = { path = "projects/valkyrie-compiler" }
+clr-backend = { package = "nyar-clr-backend", path = "projects/nyar-clr-backend" }
+jvm-backend = { package = "nyar-jvm-backend", path = "projects/nyar-jvm-backend" }
+wasi-backend = { package = "nyar-wasi-backend", path = "projects/nyar-wasi-backend" }
+native-backend = { package = "nyar-native-backend", path = "projects/nyar-native-backend" }
+miette = "7.6"
+ordered-float = "4.5"
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+zip = { version = "2.4", default-features = false, features = ["deflate"] }
+tempfile = "3.20"
 
 [profile.release]
 lto = true
 opt-level = "s"
-
-
-[workspace.dependencies.valkyrie-error]
-version = "0.1.17"
-features = ["json5", "num", "dashu", "walkdir", "pratt", "yggdrasil-rt"]
-path = 'projects/valkyrie-error'
-
-[workspace.dependencies.valkyrie-parser]
-version = "*"
-path = 'projects/valkyrie-parser'
-
-[workspace.dependencies.valkyrie-types]
-version = "*"
-path = 'projects/valkyrie-types'
-
-[workspace.dependencies.valkyrie-ast]
-version = "*"
-path = 'projects/valkyrie-ast'
-
-[workspace.dependencies.valkyrie-hir]
-version = "*"
-path = 'projects/valkyrie-hir'
-
-[workspace.dependencies.valkyrie-mir]
-version = "*"
-path = 'projects/valkyrie-mir'
-
-[workspace.dependencies.valkyrie-lir]
-version = "0.0.7"
-path = 'projects/valkyrie-lir'

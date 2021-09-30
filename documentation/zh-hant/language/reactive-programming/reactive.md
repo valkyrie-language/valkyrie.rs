@@ -36,7 +36,7 @@ let doubled = Memo { count * 2 }
 # 副作用
 Effect {
     # 編譯器自動追蹤 count 和 doubled，無需 .value
-    print("當前值: ${count}, 二倍值: ${doubled}")
+    print("當前值: {count}, 二倍值: {doubled}")
 }
 
 count = 5 # 觸發同步更新
@@ -51,7 +51,7 @@ let clicks = Observable.from_events("click")
 # 鏈式運算子處理
 let debounced_clicks = clicks
     .debounce(300ms)
-    .map { "Clicked at: ${now()}" }
+    .map { "Clicked at: {now()}" }
 
 # 訂閱執行
 debounced_clicks.subscribe {
@@ -153,7 +153,7 @@ class CounterComponent {
     }
     
     micro render(self) -> Widget {
-        let count_text = self.count.map { "計數: ${$}" }
+        let count_text = self.count.map { value -> "計數: {value}" }
         
         VStack {
             Text(count_text)

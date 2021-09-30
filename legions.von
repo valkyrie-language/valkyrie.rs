@@ -1,0 +1,15 @@
+{
+    members: [
+        "projects/valkyrie.v",
+        "projects/test_if_while",
+        "projects/test_clr_smoke",
+        "projects/test_local_var",
+        "projects/test_loop",
+        "projects/test_function_call",
+        "projects/test_subscript",
+        "projects/test_clr_self",
+        "projects/test_micro_compiler",
+        "projects/test_wasm_hello",
+        "projects/test_wasm_compiler"
+    ]
+}

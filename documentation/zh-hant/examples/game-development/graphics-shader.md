@@ -856,11 +856,11 @@ class ShaderHotReload {
             let new_pipeline = create_pipeline_from_shader(compiled_shader)
             self.pipelines.insert(name, new_pipeline)
             
-            print("Shader '${name}' 重载成功")
+            print("Shader '{name}' 重载成功")
         }
         .catch {
             case e:
-                print("Shader '${name}' 重载失敗: ${e}")
+                print("Shader '{name}' 重载失敗: {e}")
         }
     }
 }

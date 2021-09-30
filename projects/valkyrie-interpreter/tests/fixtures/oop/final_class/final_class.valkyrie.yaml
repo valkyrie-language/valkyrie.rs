@@ -1,0 +1,6 @@
+success: false
+stdout: []
+stderr: []
+errors:
+- 'Error: RuntimeError: VM Execution failed: NyarError { code: 4101, kind: Vm(SymbolNotFound(QualifiedName { namespace: [], name: "main" })), location: SourceLocation { source_id: 0, offset: 0 } }'
+result: null

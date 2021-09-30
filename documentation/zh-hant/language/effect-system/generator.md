@@ -63,7 +63,7 @@ micro process_items(items: [utf8]) -> i32 {
 # 使用
 let processor = process_items(["item1", "item2", "item3"])
 loop result in processor {
-    print("Processed: ${result}")
+    print("Processed: {result}")
 }
 let total_count = processor.return_value()  # 獲取最終返回值
 ```
@@ -215,7 +215,7 @@ micro pipeline_stage2(input: Iterator⟨i32⟩) {
 
 micro pipeline_stage3(input: Iterator⟨i32⟩) {
     loop value in input {
-        yield "Result: ${ value }"  # 第三階段：格式化
+        yield "Result: {value}"  # 第三階段：格式化
     }
 }
 
@@ -308,7 +308,7 @@ micro read_lines(filename: utf8) {
 
 # 使用
 loop line in read_lines("data.txt") {
-    print("Line: ${ line }")
+    print("Line: {line}")
 }
 ```
 
@@ -359,7 +359,7 @@ micro error_prone_generator() {
     }
     .catch {
         case _:
-            yield "發生錯誤: ${ error }"
+            yield "發生錯誤: {error}"
             raise error  # 重新拋出異常
     }
 }
@@ -373,7 +373,7 @@ try {
 }
 .catch {
     case _:
-        print("生成器異常: ${ error }")
+        print("生成器異常: {error}")
 }
 ```
 

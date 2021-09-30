@@ -19,7 +19,7 @@ Button("Click me") {
 ```valkyrie
 Button("Click me") {
     on_click { event |
-        print("Clicked at: (${event.x}, ${event.y})")
+        print("Clicked at: ({event.x}, {event.y})")
         event.prevent_default()
     }
 }
@@ -147,7 +147,7 @@ widget Counter {
 ```valkyrie
 Counter {
     on_counter_changed { event |
-        print("Count changed from ${event.old_value} to ${event.new_value}")
+        print("Count changed from {event.old_value} to {event.new_value}")
     }
 }
 ```

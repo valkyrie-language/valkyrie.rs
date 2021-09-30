@@ -215,7 +215,7 @@ unite Option⟨T⟩ {
 let result = Some { value: 42 }
 
 match result {
-    case Some { value }: print("值: ${value}")
+    case Some { value }: print("值: {value}")
     case None: print("空值")
 }
 ```
@@ -265,7 +265,7 @@ using resource = acquire_resource() {
     catch {
         file_operation()
     } handle IOError(msg) {
-        print("IO錯誤: ${msg}")
+        print("IO錯誤: {msg}")
     }
 }  # resource會自動清理
 

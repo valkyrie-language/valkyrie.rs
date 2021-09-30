@@ -40,7 +40,7 @@ Valkyrie supports fluent operators to process these values:
 ```valkyrie
 let processed = obs1
     .filter { $ % 2 == 0 }
-    .map { "Value: ${$}" }
+    .map { value -> "Value: {value}" }
     .debounce(Duration.ms(300))
 ```
 
@@ -49,8 +49,8 @@ let processed = obs1
 When you no longer need to listen, you can explicitly unsubscribe:
 
 ```valkyrie
-let sub = obs.subscribe {
-    print("Received: ${$}")
+let sub = obs.subscribe { value ->
+    print("Received: {value}")
 }
 
 # Unsubscribe later

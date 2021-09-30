@@ -20,7 +20,7 @@ go {
 # Consume data in main flow
 # rx itself is an asynchronous stream (Stream)
 for item in rx {
-    print("Received: ${item}")
+    print("Received: {item}")
 }
 ```
 

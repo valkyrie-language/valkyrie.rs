@@ -1,0 +1,7 @@
+success: true
+stdout:
+  - "Sealed child: 20"
+  - "Open child: 60"
+stderr: []
+errors: []
+result: null

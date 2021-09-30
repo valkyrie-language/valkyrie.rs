@@ -31,7 +31,7 @@ let grade = if score >= 90 { "A" }
 
 ```valkyrie
 if let Some(value) = maybe_value {
-    print("Got: ${value}")
+    print("Got: {value}")
 } else {
     print("Nothing")
 }
@@ -75,7 +75,7 @@ for i in 0..10 {
 }
 
 for (index, item) in collection.enumerate() {
-    print("${index}: ${item}")
+    print("{index}: {item}")
 }
 ```
 
@@ -118,9 +118,9 @@ match value {
 ```valkyrie
 match point {
     case Point { x: 0, y: 0 } => "origin"
-    case Point { x, y: 0 } => "on x-axis at ${x}"
-    case Point { x: 0, y } => "on y-axis at ${y}"
-    case Point { x, y } => "at (${x}, ${y})"
+    case Point { x, y: 0 } => "on x-axis at {x}"
+    case Point { x: 0, y } => "on y-axis at {y}"
+    case Point { x, y } => "at ({x}, {y})"
 }
 ```
 
@@ -128,8 +128,8 @@ match point {
 
 ```valkyrie
 match result {
-    case Fine { value } => print("Success: ${value}")
-    case Fail { error } => print("Error: ${error}")
+    case Fine { value } => print("Success: {value}")
+    case Fail { error } => print("Error: {error}")
 }
 ```
 
@@ -155,9 +155,9 @@ try {
 }
 .catch {
     case IoError(e):
-        print("IO error: ${e}")
+        print("IO error: {e}")
     case ParseError(e):
-        print("Parse error: ${e}")
+        print("Parse error: {e}")
     case _:
         print("Unknown error")
 }

@@ -56,7 +56,7 @@ micro main() {
         compute_heavy()  # Assume it's a compute-intensive operation
     }
     let result = promise.block?
-    print("Result: ${result}")
+    print("Result: {result}")
 }
 ```
 
@@ -132,11 +132,11 @@ micro wrap_callback_api(url: string) -> Promise⟨string⟩ {
 micro fetch_data() {
     try {
         let data = wrap_callback_api("https://api.example.com").await?
-        print("Fetched data: ${ data }")
+        print("Fetched data: {data}")
     }
     .catch {
         case _:
-            print("Request failed: ${ error }")
+            print("Request failed: {error}")
     }
 }
 ```
@@ -174,11 +174,11 @@ sleep(5000ms) {
 # Wait for result or cancellation
 try {
     let result = promise.await?
-    print("Result: ${ result }")
+    print("Result: {result}")
 }
 .catch {
     case _:
-        print("Operation cancelled or failed: ${ error }")
+        print("Operation cancelled or failed: {error}")
 }
 ```
 
@@ -233,7 +233,7 @@ Coroutines can be converted to Streams, providing asynchronous iteration capabil
 micro fetch_pages(base_url: string) -> Stream⟨string⟩ {
     let mut page = 1
     loop {
-        let url = "${ base_url }?page=${ page }"
+        let url = "{base_url}?page={page}"
         let response = http_get(url).await?
         
         if response.is_empty() {
@@ -256,7 +256,7 @@ micro process_all_pages() {
         }
         .catch {
             case NetworkError(e):
-                print("Network error, skipping: ${ e }")
+                print("Network error, skipping: {e}")
                 continue
             case _:
                 break  # Stop processing on other errors
@@ -290,7 +290,7 @@ micro handle_concurrent() {
     let results = Promise.all(futures.collect()).await?
     
     for result in results {
-        print("Result: ${ result }")
+        print("Result: {result}")
     }
 }
 ```
@@ -344,7 +344,7 @@ micro resilient_processing() {
         }
         .catch {
             case ProcessingError(e):
-                log_error("Processing failed, skipping: ${ e }")
+                log_error("Processing failed, skipping: {e}")
                 continue
             case _:
                 break  # Stop on serious errors
@@ -396,7 +396,7 @@ micro stream_operations() {
         .buffer(3)  # Buffer 3 concurrent requests
     
     let results = processed_stream.collect().await?
-    print("Processing complete: ${ results.length } results")
+    print("Processing complete: {results.length} results")
 }
 ```
 

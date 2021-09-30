@@ -20,10 +20,10 @@ micro list_devices() {
     let devices = compute::devices()
     
     for device in devices {
-        print("Device: ${device.name}")
-        print("  Type: ${device.type}")  # CPU, GPU, TPU, etc.
-        print("  Memory: ${device.memory / 1024^3} GB")
-        print("  Compute Units: ${device.compute_units}")
+        print("Device: {device.name}")
+        print("  Type: {device.type}")  # CPU, GPU, TPU, etc.
+        print("  Memory: {device.memory / 1024^3} GB")
+        print("  Compute Units: {device.compute_units}")
     }
 }
 ```
@@ -65,7 +65,7 @@ micro run_vector_add() {
     queue.execute(vector_add, (a, b, c), global_size: n)
     
     # Results are automatically synchronized
-    print("Result[0]: ${c[0]}")
+    print("Result[0]: {c[0]}")
 }
 ```
 
@@ -122,7 +122,7 @@ for i in 0..100 {
 queue.execute(process_kernel, (data,), global_size: data.length)
 
 # Results available on CPU automatically
-print("Result: ${data[0]}")
+print("Result: {data[0]}")
 ```
 
 ### Explicit Memory Transfer
@@ -287,7 +287,7 @@ micro train_neural_network(model: NeuralNetwork, data: Dataset) {
             let loss = trainer.train_step(batch)
         }
         
-        print("Epoch ${epoch}: loss = ${trainer.current_loss}")
+        print("Epoch {epoch}: loss = {trainer.current_loss}")
     }
 }
 ```

@@ -292,12 +292,15 @@ let p2 = Point { x: 3.0, y: 4.0 }
 # 原始字符串
 r"C:\Users\Name\Documents"
 r"""多行原始字符串
-不处理转义序列"""
+不处理转义序列，也不处理插值"""
 
 # 字符串插值
 let name = "Alice"
 let age = 30
 let message = "Hello, {name}! You are {age} years old."
+
+# 字面量花括号
+"格式字符串：\{name\}"
 ```
 
 ### 其他字面量

@@ -12,7 +12,7 @@ let handler = class {
     name: string = "Handler"
     
     micro handle(self, event: Event) {
-        print("Handling event: ${event.type}")
+        print("Handling event: {event.type}")
     }
 }
 
@@ -33,11 +33,11 @@ trait ClickHandler {
 # 建立實現介面的匿名類別
 let button_handler = impl ClickHandler {
     micro on_click(self, x, y) {
-        print("Clicked at (${x}, ${y})")
+        print("Clicked at ({x}, {y})")
     }
     
     micro on_double_click(self, x, y) {
-        print("Double-clicked at (${x}, ${y})")
+        print("Double-clicked at ({x}, {y})")
     }
 }
 ```

@@ -140,7 +140,7 @@ widget Counter {
     count: Signal⟨i32⟩ = Signal.new(0)
     
     Column {
-        Text("Count: ${count.get()}")
+        Text("Count: {count.get()}")
         Button("Increment") {
             on_click { count.update { $ + 1 } }
         }

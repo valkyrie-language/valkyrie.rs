@@ -37,7 +37,7 @@ let last_name = Signal.new("Doe")
 
 # Computed signal - automatically recalculates
 let full_name = Signal.derive {
-    "${first_name.get()} ${last_name.get()}"
+    "{first_name.get()} {last_name.get()}"
 }
 
 print(full_name.get())  # "John Doe"
@@ -57,7 +57,7 @@ widget Counter {
     
     Column {
         # UI automatically re-renders when signal changes
-        Text("Count: ${count.get()}")
+        Text("Count: {count.get()}")
         
         Row {
             Button("-") {
@@ -126,10 +126,10 @@ widget UserProfile {
     
     Column {
         # Only this Text re-renders when name changes
-        Text("${user.get().name}")
+        Text("{user.get().name}")
         
         # Only this Text re-renders when email changes
-        Text("${user.get().email}")
+        Text("{user.get().email}")
         
         # This part is not affected by name/email changes
         StaticFooter { }

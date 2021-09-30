@@ -1,32 +1,35 @@
 [package]
 name = "valkyrie-lsp"
-version = "0.1.0"
-edition = "2021"
-authors = ["Nyar Team"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "Language Server Protocol implementation for Valkyrie language using Nyar compiler infrastructure"
-license = "MIT"
+license.workspace = true
 repository = "https://github.com/nyar-lang/nyar-vm"
 
 [dependencies]
-# LSP 核心依赖
-tower-lsp = "0.20"
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Nyar 编译器基础设施
-nyar_valkyrie = { path = "../nyar_valkyrie" }
-# 日志和错误处理
-tracing = "0.1"
-tracing-subscriber = "0.3"
-
-# 异步和并发
-dashmap = "5.0"
-parking_lot = "0.12"
+valkyrie-compiler = { workspace = true }
+valkyrie-types = { workspace = true, features = ["serde"] }
+oak-valkyrie = { workspace = true, features = ["serde", "oak-pretty-print"] }
+oak-lsp = { workspace = true }
+oak-core = { workspace = true }
+oak-vfs = { workspace = true }
+oak-toml = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+url = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+async-recursion = { workspace = true }
+toml = { workspace = true }
 
 [dev-dependencies]
-tokio-test = "0.4"
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
 
-[[bin]]
-name = "valkyrie-lsp"
-path = "src/main.rs"
+[lib]
+name = "valkyrie_lsp"
+path = "src/lib.rs"

@@ -1,22 +1,19 @@
 [package]
 name = "valkyrie-parser"
-version = "0.1.0"
-edition = "2021"
-authors = ["Nyar Team"]
-description = "Valkyrie language parser built on nyar platform"
-license = "MIT"
-repository = "https://github.com/nyar-lang/nyar-vm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Valkyrie language parser and AST facade"
+license.workspace = true
+repository = "https://github.com/nyar-lang/valkyrie.rs"
 
 [dependencies]
-nyar-ast = { path = "../nyar-ast" }
-nyar-core = { path = "../nyar-core" }
-nyar-error = { path = "../nyar-error" }
-chumsky = "0.9"
-tracing = "0.1"
+miette = { workspace = true }
+serde = { workspace = true, optional = true }
+valkyrie-types = { workspace = true }
+
+[features]
+default = []
+serde = ["dep:serde", "valkyrie-types/serde"]
 
 [dev-dependencies]
-criterion = "0.5"
-
-[[bench]]
-name = "parser_performance"
-harness = false

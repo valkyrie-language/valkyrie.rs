@@ -20,7 +20,7 @@ class Person {
     
     # 方法
     micro introduce(self) -> string {
-        "Hello, I'm ${self.name}, ${self.age} years old."
+        "Hello, I'm {self.name}, {self.age} years old."
     }
 }
 ```
@@ -42,7 +42,7 @@ class Student : Person {
     
     # 重寫父類方法
     override micro introduce(self) -> string {
-        "${super.introduce()} I study at ${self.school}, grade ${self.grade}."
+        "{super.introduce()} I study at {self.school}, grade {self.grade}."
     }
 }
 ```
@@ -112,8 +112,8 @@ animal.speak()  # 輸出 "Woof!"（多型）
 ```valkyrie
 micro describe(animal: Animal) {
     match animal {
-        case dog: Dog: print("This is a dog: ${dog.breed}")
-        case cat: Cat: print("This is a cat: ${cat.color}")
+        case dog: Dog: print("This is a dog: {dog.breed}")
+        case cat: Cat: print("This is a cat: {cat.color}")
         else: print("Unknown animal")
     }
 }
@@ -192,7 +192,7 @@ abstract class Shape {
     
     # 具體方法
     micro describe(self) -> string {
-        "Area: ${self.area()}, Perimeter: ${self.perimeter()}"
+        "Area: {self.area()}, Perimeter: {self.perimeter()}"
     }
 }
 

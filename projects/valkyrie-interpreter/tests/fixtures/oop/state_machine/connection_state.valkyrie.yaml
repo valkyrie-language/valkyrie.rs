@@ -1,0 +1,3 @@
+name: connection_state
+description: Test state machine pattern using sealed classes
+version: 1.0.0

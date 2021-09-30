@@ -79,7 +79,7 @@ print(coro.send("stop"))     # "stopped"
 ```valkyrie
 # 非同步協程
 micro fetch_data(url: utf8) -> utf8 {
-    print("開始請求: ${ url }")
+    print("開始請求: {url}")
     let response = http_get(url).await?
     yield "請求已發送"  # 可以在非同步函數中使用 yield
     
@@ -87,7 +87,7 @@ micro fetch_data(url: utf8) -> utf8 {
         yield "請求成功"
         response.body
     } else {
-        raise "請求失敗: ${ response.status }"
+        raise "請求失敗: {response.status}"
     }
 }
 
@@ -97,17 +97,17 @@ micro main() {
     
     # 處理中間狀態
     loop status in fetcher {
-        print("狀態: ${ status }")
+        print("狀態: {status}")
     }
     
     # 獲取最終結果
     try {
         let data = fetcher.await?
-        print("資料: ${ data }")
+        print("資料: {data}")
     }
     .catch {
         case _:
-            print("錯誤: ${ error }")
+            print("錯誤: {error}")
     }
 }
 ```
@@ -117,9 +117,9 @@ micro main() {
 ```valkyrie
 # 並發執行多個協程
 micro concurrent_processing(items: [utf8]) {
-    let promises = items.map {
-        let result = process_item($)
-        yield "處理完成: ${ $ }"
+    let promises = items.map { item ->
+        let result = process_item(item)
+        yield "處理完成: {item}"
         result
     }
     
@@ -138,7 +138,7 @@ micro run_concurrent() {
     }
     
     let final_results = processor.await?
-    print("最終結果: ${ final_results }")
+    print("最終結果: {final_results}")
 }
 ```
 
@@ -222,7 +222,7 @@ class CoroutinePool {
             loop coro in self.coroutines {
                 if coro.state() == CoroutineState::Suspended {
                     let result = coro.resume()
-                    yield "協程進度: ${ result }"
+                    yield "協程進度: {result}"
                     
                     if coro.state() == CoroutineState::Completed {
                         self.active_count -= 1
@@ -256,7 +256,7 @@ micro error_prone_generator() {
     }
     .catch {
         case _:
-            yield "發生錯誤: ${ error }"
+            yield "發生錯誤: {error}"
             raise error  # 重新拋出異常
     }
 }
@@ -270,7 +270,7 @@ try {
 }
 .catch {
     case _:
-        print("協程異常: ${ error }")
+        print("協程異常: {error}")
 }
 ```
 

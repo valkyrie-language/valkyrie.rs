@@ -112,5 +112,5 @@ macro generate_struct(name: string, fields: [Field]) -> TokenStream {
 | :--- | :--- | :--- | :--- |
 | **定位** | 文本/代码生成 | UI 视觉投影 | 对象 DSL 构建 |
 | **界定符** | `<% ... %>` | `<tag> ... </tag>` | `{ ... }` |
-| **插值** | `{ expr }` | `$ident` / `${expr}` | `${expr}` |
+| **插值** | `{ expr }` | `{expr}` | `{expr}` |
 | **逻辑** | `<% loop ... %>` | `<loop ...>` | `loop ... { ... }` |

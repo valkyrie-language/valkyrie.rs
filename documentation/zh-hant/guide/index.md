@@ -158,9 +158,9 @@ match score {
 # 元組解構
 match point {
     case (0, 0): "Origin"
-    case (x, 0): "On X-axis at ${ x }"
-    case (0, y): "On Y-axis at ${ y }"
-    case (x, y): "Point at (${ x }, ${ y })"
+    case (x, 0): "On X-axis at {x}"
+    case (0, y): "On Y-axis at {y}"
+    case (x, y): "Point at ({x}, {y})"
 }
 ```
 
@@ -194,8 +194,8 @@ union Result<T, E> {
 # 使用聯合類型
 let result: Result<i32, String> = Fine { value: 42 }
 match result {
-    case Fine { value }: print("Success: ${ value }")
-    case Fail { error }: print("Error: ${ error }")
+    case Fine { value }: print("Success: {value}")
+    case Fail { error }: print("Error: {error}")
 }
 ```
 
@@ -212,11 +212,11 @@ class Person {
     }
     
     greet(self) {
-        print("Hello, I'm ${self.name}")
+        print("Hello, I'm {self.name}")
     }
     
     get_info(self) -> String {
-        "${self.name} is ${self.age} years old"
+        "{self.name} is {self.age} years old"
     }
 }
 
@@ -263,7 +263,7 @@ micro main() {
     let p1 = Point { x: 0.0, y: 0.0 }
     let p2 = Point { x: 3.0, y: 4.0 }
     let dist = distance(p1, p2)
-    print("Distance: ${dist}")
+    print("Distance: {dist}")
 }
 ```
 
@@ -300,12 +300,15 @@ micro main() {
 # 原始字符串
 r"C:\Users\Name\Documents"
 r"""多行原始字符串
-不處理轉義序列"""
+不處理轉義序列，也不處理插值"""
 
 # 字符串插值
 let name = "Alice"
 let age = 30
-let message = "Hello, ${name}! You are ${age} years old."
+let message = "Hello, {name}! You are {age} years old."
+
+# 字面量花括號
+"模板：\{name\}"
 ```
 
 ### 其他字面量
