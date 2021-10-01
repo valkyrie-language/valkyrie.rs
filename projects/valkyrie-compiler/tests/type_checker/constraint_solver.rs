@@ -1,6 +1,9 @@
 use valkyrie_compiler::type_checker::*;
 
-use valkyrie_types::{hir::HirType, Identifier, NamePath};
+use valkyrie_types::{
+    hir::{AssociatedType, FunctionType, GenericType, ValkyrieType},
+    Identifier, NamePath,
+};
 
 fn make_trait_name(name: &str) -> NamePath {
     NamePath::new(vec![Identifier::new(name)])
@@ -44,8 +47,8 @@ fn test_add_trait_bound_constraint() {
 #[test]
 fn test_add_equality_constraint() {
     let mut solver = ConstraintSolver::new();
-    let t1 = HirType::Integer64;
-    let t2 = HirType::Integer64;
+    let t1 = ValkyrieType::Integer64;
+    let t2 = ValkyrieType::Integer64;
 
     solver.add_constraint(TypeConstraint::equality(t1, t2, None));
 
@@ -55,7 +58,7 @@ fn test_add_equality_constraint() {
 #[test]
 fn test_solve_equality_same_types() {
     let mut solver = ConstraintSolver::new();
-    solver.add_constraint(TypeConstraint::equality(HirType::Integer64, HirType::Integer64, None));
+    solver.add_constraint(TypeConstraint::equality(ValkyrieType::Integer64, ValkyrieType::Integer64, None));
 
     let result = solver.solve();
     assert!(result.is_ok());
@@ -64,7 +67,7 @@ fn test_solve_equality_same_types() {
 #[test]
 fn test_solve_equality_different_types() {
     let mut solver = ConstraintSolver::new();
-    solver.add_constraint(TypeConstraint::equality(HirType::Integer64, HirType::Boolean, None));
+    solver.add_constraint(TypeConstraint::equality(ValkyrieType::Integer64, ValkyrieType::Boolean, None));
 
     let result = solver.solve();
     assert!(result.is_err());
@@ -77,22 +80,22 @@ fn test_solve_equality_different_types() {
 fn test_unify_primitives() {
     let mut solver = ConstraintSolver::new();
 
-    assert!(solver.unify(&HirType::Integer32, &HirType::Integer32, None).is_ok());
-    assert!(solver.unify(&HirType::Integer64, &HirType::Integer64, None).is_ok());
-    assert!(solver.unify(&HirType::Float32, &HirType::Float32, None).is_ok());
-    assert!(solver.unify(&HirType::Float64, &HirType::Float64, None).is_ok());
-    assert!(solver.unify(&HirType::Boolean, &HirType::Boolean, None).is_ok());
-    assert!(solver.unify(&HirType::Utf8, &HirType::Utf8, None).is_ok());
-    assert!(solver.unify(&HirType::Unit, &HirType::Unit, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Integer32, &ValkyrieType::Integer32, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Integer64, &ValkyrieType::Integer64, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Float32, &ValkyrieType::Float32, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Float64, &ValkyrieType::Float64, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Boolean, &ValkyrieType::Boolean, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Utf8, &ValkyrieType::Utf8, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Unit, &ValkyrieType::Unit, None).is_ok());
 }
 
 #[test]
 fn test_unify_infer() {
     let mut solver = ConstraintSolver::new();
 
-    assert!(solver.unify(&HirType::Infer, &HirType::Integer64, None).is_ok());
-    assert!(solver.unify(&HirType::Integer64, &HirType::Infer, None).is_ok());
-    assert!(solver.unify(&HirType::Infer, &HirType::Infer, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::AutoType, &ValkyrieType::Integer64, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Integer64, &ValkyrieType::AutoType, None).is_ok());
+    assert!(solver.unify(&ValkyrieType::AutoType, &ValkyrieType::AutoType, None).is_ok());
 }
 
 #[test]
@@ -102,19 +105,19 @@ fn test_unify_named_types() {
     let name2 = Identifier::new("MyType");
     let name3 = Identifier::new("OtherType");
 
-    assert!(solver.unify(&HirType::Named(name1.clone()), &HirType::Named(name2), None).is_ok());
-    assert!(solver.unify(&HirType::Named(name1), &HirType::Named(name3), None).is_err());
+    assert!(solver.unify(&ValkyrieType::Named(name1.clone()), &ValkyrieType::Named(name2), None).is_ok());
+    assert!(solver.unify(&ValkyrieType::Named(name1), &ValkyrieType::Named(name3), None).is_err());
 }
 
 #[test]
 fn test_unify_array_types() {
     let mut solver = ConstraintSolver::new();
 
-    let t1 = HirType::Array(Box::new(HirType::Integer64));
-    let t2 = HirType::Array(Box::new(HirType::Integer64));
+    let t1 = ValkyrieType::Array(Box::new(ValkyrieType::Integer64));
+    let t2 = ValkyrieType::Array(Box::new(ValkyrieType::Integer64));
     assert!(solver.unify(&t1, &t2, None).is_ok());
 
-    let t3 = HirType::Array(Box::new(HirType::Boolean));
+    let t3 = ValkyrieType::Array(Box::new(ValkyrieType::Boolean));
     assert!(solver.unify(&t1, &t3, None).is_err());
 }
 
@@ -122,14 +125,14 @@ fn test_unify_array_types() {
 fn test_unify_tuple_types() {
     let mut solver = ConstraintSolver::new();
 
-    let t1 = HirType::Tuple(vec![HirType::Integer64, HirType::Boolean]);
-    let t2 = HirType::Tuple(vec![HirType::Integer64, HirType::Boolean]);
+    let t1 = ValkyrieType::Tuple(vec![ValkyrieType::Integer64, ValkyrieType::Boolean]);
+    let t2 = ValkyrieType::Tuple(vec![ValkyrieType::Integer64, ValkyrieType::Boolean]);
     assert!(solver.unify(&t1, &t2, None).is_ok());
 
-    let t3 = HirType::Tuple(vec![HirType::Integer64]);
+    let t3 = ValkyrieType::Tuple(vec![ValkyrieType::Integer64]);
     assert!(solver.unify(&t1, &t3, None).is_err());
 
-    let t4 = HirType::Tuple(vec![HirType::Boolean, HirType::Integer64]);
+    let t4 = ValkyrieType::Tuple(vec![ValkyrieType::Boolean, ValkyrieType::Integer64]);
     assert!(solver.unify(&t1, &t4, None).is_err());
 }
 
@@ -137,11 +140,17 @@ fn test_unify_tuple_types() {
 fn test_unify_function_types() {
     let mut solver = ConstraintSolver::new();
 
-    let t1 = HirType::Function { params: vec![HirType::Integer64, HirType::Boolean], return_type: Box::new(HirType::Utf8) };
-    let t2 = HirType::Function { params: vec![HirType::Integer64, HirType::Boolean], return_type: Box::new(HirType::Utf8) };
+    let t1 = ValkyrieType::Function(FunctionType {
+        params: vec![ValkyrieType::Integer64, ValkyrieType::Boolean],
+        return_type: Box::new(ValkyrieType::Utf8),
+    });
+    let t2 = ValkyrieType::Function(FunctionType {
+        params: vec![ValkyrieType::Integer64, ValkyrieType::Boolean],
+        return_type: Box::new(ValkyrieType::Utf8),
+    });
     assert!(solver.unify(&t1, &t2, None).is_ok());
 
-    let t3 = HirType::Function { params: vec![HirType::Integer64], return_type: Box::new(HirType::Utf8) };
+    let t3 = ValkyrieType::Function(FunctionType { params: vec![ValkyrieType::Integer64], return_type: Box::new(ValkyrieType::Utf8) });
     assert!(solver.unify(&t1, &t3, None).is_err());
 }
 
@@ -149,12 +158,12 @@ fn test_unify_function_types() {
 fn test_check_builtin_trait() {
     let solver = ConstraintSolver::new();
 
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Copy")).unwrap());
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Clone")).unwrap());
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Eq")).unwrap());
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Send")).unwrap());
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Sync")).unwrap());
-    assert!(solver.check_trait_bound(&HirType::Integer64, &make_trait_name("Default")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Copy")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Clone")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Eq")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Send")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Sync")).unwrap());
+    assert!(solver.check_trait_bound(&ValkyrieType::Integer64, &make_trait_name("Default")).unwrap());
 }
 
 #[test]
@@ -162,12 +171,12 @@ fn test_register_trait_impl() {
     let mut solver = ConstraintSolver::new();
 
     solver.register_trait_impl(TraitImpl {
-        ty: HirType::Named(Identifier::new("MyType")),
+        ty: ValkyrieType::Named(Identifier::new("MyType")),
         trait_name: make_trait_name("Display"),
         type_args: vec![],
     });
 
-    let result = solver.check_trait_bound(&HirType::Named(Identifier::new("MyType")), &make_trait_name("Display"));
+    let result = solver.check_trait_bound(&ValkyrieType::Named(Identifier::new("MyType")), &make_trait_name("Display"));
     assert!(result.unwrap());
 }
 
@@ -175,7 +184,7 @@ fn test_register_trait_impl() {
 fn test_trait_not_implemented_error() {
     let solver = ConstraintSolver::new();
 
-    let result = solver.check_trait_bound(&HirType::Named(Identifier::new("CustomType")), &make_trait_name("Display"));
+    let result = solver.check_trait_bound(&ValkyrieType::Named(Identifier::new("CustomType")), &make_trait_name("Display"));
     assert!(!result.unwrap());
 }
 
@@ -185,10 +194,10 @@ fn test_constraint_error_display() {
     assert!(err.to_string().contains("MyType"));
     assert!(err.to_string().contains("Display"));
 
-    let err = ConstraintError::type_mismatch(HirType::Integer64, HirType::Boolean, None);
+    let err = ConstraintError::type_mismatch(ValkyrieType::Integer64, ValkyrieType::Boolean, None);
     assert!(err.to_string().contains("类型不匹配"));
 
-    let err = ConstraintError::infinite_type(TypeVar(0), HirType::Integer64, None);
+    let err = ConstraintError::infinite_type(TypeVar(0), ValkyrieType::Integer64, None);
     assert!(err.to_string().contains("无限类型"));
 
     let err = ConstraintError::ambiguous_type(TypeVar(0), None);
@@ -199,18 +208,18 @@ fn test_constraint_error_display() {
 fn test_is_subtype() {
     let solver = ConstraintSolver::new();
 
-    assert!(solver.is_subtype(&HirType::Integer32, &HirType::Integer64));
-    assert!(solver.is_subtype(&HirType::Float32, &HirType::Float64));
-    assert!(solver.is_subtype(&HirType::Integer64, &HirType::Integer64));
-    assert!(!solver.is_subtype(&HirType::Integer64, &HirType::Integer32));
-    assert!(!solver.is_subtype(&HirType::Integer64, &HirType::Boolean));
+    assert!(solver.is_subtype(&ValkyrieType::Integer32, &ValkyrieType::Integer64));
+    assert!(solver.is_subtype(&ValkyrieType::Float32, &ValkyrieType::Float64));
+    assert!(solver.is_subtype(&ValkyrieType::Integer64, &ValkyrieType::Integer64));
+    assert!(!solver.is_subtype(&ValkyrieType::Integer64, &ValkyrieType::Integer32));
+    assert!(!solver.is_subtype(&ValkyrieType::Integer64, &ValkyrieType::Boolean));
 }
 
 #[test]
 fn test_solver_clear() {
     let mut solver = ConstraintSolver::new();
     solver.add_constraint(TypeConstraint::trait_bound(TypeVar(0), make_trait_name("Display"), None));
-    solver.register_trait_impl(TraitImpl { ty: HirType::Integer64, trait_name: make_trait_name("Clone"), type_args: vec![] });
+    solver.register_trait_impl(TraitImpl { ty: ValkyrieType::Integer64, trait_name: make_trait_name("Clone"), type_args: vec![] });
 
     solver.clear();
 
@@ -223,7 +232,7 @@ fn test_solver_clear() {
 fn test_subtype_constraint() {
     let mut solver = ConstraintSolver::new();
 
-    solver.add_constraint(TypeConstraint::subtype(HirType::Integer32, HirType::Integer64, None));
+    solver.add_constraint(TypeConstraint::subtype(ValkyrieType::Integer32, ValkyrieType::Integer64, None));
 
     let result = solver.solve();
     assert!(result.is_ok());
@@ -233,7 +242,7 @@ fn test_subtype_constraint() {
 fn test_subtype_constraint_failure() {
     let mut solver = ConstraintSolver::new();
 
-    solver.add_constraint(TypeConstraint::subtype(HirType::Integer64, HirType::Integer32, None));
+    solver.add_constraint(TypeConstraint::subtype(ValkyrieType::Integer64, ValkyrieType::Integer32, None));
 
     let result = solver.solve();
     assert!(result.is_err());
@@ -257,12 +266,12 @@ fn test_where_clause() {
     let where_clause = WhereClause::new(
         vec![
             WhereBound {
-                ty: HirType::Generic { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] },
+                ty: ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] }),
                 traits: vec![make_trait_name("Display")],
                 span: None,
             },
             WhereBound {
-                ty: HirType::Generic { name: Identifier::new("U"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] },
+                ty: ValkyrieType::Generic(GenericType { name: Identifier::new("U"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] }),
                 traits: vec![make_trait_name("Clone")],
                 span: None,
             },
@@ -340,7 +349,7 @@ fn test_generate_error_report() {
 #[test]
 fn test_generate_error_report_with_type_mismatch() {
     let solver = ConstraintSolver::new();
-    let error = ConstraintError::type_mismatch(HirType::Integer64, HirType::Boolean, None);
+    let error = ConstraintError::type_mismatch(ValkyrieType::Integer64, ValkyrieType::Boolean, None);
 
     let report = solver.generate_error_report(&error);
 
@@ -354,7 +363,7 @@ fn test_suggest_fixes() {
     let var = TypeVar(0);
 
     solver.add_constraint(TypeConstraint::trait_bound(var.clone(), make_trait_name("Display"), None));
-    solver.add_substitution(var, HirType::Named(Identifier::new("MyType")));
+    solver.add_substitution(var, ValkyrieType::Named(Identifier::new("MyType")));
 
     let suggestions = solver.suggest_fixes();
 
@@ -391,11 +400,11 @@ fn test_fix_suggestion_with_code_example() {
 #[test]
 fn test_associated_type_constraint() {
     let mut solver = ConstraintSolver::new();
-    let base_type = HirType::Named(Identifier::new("Counter"));
+    let base_type = ValkyrieType::Named(Identifier::new("Counter"));
     let trait_name = make_trait_name("Iterator");
     let assoc_name = Identifier::new("Item");
-    let concrete_type = HirType::Integer64;
-    let expected_bound = HirType::Integer64;
+    let concrete_type = ValkyrieType::Integer64;
+    let expected_bound = ValkyrieType::Integer64;
 
     solver.register_associated_type_impl(base_type.clone(), trait_name.clone(), assoc_name.clone(), concrete_type.clone());
 
@@ -414,11 +423,11 @@ fn test_associated_type_constraint() {
 #[test]
 fn test_associated_type_constraint_mismatch() {
     let mut solver = ConstraintSolver::new();
-    let base_type = HirType::Named(Identifier::new("Counter"));
+    let base_type = ValkyrieType::Named(Identifier::new("Counter"));
     let trait_name = make_trait_name("Iterator");
     let assoc_name = Identifier::new("Item");
-    let concrete_type = HirType::Integer64;
-    let expected_bound = HirType::Utf8;
+    let concrete_type = ValkyrieType::Integer64;
+    let expected_bound = ValkyrieType::Utf8;
 
     solver.register_associated_type_impl(base_type.clone(), trait_name.clone(), assoc_name.clone(), concrete_type.clone());
 
@@ -437,23 +446,23 @@ fn test_associated_type_constraint_mismatch() {
 #[test]
 fn test_associated_type_constraint_with_nested_function_and_associated_type() {
     let mut solver = ConstraintSolver::new();
-    let base_type = HirType::Named(Identifier::new("MapperFactory"));
+    let base_type = ValkyrieType::Named(Identifier::new("MapperFactory"));
     let trait_name = make_trait_name("Streaming");
     let assoc_name = Identifier::new("Output");
-    let concrete_type = HirType::Function {
-        params: vec![HirType::Integer32],
-        return_type: Box::new(HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("Boxed"))),
-            vec![HirType::Tuple(vec![
-                HirType::AssociatedType {
-                    base: Box::new(HirType::Named(Identifier::new("VecIter"))),
+    let concrete_type = ValkyrieType::Function(FunctionType {
+        params: vec![ValkyrieType::Integer32],
+        return_type: Box::new(ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+            vec![ValkyrieType::Tuple(vec![
+                ValkyrieType::Associated(AssociatedType {
+                    base: Box::new(ValkyrieType::Named(Identifier::new("VecIter"))),
                     name: Identifier::new("Item"),
-                    type_args: vec![HirType::Integer32],
-                },
-                HirType::Integer32,
+                    type_arguments: vec![ValkyrieType::Integer32],
+                }),
+                ValkyrieType::Integer32,
             ])],
         )),
-    };
+    });
 
     solver.register_associated_type_impl(base_type.clone(), trait_name.clone(), assoc_name.clone(), concrete_type.clone());
     solver.add_associated_type_constraint(AssociatedTypeConstraint::new(base_type, trait_name, assoc_name, concrete_type, None));
@@ -465,7 +474,7 @@ fn test_associated_type_constraint_with_nested_function_and_associated_type() {
 #[test]
 fn test_associated_type_constraint_with_nested_function_and_associated_type_mismatch() {
     let mut solver = ConstraintSolver::new();
-    let base_type = HirType::Named(Identifier::new("MapperFactory"));
+    let base_type = ValkyrieType::Named(Identifier::new("MapperFactory"));
     let trait_name = make_trait_name("Streaming");
     let assoc_name = Identifier::new("Output");
 
@@ -473,40 +482,40 @@ fn test_associated_type_constraint_with_nested_function_and_associated_type_mism
         base_type.clone(),
         trait_name.clone(),
         assoc_name.clone(),
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![
-                    HirType::AssociatedType {
-                        base: Box::new(HirType::Named(Identifier::new("VecIter"))),
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![
+                    ValkyrieType::Associated(AssociatedType {
+                        base: Box::new(ValkyrieType::Named(Identifier::new("VecIter"))),
                         name: Identifier::new("Item"),
-                        type_args: vec![HirType::Integer32],
-                    },
-                    HirType::Integer32,
+                        type_arguments: vec![ValkyrieType::Integer32],
+                    }),
+                    ValkyrieType::Integer32,
                 ])],
             )),
-        },
+        }),
     );
 
     solver.add_associated_type_constraint(AssociatedTypeConstraint::new(
         base_type,
         trait_name,
         assoc_name,
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![
-                    HirType::AssociatedType {
-                        base: Box::new(HirType::Named(Identifier::new("VecIter"))),
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![
+                    ValkyrieType::Associated(AssociatedType {
+                        base: Box::new(ValkyrieType::Named(Identifier::new("VecIter"))),
                         name: Identifier::new("Item"),
-                        type_args: vec![HirType::Integer64],
-                    },
-                    HirType::Integer32,
+                        type_arguments: vec![ValkyrieType::Integer64],
+                    }),
+                    ValkyrieType::Integer32,
                 ])],
             )),
-        },
+        }),
         None,
     ));
 
@@ -517,32 +526,32 @@ fn test_associated_type_constraint_with_nested_function_and_associated_type_mism
 #[test]
 fn test_where_clause_uses_binding_from_associated_type_constraint() {
     let mut solver = ConstraintSolver::new();
-    let generic_t = HirType::Generic { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] };
+    let generic_t = ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] });
 
     solver.register_associated_type_impl(
-        HirType::Named(Identifier::new("MapperFactory")),
+        ValkyrieType::Named(Identifier::new("MapperFactory")),
         make_trait_name("Streaming"),
         Identifier::new("Output"),
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![HirType::Integer64, HirType::Integer64])],
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer64, ValkyrieType::Integer64])],
             )),
-        },
+        }),
     );
 
     solver.add_associated_type_constraint(AssociatedTypeConstraint::new(
-        HirType::Named(Identifier::new("MapperFactory")),
+        ValkyrieType::Named(Identifier::new("MapperFactory")),
         make_trait_name("Streaming"),
         Identifier::new("Output"),
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![generic_t.clone(), generic_t.clone()])],
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![generic_t.clone(), generic_t.clone()])],
             )),
-        },
+        }),
         None,
     ));
 
@@ -553,38 +562,38 @@ fn test_where_clause_uses_binding_from_associated_type_constraint() {
 
     let result = solver.solve();
     assert!(result.is_ok());
-    assert_eq!(solver.generic_bindings().get(&Identifier::new("T")), Some(&HirType::Integer64));
+    assert_eq!(solver.generic_bindings().get(&Identifier::new("T")), Some(&ValkyrieType::Integer64));
 }
 
 #[test]
 fn test_where_clause_reports_trait_error_after_associated_type_binding() {
     let mut solver = ConstraintSolver::new();
-    let generic_t = HirType::Generic { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] };
+    let generic_t = ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] });
 
     solver.register_associated_type_impl(
-        HirType::Named(Identifier::new("MapperFactory")),
+        ValkyrieType::Named(Identifier::new("MapperFactory")),
         make_trait_name("Streaming"),
         Identifier::new("Output"),
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![HirType::Integer64, HirType::Integer64])],
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer64, ValkyrieType::Integer64])],
             )),
-        },
+        }),
     );
 
     solver.add_associated_type_constraint(AssociatedTypeConstraint::new(
-        HirType::Named(Identifier::new("MapperFactory")),
+        ValkyrieType::Named(Identifier::new("MapperFactory")),
         make_trait_name("Streaming"),
         Identifier::new("Output"),
-        HirType::Function {
-            params: vec![HirType::Integer32],
-            return_type: Box::new(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Boxed"))),
-                vec![HirType::Tuple(vec![generic_t.clone(), generic_t.clone()])],
+        ValkyrieType::Function(FunctionType {
+            params: vec![ValkyrieType::Integer32],
+            return_type: Box::new(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                vec![ValkyrieType::Tuple(vec![generic_t.clone(), generic_t.clone()])],
             )),
-        },
+        }),
         None,
     ));
 
@@ -607,12 +616,12 @@ fn test_trait_bound_checker() {
     assert!(!checker.is_builtin_trait(&make_trait_name("CustomTrait")));
 
     checker.register_trait_impl(TraitImpl {
-        ty: HirType::Named(Identifier::new("MyType")),
+        ty: ValkyrieType::Named(Identifier::new("MyType")),
         trait_name: make_trait_name("CustomTrait"),
         type_args: vec![],
     });
 
-    assert!(checker.check_trait_bound(&HirType::Named(Identifier::new("MyType")), &make_trait_name("CustomTrait")).unwrap());
+    assert!(checker.check_trait_bound(&ValkyrieType::Named(Identifier::new("MyType")), &make_trait_name("CustomTrait")).unwrap());
 }
 
 #[test]
@@ -638,7 +647,7 @@ fn test_where_clause_empty() {
 
     let mut clause = WhereClause::empty();
     clause.add_bound(WhereBound {
-        ty: HirType::Generic { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] },
+        ty: ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: valkyrie_types::hir::HirKind::Type, bounds: vec![] }),
         traits: vec![make_trait_name("Display")],
         span: None,
     });
@@ -658,7 +667,7 @@ fn test_multi_trait_bound_empty() {
 #[test]
 fn test_associated_type_not_found_error() {
     let error = ConstraintError::associated_type_not_found(
-        HirType::Named(Identifier::new("MyType")),
+        ValkyrieType::Named(Identifier::new("MyType")),
         make_trait_name("Iterator"),
         Identifier::new("Item"),
         None,
@@ -676,10 +685,10 @@ fn test_propagation_failed_error() {
 #[test]
 fn test_resolve_associated_type() {
     let mut solver = ConstraintSolver::new();
-    let base_type = HirType::Named(Identifier::new("Counter"));
+    let base_type = ValkyrieType::Named(Identifier::new("Counter"));
     let trait_name = make_trait_name("Iterator");
     let assoc_name = Identifier::new("Item");
-    let concrete_type = HirType::Integer64;
+    let concrete_type = ValkyrieType::Integer64;
 
     solver.register_associated_type_impl(base_type.clone(), trait_name.clone(), assoc_name.clone(), concrete_type.clone());
 
@@ -690,11 +699,11 @@ fn test_resolve_associated_type() {
 #[test]
 fn test_unify_associated_types() {
     let mut solver = ConstraintSolver::new();
-    let ty = HirType::Named(Identifier::new("Counter"));
+    let ty = ValkyrieType::Named(Identifier::new("Counter"));
     let assoc_name = Identifier::new("Item");
 
-    let assoc_ty1 = HirType::AssociatedType { base: Box::new(ty.clone()), name: assoc_name.clone(), type_args: vec![] };
-    let assoc_ty2 = HirType::AssociatedType { base: Box::new(ty), name: assoc_name, type_args: vec![] };
+    let assoc_ty1 = ValkyrieType::Associated(AssociatedType { base: Box::new(ty.clone()), name: assoc_name.clone(), type_arguments: vec![] });
+    let assoc_ty2 = ValkyrieType::Associated(AssociatedType { base: Box::new(ty), name: assoc_name, type_arguments: vec![] });
 
     let result = solver.unify(&assoc_ty1, &assoc_ty2, None);
     assert!(result.is_ok());
@@ -703,10 +712,11 @@ fn test_unify_associated_types() {
 #[test]
 fn test_unify_associated_types_different_names() {
     let mut solver = ConstraintSolver::new();
-    let ty = HirType::Named(Identifier::new("Counter"));
+    let ty = ValkyrieType::Named(Identifier::new("Counter"));
 
-    let assoc_ty1 = HirType::AssociatedType { base: Box::new(ty.clone()), name: Identifier::new("Item"), type_args: vec![] };
-    let assoc_ty2 = HirType::AssociatedType { base: Box::new(ty), name: Identifier::new("Value"), type_args: vec![] };
+    let assoc_ty1 =
+        ValkyrieType::Associated(AssociatedType { base: Box::new(ty.clone()), name: Identifier::new("Item"), type_arguments: vec![] });
+    let assoc_ty2 = ValkyrieType::Associated(AssociatedType { base: Box::new(ty), name: Identifier::new("Value"), type_arguments: vec![] });
 
     let result = solver.unify(&assoc_ty1, &assoc_ty2, None);
     assert!(matches!(result, Err(ConstraintError { .. })));
@@ -714,14 +724,14 @@ fn test_unify_associated_types_different_names() {
 
 #[test]
 fn test_unity_variant_subtype() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let option_enum = HirEnum {
         name: Identifier::new("Option"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![
             HirVariant { name: Identifier::new("Some"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
             HirVariant { name: Identifier::new("None"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
@@ -732,25 +742,25 @@ fn test_unity_variant_subtype() {
 
     solver.register_unity_type(&option_enum);
 
-    let some_type = HirType::Named(Identifier::new("Some"));
-    let option_type = HirType::Apply(Box::new(HirType::Named(Identifier::new("Option"))), vec![HirType::Integer32]);
+    let some_type = ValkyrieType::Named(Identifier::new("Some"));
+    let option_type = ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Option"))), vec![ValkyrieType::Integer32]);
 
     assert!(solver.is_subtype(&some_type, &option_type));
 
-    let none_type = HirType::Named(Identifier::new("None"));
+    let none_type = ValkyrieType::Named(Identifier::new("None"));
     assert!(solver.is_subtype(&none_type, &option_type));
 }
 
 #[test]
 fn test_gadt_variant_result_type_subtype() {
-    use valkyrie_types::hir::{HirEnum, HirField, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirField, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let expr_enum = HirEnum {
         name: Identifier::new("Expr"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![
             HirVariant {
                 name: Identifier::new("Literal"),
@@ -758,21 +768,21 @@ fn test_gadt_variant_result_type_subtype() {
                 fields: vec![HirField {
                     name: Identifier::new("value"),
                     doc: Default::default(),
-                    ty: HirType::Float64,
+                    ty: ValkyrieType::Float64,
                     visibility: HirVisibility::public(),
                     is_readonly: false,
                 }],
                 tuple_types: vec![],
-                result_type: Some(HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Float64])),
+                result_type: Some(ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Float64])),
             },
             HirVariant {
                 name: Identifier::new("If"),
                 doc: Default::default(),
                 fields: vec![],
                 tuple_types: vec![],
-                result_type: Some(HirType::Apply(
-                    Box::new(HirType::Named(Identifier::new("Expr"))),
-                    vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+                result_type: Some(ValkyrieType::Apply(
+                    Box::new(ValkyrieType::Named(Identifier::new("Expr"))),
+                    vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })],
                 )),
             },
         ],
@@ -783,39 +793,39 @@ fn test_gadt_variant_result_type_subtype() {
     solver.register_unity_type(&expr_enum);
 
     assert!(solver.is_subtype(
-        &HirType::Named(Identifier::new("Literal")),
-        &HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Float64]),
+        &ValkyrieType::Named(Identifier::new("Literal")),
+        &ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Float64]),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("Literal")),
-        &HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Integer64]),
+        &ValkyrieType::Named(Identifier::new("Literal")),
+        &ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Integer64]),
     ));
     assert!(solver.is_subtype(
-        &HirType::Named(Identifier::new("If")),
-        &HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Integer32]),
+        &ValkyrieType::Named(Identifier::new("If")),
+        &ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Integer32]),
     ));
 }
 
 #[test]
 fn test_gadt_variant_result_type_matches_nested_tuple_pattern() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let pair_expr_enum = HirEnum {
         name: Identifier::new("PairExpr"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![HirVariant {
             name: Identifier::new("PairValue"),
             doc: Default::default(),
             fields: vec![],
             tuple_types: vec![],
-            result_type: Some(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("PairExpr"))),
-                vec![HirType::Tuple(vec![
-                    HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
-                    HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+            result_type: Some(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("PairExpr"))),
+                vec![ValkyrieType::Tuple(vec![
+                    ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }),
+                    ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }),
                 ])],
             )),
         }],
@@ -826,48 +836,48 @@ fn test_gadt_variant_result_type_matches_nested_tuple_pattern() {
     solver.register_unity_type(&pair_expr_enum);
 
     assert!(solver.is_subtype(
-        &HirType::Named(Identifier::new("PairValue")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("PairExpr"))),
-            vec![HirType::Tuple(vec![HirType::Integer32, HirType::Integer32])],
+        &ValkyrieType::Named(Identifier::new("PairValue")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("PairExpr"))),
+            vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer32, ValkyrieType::Integer32])],
         ),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("PairValue")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("PairExpr"))),
-            vec![HirType::Tuple(vec![HirType::Integer32, HirType::Integer64])],
+        &ValkyrieType::Named(Identifier::new("PairValue")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("PairExpr"))),
+            vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer32, ValkyrieType::Integer64])],
         ),
     ));
 }
 
 #[test]
 fn test_gadt_variant_result_type_matches_function_with_nested_apply_tuple_return() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let callable_enum = HirEnum {
         name: Identifier::new("Callable"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![HirVariant {
             name: Identifier::new("Duplicator"),
             doc: Default::default(),
             fields: vec![],
             tuple_types: vec![],
-            result_type: Some(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Callable"))),
-                vec![HirType::Function {
-                    params: vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
-                    return_type: Box::new(HirType::Apply(
-                        Box::new(HirType::Named(Identifier::new("Boxed"))),
-                        vec![HirType::Tuple(vec![
-                            HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
-                            HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+            result_type: Some(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Callable"))),
+                vec![ValkyrieType::Function(FunctionType {
+                    params: vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })],
+                    return_type: Box::new(ValkyrieType::Apply(
+                        Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                        vec![ValkyrieType::Tuple(vec![
+                            ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }),
+                            ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }),
                         ])],
                     )),
-                }],
+                })],
             )),
         }],
         doc: Default::default(),
@@ -877,49 +887,49 @@ fn test_gadt_variant_result_type_matches_function_with_nested_apply_tuple_return
     solver.register_unity_type(&callable_enum);
 
     assert!(solver.is_subtype(
-        &HirType::Named(Identifier::new("Duplicator")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("Callable"))),
-            vec![HirType::Function {
-                params: vec![HirType::Integer32],
-                return_type: Box::new(HirType::Apply(
-                    Box::new(HirType::Named(Identifier::new("Boxed"))),
-                    vec![HirType::Tuple(vec![HirType::Integer32, HirType::Integer32])],
+        &ValkyrieType::Named(Identifier::new("Duplicator")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("Callable"))),
+            vec![ValkyrieType::Function(FunctionType {
+                params: vec![ValkyrieType::Integer32],
+                return_type: Box::new(ValkyrieType::Apply(
+                    Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                    vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer32, ValkyrieType::Integer32])],
                 )),
-            }],
+            })],
         ),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("Duplicator")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("Callable"))),
-            vec![HirType::Function {
-                params: vec![HirType::Integer32],
-                return_type: Box::new(HirType::Apply(
-                    Box::new(HirType::Named(Identifier::new("Boxed"))),
-                    vec![HirType::Tuple(vec![HirType::Integer32, HirType::Integer64])],
+        &ValkyrieType::Named(Identifier::new("Duplicator")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("Callable"))),
+            vec![ValkyrieType::Function(FunctionType {
+                params: vec![ValkyrieType::Integer32],
+                return_type: Box::new(ValkyrieType::Apply(
+                    Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                    vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer32, ValkyrieType::Integer64])],
                 )),
-            }],
+            })],
         ),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("Duplicator")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("Callable"))),
-            vec![HirType::Function {
-                params: vec![HirType::Integer64],
-                return_type: Box::new(HirType::Apply(
-                    Box::new(HirType::Named(Identifier::new("Boxed"))),
-                    vec![HirType::Tuple(vec![HirType::Integer32, HirType::Integer32])],
+        &ValkyrieType::Named(Identifier::new("Duplicator")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("Callable"))),
+            vec![ValkyrieType::Function(FunctionType {
+                params: vec![ValkyrieType::Integer64],
+                return_type: Box::new(ValkyrieType::Apply(
+                    Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                    vec![ValkyrieType::Tuple(vec![ValkyrieType::Integer32, ValkyrieType::Integer32])],
                 )),
-            }],
+            })],
         ),
     ));
 }
 
 #[test]
 fn test_gadt_variant_result_type_matches_function_with_nested_associated_type() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
@@ -927,32 +937,40 @@ fn test_gadt_variant_result_type_matches_function_with_nested_associated_type() 
         name: Identifier::new("StreamCallable"),
         is_unity: true,
         generics: vec![
-            HirGeneric { name: Identifier::new("Iter"), kind: HirKind::Type, bounds: vec![] },
-            HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("Iter"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
         ],
         variants: vec![HirVariant {
             name: Identifier::new("NextMapper"),
             doc: Default::default(),
             fields: vec![],
             tuple_types: vec![],
-            result_type: Some(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("StreamCallable"))),
+            result_type: Some(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("StreamCallable"))),
                 vec![
-                    HirType::Generic { name: Identifier::new("Iter"), kind: HirKind::Type, bounds: vec![] },
-                    HirType::Function {
-                        params: vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
-                        return_type: Box::new(HirType::Apply(
-                            Box::new(HirType::Named(Identifier::new("Boxed"))),
-                            vec![HirType::Tuple(vec![
-                                HirType::AssociatedType {
-                                    base: Box::new(HirType::Generic { name: Identifier::new("Iter"), kind: HirKind::Type, bounds: vec![] }),
+                    ValkyrieType::Generic(GenericType { name: Identifier::new("Iter"), kind: HirKind::Type, bounds: vec![] }),
+                    ValkyrieType::Function(FunctionType {
+                        params: vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })],
+                        return_type: Box::new(ValkyrieType::Apply(
+                            Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                            vec![ValkyrieType::Tuple(vec![
+                                ValkyrieType::Associated(AssociatedType {
+                                    base: Box::new(ValkyrieType::Generic(GenericType {
+                                        name: Identifier::new("Iter"),
+                                        kind: HirKind::Type,
+                                        bounds: vec![],
+                                    })),
                                     name: Identifier::new("Item"),
-                                    type_args: vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
-                                },
-                                HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+                                    type_arguments: vec![ValkyrieType::Generic(GenericType {
+                                        name: Identifier::new("T"),
+                                        kind: HirKind::Type,
+                                        bounds: vec![],
+                                    })],
+                                }),
+                                ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }),
                             ])],
                         )),
-                    },
+                    }),
                 ],
             )),
         }],
@@ -963,71 +981,71 @@ fn test_gadt_variant_result_type_matches_function_with_nested_associated_type() 
     solver.register_unity_type(&stream_callable_enum);
 
     assert!(solver.is_subtype(
-        &HirType::Named(Identifier::new("NextMapper")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("StreamCallable"))),
+        &ValkyrieType::Named(Identifier::new("NextMapper")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("StreamCallable"))),
             vec![
-                HirType::Named(Identifier::new("VecIter")),
-                HirType::Function {
-                    params: vec![HirType::Integer32],
-                    return_type: Box::new(HirType::Apply(
-                        Box::new(HirType::Named(Identifier::new("Boxed"))),
-                        vec![HirType::Tuple(vec![
-                            HirType::AssociatedType {
-                                base: Box::new(HirType::Named(Identifier::new("VecIter"))),
+                ValkyrieType::Named(Identifier::new("VecIter")),
+                ValkyrieType::Function(FunctionType {
+                    params: vec![ValkyrieType::Integer32],
+                    return_type: Box::new(ValkyrieType::Apply(
+                        Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                        vec![ValkyrieType::Tuple(vec![
+                            ValkyrieType::Associated(AssociatedType {
+                                base: Box::new(ValkyrieType::Named(Identifier::new("VecIter"))),
                                 name: Identifier::new("Item"),
-                                type_args: vec![HirType::Integer32],
-                            },
-                            HirType::Integer32,
+                                type_arguments: vec![ValkyrieType::Integer32],
+                            }),
+                            ValkyrieType::Integer32,
                         ])],
                     )),
-                },
+                }),
             ],
         ),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("NextMapper")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("StreamCallable"))),
+        &ValkyrieType::Named(Identifier::new("NextMapper")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("StreamCallable"))),
             vec![
-                HirType::Named(Identifier::new("VecIter")),
-                HirType::Function {
-                    params: vec![HirType::Integer32],
-                    return_type: Box::new(HirType::Apply(
-                        Box::new(HirType::Named(Identifier::new("Boxed"))),
-                        vec![HirType::Tuple(vec![
-                            HirType::AssociatedType {
-                                base: Box::new(HirType::Named(Identifier::new("OtherIter"))),
+                ValkyrieType::Named(Identifier::new("VecIter")),
+                ValkyrieType::Function(FunctionType {
+                    params: vec![ValkyrieType::Integer32],
+                    return_type: Box::new(ValkyrieType::Apply(
+                        Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                        vec![ValkyrieType::Tuple(vec![
+                            ValkyrieType::Associated(AssociatedType {
+                                base: Box::new(ValkyrieType::Named(Identifier::new("OtherIter"))),
                                 name: Identifier::new("Item"),
-                                type_args: vec![HirType::Integer32],
-                            },
-                            HirType::Integer32,
+                                type_arguments: vec![ValkyrieType::Integer32],
+                            }),
+                            ValkyrieType::Integer32,
                         ])],
                     )),
-                },
+                }),
             ],
         ),
     ));
     assert!(!solver.is_subtype(
-        &HirType::Named(Identifier::new("NextMapper")),
-        &HirType::Apply(
-            Box::new(HirType::Named(Identifier::new("StreamCallable"))),
+        &ValkyrieType::Named(Identifier::new("NextMapper")),
+        &ValkyrieType::Apply(
+            Box::new(ValkyrieType::Named(Identifier::new("StreamCallable"))),
             vec![
-                HirType::Named(Identifier::new("VecIter")),
-                HirType::Function {
-                    params: vec![HirType::Integer32],
-                    return_type: Box::new(HirType::Apply(
-                        Box::new(HirType::Named(Identifier::new("Boxed"))),
-                        vec![HirType::Tuple(vec![
-                            HirType::AssociatedType {
-                                base: Box::new(HirType::Named(Identifier::new("VecIter"))),
+                ValkyrieType::Named(Identifier::new("VecIter")),
+                ValkyrieType::Function(FunctionType {
+                    params: vec![ValkyrieType::Integer32],
+                    return_type: Box::new(ValkyrieType::Apply(
+                        Box::new(ValkyrieType::Named(Identifier::new("Boxed"))),
+                        vec![ValkyrieType::Tuple(vec![
+                            ValkyrieType::Associated(AssociatedType {
+                                base: Box::new(ValkyrieType::Named(Identifier::new("VecIter"))),
                                 name: Identifier::new("Item"),
-                                type_args: vec![HirType::Integer64],
-                            },
-                            HirType::Integer32,
+                                type_arguments: vec![ValkyrieType::Integer64],
+                            }),
+                            ValkyrieType::Integer32,
                         ])],
                     )),
-                },
+                }),
             ],
         ),
     ));
@@ -1035,7 +1053,7 @@ fn test_gadt_variant_result_type_matches_function_with_nested_associated_type() 
 
 #[test]
 fn test_unity_variant_subtype_with_type_args() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
@@ -1043,8 +1061,8 @@ fn test_unity_variant_subtype_with_type_args() {
         name: Identifier::new("Result"),
         is_unity: true,
         generics: vec![
-            HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
-            HirGeneric { name: Identifier::new("E"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("E"), kind: HirKind::Type, bounds: vec![] },
         ],
         variants: vec![
             HirVariant { name: Identifier::new("Fine"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
@@ -1056,25 +1074,26 @@ fn test_unity_variant_subtype_with_type_args() {
 
     solver.register_unity_type(&result_enum);
 
-    let fine_type = HirType::Named(Identifier::new("Fine"));
-    let result_type = HirType::Apply(Box::new(HirType::Named(Identifier::new("Result"))), vec![HirType::Integer32, HirType::Utf8]);
+    let fine_type = ValkyrieType::Named(Identifier::new("Fine"));
+    let result_type =
+        ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Result"))), vec![ValkyrieType::Integer32, ValkyrieType::Utf8]);
 
     assert!(solver.is_subtype(&fine_type, &result_type));
 
-    let fail_type = HirType::Named(Identifier::new("Fail"));
+    let fail_type = ValkyrieType::Named(Identifier::new("Fail"));
     assert!(solver.is_subtype(&fail_type, &result_type));
 }
 
 #[test]
 fn test_unity_variant_not_subtype_of_different_unity() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let option_enum = HirEnum {
         name: Identifier::new("Option"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![
             HirVariant { name: Identifier::new("Some"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
             HirVariant { name: Identifier::new("None"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
@@ -1087,8 +1106,8 @@ fn test_unity_variant_not_subtype_of_different_unity() {
         name: Identifier::new("Result"),
         is_unity: true,
         generics: vec![
-            HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
-            HirGeneric { name: Identifier::new("E"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] },
+            GenericType { name: Identifier::new("E"), kind: HirKind::Type, bounds: vec![] },
         ],
         variants: vec![
             HirVariant { name: Identifier::new("Fine"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
@@ -1101,22 +1120,23 @@ fn test_unity_variant_not_subtype_of_different_unity() {
     solver.register_unity_type(&option_enum);
     solver.register_unity_type(&result_enum);
 
-    let some_type = HirType::Named(Identifier::new("Some"));
-    let result_type = HirType::Apply(Box::new(HirType::Named(Identifier::new("Result"))), vec![HirType::Integer32, HirType::Utf8]);
+    let some_type = ValkyrieType::Named(Identifier::new("Some"));
+    let result_type =
+        ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Result"))), vec![ValkyrieType::Integer32, ValkyrieType::Utf8]);
 
     assert!(!solver.is_subtype(&some_type, &result_type));
 }
 
 #[test]
 fn test_unity_subtype_constraint() {
-    use valkyrie_types::hir::{HirEnum, HirGeneric, HirKind, HirVariant, HirVisibility};
+    use valkyrie_types::hir::{GenericType, HirEnum, HirKind, HirVariant, HirVisibility};
 
     let mut solver = ConstraintSolver::new();
 
     let option_enum = HirEnum {
         name: Identifier::new("Option"),
         is_unity: true,
-        generics: vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+        generics: vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
         variants: vec![
             HirVariant { name: Identifier::new("Some"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
             HirVariant { name: Identifier::new("None"), doc: Default::default(), fields: vec![], tuple_types: vec![], result_type: None },
@@ -1127,8 +1147,8 @@ fn test_unity_subtype_constraint() {
 
     solver.register_unity_type(&option_enum);
 
-    let some_type = HirType::Named(Identifier::new("Some"));
-    let option_type = HirType::Apply(Box::new(HirType::Named(Identifier::new("Option"))), vec![HirType::Integer32]);
+    let some_type = ValkyrieType::Named(Identifier::new("Some"));
+    let option_type = ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Option"))), vec![ValkyrieType::Integer32]);
 
     solver.add_constraint(TypeConstraint::subtype(some_type, option_type, None));
 

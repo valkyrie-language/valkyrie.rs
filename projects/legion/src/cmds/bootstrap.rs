@@ -1,23 +1,4 @@
-//! `legion bootstrap` 命令。
-//!
-//! 实现 `seed -> v1 -> v2` 的诚实自举编译链，支持 `CLR` 与 `WASM` 目标。
-//!
-//! 工作流程（诚实自举）：
-//! 1. 使用 seed（已有的可运行 legion）编译编译器源码，得到 v1（编译器）
-//! 2. 运行 v1 验证其可执行（WASM 目标：v1 读取源文件产生 v1_output.wasm）
-//! 3. 使用 v1 编译同一份编译器源码，得到 v2（WASM 目标：v1 读取源文件产生 v2_output.wasm）
-//! 4. 比对 v1_output 和 v2_output 的字节一致性（验证确定性）
-//!
-//! 诚实自举护栏（见 spec.md "诚实自举护栏"章节）：
-//! - v1 必须实际读取源文件内容，输出依赖于源文件内容
-//! - 禁止预编译模板、自复制、外部编译器代理、差分测试伪装
-//! - 禁止使用固定输入值（如 42）代替源文件路径
-//!
-//! 对于 `WASM` 目标：
-//! - v1 是 `.wasm` 产物 + `.mjs` 启动壳，通过 `node` 运行
-//! - 微编译器通过 `wasm_import` 从 `Node` 启动壳获取 I/O 能力
-//! - v1 运行时通过 `read_source_byte` 导入读取源文件，统计字节数，生成返回该计数的 WASM 模块
-//! - 自举验证：v1 两次运行（读取同一源文件）产生相同输出，验证确定性
+#![doc = include_str!("readme.md")]
 
 use std::{
     fs,
@@ -27,7 +8,7 @@ use std::{
 
 use clap::Args;
 use miette::{miette, IntoDiagnostic, Report, Result};
-use nyar::CanonicalTarget;
+use valkyrie_compiler::CanonicalTarget;
 
 /// `legion bootstrap` 的命令参数。
 #[derive(Debug, Clone, Args)]
@@ -102,7 +83,7 @@ impl BootstrapResult {
 pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
     let mut result = BootstrapResult { stages_completed: Vec::new(), failed_stage: None, v1_path: None, v2_path: None };
     let target_str = args.target.to_string();
-    // `WASI` 目标的规范字符串形如 `wasm32-unknown-wasi-wasip1`，以 `wasm` 开头但包含 `wasi`。
+    // `WASI` 目标的规范字符串形如 `wasm32-unknown-wasi-wasi`，以 `wasm` 开头但包含 `wasi`。
     // 因此用 `contains("wasi")` 检测 `WASI` 目标，`contains("wasm")` 检测所有 `WASM` 系目标。
     let is_wasm_target = target_str.contains("wasm") || target_str.contains("wasi");
 
@@ -242,8 +223,8 @@ fn find_wasi_host() -> Result<PathBuf> {
 
     if !host.exists() {
         return Err(miette!(
-            "未找到 WASI 宿主二进制: {path}\n\
-             请先构建: cargo build -p valkyrie-interpreter --bin valkyrie-wasi-host",
+            r#"未找到 WASI 宿主二进制: {path}
+请先构建: cargo build -p valkyrie-interpreter --bin valkyrie-wasi-host"#,
             path = host.display()
         ));
     }
@@ -279,14 +260,14 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
 
     // 检测 seed 是否为 WASM 文件（v1 产物）。
     let is_wasm_seed = normalized_seed.extension().is_some_and(|ext| ext == "wasm");
-    // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasip1`，用 `contains("wasi")` 检测。
+    // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasi`，用 `contains("wasi")` 检测。
     let is_wasi_target = target.contains("wasi");
 
     if is_wasm_seed {
         if !source_file.exists() {
             return Err(miette!(
-                "{stage_name} 源文件不存在: {source_file}\n\
-                 诚实自举要求 v1 实际读取源文件内容",
+                r#"{stage_name} 源文件不存在: {source_file}
+诚实自举要求 v1 实际读取源文件内容"#,
                 stage_name = stage_name,
                 source_file = source_file.display()
             ));
@@ -327,7 +308,14 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(miette!("{} WASM 运行失败\nstdout: {}\nstderr: {}", stage_name, stdout.trim(), stderr.trim()));
+            return Err(miette!(
+                r#"{} WASM 运行失败
+stdout: {}
+stderr: {}"#,
+                stage_name,
+                stdout.trim(),
+                stderr.trim()
+            ));
         }
 
         // 验证产物确实被生成了。
@@ -335,10 +323,10 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
             return Err(miette!(
-                "{stage_name} WASM 运行退出码为 0 但未产出产物 {path}\n\
-                 seed（{seed}）可能未正确实现输出逻辑。\n\
-                 stdout: {stdout}\n\
-                 stderr: {stderr}",
+                r#"{stage_name} WASM 运行退出码为 0 但未产出产物 {path}
+seed（{seed}）可能未正确实现输出逻辑。
+stdout: {stdout}
+stderr: {stderr}"#,
                 stage_name = stage_name,
                 path = output_file.display(),
                 seed = seed.display(),
@@ -375,7 +363,14 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
     if !output.status.success() {
         let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
         let stdout = String::from_utf8_lossy(&output.stdout);
-        return Err(miette!("{} 编译失败\nstdout: {}\nstderr: {}", stage_name, stdout.trim(), stderr.trim()));
+        return Err(miette!(
+            r#"{} 编译失败
+stdout: {}
+stderr: {}"#,
+            stage_name,
+            stdout.trim(),
+            stderr.trim()
+        ));
     }
 
     // 验证产物确实被生成了。
@@ -383,10 +378,10 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
         let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
         let stdout = String::from_utf8_lossy(&output.stdout);
         return Err(miette!(
-            "{stage_name} 编译退出码为 0 但未产出产物 {path}\n\
-             seed（{seed}）可能不具备 `legion build` 命令行能力。\n\
-             stdout: {stdout}\n\
-             stderr: {stderr}",
+            r#"{stage_name} 编译退出码为 0 但未产出产物 {path}
+seed（{seed}）可能不具备 `legion build` 命令行能力。
+stdout: {stdout}
+stderr: {stderr}"#,
             stage_name = stage_name,
             path = expected_artifact.display(),
             seed = seed.display(),
@@ -412,7 +407,7 @@ fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path:
 
     let normalized_artifact = strip_verbatim_prefix(artifact_path);
 
-    // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasip1`，用 `contains("wasi")` 检测。
+    // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasi`，用 `contains("wasi")` 检测。
     // 注意：必须先检查 `wasi` 再检查 `wasm`，因为 `WASI` 字符串也包含 `wasm`。
     if target.contains("wasi") {
         // WASI 目标：通过 valkyrie-wasi-host 运行 WASM 模块。
@@ -434,7 +429,13 @@ fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path:
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(miette!("WASI 产物运行失败\nstdout: {}\nstderr: {}", stdout.trim(), stderr.trim()));
+            return Err(miette!(
+                r#"WASI 产物运行失败
+stdout: {}
+stderr: {}"#,
+                stdout.trim(),
+                stderr.trim()
+            ));
         }
 
         if let Some(output) = output_path {
@@ -473,7 +474,13 @@ fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path:
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(miette!("WASM 产物运行失败\nstdout: {}\nstderr: {}", stdout.trim(), stderr.trim()));
+            return Err(miette!(
+                r#"WASM 产物运行失败
+stdout: {}
+stderr: {}"#,
+                stdout.trim(),
+                stderr.trim()
+            ));
         }
 
         // 如果有输出路径，验证输出文件已生成。
@@ -538,9 +545,9 @@ fn compare_artifacts(v1_path: &Path, v2_path: &Path) -> Result<()> {
 
     match diff_pos {
         Some(pos) => Err(miette!(
-            "v1/v2 比对失败: 二进制不一致\n\
-                 首次差异位置: 0x{pos:X} (v1=0x{v1:02X}, v2=0x{v2:02X})\n\
-                 v1 长度: {v1_len}, v2 长度: {v2_len}",
+            r#"v1/v2 比对失败: 二进制不一致
+首次差异位置: 0x{pos:X} (v1=0x{v1:02X}, v2=0x{v2:02X})
+v1 长度: {v1_len}, v2 长度: {v2_len}"#,
             pos = pos,
             v1 = v1_bytes[pos],
             v2 = v2_bytes[pos],

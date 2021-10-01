@@ -1,4 +1,39 @@
+mod match_patterns;
+
+pub use match_patterns::{
+    ArrayPattern, ExtractPattern, MatchArm, MatchObjectField, ObjectPattern, OrPatternExpression, PatternExpression, TuplePattern,
+};
+
 use std::ops::Range;
+use valkyrie_types::Identifier;
+
+/// 具备源码跨度的标识符节点。
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct IdentifierNode {
+    /// 标识符语义名称。
+    pub name: Identifier,
+    /// 标识符在源码中的跨度。
+    pub span: Range<usize>,
+}
+
+impl IdentifierNode {
+    /// 创建一个新的标识符节点。
+    pub fn new(name: Identifier, span: Range<usize>) -> Self {
+        Self { name, span }
+    }
+
+    /// 以字符串形式访问标识符名称。
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl std::fmt::Display for IdentifierNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.name, f)
+    }
+}
 
 /// Parser root for a single Valkyrie source file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,7 +72,7 @@ pub enum DeclarationStatement {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TypeAliasDeclaration {
     /// 别名名称。
-    pub name: String,
+    pub name: IdentifierNode,
     /// 别名指向的目标类型。
     pub target: TypeExpression,
     /// 源码跨度。
@@ -52,7 +87,7 @@ pub struct TypeAliasDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AttributeDeclaration {
     /// 属性名称。
-    pub name: String,
+    pub name: IdentifierNode,
     /// 源码跨度。
     pub span: Range<usize>,
 }
@@ -77,6 +112,8 @@ pub struct UsingStatement {
     pub path: NamePath,
     /// 选择性导入的名称列表（`using! a.b.{C, D}` 语法）。
     pub selective_imports: Vec<String>,
+    /// 是否为通配导入（`using a.b.*;` 语法）。
+    pub glob_import: bool,
     /// Source span of the declaration.
     pub span: Range<usize>,
 }
@@ -142,7 +179,7 @@ pub struct Annotations {
     /// Parsed attribute lists.
     pub attribute_lists: Vec<AttributeList>,
     /// Declaration modifiers such as `public` or `abstract`.
-    pub modifiers: Vec<String>,
+    pub modifiers: Vec<IdentifierNode>,
 }
 
 impl Annotations {
@@ -157,7 +194,7 @@ impl Annotations {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FunctionParameter {
     /// Parameter name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured type annotation.
     pub parameter_type: Option<TypeExpression>,
     /// Whether the parameter uses `mut`.
@@ -171,7 +208,7 @@ pub struct FunctionParameter {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GenericParameterDeclaration {
     /// Generic parameter name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Optional trait/type bounds attached with `:`.
     pub bounds: Vec<TypeExpression>,
     /// Optional default type attached with `=`.
@@ -254,38 +291,72 @@ pub struct LetStatement {
     pub initializer: Option<TermExpression>,
 }
 
-/// Parsed pattern expression used by `let` and iterator loops.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum PatternExpression {
-    /// `_`
-    Wildcard {
-        /// Source span of the pattern.
-        span: Range<usize>,
-    },
-    /// A single binding such as `value`.
-    Variable {
-        /// Binding name.
-        name: String,
-        /// Source span of the pattern.
-        span: Range<usize>,
-    },
-    /// Tuple pattern such as `(x, y)`.
-    Tuple {
-        /// Nested items.
-        items: Vec<PatternExpression>,
-        /// Source span of the pattern.
-        span: Range<usize>,
-    },
+pub struct TermBinaryExpression {
+    /// Operator.
+    pub operator: BinaryOperator,
+    /// Left operand.
+    pub lhs: TermExpression,
+    /// Right operand.
+    pub rhs: TermExpression,
+    /// Source span of the expression.
+    pub span: Range<usize>,
 }
 
-impl PatternExpression {
-    /// Returns the source span of the pattern.
-    pub fn span(&self) -> &Range<usize> {
-        match self {
-            Self::Wildcard { span } | Self::Variable { span, .. } | Self::Tuple { span, .. } => span,
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TermUnaryExpression {
+    /// Operator.
+    pub operator: UnaryOperator,
+    /// Operand.
+    pub base: TermExpression,
+    /// Source span of the expression.
+    pub span: Range<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TermAsExpression {
+    /// Input expression.
+    pub base: TermExpression,
+    /// Target type.
+    pub target: TypeExpression,
+    /// Source span of the expression.
+    pub span: Range<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SubscriptKind {
+    /// `a[1]` 这类序数访问。
+    Ordinal,
+    /// `a⁅0⁆` / `a::[0]` 这类偏移访问。
+    Offset,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IfStatement {
+    /// The condition expression.
+    pub condition: TermExpression,
+    /// The then branch body.
+    pub then_body: DeclarationBody,
+    /// The optional else branch body.
+    pub else_body: Option<DeclarationBody>,
+    /// Source span of the expression.
+    pub span: Range<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoopStatement {
+    /// Optional loop label.
+    pub label: Option<String>,
+    /// Optional binding pattern for iterator loops.
+    pub pattern: Option<PatternExpression>,
+    /// Optional source expression for iterator loops.
+    pub iterator: Option<TermExpression>,
+    /// Optional condition for while-style loops.
+    pub condition: Option<TermExpression>,
+    /// Loop body.
+    pub body: DeclarationBody,
+    /// Source span of the expression.
+    pub span: Range<usize>,
 }
 
 /// Parsed term expression node.
@@ -307,25 +378,9 @@ pub enum TermExpression {
         span: Range<usize>,
     },
     /// Prefix unary operator.
-    Unary {
-        /// Operator.
-        op: UnaryOperator,
-        /// Operand.
-        expr: Box<TermExpression>,
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
+    Unary(Box<TermUnaryExpression>),
     /// Binary operator parsed by Pratt.
-    Binary {
-        /// Operator.
-        op: BinaryOperator,
-        /// Left operand.
-        lhs: Box<TermExpression>,
-        /// Right operand.
-        rhs: Box<TermExpression>,
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
+    Binary(Box<TermBinaryExpression>),
     /// Function or constructor call.
     Call {
         /// Callee expression.
@@ -350,6 +405,8 @@ pub enum TermExpression {
         object: Box<TermExpression>,
         /// Index expression.
         index: Box<TermExpression>,
+        /// Whether the subscript uses ordinal or offset semantics.
+        kind: SubscriptKind,
         /// Source span of the expression.
         span: Range<usize>,
     },
@@ -368,14 +425,7 @@ pub enum TermExpression {
         span: Range<usize>,
     },
     /// Explicit cast expression such as `value as i32`.
-    As {
-        /// Input expression.
-        expr: Box<TermExpression>,
-        /// Target type.
-        ty: TypeExpression,
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
+    As(Box<TermAsExpression>),
     /// Explicit generic application such as `value::<i32>`.
     Turbofish {
         /// Input expression.
@@ -403,6 +453,8 @@ pub enum TermExpression {
     },
     /// `break value`
     Break {
+        /// Optional break label.
+        label: Option<String>,
         /// Optional break value.
         value: Option<Box<TermExpression>>,
         /// Source span of the expression.
@@ -410,38 +462,76 @@ pub enum TermExpression {
     },
     /// `continue`
     Continue {
+        /// Optional continue label.
+        label: Option<String>,
         /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `yield value`
+    Yield {
+        /// Optional yielded value.
+        value: Option<Box<TermExpression>>,
+        /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `yield from source`
+    YieldFrom {
+        /// Source expression delegated by `yield from`.
+        value: Box<TermExpression>,
+        /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `raise effect`
+    Raise {
+        /// Raised effect payload.
+        value: Box<TermExpression>,
+        /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `resume value`
+    Resume {
+        /// Resumed continuation value.
+        value: Box<TermExpression>,
+        /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `catch expr { ... }`
+    Catch {
+        /// Protected expression.
+        expr: Box<TermExpression>,
+        /// Handler arms.
+        arms: Vec<MatchArm>,
+        /// Source span of the expression.
+        span: Range<usize>,
+    },
+    /// `fallthrough` 语句级控制流。
+    ///
+    /// 暂作为表达式节点承载，实际仅允许出现在 `case` statement 体系中；
+    /// 在 `match` 表达式、普通块或其它上下文中应在语义阶段被拒绝。
+    Fallthrough {
+        /// 源码范围。
         span: Range<usize>,
     },
     /// `if condition { then } else { else }`
-    If {
-        /// The condition expression.
-        condition: Box<TermExpression>,
-        /// The then branch body.
-        then_body: Box<DeclarationBody>,
-        /// The optional else branch body.
-        else_body: Option<Box<DeclarationBody>>,
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
-    /// `loop pattern in source { ... }` or `loop condition { ... }`
-    Loop {
-        /// Optional binding pattern for iterator loops.
-        pattern: Option<PatternExpression>,
-        /// Optional source expression for iterator loops.
-        iterator: Option<Box<TermExpression>>,
-        /// Optional condition for while-style loops.
-        condition: Option<Box<TermExpression>>,
-        /// Loop body.
-        body: Box<DeclarationBody>,
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
+    If(Box<IfStatement>),
+    /// `loop { ... }` 或 `loop pattern in source { ... }`
+    Loop(Box<LoopStatement>),
     /// `match scrutinee { case Pattern(binding): body default: body }`
     Match {
         /// 被匹配的表达式。
         scrutinee: Box<TermExpression>,
         /// 匹配分支列表。
+        arms: Vec<MatchArm>,
+        /// 源码范围。
+        span: Range<usize>,
+    },
+    /// `case scrutinee { case Pattern: body default: body }`
+    ///
+    /// 与值语义 `match` 分离的源码级 `case statement` 入口。
+    Case {
+        /// 被调度的表达式。
+        scrutinee: Box<TermExpression>,
+        /// `case` 分支列表。
         arms: Vec<MatchArm>,
         /// 源码范围。
         span: Range<usize>,
@@ -475,65 +565,38 @@ pub enum TermExpression {
     },
 }
 
-/// `match` 表达式的单个分支。
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MatchArm {
-    /// 分支模式。
-    pub pattern: MatchPattern,
-    /// 分支体。
-    pub body: DeclarationBody,
-    /// 源码范围。
-    pub span: Range<usize>,
-}
-
-/// `match` 分支模式。
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum MatchPattern {
-    /// `case TypeName(binding1, binding2) if guard` — 构造器模式。
-    Constructor {
-        /// 构造器名称路径。
-        name: NamePath,
-        /// 绑定变量名列表。
-        bindings: Vec<String>,
-        /// 可选的 `if` 守卫表达式。
-        guard: Option<Box<TermExpression>>,
-        /// 源码范围。
-        span: Range<usize>,
-    },
-    /// `default:` — 默认分支。
-    Default {
-        /// 源码范围。
-        span: Range<usize>,
-    },
-}
-
 impl TermExpression {
     /// Returns the source span of the expression.
     pub fn span(&self) -> &Range<usize> {
         match self {
             Self::Name { span, .. }
             | Self::Literal { span, .. }
-            | Self::Unary { span, .. }
-            | Self::Binary { span, .. }
+            | Self::Unary(box TermUnaryExpression { span, .. })
+            | Self::Binary(box TermBinaryExpression { span, .. })
             | Self::Call { span, .. }
             | Self::MemberAccess { span, .. }
             | Self::Subscript { span, .. }
             | Self::Tuple { span, .. }
             | Self::Array { span, .. }
-            | Self::As { span, .. }
+            | Self::As(box TermAsExpression { span, .. })
             | Self::Turbofish { span, .. }
             | Self::Assign { span, .. }
             | Self::Return { span, .. }
             | Self::Break { span, .. }
-            | Self::Continue { span }
-            | Self::If { span, .. }
-            | Self::Loop { span, .. }
+            | Self::Continue { span, .. }
+            | Self::Yield { span, .. }
+            | Self::YieldFrom { span, .. }
+            | Self::Raise { span, .. }
+            | Self::Resume { span, .. }
+            | Self::Catch { span, .. }
+            | Self::If(box IfStatement { span, .. })
+            | Self::Loop(box LoopStatement { span, .. })
             | Self::Match { span, .. }
+            | Self::Case { span, .. }
             | Self::Construct { span, .. }
             | Self::Lambda { span, .. }
-            | Self::Block { span, .. } => span,
+            | Self::Block { span, .. }
+            | Self::Fallthrough { span } => span,
         }
     }
 }
@@ -542,9 +605,9 @@ impl TermExpression {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TypeExpression {
-    /// Name/path reference such as `Vec<T>`.
+    /// Namepath reference such as `package::module::TypeName`.
     Path(TypePath),
-    /// Array type such as `[utf8]`.
+    /// 堆数组类型 `[T]`，以及栈数组类型 `[T; N]`.
     Array {
         /// Element type.
         item: Box<TypeExpression>,
@@ -558,26 +621,16 @@ pub enum TypeExpression {
         /// Source span of the expression.
         span: Range<usize>,
     },
-    /// Unit type.
-    Unit {
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
-    /// `Self` type placeholder.
-    SelfType {
-        /// Source span of the expression.
-        span: Range<usize>,
-    },
     /// 关联类型绑定参数，如 `Iterator<Item = T>` 中的 `Item = T`。
     Associated {
         /// 关联类型名称。
-        name: String,
+        name: IdentifierNode,
         /// 绑定的类型表达式。
         ty: Box<TypeExpression>,
         /// 源码跨度。
         span: Range<usize>,
     },
-    /// 可空类型 `T?`，表示 `T` 或 `null`。
+    /// 可空类型 `T?`，等价于 `T | null`，表示 `T` 或 `null`。
     Nullable {
         /// 内部类型。
         item: Box<TypeExpression>,
@@ -602,8 +655,6 @@ impl TypeExpression {
             Self::Path(path) => &path.span,
             Self::Array { span, .. }
             | Self::Tuple { span, .. }
-            | Self::Unit { span }
-            | Self::SelfType { span }
             | Self::Associated { span, .. }
             | Self::Nullable { span, .. }
             | Self::Function { span, .. } => span,
@@ -672,16 +723,18 @@ pub enum BinaryOperator {
     And,
     /// `lhs || rhs`
     Or,
+    /// `lhs + rhs`
+    Add,
+    /// `lhs - rhs`
+    Sub,
     /// `lhs * rhs`
     Mul,
     /// `lhs / rhs`
     Div,
     /// `lhs % rhs`
     Rem,
-    /// `lhs + rhs`
-    Add,
-    /// `lhs - rhs`
-    Sub,
+    /// `lhs ^ rhs`，幂运算。
+    Power,
     /// `lhs == rhs`
     Eq,
     /// `lhs != rhs`
@@ -704,8 +757,6 @@ pub enum BinaryOperator {
     BitAnd,
     /// `lhs | rhs`，按位或运算符。
     BitOr,
-    /// `lhs ^ rhs`，按位异或运算符。
-    BitXor,
 }
 
 /// Structured declaration body captured by recursive descent.
@@ -715,7 +766,7 @@ pub struct DeclarationBody {
     /// Statement list in source order.
     pub statements: Vec<Statement>,
     /// Optional final expression without a trailing semicolon.
-    pub tail_expression: Option<Box<TermExpression>>,
+    pub tail_expression: Option<TermExpression>,
     /// Source span of the body content.
     pub span: Range<usize>,
 }
@@ -727,7 +778,7 @@ pub struct ObjectFieldDeclaration {
     /// Structured annotations attached above the field.
     pub annotations: Annotations,
     /// Field name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured field type annotation.
     pub field_type: TypeExpression,
     /// Optional parsed default value expression.
@@ -741,7 +792,7 @@ pub struct ObjectFieldDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ObjectMethodDeclaration {
     /// Method name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the method.
     pub annotations: Annotations,
     /// Original signature line.
@@ -763,7 +814,7 @@ pub struct TraitAssociatedTypeDeclaration {
     /// Structured annotations attached above the associated type.
     pub annotations: Annotations,
     /// Associated type name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Raw generic parameter fragments captured from the source clause.
     pub generic_parameters: Vec<String>,
     /// Optional trait bounds such as `Display + Clone`.
@@ -781,7 +832,7 @@ pub struct TraitAssociatedConstDeclaration {
     /// Structured annotations attached above the associated constant.
     pub annotations: Annotations,
     /// Constant name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured constant type annotation.
     pub const_type: TypeExpression,
     /// Optional default value provided inside the trait.
@@ -797,7 +848,7 @@ pub struct ImplyAssociatedTypeBinding {
     /// Structured annotations attached above the binding.
     pub annotations: Annotations,
     /// Associated type name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured generic parameters attached to the associated type binding.
     pub generic_parameters: Vec<GenericParameterDeclaration>,
     /// Concrete type expression bound to the associated type.
@@ -813,7 +864,7 @@ pub struct ImplyAssociatedConstBinding {
     /// Structured annotations attached above the binding.
     pub annotations: Annotations,
     /// Associated constant name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Optional explicit constant type annotation.
     pub const_type: Option<TypeExpression>,
     /// Concrete value expression bound to the constant.
@@ -844,7 +895,7 @@ pub struct ObjectBody {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ClassDeclaration {
     /// Class name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the declaration.
     pub annotations: Annotations,
     /// Optional parent list from `class Child(Base, Interface)`.
@@ -864,7 +915,7 @@ pub struct ClassDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TraitDeclaration {
     /// Trait name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the declaration.
     pub annotations: Annotations,
     /// Raw generic parameter fragments captured from the source clause.
@@ -910,7 +961,7 @@ pub struct ImplyDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UniteVariantDeclaration {
     /// Variant name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the variant.
     pub annotations: Annotations,
     /// Optional object-like field payload.
@@ -928,7 +979,7 @@ pub struct UniteVariantDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UniteDeclaration {
     /// Unite name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the declaration.
     pub annotations: Annotations,
     /// Declared variants.
@@ -942,7 +993,7 @@ pub struct UniteDeclaration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FunctionDeclaration {
     /// Function name.
-    pub name: String,
+    pub name: IdentifierNode,
     /// Structured annotations attached above the declaration.
     pub annotations: Annotations,
     /// Original signature line.

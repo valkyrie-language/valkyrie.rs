@@ -1,4 +1,4 @@
-﻿# mir
+# mir
 
 这里承载 `MIR (SSA)`。
 
@@ -6,6 +6,7 @@
 - 以 `SSA` 形式表达目标无关的中层语义。
 - 显式建模值、块参数、指令产值与 terminator。
 - 为优化和后续 artifact 分区提供稳定输入。
+- 控制流统一设计见 `control_flow.next.md`。
 
 ## 禁止
 - 不退回语句列表式伪 `MIR`。

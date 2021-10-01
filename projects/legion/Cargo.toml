@@ -11,10 +11,10 @@ clr-backend = { workspace = true }
 jvm-backend = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true }
-nyar = { workspace = true }
 nyar-driver = { workspace = true }
 von-parser = { workspace = true }
 valkyrie-compiler = { workspace = true }
+valkyrie-interpreter = { workspace = true }
 valkyrie-parser = { workspace = true }
 valkyrie-types = { workspace = true }
 wasi-backend = { workspace = true }

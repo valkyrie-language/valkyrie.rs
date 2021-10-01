@@ -1,6 +1,6 @@
 use valkyrie_compiler::type_checker::*;
 use valkyrie_types::{
-    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirModule, HirParent, HirProperty, HirStruct, HirType, HirVisibility},
+    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirModule, HirParent, HirProperty, HirStruct, HirVisibility, ValkyrieType},
     Identifier, NamePath, SourceID, SourceSpan,
 };
 
@@ -14,7 +14,7 @@ fn create_final_class(name: &str) -> HirStruct {
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64,
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -42,7 +42,7 @@ fn create_normal_class(name: &str, parents: Vec<HirParent>) -> HirStruct {
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64,
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -74,7 +74,7 @@ fn create_class_with_final_method(name: &str, method_name: &str) -> HirStruct {
             annotations: vec![],
             generics: vec![],
             params: vec![],
-            return_type: HirType::Unit,
+            return_type: ValkyrieType::Unit,
             body: HirBlock { statements: vec![], expr: None, span: SourceSpan::new(SourceID::default(), 0, 0) },
             span: SourceSpan::new(SourceID::default(), 0, 0),
             visibility: HirVisibility::public(),
@@ -106,7 +106,7 @@ fn create_class_with_final_property(name: &str, property_name: &str) -> HirStruc
         properties: vec![HirProperty {
             name: Identifier::new(property_name),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64,
             getter: None,
             setter: None,
             is_readonly: true,
@@ -145,7 +145,7 @@ fn create_class_with_override_method(name: &str, parents: Vec<HirParent>, method
             annotations: vec![],
             generics: vec![],
             params: vec![],
-            return_type: HirType::Unit,
+            return_type: ValkyrieType::Unit,
             body: HirBlock { statements: vec![], expr: None, span: SourceSpan::new(SourceID::default(), 0, 0) },
             span: SourceSpan::new(SourceID::default(), 0, 0),
             visibility: HirVisibility::public(),
@@ -177,7 +177,7 @@ fn create_class_with_override_property(name: &str, parents: Vec<HirParent>, prop
         properties: vec![HirProperty {
             name: Identifier::new(property_name),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64,
             getter: None,
             setter: None,
             is_readonly: true,

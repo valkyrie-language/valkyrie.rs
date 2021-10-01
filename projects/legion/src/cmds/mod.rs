@@ -1,4 +1,4 @@
-//! legion CLI 子命令模块集合。
+#![doc = include_str!("readme.md")]
 
 pub mod bootstrap;
 pub mod build;

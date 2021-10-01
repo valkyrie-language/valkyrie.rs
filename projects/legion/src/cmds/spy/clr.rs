@@ -26,7 +26,11 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
     let Some(target) = &options.input
     else {
         return Err(miette!(
-            "用法：legion spy clr <file> [--method <name>] [--list] [--json]\n  file               目标文件（.msil / .il / .exe / .dll）\n  --method <name>    输出包含指定名称的方法体\n  --list             列出所有方法签名\n  --json             以 JSON 格式输出"
+            r#"用法：legion spy clr <file> [--method <name>] [--list] [--json]
+  file               目标文件（.msil / .il / .exe / .dll）
+  --method <name>    输出包含指定名称的方法体
+  --list             列出所有方法签名
+  --json             以 JSON 格式输出"#
         ));
     };
 
@@ -208,7 +212,9 @@ fn run_msil_text(target: &str, options: &SpyTargetOptions) -> Result<ExitCode> {
 fn convert_with_ildasm(file: &str) -> Result<String> {
     let ildasm = resolve_ildasm().ok_or_else(|| {
         miette!(
-            "ildasm 不可用。\n请先转换为文本格式：ildasm \"{}\" /text > \"{}.msil\"\n然后运行：legion spy clr \"{}.msil\" --method <name>",
+            r#"ildasm 不可用。
+请先转换为文本格式：ildasm "{}" /text > "{}.msil"
+然后运行：legion spy clr "{}.msil" --method <name>"#,
             file,
             file,
             file
@@ -225,7 +231,12 @@ fn convert_with_ildasm(file: &str) -> Result<String> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(miette!("ildasm 退出码 {}。\n{}", output.status.code().unwrap_or(-1), stderr));
+        return Err(miette!(
+            r#"ildasm 退出码 {}。
+{}"#,
+            output.status.code().unwrap_or(-1),
+            stderr
+        ));
     }
 
     let temp_dir = std::env::temp_dir();
@@ -330,7 +341,12 @@ fn print_json_list(methods: &[MsilTextMethod]) {
         .iter()
         .map(|m| {
             format!(
-                "    {{\n      \"signature\": {},\n      \"name\": {},\n      \"line\": {},\n      \"size\": {}\n    }}",
+                r#"    {{
+      "signature": {},
+      "name": {},
+      "line": {},
+      "size": {}
+    }}"#,
                 json_string(&m.signature),
                 json_string(&m.name),
                 m.start_line,
@@ -349,7 +365,12 @@ fn print_json_methods(matches: &[&MsilTextMethod]) {
         .map(|m| {
             let body = m.body.join("\n");
             format!(
-                "    {{\n      \"signature\": {},\n      \"name\": {},\n      \"line\": {},\n      \"body\": {}\n    }}",
+                r#"    {{
+      "signature": {},
+      "name": {},
+      "line": {},
+      "body": {}
+    }}"#,
                 json_string(&m.signature),
                 json_string(&m.name),
                 m.start_line,

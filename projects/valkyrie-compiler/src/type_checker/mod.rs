@@ -7,18 +7,30 @@ use std::{
 
 use valkyrie_types::{
     hir::{
-        AccessLevel, HirEnum, HirExpr, HirExprKind, HirFunction, HirImpl, HirLiteral, HirModule, HirProperty, HirStruct, HirTrait, HirType,
-        HirWidget,
+        AccessLevel, HirEnum, HirExpr, HirExprKind, HirFunction, HirImpl, HirLiteral, HirModule, HirProperty, HirStruct, HirTrait, HirWidget,
+        ValkyrieType as HirType,
     },
     Identifier, NamePath, SourceSpan,
 };
 
 fn display_path(path: &NamePath) -> String {
-    path.0.iter().map(|part| part.to_string()).collect::<Vec<_>>().join("::")
+    path.parts().iter().map(|part| part.to_string()).collect::<Vec<_>>().join("::")
 }
 
 fn last_name(path: &NamePath) -> Option<Identifier> {
-    path.0.last().cloned()
+    path.parts().last().cloned()
+}
+
+fn signed_int32_type() -> HirType {
+    HirType::Integer32 { signed: true }
+}
+
+fn signed_int64_type() -> HirType {
+    HirType::Integer64 { signed: true }
+}
+
+fn bool_type() -> HirType {
+    HirType::Boolean
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -769,18 +781,18 @@ impl TypeInference {
 
     pub fn infer(&mut self, expr: &HirExpr) -> Result<HirType, TypeError> {
         match &expr.kind {
-            HirExprKind::Literal(HirLiteral::Integer64(_)) => Ok(HirType::Integer64),
+            HirExprKind::Literal(HirLiteral::Integer64(_)) => Ok(signed_int64_type()),
             HirExprKind::Literal(HirLiteral::Float64(_)) => Ok(HirType::Float64),
             HirExprKind::Literal(HirLiteral::String(_)) => Ok(HirType::Utf8),
-            HirExprKind::Literal(HirLiteral::Bool(_)) => Ok(HirType::Boolean),
+            HirExprKind::Literal(HirLiteral::Bool(_)) => Ok(bool_type()),
             HirExprKind::Literal(HirLiteral::Unit) => Ok(HirType::Unit),
             HirExprKind::Variable(identifier) => {
                 self.variables.get(&identifier.name).cloned().ok_or_else(|| TypeError::UnboundVariable { name: identifier.name.clone() })
             }
-            HirExprKind::Call { callee, args } => self.infer_call(callee, args),
+            HirExprKind::Call { callee, args, resolved } => self.infer_call(callee, args, resolved.as_ref()),
             HirExprKind::If { condition, then_branch, else_branch } => {
                 let condition_ty = self.infer(condition)?;
-                self.unify(&condition_ty, &HirType::Boolean)?;
+                self.unify(&condition_ty, &bool_type())?;
                 let then_ty = infer_block_type(self, then_branch)?;
                 let else_ty = else_branch.as_deref().map(|branch| infer_block_type(self, branch)).transpose()?.unwrap_or(HirType::Unit);
                 self.unify(&then_ty, &else_ty)?;
@@ -790,58 +802,65 @@ impl TypeInference {
         }
     }
 
-    fn infer_call(&mut self, callee: &HirExpr, args: &[HirExpr]) -> Result<HirType, TypeError> {
+    fn infer_call(
+        &mut self,
+        callee: &HirExpr,
+        args: &[HirExpr],
+        resolved: Option<&valkyrie_types::hir::HirResolvedCall>,
+    ) -> Result<HirType, TypeError> {
+        if let Some(resolved) = resolved {
+            return Ok(resolved.return_type.clone());
+        }
         let arg_types: Vec<HirType> = args.iter().map(|arg| self.infer(arg)).collect::<Result<_, _>>()?;
         let HirExprKind::Path(path) = &callee.kind
         else {
             return Err(TypeError::UnsupportedExpression);
         };
-        if path.0.len() != 1 {
+        if path.parts().len() != 1 {
             return Err(TypeError::UnsupportedExpression);
         }
 
-        match (path.0[0].as_str(), arg_types.as_slice()) {
+        match (path.parts()[0].as_str(), arg_types.as_slice()) {
             ("infix +" | "infix -" | "infix *" | "infix /" | "infix %", [lhs, rhs]) => {
                 self.unify(lhs, rhs)?;
                 Ok(lhs.clone())
             }
             ("infix ==" | "infix !=" | "infix <" | "infix <=" | "infix >" | "infix >=", [lhs, rhs]) => {
                 self.unify(lhs, rhs)?;
-                Ok(HirType::Boolean)
+                Ok(bool_type())
             }
             ("prefix -", [inner]) => {
                 if self.is_numeric(inner) {
                     Ok(inner.clone())
                 }
                 else {
-                    Err(TypeError::Mismatch { expected: HirType::Integer64, found: inner.clone() })
+                    Err(TypeError::Mismatch { expected: signed_int64_type(), found: inner.clone() })
                 }
             }
             ("prefix !", [inner]) => {
-                self.unify(inner, &HirType::Boolean)?;
-                Ok(HirType::Boolean)
+                self.unify(inner, &bool_type())?;
+                Ok(bool_type())
             }
             _ => Err(TypeError::UnsupportedExpression),
         }
     }
 
     pub fn unify(&mut self, left: &HirType, right: &HirType) -> Result<(), TypeError> {
-        if left == &HirType::Infer || right == &HirType::Infer {
+        if left == &HirType::AutoType || right == &HirType::AutoType {
             return Ok(());
         }
         match (left, right) {
             (HirType::Array(lhs), HirType::Array(rhs)) => self.unify(lhs, rhs),
-            (
-                HirType::Function { params: lhs_params, return_type: lhs_ret },
-                HirType::Function { params: rhs_params, return_type: rhs_ret },
-            ) => {
+            (HirType::Function(lhs_fn), HirType::Function(rhs_fn)) => {
+                let lhs_params = &lhs_fn.params;
+                let rhs_params = &rhs_fn.params;
                 if lhs_params.len() != rhs_params.len() {
                     return Err(TypeError::Mismatch { expected: left.clone(), found: right.clone() });
                 }
                 for (lhs, rhs) in lhs_params.iter().zip(rhs_params) {
                     self.unify(lhs, rhs)?;
                 }
-                self.unify(lhs_ret, rhs_ret)
+                self.unify(&lhs_fn.return_type, &rhs_fn.return_type)
             }
             (HirType::Tuple(lhs), HirType::Tuple(rhs)) => {
                 if lhs.len() != rhs.len() {
@@ -862,11 +881,11 @@ impl TypeInference {
     }
 
     pub fn is_numeric(&self, ty: &HirType) -> bool {
-        matches!(ty, HirType::Integer32 | HirType::Integer64 | HirType::Float32 | HirType::Float64)
+        matches!(ty, HirType::Integer32 { signed: _ } | HirType::Integer64 { signed: _ } | HirType::Float32 | HirType::Float64)
     }
 
     pub fn is_integer(&self, ty: &HirType) -> bool {
-        matches!(ty, HirType::Integer32 | HirType::Integer64)
+        matches!(ty, HirType::Integer32 { signed: _ } | HirType::Integer64 { signed: _ })
     }
 
     pub fn clear(&mut self) {
@@ -1568,7 +1587,14 @@ impl ConstraintReport {
     }
 
     pub fn to_detailed_message(&self) -> String {
-        format!("错误: {}\n约束追溯: {}\n建议修复: {}", self.primary_message, self.chain.len(), self.suggestions.len())
+        format!(
+            r#"错误: {}
+约束追溯: {}
+建议修复: {}"#,
+            self.primary_message,
+            self.chain.len(),
+            self.suggestions.len()
+        )
     }
 }
 
@@ -1592,7 +1618,10 @@ impl TraitBoundChecker {
 
     pub fn check_trait_bound(&self, ty: &HirType, trait_name: &NamePath) -> Result<bool, ConstraintError> {
         if self.is_builtin_trait(trait_name)
-            && matches!(ty, HirType::Integer32 | HirType::Integer64 | HirType::Float32 | HirType::Float64 | HirType::Boolean)
+            && matches!(
+                ty,
+                HirType::Integer32 { signed: _ } | HirType::Integer64 { signed: _ } | HirType::Float32 | HirType::Float64 | HirType::Boolean
+            )
         {
             return Ok(true);
         }
@@ -2149,16 +2178,16 @@ impl ConstraintSolver {
 
     fn apply_generic_bindings_with_seen(&self, ty: &HirType, seen: &mut BTreeSet<Identifier>) -> HirType {
         match ty {
-            HirType::Generic { name, .. } => {
-                let Some(bound) = self.generic_bindings.get(name)
+            HirType::Generic(generic) => {
+                let Some(bound) = self.generic_bindings.get(&generic.name)
                 else {
                     return ty.clone();
                 };
-                if !seen.insert(name.clone()) {
+                if !seen.insert(generic.name.clone()) {
                     return ty.clone();
                 }
                 let resolved = self.apply_generic_bindings_with_seen(bound, seen);
-                seen.remove(name);
+                seen.remove(&generic.name);
                 resolved
             }
             HirType::Apply(base, args) => HirType::Apply(
@@ -2167,30 +2196,30 @@ impl ConstraintSolver {
             ),
             HirType::Tuple(items) => HirType::Tuple(items.iter().map(|item| self.apply_generic_bindings_with_seen(item, seen)).collect()),
             HirType::Array(item) => HirType::Array(Box::new(self.apply_generic_bindings_with_seen(item, seen))),
-            HirType::Function { params, return_type } => HirType::Function {
-                params: params.iter().map(|param| self.apply_generic_bindings_with_seen(param, seen)).collect(),
-                return_type: Box::new(self.apply_generic_bindings_with_seen(return_type, seen)),
-            },
-            HirType::AssociatedType { base, name, type_args } => HirType::AssociatedType {
-                base: Box::new(self.apply_generic_bindings_with_seen(base, seen)),
-                name: name.clone(),
-                type_args: type_args.iter().map(|arg| self.apply_generic_bindings_with_seen(arg, seen)).collect(),
-            },
+            HirType::Function(function) => HirType::Function(Box::new(valkyrie_types::hir::FunctionType {
+                params: function.params.iter().map(|param| self.apply_generic_bindings_with_seen(param, seen)).collect(),
+                return_type: self.apply_generic_bindings_with_seen(&function.return_type, seen),
+            })),
+            HirType::Associated(associated) => HirType::Associated(Box::new(valkyrie_types::hir::AssociatedType {
+                base: self.apply_generic_bindings_with_seen(&associated.base, seen),
+                name: associated.name.clone(),
+                type_arguments: associated.type_arguments.iter().map(|arg| self.apply_generic_bindings_with_seen(arg, seen)).collect(),
+            })),
             _ => ty.clone(),
         }
     }
 
     fn has_unresolved_generics(&self, ty: &HirType) -> bool {
         match ty {
-            HirType::Generic { .. } => true,
+            HirType::Generic(_) => true,
             HirType::Apply(base, args) => self.has_unresolved_generics(base) || args.iter().any(|arg| self.has_unresolved_generics(arg)),
             HirType::Tuple(items) => items.iter().any(|item| self.has_unresolved_generics(item)),
             HirType::Array(item) => self.has_unresolved_generics(item),
-            HirType::Function { params, return_type } => {
-                params.iter().any(|param| self.has_unresolved_generics(param)) || self.has_unresolved_generics(return_type)
+            HirType::Function(function) => {
+                function.params.iter().any(|param| self.has_unresolved_generics(param)) || self.has_unresolved_generics(&function.return_type)
             }
-            HirType::AssociatedType { base, type_args, .. } => {
-                self.has_unresolved_generics(base) || type_args.iter().any(|arg| self.has_unresolved_generics(arg))
+            HirType::Associated(associated) => {
+                self.has_unresolved_generics(&associated.base) || associated.type_arguments.iter().any(|arg| self.has_unresolved_generics(arg))
             }
             _ => false,
         }
@@ -2198,20 +2227,20 @@ impl ConstraintSolver {
 
     fn bind_generic(&mut self, name: &Identifier, actual: &HirType, span: Option<SourceSpan>) -> Result<(), ConstraintError> {
         let actual = self.apply_generic_bindings(actual);
-        if matches!(&actual, HirType::Generic { name: actual_name, .. } if actual_name == name) {
+        if matches!(&actual, HirType::Generic(generic) if &generic.name == name) {
             return Ok(());
         }
         if let Some(bound) = self.generic_bindings.get(name).cloned() {
-            if let HirType::Generic { name: actual_name, .. } = &actual {
-                if !self.generic_bindings.contains_key(actual_name) {
-                    self.generic_bindings.insert(actual_name.clone(), bound);
+            if let HirType::Generic(actual_generic) = &actual {
+                if !self.generic_bindings.contains_key(&actual_generic.name) {
+                    self.generic_bindings.insert(actual_generic.name.clone(), bound);
                     return Ok(());
                 }
             }
             return self.unify(&self.apply_generic_bindings(&bound), &actual, span);
         }
-        if let HirType::Generic { name: actual_name, .. } = &actual {
-            if let Some(bound) = self.generic_bindings.get(actual_name).cloned() {
+        if let HirType::Generic(actual_generic) = &actual {
+            if let Some(bound) = self.generic_bindings.get(&actual_generic.name).cloned() {
                 self.generic_bindings.insert(name.clone(), bound);
                 return Ok(());
             }
@@ -2224,8 +2253,8 @@ impl ConstraintSolver {
         let left = self.apply_generic_bindings(left);
         let right = self.apply_generic_bindings(right);
         match (&left, &right) {
-            (HirType::Generic { name, .. }, actual) => self.bind_generic(name, actual, span),
-            (actual, HirType::Generic { name, .. }) => self.bind_generic(name, actual, span),
+            (HirType::Generic(generic), actual) => self.bind_generic(&generic.name, actual, span),
+            (actual, HirType::Generic(generic)) => self.bind_generic(&generic.name, actual, span),
             (HirType::Apply(lhs_base, lhs_args), HirType::Apply(rhs_base, rhs_args)) => {
                 self.collect_generic_bindings(lhs_base, rhs_base, span.clone())?;
                 for (lhs, rhs) in lhs_args.iter().zip(rhs_args) {
@@ -2240,21 +2269,19 @@ impl ConstraintSolver {
                 Ok(())
             }
             (HirType::Array(lhs_item), HirType::Array(rhs_item)) => self.collect_generic_bindings(lhs_item, rhs_item, span),
-            (
-                HirType::Function { params: lhs_params, return_type: lhs_return },
-                HirType::Function { params: rhs_params, return_type: rhs_return },
-            ) => {
+            (HirType::Function(lhs_fn), HirType::Function(rhs_fn)) => {
+                let lhs_params = &lhs_fn.params;
+                let rhs_params = &rhs_fn.params;
                 for (lhs, rhs) in lhs_params.iter().zip(rhs_params) {
                     self.collect_generic_bindings(lhs, rhs, span.clone())?;
                 }
-                self.collect_generic_bindings(lhs_return, rhs_return, span)
+                self.collect_generic_bindings(&lhs_fn.return_type, &rhs_fn.return_type, span)
             }
-            (
-                HirType::AssociatedType { base: lhs_base, name: lhs_name, type_args: lhs_args },
-                HirType::AssociatedType { base: rhs_base, name: rhs_name, type_args: rhs_args },
-            ) if lhs_name == rhs_name && lhs_args.len() == rhs_args.len() => {
-                self.collect_generic_bindings(lhs_base, rhs_base, span.clone())?;
-                for (lhs, rhs) in lhs_args.iter().zip(rhs_args) {
+            (HirType::Associated(lhs_assoc), HirType::Associated(rhs_assoc))
+                if lhs_assoc.name == rhs_assoc.name && lhs_assoc.type_arguments.len() == rhs_assoc.type_arguments.len() =>
+            {
+                self.collect_generic_bindings(&lhs_assoc.base, &rhs_assoc.base, span.clone())?;
+                for (lhs, rhs) in lhs_assoc.type_arguments.iter().zip(&rhs_assoc.type_arguments) {
                     self.collect_generic_bindings(lhs, rhs, span.clone())?;
                 }
                 Ok(())
@@ -2285,7 +2312,7 @@ impl ConstraintSolver {
     }
 
     pub fn unify(&mut self, left: &HirType, right: &HirType, span: Option<SourceSpan>) -> Result<(), ConstraintError> {
-        if left == &HirType::Infer || right == &HirType::Infer {
+        if left == &HirType::AutoType || right == &HirType::AutoType {
             return Ok(());
         }
         match (left, right) {
@@ -2299,27 +2326,23 @@ impl ConstraintSolver {
                 }
                 Ok(())
             }
-            (
-                HirType::Function { params: lhs_params, return_type: lhs_return },
-                HirType::Function { params: rhs_params, return_type: rhs_return },
-            ) => {
+            (HirType::Function(lhs_fn), HirType::Function(rhs_fn)) => {
+                let lhs_params = &lhs_fn.params;
+                let rhs_params = &rhs_fn.params;
                 if lhs_params.len() != rhs_params.len() {
                     return Err(ConstraintError::type_mismatch(left.clone(), right.clone(), span));
                 }
                 for (lhs, rhs) in lhs_params.iter().zip(rhs_params) {
                     self.unify(lhs, rhs, span.clone())?;
                 }
-                self.unify(lhs_return, rhs_return, span)
+                self.unify(&lhs_fn.return_type, &rhs_fn.return_type, span)
             }
-            (
-                HirType::AssociatedType { base: lhs_base, name: lhs_name, type_args: lhs_args },
-                HirType::AssociatedType { base: rhs_base, name: rhs_name, type_args: rhs_args },
-            ) => {
-                if lhs_name != rhs_name || lhs_args.len() != rhs_args.len() {
+            (HirType::Associated(lhs_assoc), HirType::Associated(rhs_assoc)) => {
+                if lhs_assoc.name != rhs_assoc.name || lhs_assoc.type_arguments.len() != rhs_assoc.type_arguments.len() {
                     return Err(ConstraintError::type_mismatch(left.clone(), right.clone(), span));
                 }
-                self.unify(lhs_base, rhs_base, span.clone())?;
-                for (lhs, rhs) in lhs_args.iter().zip(rhs_args) {
+                self.unify(&lhs_assoc.base, &rhs_assoc.base, span.clone())?;
+                for (lhs, rhs) in lhs_assoc.type_arguments.iter().zip(&rhs_assoc.type_arguments) {
                     self.unify(lhs, rhs, span.clone())?;
                 }
                 Ok(())
@@ -2331,7 +2354,10 @@ impl ConstraintSolver {
 
     pub fn check_trait_bound(&self, ty: &HirType, trait_name: &NamePath) -> Result<bool, ConstraintError> {
         if matches!(display_path(trait_name).as_str(), "Copy" | "Clone" | "Eq" | "Send" | "Sync" | "Default")
-            && matches!(ty, HirType::Integer32 | HirType::Integer64 | HirType::Float32 | HirType::Float64 | HirType::Boolean)
+            && matches!(
+                ty,
+                HirType::Integer32 { signed: _ } | HirType::Integer64 { signed: _ } | HirType::Float32 | HirType::Float64 | HirType::Boolean
+            )
         {
             return Ok(true);
         }
@@ -2342,7 +2368,7 @@ impl ConstraintSolver {
         if sub == sup {
             return true;
         }
-        if matches!((sub, sup), (HirType::Integer32, HirType::Integer64) | (HirType::Float32, HirType::Float64)) {
+        if matches!((sub, sup), (HirType::Integer32 { signed: _ }, HirType::Integer64 { signed: _ }) | (HirType::Float32, HirType::Float64)) {
             return true;
         }
         self.is_unity_variant_subtype(sub, sup)
@@ -2377,10 +2403,10 @@ impl ConstraintSolver {
 
     fn matches_type_pattern(&self, pattern: &HirType, concrete: &HirType, bindings: &mut BTreeMap<Identifier, HirType>) -> bool {
         match (pattern, concrete) {
-            (HirType::Generic { name, .. }, actual) => match bindings.get(name) {
+            (HirType::Generic(generic), actual) => match bindings.get(&generic.name) {
                 Some(bound) => bound == actual,
                 None => {
-                    bindings.insert(name.clone(), actual.clone());
+                    bindings.insert(generic.name.clone(), actual.clone());
                     true
                 }
             },
@@ -2395,22 +2421,20 @@ impl ConstraintSolver {
                     && lhs_items.iter().zip(rhs_items).all(|(lhs, rhs)| self.matches_type_pattern(lhs, rhs, bindings))
             }
             (HirType::Array(lhs_item), HirType::Array(rhs_item)) => self.matches_type_pattern(lhs_item, rhs_item, bindings),
-            (
-                HirType::Function { params: lhs_params, return_type: lhs_return },
-                HirType::Function { params: rhs_params, return_type: rhs_return },
-            ) => {
-                lhs_params.len() == rhs_params.len()
-                    && lhs_params.iter().zip(rhs_params).all(|(lhs, rhs)| self.matches_type_pattern(lhs, rhs, bindings))
-                    && self.matches_type_pattern(lhs_return, rhs_return, bindings)
+            (HirType::Function(lhs_fn), HirType::Function(rhs_fn)) => {
+                lhs_fn.params.len() == rhs_fn.params.len()
+                    && lhs_fn.params.iter().zip(&rhs_fn.params).all(|(lhs, rhs)| self.matches_type_pattern(lhs, rhs, bindings))
+                    && self.matches_type_pattern(&lhs_fn.return_type, &rhs_fn.return_type, bindings)
             }
-            (
-                HirType::AssociatedType { base: lhs_base, name: lhs_name, type_args: lhs_args },
-                HirType::AssociatedType { base: rhs_base, name: rhs_name, type_args: rhs_args },
-            ) => {
-                lhs_name == rhs_name
-                    && lhs_args.len() == rhs_args.len()
-                    && self.matches_type_pattern(lhs_base, rhs_base, bindings)
-                    && lhs_args.iter().zip(rhs_args).all(|(lhs, rhs)| self.matches_type_pattern(lhs, rhs, bindings))
+            (HirType::Associated(lhs_assoc), HirType::Associated(rhs_assoc)) => {
+                lhs_assoc.name == rhs_assoc.name
+                    && lhs_assoc.type_arguments.len() == rhs_assoc.type_arguments.len()
+                    && self.matches_type_pattern(&lhs_assoc.base, &rhs_assoc.base, bindings)
+                    && lhs_assoc
+                        .type_arguments
+                        .iter()
+                        .zip(&rhs_assoc.type_arguments)
+                        .all(|(lhs, rhs)| self.matches_type_pattern(lhs, rhs, bindings))
             }
             _ => pattern == concrete,
         }

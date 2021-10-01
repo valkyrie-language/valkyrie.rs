@@ -1,6 +1,6 @@
 use valkyrie_compiler::derive::*;
 use valkyrie_types::{
-    hir::{HirDocumentation, HirField, HirImpl, HirModule, HirStruct, HirType, HirVisibility},
+    hir::{HirDocumentation, HirField, HirImpl, HirModule, HirStruct, HirVisibility, ValkyrieType},
     Identifier, NamePath,
 };
 
@@ -15,14 +15,14 @@ fn create_test_struct(name: &str, derives: Vec<&str>) -> HirStruct {
             HirField {
                 name: Identifier::new("x"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Integer32,
+                ty: ValkyrieType::Integer32,
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             },
             HirField {
                 name: Identifier::new("y"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Integer32,
+                ty: ValkyrieType::Integer32,
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             },
@@ -128,7 +128,7 @@ fn test_conflict_detection() {
     let existing_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Point")),
+        target: ValkyrieType::Named(Identifier::new("Point")),
         trait_path: Some(NamePath::new(vec![Identifier::new("Debug")])),
         methods: vec![],
         associated_type_impls: vec![],
@@ -186,7 +186,7 @@ fn test_injection_result_merge() {
     result1.impls.push(HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("A")),
+        target: ValkyrieType::Named(Identifier::new("A")),
         trait_path: None,
         methods: vec![],
         associated_type_impls: vec![],
@@ -199,7 +199,7 @@ fn test_injection_result_merge() {
     result2.impls.push(HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("B")),
+        target: ValkyrieType::Named(Identifier::new("B")),
         trait_path: None,
         methods: vec![],
         associated_type_impls: vec![],

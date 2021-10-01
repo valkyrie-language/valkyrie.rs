@@ -3,19 +3,22 @@ use std::{
     path::PathBuf,
 };
 
-use miette::{Diagnostic, Severity};
+use miette::{Diagnostic, LabeledSpan as MietteLabeledSpan, Severity};
+
+mod control_flow;
+mod match_patterns;
 
 use crate::{
     ast::{
         Annotations, AttributeArgument, AttributeDeclaration, AttributeItem, AttributeList, BinaryOperator, ClassDeclaration, DeclarationBody,
-        DeclarationStatement, FunctionDeclaration, FunctionParameter, GenericParameterDeclaration, ImplyAssociatedConstBinding,
-        ImplyAssociatedTypeBinding, ImplyDeclaration, InheritanceItem, LetStatement, LiteralExpression, MatchArm, MatchPattern, NamePath,
-        NamespaceDeclaration, ObjectBody, ObjectFieldDeclaration, ObjectMethodDeclaration, PatternExpression, Statement, StringLiteral,
-        StringSegment, TermExpression, TraitAssociatedConstDeclaration, TraitAssociatedTypeDeclaration, TraitDeclaration, TypeAliasDeclaration,
-        TypeExpression, TypePath, UnaryOperator, UniteDeclaration, UniteVariantDeclaration, UsingStatement, ValkyrieRoot,
-        WhereConstraintDeclaration,
+        DeclarationStatement, FunctionDeclaration, FunctionParameter, GenericParameterDeclaration, IdentifierNode, IfStatement,
+        ImplyAssociatedConstBinding, ImplyAssociatedTypeBinding, ImplyDeclaration, InheritanceItem, LiteralExpression, LoopStatement, NamePath,
+        NamespaceDeclaration, ObjectBody, ObjectFieldDeclaration, ObjectMethodDeclaration, Statement, StringLiteral, StringSegment,
+        SubscriptKind, TermAsExpression, TermBinaryExpression, TermExpression, TermUnaryExpression, TraitAssociatedConstDeclaration,
+        TraitAssociatedTypeDeclaration, TraitDeclaration, TypeAliasDeclaration, TypeExpression, TypePath, UnaryOperator, UniteDeclaration,
+        UniteVariantDeclaration, UsingStatement, ValkyrieRoot, WhereConstraintDeclaration,
     },
-    lexer::{Lexer, Token, TokenKind},
+    lexer::{Keyword, Lexer, Token, TokenKind},
 };
 use std::ops::Range;
 
@@ -43,12 +46,21 @@ pub enum ParseError {
     /// File read failure.
     Io(std::io::Error),
     /// Syntactically invalid source text.
-    Invalid(String),
+    Invalid {
+        /// 错误消息。
+        message: String,
+        /// 可选源码范围。
+        span: Option<Range<usize>>,
+    },
 }
 
 impl ParseError {
-    pub(crate) fn invalid(message: impl Into<String>) -> Self {
-        Self::Invalid(message.into())
+    pub fn invalid(message: impl Into<String>) -> Self {
+        Self::Invalid { message: message.into(), span: None }
+    }
+
+    pub fn invalid_at(message: impl Into<String>, span: Range<usize>) -> Self {
+        Self::Invalid { message: message.into(), span: Some(span) }
     }
 }
 
@@ -56,7 +68,7 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(error) => Display::fmt(error, f),
-            Self::Invalid(message) => write!(f, "{}", message),
+            Self::Invalid { message, .. } => write!(f, "{}", message),
         }
     }
 }
@@ -67,7 +79,7 @@ impl Diagnostic for ParseError {
     fn code<'a>(&'a self) -> Option<Box<dyn Display + 'a>> {
         Some(Box::new(match self {
             ParseError::Io(_) => "valkyrie::parser::io",
-            ParseError::Invalid(_) => "valkyrie::parser::invalid",
+            ParseError::Invalid { .. } => "valkyrie::parser::invalid",
         }))
     }
 
@@ -78,8 +90,19 @@ impl Diagnostic for ParseError {
     fn help<'a>(&'a self) -> Option<Box<dyn Display + 'a>> {
         Some(Box::new(match self {
             ParseError::Io(_) => "请确认源文件存在且当前进程具备读取权限",
-            ParseError::Invalid(_) => "请检查语法是否完整，尤其是声明头、括号、属性与对象体",
+            ParseError::Invalid { .. } => "请检查语法是否完整，尤其是声明头、括号、属性与对象体",
         }))
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = MietteLabeledSpan> + '_>> {
+        match self {
+            ParseError::Invalid { span: Some(span), .. } => {
+                let labeled =
+                    MietteLabeledSpan::new_with_span(Some("解析失败位置".to_string()), (span.start, span.end.saturating_sub(span.start)));
+                Some(Box::new(std::iter::once(labeled)))
+            }
+            _ => None,
+        }
     }
 }
 
@@ -130,53 +153,56 @@ impl<'a> Parser<'a> {
             attribute_lists.push(self.parse_attribute_list()?);
         }
 
-        while let Some(text) = self.current_identifier_text() {
+        while let Some(text) = self.current_modifier_text() {
             if !DECLARATION_MODIFIERS.contains(&text) {
                 break;
             }
-            modifiers.push(text.to_string());
+            let modifier_start = self.current().span.start;
+            let modifier_text = text.to_string();
             self.bump();
+            modifiers
+                .push(IdentifierNode::new(valkyrie_types::Identifier::new(&modifier_text), span(modifier_start, self.previous().span.end)));
         }
 
         Ok(Annotations { documents: Vec::new(), attribute_lists, modifiers })
     }
 
     fn parse_declaration(&mut self, annotations: Annotations) -> Result<DeclarationStatement, ParseError> {
-        if self.check_keyword("namespace") {
+        if self.check_token_keyword(Keyword::Namespace) {
             return Ok(DeclarationStatement::Namespace(self.parse_namespace()?));
         }
-        if self.check_keyword("using") {
+        if self.check_token_keyword(Keyword::Using) {
             return Ok(DeclarationStatement::Using(self.parse_using()?));
         }
-        if self.check_keyword("micro") {
+        if self.check_token_keyword(Keyword::Micro) {
             return Ok(DeclarationStatement::Function(self.parse_function_declaration(annotations)?));
         }
-        if self.check_keyword("class") || self.check_keyword("structure") {
+        if self.check_token_keyword(Keyword::Class) || self.check_token_keyword(Keyword::Structure) {
             return Ok(DeclarationStatement::Class(self.parse_class_declaration(annotations)?));
         }
-        if self.check_keyword("trait") {
+        if self.check_token_keyword(Keyword::Trait) {
             return Ok(DeclarationStatement::Trait(self.parse_trait_declaration(annotations)?));
         }
-        if self.check_keyword("imply") {
+        if self.check_token_keyword(Keyword::Imply) {
             return Ok(DeclarationStatement::Imply(self.parse_imply_declaration(annotations)?));
         }
-        if self.check_keyword("unite") {
+        if self.check_token_keyword(Keyword::Unite) {
             return Ok(DeclarationStatement::Unite(self.parse_unite_declaration(annotations)?));
         }
-        if self.check_keyword("attribute") {
+        if self.check_identifier_text_eq("attribute") {
             return Ok(DeclarationStatement::Attribute(self.parse_attribute_declaration(annotations)?));
         }
-        if self.check_keyword("type") {
+        if self.check_token_keyword(Keyword::Type) {
             return Ok(DeclarationStatement::TypeAlias(self.parse_type_alias_declaration(annotations)?));
         }
-        if self.check_keyword("extern") {
+        if self.check_identifier_text_eq("extern") {
             return Ok(DeclarationStatement::Function(self.parse_extern_function_declaration(annotations)?));
         }
         Err(self.error_here("expected declaration"))
     }
 
     fn parse_namespace(&mut self) -> Result<NamespaceDeclaration, ParseError> {
-        let start = self.expect_keyword("namespace")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Namespace)?.span.start;
         // 支持 `namespace!` 宏式语法，`!` 被消费后按普通 `namespace` 处理。
         self.match_symbol(TokenKind::Bang);
         // 源码使用 `.` 作为命名空间路径分隔符（如 `namespace std.data.text.wit;`）。
@@ -196,7 +222,7 @@ impl<'a> Parser<'a> {
                 let decl = self.parse_declaration(Annotations::default())?;
                 match decl {
                     DeclarationStatement::Function(func) => {
-                        let path = NamePath { parts: vec![func.name.clone()], span: func.span.clone() };
+                        let path = NamePath { parts: vec![func.name.as_str().to_string()], span: func.span.clone() };
                         statements.push(Statement::Expr {
                             span: func.span.clone(),
                             expression: TermExpression::Name { path, span: func.span.clone() },
@@ -218,32 +244,40 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_using(&mut self) -> Result<UsingStatement, ParseError> {
-        let start = self.expect_keyword("using")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Using)?.span.start;
         // 支持 `using!` 宏式语法，`!` 被消费后按普通 `using` 处理。
         self.match_symbol(TokenKind::Bang);
         let path = self.parse_dotted_name_path()?;
 
-        // 支持选择性导入：`using! a.b.{C, D}`。
-        let selective_imports = if self.match_symbol(TokenKind::Dot) {
-            self.expect_symbol(TokenKind::LBrace)?;
-            let names = self.parse_comma_separated_until(TokenKind::RBrace, |parser| {
-                let name = parser.expect_identifier_text()?.to_string();
-                Ok(name)
-            })?;
-            self.expect_symbol(TokenKind::RBrace)?;
-            names
+        // 支持选择性导入：`using a.b.{C, D};`
+        // 支持通配导入：`using a.b.*;`
+        // 同时保留裸导入：`using a.b;`，其语义由后续绑定阶段决定。
+        let mut selective_imports = Vec::new();
+        let mut glob_import = false;
+        if self.match_symbol(TokenKind::Dot) {
+            if self.match_symbol(TokenKind::LBrace) {
+                selective_imports = self.parse_comma_separated_until(TokenKind::RBrace, |parser| {
+                    let name = parser.expect_identifier_text()?.to_string();
+                    Ok(name)
+                })?;
+                self.expect_symbol(TokenKind::RBrace)?;
+            }
+            else if self.match_symbol(TokenKind::Star) {
+                glob_import = true;
+            }
+            else {
+                return Err(self.error_here("expected `{` or `*` after `using <module>.`"));
+            }
         }
-        else {
-            Vec::new()
-        };
 
         // 分号可选：`using!` 宏式语法常省略分号，以下一个声明边界作为隐式终止。
         self.match_symbol(TokenKind::Semicolon);
-        Ok(UsingStatement { path, selective_imports, span: span(start, self.previous().span.end) })
+        Ok(UsingStatement { path, selective_imports, glob_import, span: span(start, self.previous().span.end) })
     }
 
     fn parse_function_declaration(&mut self, annotations: Annotations) -> Result<FunctionDeclaration, ParseError> {
-        let start = self.expect_keyword("micro")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Micro)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         self.skip_generic_parameter_clause()?;
         let params = self.parse_parameter_list()?;
@@ -268,7 +302,7 @@ impl<'a> Parser<'a> {
         };
 
         Ok(FunctionDeclaration {
-            name,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
             annotations,
             signature: self.slice(span(start, signature_end)).trim().to_string(),
             params,
@@ -283,7 +317,8 @@ impl<'a> Parser<'a> {
     /// 语法：`extern name(params): return_type`
     /// 无 `micro` 关键字，无函数体，用于声明外部导入函数（如 WASI 接口）。
     fn parse_extern_function_declaration(&mut self, annotations: Annotations) -> Result<FunctionDeclaration, ParseError> {
-        let start = self.expect_keyword("extern")?.span.start;
+        let start = self.expect_identifier_text_eq("extern")?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         self.skip_generic_parameter_clause()?;
         let params = self.parse_parameter_list()?;
@@ -296,7 +331,7 @@ impl<'a> Parser<'a> {
         let signature_end = self.current().span.start;
 
         Ok(FunctionDeclaration {
-            name,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
             annotations,
             signature: self.slice(span(start, signature_end)).trim().to_string(),
             params,
@@ -309,12 +344,13 @@ impl<'a> Parser<'a> {
     fn parse_class_declaration(&mut self, annotations: Annotations) -> Result<ClassDeclaration, ParseError> {
         // `structure` 与 `class` 共用同一解析路径，区别仅在语义（值类型 vs 引用类型）。
         // `structure` 关键字声明值类型，`class` 关键字声明引用类型。
-        let (start, is_value_type) = if self.check_keyword("class") {
-            (self.expect_keyword("class")?.span.start, false)
+        let (start, is_value_type) = if self.check_token_keyword(Keyword::Class) {
+            (self.expect_token_keyword(Keyword::Class)?.span.start, false)
         }
         else {
-            (self.expect_keyword("structure")?.span.start, true)
+            (self.expect_token_keyword(Keyword::Structure)?.span.start, true)
         };
+        let name_start = self.current().span.start;
         let name = self.expect_name_text()?;
         self.skip_generic_parameter_clause()?;
         let inheritance = if self.match_symbol(TokenKind::LParen) {
@@ -326,18 +362,26 @@ impl<'a> Parser<'a> {
             Vec::new()
         };
         let body = self.parse_object_body(true)?;
-        Ok(ClassDeclaration { name, annotations, inheritance, body, is_value_type, span: span(start, self.previous().span.end) })
+        Ok(ClassDeclaration {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            annotations,
+            inheritance,
+            body,
+            is_value_type,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_trait_declaration(&mut self, annotations: Annotations) -> Result<TraitDeclaration, ParseError> {
-        let start = self.expect_keyword("trait")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Trait)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_name_text()?;
         let generic_parameters = self.parse_generic_parameter_clause()?;
         if self.match_symbol(TokenKind::Equal) {
             let alias_targets = self.parse_trait_inheritance_list()?;
             self.expect_implicit_or_explicit_terminator(&["namespace", "using", "micro", "class", "trait", "imply", "unite"])?;
             return Ok(TraitDeclaration {
-                name,
+                name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
                 annotations,
                 generic_parameters,
                 inheritance: Vec::new(),
@@ -351,7 +395,7 @@ impl<'a> Parser<'a> {
         let inheritance = if self.match_symbol(TokenKind::Colon) { self.parse_trait_inheritance_list()? } else { Vec::new() };
         let body = self.parse_object_body(false)?;
         Ok(TraitDeclaration {
-            name,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
             annotations,
             generic_parameters,
             inheritance,
@@ -363,7 +407,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_imply_declaration(&mut self, annotations: Annotations) -> Result<ImplyDeclaration, ParseError> {
-        let start = self.expect_keyword("imply")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Imply)?.span.start;
         let generic_parameters = self.parse_structured_generic_parameter_clause()?;
         let target_type = self.parse_type_expression_bp(0)?;
         let trait_type = if self.match_symbol(TokenKind::Colon) { Some(self.parse_type_expression_bp(0)?) } else { None };
@@ -396,22 +440,23 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            if self.check_keyword("micro")
-                || self.check_keyword("infix")
-                || self.check_keyword("prefix")
-                || self.check_keyword("postfix")
-                || annotations.modifiers.iter().any(|modifier| modifier == "get" || modifier == "set")
+            if self.check_token_keyword(Keyword::Micro)
+                || self.check_identifier_text_eq("infix")
+                || self.check_identifier_text_eq("prefix")
+                || self.check_identifier_text_eq("postfix")
+                || self.check_identifier_text_eq("suffix")
+                || annotations.modifiers.iter().any(|modifier| modifier.as_str() == "get" || modifier.as_str() == "set")
             {
                 methods.push(self.parse_object_method_declaration(annotations)?);
                 continue;
             }
 
-            if !allow_fields && self.check_keyword("type") {
+            if !allow_fields && self.check_token_keyword(Keyword::Type) {
                 associated_types.push(self.parse_trait_associated_type(annotations)?);
                 continue;
             }
 
-            if !allow_fields && self.check_keyword("const") {
+            if !allow_fields && self.check_token_keyword(Keyword::Const) {
                 associated_constants.push(self.parse_trait_associated_const(annotations)?);
                 continue;
             }
@@ -430,8 +475,8 @@ impl<'a> Parser<'a> {
             // 当不允许字段时（trait 体），标识符是方法。
             if !allow_fields
                 && matches!(self.current().kind, TokenKind::Identifier)
-                && !self.check_keyword("type")
-                && !self.check_keyword("const")
+                && !self.check_token_keyword(Keyword::Type)
+                && !self.check_token_keyword(Keyword::Const)
             {
                 methods.push(self.parse_object_method_declaration(annotations)?);
                 continue;
@@ -446,7 +491,9 @@ impl<'a> Parser<'a> {
 
     fn parse_object_field(&mut self, annotations: Annotations) -> Result<ObjectFieldDeclaration, ParseError> {
         let start = self.current().span.start;
-        let name = self.expect_identifier_text()?.to_string();
+        let name_start = self.current().span.start;
+        let name_text = self.expect_identifier_text()?.to_string();
+        let name = IdentifierNode::new(valkyrie_types::Identifier::new(&name_text), span(name_start, self.previous().span.end));
         self.expect_symbol(TokenKind::Colon)?;
         let field_type = self.parse_type_expression_bp(0)?;
         let default_value = if self.match_symbol(TokenKind::Equal) {
@@ -472,19 +519,35 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_object_method_declaration(&mut self, annotations: Annotations) -> Result<ObjectMethodDeclaration, ParseError> {
-        let is_accessor = annotations.modifiers.iter().any(|modifier| modifier == "get" || modifier == "set");
-        let is_operator = self.check_keyword("infix") || self.check_keyword("prefix") || self.check_keyword("postfix");
+        let is_accessor = annotations.modifiers.iter().any(|modifier| modifier.as_str() == "get" || modifier.as_str() == "set");
+        let is_operator = self.check_identifier_text_eq("infix")
+            || self.check_identifier_text_eq("prefix")
+            || self.check_identifier_text_eq("postfix")
+            || self.check_identifier_text_eq("suffix");
         // 支持不带 `micro` 前缀的普通方法名（如 `bit_and(self, ...)`）。
         let is_plain_method = matches!(self.current().kind, TokenKind::Identifier)
-            && !self.check_keyword("micro")
-            && !self.check_keyword("type")
-            && !self.check_keyword("const")
-            && !self.check_keyword("infix")
-            && !self.check_keyword("prefix")
-            && !self.check_keyword("postfix");
-        let start =
-            if is_accessor || is_operator || is_plain_method { self.current().span.start } else { self.expect_keyword("micro")?.span.start };
-        let name = if is_accessor { self.expect_identifier_text()?.to_string() } else { self.parse_method_name()? };
+            && !self.check_token_keyword(Keyword::Micro)
+            && !self.check_token_keyword(Keyword::Type)
+            && !self.check_token_keyword(Keyword::Const)
+            && !self.check_identifier_text_eq("infix")
+            && !self.check_identifier_text_eq("prefix")
+            && !self.check_identifier_text_eq("postfix")
+            && !self.check_identifier_text_eq("suffix");
+        let start = if is_accessor || is_operator || is_plain_method {
+            self.current().span.start
+        }
+        else {
+            self.expect_token_keyword(Keyword::Micro)?.span.start
+        };
+        let name = if is_accessor {
+            let name_start = self.current().span.start;
+            let name_text = self.expect_identifier_text()?.to_string();
+            IdentifierNode::new(valkyrie_types::Identifier::new(&name_text), span(name_start, self.previous().span.end))
+        }
+        else {
+            let parsed_name = self.parse_method_name()?;
+            IdentifierNode::new(valkyrie_types::Identifier::new(&parsed_name), span(start, self.previous().span.end))
+        };
         self.skip_generic_parameter_clause()?;
         let params = self.parse_parameter_list()?;
         let return_type = if self.match_symbol(TokenKind::Arrow) || self.match_symbol(TokenKind::Colon) {
@@ -502,7 +565,7 @@ impl<'a> Parser<'a> {
             Some(self.parse_block_body()?)
         }
         else {
-            self.expect_implicit_or_explicit_terminator(&["micro", "type", "const", "infix", "prefix", "postfix"])?;
+            self.expect_implicit_or_explicit_terminator(&["micro", "type", "const", "infix", "prefix", "postfix", "suffix"])?;
             None
         };
 
@@ -518,7 +581,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_method_name(&mut self) -> Result<String, ParseError> {
-        if self.check_keyword("infix") || self.check_keyword("prefix") || self.check_keyword("postfix") {
+        if self.check_identifier_text_eq("infix")
+            || self.check_identifier_text_eq("prefix")
+            || self.check_identifier_text_eq("postfix")
+            || self.check_identifier_text_eq("suffix")
+        {
             let fixity = self.expect_identifier_text()?.to_string();
             let operator = self.parse_operator_method_symbol()?;
             return Ok(format!("{fixity} {operator}"));
@@ -576,22 +643,25 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            if self.check_keyword("micro")
-                || self.check_keyword("infix")
-                || self.check_keyword("prefix")
-                || self.check_keyword("postfix")
-                || (matches!(self.current().kind, TokenKind::Identifier) && !self.check_keyword("type") && !self.check_keyword("const"))
+            if self.check_token_keyword(Keyword::Micro)
+                || self.check_identifier_text_eq("infix")
+                || self.check_identifier_text_eq("prefix")
+                || self.check_identifier_text_eq("postfix")
+                || self.check_identifier_text_eq("suffix")
+                || (matches!(self.current().kind, TokenKind::Identifier)
+                    && !self.check_token_keyword(Keyword::Type)
+                    && !self.check_token_keyword(Keyword::Const))
             {
                 methods.push(self.parse_object_method_declaration(annotations)?);
                 continue;
             }
 
-            if self.check_keyword("type") {
+            if self.check_token_keyword(Keyword::Type) {
                 associated_type_bindings.push(self.parse_imply_associated_type_binding(annotations)?);
                 continue;
             }
 
-            if self.check_keyword("const") {
+            if self.check_token_keyword(Keyword::Const) {
                 associated_const_bindings.push(self.parse_imply_associated_const_binding(annotations)?);
                 continue;
             }
@@ -604,29 +674,44 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_imply_associated_type_binding(&mut self, annotations: Annotations) -> Result<ImplyAssociatedTypeBinding, ParseError> {
-        let start = self.expect_keyword("type")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Type)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         let generic_parameters = self.parse_structured_generic_parameter_clause()?;
         self.expect_symbol(TokenKind::Equal)?;
         let concrete_type = self.parse_type_expression_bp(0)?;
         self.expect_implicit_or_explicit_terminator(&["micro", "type", "const"])?;
 
-        Ok(ImplyAssociatedTypeBinding { annotations, name, generic_parameters, concrete_type, span: span(start, self.previous().span.end) })
+        Ok(ImplyAssociatedTypeBinding {
+            annotations,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            generic_parameters,
+            concrete_type,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_imply_associated_const_binding(&mut self, annotations: Annotations) -> Result<ImplyAssociatedConstBinding, ParseError> {
-        let start = self.expect_keyword("const")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Const)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         let const_type = if self.match_symbol(TokenKind::Colon) { Some(self.parse_type_expression_bp(0)?) } else { None };
         self.expect_symbol(TokenKind::Equal)?;
         let value = self.parse_expression_bp(0)?;
         self.expect_implicit_or_explicit_terminator(&["micro", "type", "const"])?;
 
-        Ok(ImplyAssociatedConstBinding { annotations, name, const_type, value, span: span(start, self.previous().span.end) })
+        Ok(ImplyAssociatedConstBinding {
+            annotations,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            const_type,
+            value,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_trait_associated_type(&mut self, annotations: Annotations) -> Result<TraitAssociatedTypeDeclaration, ParseError> {
-        let start = self.expect_keyword("type")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Type)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         let generic_parameters = self.parse_generic_parameter_clause()?;
         let bounds = if self.match_symbol(TokenKind::Colon) { self.parse_trait_bound_list()? } else { Vec::new() };
@@ -635,7 +720,7 @@ impl<'a> Parser<'a> {
 
         Ok(TraitAssociatedTypeDeclaration {
             annotations,
-            name,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
             generic_parameters,
             bounds,
             default_type,
@@ -644,19 +729,28 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_trait_associated_const(&mut self, annotations: Annotations) -> Result<TraitAssociatedConstDeclaration, ParseError> {
-        let start = self.expect_keyword("const")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Const)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         self.expect_symbol(TokenKind::Colon)?;
         let const_type = self.parse_type_expression_bp(0)?;
         let default_value = if self.match_symbol(TokenKind::Equal) { Some(self.parse_expression_bp(0)?) } else { None };
         self.expect_implicit_or_explicit_terminator(&["micro", "type", "const"])?;
 
-        Ok(TraitAssociatedConstDeclaration { annotations, name, const_type, default_value, span: span(start, self.previous().span.end) })
+        Ok(TraitAssociatedConstDeclaration {
+            annotations,
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            const_type,
+            default_value,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_unite_declaration(&mut self, annotations: Annotations) -> Result<UniteDeclaration, ParseError> {
-        let start = self.expect_keyword("unite")?.span.start;
-        let name = self.expect_identifier_text()?.to_string();
+        let start = self.expect_token_keyword(Keyword::Unite)?.span.start;
+        let name_start = self.current().span.start;
+        let name_text = self.expect_identifier_text()?.to_string();
+        let name = IdentifierNode::new(valkyrie_types::Identifier::new(&name_text), span(name_start, self.previous().span.end));
         self.skip_generic_parameter_clause()?;
         self.expect_symbol(TokenKind::LBrace)?;
         let mut variants = Vec::new();
@@ -675,6 +769,7 @@ impl<'a> Parser<'a> {
 
     fn parse_unite_variant(&mut self, annotations: Annotations) -> Result<UniteVariantDeclaration, ParseError> {
         let start = self.current().span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         let result_type = if self.match_symbol(TokenKind::Colon) { Some(self.parse_type_expression_bp(0)?) } else { None };
         let mut fields = Vec::new();
@@ -700,7 +795,10 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 let field_start = self.current().span.start;
-                let field_name = self.expect_identifier_text()?.to_string();
+                let field_name_start = self.current().span.start;
+                let field_name_text = self.expect_identifier_text()?.to_string();
+                let field_name =
+                    IdentifierNode::new(valkyrie_types::Identifier::new(&field_name_text), span(field_name_start, self.previous().span.end));
                 self.expect_symbol(TokenKind::Colon)?;
                 let field_type = self.parse_type_expression_bp(0)?;
                 let default_value = if self.match_symbol(TokenKind::Equal) { Some(self.parse_expression_bp(0)?) } else { None };
@@ -720,7 +818,14 @@ impl<'a> Parser<'a> {
         self.match_symbol(TokenKind::Comma);
         self.match_symbol(TokenKind::Semicolon);
 
-        Ok(UniteVariantDeclaration { name, annotations, fields, tuple_types, result_type, span: span(start, self.previous().span.end) })
+        Ok(UniteVariantDeclaration {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            annotations,
+            fields,
+            tuple_types,
+            result_type,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     /// 解析 `attribute name;` 标记属性声明。
@@ -728,21 +833,30 @@ impl<'a> Parser<'a> {
     /// 语法：`attribute <identifier>;`
     /// 用于声明可在类型上使用的标记属性。
     fn parse_attribute_declaration(&mut self, _annotations: Annotations) -> Result<AttributeDeclaration, ParseError> {
-        let start = self.expect_keyword("attribute")?.span.start;
+        let start = self.expect_identifier_text_eq("attribute")?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         self.expect_symbol(TokenKind::Semicolon)?;
-        Ok(AttributeDeclaration { name, span: span(start, self.previous().span.end) })
+        Ok(AttributeDeclaration {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            span: span(start, self.previous().span.end),
+        })
     }
 
     /// 解析 `type Name = Target;` 类型别名声明。
     fn parse_type_alias_declaration(&mut self, _annotations: Annotations) -> Result<TypeAliasDeclaration, ParseError> {
-        let start = self.expect_keyword("type")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Type)?.span.start;
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         self.expect_symbol(TokenKind::Equal)?;
         let target = self.parse_type_expression_bp(0)?;
         // 分号可选：某些源文件省略分号。
         self.match_symbol(TokenKind::Semicolon);
-        Ok(TypeAliasDeclaration { name, target, span: span(start, self.previous().span.end) })
+        Ok(TypeAliasDeclaration {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            target,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_attribute_list(&mut self) -> Result<AttributeList, ParseError> {
@@ -787,11 +901,17 @@ impl<'a> Parser<'a> {
 
     fn parse_parameter(&mut self) -> Result<FunctionParameter, ParseError> {
         let start = self.current().span.start;
-        let is_mutable = self.match_keyword("mut");
+        let is_mutable = self.match_token_keyword(Keyword::Mut);
+        let name_start = self.current().span.start;
         let name = self.expect_identifier_text()?.to_string();
         let parameter_type = if self.match_symbol(TokenKind::Colon) { Some(self.parse_type_expression_bp(0)?) } else { None };
 
-        Ok(FunctionParameter { name, parameter_type, is_mutable, span: span(start, self.previous().span.end) })
+        Ok(FunctionParameter {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(name_start, self.previous().span.end)),
+            parameter_type,
+            is_mutable,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_inheritance_item(&mut self) -> Result<InheritanceItem, ParseError> {
@@ -901,7 +1021,7 @@ impl<'a> Parser<'a> {
         if self.match_symbol(TokenKind::LParen) {
             let open = self.previous().span.clone();
             if self.match_symbol(TokenKind::RParen) {
-                return Ok(TypeExpression::Unit { span: span(open.start, self.previous().span.end) });
+                return Ok(TypeExpression::Tuple { items: Vec::new(), span: span(open.start, self.previous().span.end) });
             }
 
             // 支持带命名字段的元组类型 `(name: Type, name2: Type2)`。
@@ -924,7 +1044,7 @@ impl<'a> Parser<'a> {
         }
 
         // 函数类型：`micro(P1, P2) -> R`。
-        if self.check_keyword("micro") && self.nth_is_symbol(1, TokenKind::LParen) {
+        if self.check_token_keyword(Keyword::Micro) && self.nth_is_symbol(1, TokenKind::LParen) {
             let start = self.current().span.start;
             self.bump(); // 消费 `micro`
             self.expect_symbol(TokenKind::LParen)?;
@@ -934,16 +1054,13 @@ impl<'a> Parser<'a> {
                 self.parse_type_expression_bp(0)?
             }
             else {
-                TypeExpression::Unit { span: span(self.previous().span.end, self.previous().span.end) }
+                TypeExpression::Tuple { items: Vec::new(), span: span(self.previous().span.end, self.previous().span.end) }
             };
             let end = self.previous().span.end;
             return Ok(TypeExpression::Function { params, return_type: Box::new(return_type), span: span(start, end) });
         }
 
         let path = self.parse_type_path()?;
-        if path.arguments.is_empty() && path.name.parts.len() == 1 && path.name.parts[0] == "Self" {
-            return Ok(TypeExpression::SelfType { span: path.span.clone() });
-        }
         Ok(TypeExpression::Path(path))
     }
 
@@ -990,16 +1107,16 @@ impl<'a> Parser<'a> {
 
     fn parse_type_path(&mut self) -> Result<TypePath, ParseError> {
         let start = self.current().span.start;
-        let mut parts = vec![self.expect_identifier_text()?.to_string()];
+        let mut parts = vec![self.expect_type_name_text()?];
         // 同时接受 `::` 和 `.` 作为类型路径分隔符（源码中两种写法均有使用）。
         loop {
-            let is_colon = self.check_symbol(TokenKind::DoubleColon) && self.nth_is_identifier(1);
-            let is_dot = self.check_symbol(TokenKind::Dot) && self.nth_is_identifier(1);
+            let is_colon = self.check_symbol(TokenKind::DoubleColon) && self.nth_is_type_name(1);
+            let is_dot = self.check_symbol(TokenKind::Dot) && self.nth_is_type_name(1);
             if !is_colon && !is_dot {
                 break;
             }
             self.bump();
-            parts.push(self.expect_identifier_text()?.to_string());
+            parts.push(self.expect_type_name_text()?);
         }
         let name_span = span(start, self.previous().span.end);
         Ok(TypePath { name: NamePath { parts, span: name_span.clone() }, arguments: Vec::new(), span: name_span })
@@ -1016,8 +1133,13 @@ impl<'a> Parser<'a> {
     fn parse_type_argument(&mut self) -> Result<TypeExpression, ParseError> {
         let start = self.current().span.start;
         // 尝试解析 `Name = Type` 形式的关联类型绑定。
-        if matches!(self.current().kind, TokenKind::Identifier) && !self.check_keyword("where") && self.peek().kind == TokenKind::Equal {
-            let name = self.expect_identifier_text()?.to_string();
+        if matches!(self.current().kind, TokenKind::Identifier)
+            && !self.check_token_keyword(Keyword::Where)
+            && self.peek().kind == TokenKind::Equal
+        {
+            let name_start = self.current().span.start;
+            let name_text = self.expect_identifier_text()?.to_string();
+            let name = IdentifierNode::new(valkyrie_types::Identifier::new(&name_text), span(name_start, self.previous().span.end));
             self.expect_symbol(TokenKind::Equal)?;
             let ty = self.parse_type_expression_bp(0)?;
             let end = self.previous().span.end;
@@ -1038,7 +1160,7 @@ impl<'a> Parser<'a> {
                 continue;
             }
 
-            if self.check_keyword("as") {
+            if self.check_token_keyword(Keyword::As) {
                 let (left_bp, _right_bp) = (45, 46);
                 if left_bp < min_bp {
                     break;
@@ -1047,7 +1169,7 @@ impl<'a> Parser<'a> {
                 self.bump();
                 let ty = self.parse_type_expression_bp(0)?;
                 let end = self.previous().span.end;
-                lhs = TermExpression::As { expr: Box::new(lhs), ty, span: span(start, end) };
+                lhs = TermExpression::As(Box::new(TermAsExpression { base: lhs, target: ty, span: span(start, end) }));
                 continue;
             }
 
@@ -1076,7 +1198,7 @@ impl<'a> Parser<'a> {
             self.bump();
             let rhs = self.parse_expression_bp(right_bp)?;
             let end = rhs.span().end;
-            lhs = TermExpression::Binary { op, lhs: Box::new(lhs), rhs: Box::new(rhs), span: span(start, end) };
+            lhs = TermExpression::Binary(Box::new(TermBinaryExpression { operator: op, lhs, rhs, span: span(start, end) }));
         }
 
         Ok(lhs)
@@ -1084,24 +1206,33 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_prefix(&mut self) -> Result<TermExpression, ParseError> {
         let token = self.current().clone();
+        if self.check_identifier_text_eq("unsafe") && self.nth_is_symbol(1, TokenKind::LBrace) {
+            return self.parse_unsafe_block_expression();
+        }
         match token.kind {
-            TokenKind::Identifier if self.check_keyword("true") || self.check_keyword("false") => {
-                let value = self.check_keyword("true");
+            TokenKind::Keyword(Keyword::True) | TokenKind::Keyword(Keyword::False) => {
+                let value = token.kind == TokenKind::Keyword(Keyword::True);
                 self.bump();
                 Ok(TermExpression::Literal { literal: LiteralExpression::Bool(value), span: token.span })
             }
-            TokenKind::Identifier if self.check_keyword("return") => self.parse_return_expression(),
-            TokenKind::Identifier if self.check_keyword("break") => self.parse_break_expression(),
-            TokenKind::Identifier if self.check_keyword("continue") => {
+            TokenKind::Apostrophe => self.parse_labeled_loop_expression(),
+            TokenKind::Keyword(Keyword::Return) => self.parse_return_expression(),
+            TokenKind::Keyword(Keyword::Break) => self.parse_break_expression(),
+            TokenKind::Keyword(Keyword::Continue) => self.parse_continue_expression(),
+            TokenKind::Keyword(Keyword::Yield) => self.parse_yield_expression(),
+            TokenKind::Keyword(Keyword::Raise) => self.parse_raise_expression(),
+            TokenKind::Keyword(Keyword::Resume) => self.parse_resume_expression(),
+            TokenKind::Keyword(Keyword::Catch) => self.parse_catch_expression(),
+            TokenKind::Keyword(Keyword::Fallthrough) => {
                 self.bump();
-                Ok(TermExpression::Continue { span: token.span })
+                Ok(TermExpression::Fallthrough { span: token.span })
             }
-            TokenKind::Identifier if self.check_keyword("if") => self.parse_if_expression(),
-            TokenKind::Identifier if self.check_keyword("loop") => self.parse_loop_expression(),
-            TokenKind::Identifier if self.check_keyword("while") => self.parse_while_expression(),
-            TokenKind::Identifier if self.check_keyword("match") => self.parse_match_expression(),
-            TokenKind::Identifier if self.check_keyword("micro") => self.parse_lambda_expression(),
-            TokenKind::Identifier if self.check_keyword("unsafe") => self.parse_unsafe_block_expression(),
+            TokenKind::Keyword(Keyword::If) => self.parse_if_expression(),
+            TokenKind::Keyword(Keyword::Loop) => self.parse_loop_expression(),
+            TokenKind::Keyword(Keyword::While) => self.parse_while_expression(),
+            TokenKind::Keyword(Keyword::Case) => self.parse_case_expression(),
+            TokenKind::Keyword(Keyword::Match) => self.parse_match_expression(),
+            TokenKind::Keyword(Keyword::Micro) => self.parse_lambda_expression(),
             TokenKind::Identifier => {
                 let path = self.parse_name_path()?;
                 let span = path.span.clone();
@@ -1135,7 +1266,7 @@ impl<'a> Parser<'a> {
                 self.bump();
                 let rhs = self.parse_expression_bp(80)?;
                 let end = rhs.span().end;
-                Ok(TermExpression::Unary { op, expr: Box::new(rhs), span: span(start, end) })
+                Ok(TermExpression::Unary(Box::new(TermUnaryExpression { operator: op, base: rhs, span: span(start, end) })))
             }
             TokenKind::LParen => self.parse_parenthesized_expression(),
             TokenKind::LBracket => self.parse_array_expression(),
@@ -1147,7 +1278,9 @@ impl<'a> Parser<'a> {
         match self.current().kind {
             TokenKind::LParen => self.parse_call_expression(lhs),
             TokenKind::Dot => self.parse_member_expression(lhs),
-            TokenKind::LBracket => self.parse_subscript_expression(lhs),
+            TokenKind::LBracket => self.parse_subscript_expression(lhs, SubscriptKind::Ordinal),
+            TokenKind::LOffsetBracket => self.parse_offset_subscript_expression(lhs),
+            TokenKind::DoubleColon if self.nth_is_symbol(1, TokenKind::LBracket) => self.parse_offset_alias_subscript_expression(lhs),
             TokenKind::DoubleColon if self.nth_is_symbol(1, TokenKind::LAngle) => self.parse_turbofish_expression(lhs),
             // `::identifier` 路径解析，用于静态方法访问如 `Type::new()`。
             TokenKind::DoubleColon if self.nth_is_identifier(1) => self.parse_path_member_expression(lhs),
@@ -1167,7 +1300,7 @@ impl<'a> Parser<'a> {
     fn parse_member_expression(&mut self, object: TermExpression) -> Result<TermExpression, ParseError> {
         let start = object.span().start;
         self.expect_symbol(TokenKind::Dot)?;
-        let member = self.expect_identifier_text()?.to_string();
+        let member = self.expect_member_name_text()?;
         let end = self.previous().span.end;
         Ok(TermExpression::MemberAccess { object: Box::new(object), member, span: span(start, end) })
     }
@@ -1178,17 +1311,44 @@ impl<'a> Parser<'a> {
     fn parse_path_member_expression(&mut self, object: TermExpression) -> Result<TermExpression, ParseError> {
         let start = object.span().start;
         self.expect_symbol(TokenKind::DoubleColon)?;
-        let member = self.expect_identifier_text()?.to_string();
+        let member = self.expect_member_name_text()?;
         let end = self.previous().span.end;
         Ok(TermExpression::MemberAccess { object: Box::new(object), member, span: span(start, end) })
     }
 
-    fn parse_subscript_expression(&mut self, object: TermExpression) -> Result<TermExpression, ParseError> {
+    fn parse_subscript_expression(&mut self, object: TermExpression, kind: SubscriptKind) -> Result<TermExpression, ParseError> {
         let start = object.span().start;
         self.expect_symbol(TokenKind::LBracket)?;
         let index = self.parse_expression_bp(0)?;
         let close = self.expect_symbol(TokenKind::RBracket)?;
-        Ok(TermExpression::Subscript { object: Box::new(object), index: Box::new(index), span: span(start, close.span.end) })
+        Ok(TermExpression::Subscript { object: Box::new(object), index: Box::new(index), kind, span: span(start, close.span.end) })
+    }
+
+    fn parse_offset_subscript_expression(&mut self, object: TermExpression) -> Result<TermExpression, ParseError> {
+        let start = object.span().start;
+        self.expect_symbol(TokenKind::LOffsetBracket)?;
+        let index = self.parse_expression_bp(0)?;
+        let close = self.expect_symbol(TokenKind::ROffsetBracket)?;
+        Ok(TermExpression::Subscript {
+            object: Box::new(object),
+            index: Box::new(index),
+            kind: SubscriptKind::Offset,
+            span: span(start, close.span.end),
+        })
+    }
+
+    fn parse_offset_alias_subscript_expression(&mut self, object: TermExpression) -> Result<TermExpression, ParseError> {
+        let start = object.span().start;
+        self.expect_symbol(TokenKind::DoubleColon)?;
+        self.expect_symbol(TokenKind::LBracket)?;
+        let index = self.parse_expression_bp(0)?;
+        let close = self.expect_symbol(TokenKind::RBracket)?;
+        Ok(TermExpression::Subscript {
+            object: Box::new(object),
+            index: Box::new(index),
+            kind: SubscriptKind::Offset,
+            span: span(start, close.span.end),
+        })
     }
 
     fn parse_turbofish_expression(&mut self, expr: TermExpression) -> Result<TermExpression, ParseError> {
@@ -1266,17 +1426,74 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_return_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("return")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Return)?.span.start;
         let value = if self.is_expression_terminator() { None } else { Some(Box::new(self.parse_expression_bp(0)?)) };
         let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
         Ok(TermExpression::Return { value, span: span(start, end) })
     }
 
     fn parse_break_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("break")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Break)?.span.start;
+        let label = if self.check_symbol(TokenKind::Apostrophe) { Some(self.parse_label_name()?) } else { None };
         let value = if self.is_expression_terminator() { None } else { Some(Box::new(self.parse_expression_bp(0)?)) };
         let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
-        Ok(TermExpression::Break { value, span: span(start, end) })
+        Ok(TermExpression::Break { label, value, span: span(start, end) })
+    }
+
+    fn parse_continue_expression(&mut self) -> Result<TermExpression, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Continue)?.span.start;
+        let label = if self.check_symbol(TokenKind::Apostrophe) { Some(self.parse_label_name()?) } else { None };
+        let end = self.previous().span.end;
+        Ok(TermExpression::Continue { label, span: span(start, end) })
+    }
+
+    fn parse_yield_expression(&mut self) -> Result<TermExpression, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Yield)?.span.start;
+        if self.match_identifier_text_eq("from") {
+            let value = Box::new(self.parse_expression_bp(0)?);
+            let end = value.span().end;
+            return Ok(TermExpression::YieldFrom { value, span: span(start, end) });
+        }
+
+        let value = if self.is_expression_terminator() { None } else { Some(Box::new(self.parse_expression_bp(0)?)) };
+        let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
+        Ok(TermExpression::Yield { value, span: span(start, end) })
+    }
+
+    fn parse_raise_expression(&mut self) -> Result<TermExpression, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Raise)?.span.start;
+        let value = Box::new(self.parse_expression_bp(0)?);
+        let end = value.span().end;
+        Ok(TermExpression::Raise { value, span: span(start, end) })
+    }
+
+    fn parse_resume_expression(&mut self) -> Result<TermExpression, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Resume)?.span.start;
+        let value = Box::new(self.parse_expression_bp(0)?);
+        let end = value.span().end;
+        Ok(TermExpression::Resume { value, span: span(start, end) })
+    }
+
+    fn parse_catch_expression(&mut self) -> Result<TermExpression, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Catch)?.span.start;
+        self.suppress_struct_constructor = true;
+        let expr = Box::new(self.parse_expression_bp(0)?);
+        self.suppress_struct_constructor = false;
+        self.expect_symbol(TokenKind::LBrace)?;
+
+        let mut arms = Vec::new();
+        while !self.check_symbol(TokenKind::RBrace) {
+            if self.is_eof() {
+                return Err(ParseError::invalid("unterminated catch body"));
+            }
+            if self.match_symbol(TokenKind::Semicolon) {
+                continue;
+            }
+            let arm = self.parse_match_arm()?;
+            arms.push(arm);
+        }
+        let close = self.expect_symbol(TokenKind::RBrace)?;
+        Ok(TermExpression::Catch { expr, arms, span: span(start, close.span.end) })
     }
 
     /// 解析 lambda 表达式 `micro(params) -> return_type { body }`。
@@ -1284,7 +1501,7 @@ impl<'a> Parser<'a> {
     /// 与顶层 `micro name(params) -> T { body }` 函数声明不同，lambda 作为表达式
     /// 出现在调用参数等位置时没有函数名，直接以 `micro(` 起始。
     fn parse_lambda_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("micro")?.span.start;
+        let start = self.expect_token_keyword(Keyword::Micro)?.span.start;
         let params = self.parse_parameter_list()?;
         let return_type = if self.match_symbol(TokenKind::Arrow) { Some(self.parse_type_expression_bp(0)?) } else { None };
         let body = if self.check_symbol(TokenKind::LBrace) {
@@ -1302,249 +1519,10 @@ impl<'a> Parser<'a> {
     /// `unsafe` 关键字后紧跟块体，语义上与普通块相同，
     /// 仅标记其中的操作可能涉及不安全行为。
     fn parse_unsafe_block_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("unsafe")?.span.start;
+        let start = self.expect_identifier_text_eq("unsafe")?.span.start;
         let body = self.parse_block_body()?;
         let end = body.span.end;
         Ok(TermExpression::Block { body: Box::new(body), span: span(start, end) })
-    }
-
-    /// 解析 `if condition { then } else { else }` 表达式。
-    ///
-    /// `else` 分支可选；当存在时既可以是块体，也可以是嵌套的 `if` 表达式。
-    fn parse_if_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("if")?.span.start;
-        // 抑制结构体构造 postfix，避免误吞 if 块体。
-        self.suppress_struct_constructor = true;
-        let condition = self.parse_expression_bp(0)?;
-        self.suppress_struct_constructor = false;
-        let then_body = Box::new(self.parse_block_body()?);
-        let else_body = if self.match_keyword("else") {
-            if self.check_keyword("if") {
-                let nested = self.parse_if_expression()?;
-                let nested_span = nested.span().clone();
-                Some(Box::new(DeclarationBody { statements: Vec::new(), tail_expression: Some(Box::new(nested)), span: nested_span }))
-            }
-            else {
-                Some(Box::new(self.parse_block_body()?))
-            }
-        }
-        else {
-            None
-        };
-        let end = else_body.as_ref().map_or(then_body.span.end, |body| body.span.end);
-        Ok(TermExpression::If { condition: Box::new(condition), then_body, else_body, span: span(start, end) })
-    }
-
-    /// 解析 `loop` 表达式。
-    ///
-    /// 支持两种语法：
-    /// - while 风格：`loop condition { body }`
-    /// - for 风格：`loop pattern in iterator { body }`
-    ///
-    /// 判别依据：`loop` 后若紧跟标识符且下一个 token 是 `in` 关键字，则按 for 风格解析；
-    /// 否则按 while 风格解析条件表达式。
-    fn parse_loop_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("loop")?.span.start;
-
-        let checkpoint = self.index;
-        if matches!(self.current().kind, TokenKind::Identifier | TokenKind::LParen) {
-            if let Ok(pattern) = self.parse_pattern_expression() {
-                if self.match_keyword("in") {
-                    // 抑制结构体构造 postfix，避免误吞 loop 块体。
-                    self.suppress_struct_constructor = true;
-                    let iterator = Some(Box::new(self.parse_expression_bp(0)?));
-                    self.suppress_struct_constructor = false;
-                    let body = Box::new(self.parse_block_body()?);
-                    let end = body.span.end;
-                    return Ok(TermExpression::Loop { pattern: Some(pattern), iterator, condition: None, body, span: span(start, end) });
-                }
-            }
-            self.index = checkpoint;
-        }
-
-        {
-            // 抑制结构体构造 postfix，避免误吞 loop 块体。
-            self.suppress_struct_constructor = true;
-            let condition = Some(Box::new(self.parse_expression_bp(0)?));
-            self.suppress_struct_constructor = false;
-            let body = Box::new(self.parse_block_body()?);
-            let end = body.span.end;
-            Ok(TermExpression::Loop { pattern: None, iterator: None, condition, body, span: span(start, end) })
-        }
-    }
-
-    /// 解析 `while condition { body }` 表达式。
-    ///
-    /// `while` 是 `loop condition { body }` 的语法糖，复用 `TermExpression::Loop`。
-    fn parse_while_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("while")?.span.start;
-        // 抑制结构体构造 postfix，避免误吞 while 块体。
-        self.suppress_struct_constructor = true;
-        let condition = Some(Box::new(self.parse_expression_bp(0)?));
-        self.suppress_struct_constructor = false;
-        let body = Box::new(self.parse_block_body()?);
-        let end = body.span.end;
-        Ok(TermExpression::Loop { pattern: None, iterator: None, condition, body, span: span(start, end) })
-    }
-
-    /// 解析 `match scrutinee { case Pattern(binding): body default: body }` 表达式。
-    ///
-    /// 支持构造器模式（`case Name(binding)`）和默认分支（`default:`）。
-    fn parse_match_expression(&mut self) -> Result<TermExpression, ParseError> {
-        let start = self.expect_keyword("match")?.span.start;
-        // 抑制结构体构造 postfix，避免误吞 match 块体。
-        self.suppress_struct_constructor = true;
-        let scrutinee = Box::new(self.parse_expression_bp(0)?);
-        self.suppress_struct_constructor = false;
-        self.expect_symbol(TokenKind::LBrace)?;
-
-        let mut arms = Vec::new();
-        while !self.check_symbol(TokenKind::RBrace) {
-            if self.is_eof() {
-                return Err(ParseError::invalid("unterminated match body"));
-            }
-            if self.match_symbol(TokenKind::Semicolon) {
-                continue;
-            }
-            let arm = self.parse_match_arm()?;
-            arms.push(arm);
-        }
-        let close = self.expect_symbol(TokenKind::RBrace)?;
-        Ok(TermExpression::Match { scrutinee, arms, span: span(start, close.span.end) })
-    }
-
-    fn parse_match_arm(&mut self) -> Result<MatchArm, ParseError> {
-        let start = self.current().span.start;
-        let pattern = if self.match_keyword("default") || self.match_keyword("else") {
-            self.expect_symbol(TokenKind::Colon)?;
-            MatchPattern::Default { span: span(start, self.previous().span.end) }
-        }
-        else {
-            self.expect_keyword("case")?;
-            let name = self.parse_name_path()?;
-            let mut bindings = Vec::new();
-            if self.match_symbol(TokenKind::LParen) {
-                while !self.check_symbol(TokenKind::RParen) {
-                    bindings.push(self.expect_identifier_text()?.to_string());
-                    if !self.match_symbol(TokenKind::Comma) {
-                        break;
-                    }
-                }
-                self.expect_symbol(TokenKind::RParen)?;
-            }
-            // 消费 "或模式"（`case Pattern1 | Pattern2:`）中的额外分支。
-            // 自举阶段仅保留第一个模式，额外分支被消费但不存储。
-            while self.match_symbol(TokenKind::Pipe) {
-                let _alt_name = self.parse_name_path()?;
-                if self.match_symbol(TokenKind::LParen) {
-                    while !self.check_symbol(TokenKind::RParen) {
-                        self.expect_identifier_text()?;
-                        if !self.match_symbol(TokenKind::Comma) {
-                            break;
-                        }
-                    }
-                    self.expect_symbol(TokenKind::RParen)?;
-                }
-            }
-            // 可选的 `if <expression>` 守卫子句，在 `:` 之前解析。
-            let guard = if self.match_keyword("if") { Some(Box::new(self.parse_expression_bp(0)?)) } else { None };
-            self.expect_symbol(TokenKind::Colon)?;
-            MatchPattern::Constructor { name, bindings, guard, span: span(start, self.previous().span.end) }
-        };
-        let body = self.parse_match_arm_body()?;
-        Ok(MatchArm { pattern, body, span: span(start, self.previous().span.end) })
-    }
-
-    /// 解析 match arm 体：不要求 `{}`，以 `case`/`default`/`}` 作为终止边界。
-    fn parse_match_arm_body(&mut self) -> Result<DeclarationBody, ParseError> {
-        let start = self.current().span.start;
-        let mut statements = Vec::new();
-        let mut tail_expression = None;
-
-        while !self.is_match_arm_terminator() {
-            if self.is_eof() {
-                return Err(ParseError::invalid("unterminated match arm body"));
-            }
-            if self.match_symbol(TokenKind::Semicolon) {
-                continue;
-            }
-
-            if self.check_keyword("let") || self.check_keyword("mut") {
-                statements.push(self.parse_let_statement()?);
-                continue;
-            }
-
-            let expr = self.parse_expression_bp(0)?;
-            if self.match_symbol(TokenKind::Semicolon) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            if matches!(expr, TermExpression::If { .. } | TermExpression::Loop { .. } | TermExpression::Match { .. }) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            if self.is_match_arm_terminator() {
-                if expression_requires_statement(&expr) {
-                    statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                }
-                else {
-                    tail_expression = Some(Box::new(expr));
-                }
-                break;
-            }
-
-            if self.is_statement_start() {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            return Err(self.error_here("expected ';' or arm boundary after expression"));
-        }
-
-        Ok(DeclarationBody { statements, tail_expression, span: span(start, self.current().span.start) })
-    }
-
-    /// 判断当前 token 是否为 match arm 体的终止边界。
-    fn is_match_arm_terminator(&self) -> bool {
-        if self.check_symbol(TokenKind::RBrace) || self.is_eof() {
-            return true;
-        }
-        if matches!(self.current().kind, TokenKind::Identifier) {
-            let text = self.slice(self.current().span.clone());
-            if text == "case" || text == "else" {
-                return true;
-            }
-            // `default:` 是 match arm 模式，作为终止符；
-            // `default` 不跟 `:` 时是表达式（如 `unwrap_or` 的 `default` 参数），不作为终止符。
-            if text == "default" && self.peek().kind == TokenKind::Colon {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn parse_pattern_expression(&mut self) -> Result<PatternExpression, ParseError> {
-        match self.current().kind {
-            TokenKind::Identifier => {
-                let name = self.expect_identifier_text()?.to_string();
-                let span = self.previous().span.clone();
-                if name == "_" {
-                    Ok(PatternExpression::Wildcard { span })
-                }
-                else {
-                    Ok(PatternExpression::Variable { name, span })
-                }
-            }
-            TokenKind::LParen => {
-                let open = self.expect_symbol(TokenKind::LParen)?;
-                let items = self.parse_comma_separated_until(TokenKind::RParen, |parser| parser.parse_pattern_expression())?;
-                let close = self.expect_symbol(TokenKind::RParen)?;
-                Ok(PatternExpression::Tuple { items, span: span(open.span.start, close.span.end) })
-            }
-            _ => Err(self.error_here("expected pattern")),
-        }
     }
 
     fn expression_postfix_binding_power(&self) -> Option<(u8, u8)> {
@@ -1553,7 +1531,8 @@ impl<'a> Parser<'a> {
             // `::identifier` 路径访问，与 `.` 成员访问具有相同的绑定力。
             TokenKind::DoubleColon if self.nth_is_identifier(1) => Some((95, 96)),
             TokenKind::DoubleColon if self.nth_is_symbol(1, TokenKind::LAngle) => Some((93, 94)),
-            TokenKind::LParen | TokenKind::LBracket => Some((90, 91)),
+            TokenKind::DoubleColon if self.nth_is_symbol(1, TokenKind::LBracket) => Some((90, 91)),
+            TokenKind::LParen | TokenKind::LBracket | TokenKind::LOffsetBracket => Some((90, 91)),
             // 结构体构造 `Type { field: value }`，在条件解析时被抑制。
             TokenKind::LBrace if !self.suppress_struct_constructor => Some((85, 86)),
             _ => None,
@@ -1565,7 +1544,7 @@ impl<'a> Parser<'a> {
     /// 用于换行隐式终止：当表达式后紧跟标识符（含关键字）时，无需 `;` 即可结束当前语句。
     /// 值类型关键字（如 `i32`、`utf8`）也视为新语句起始。
     fn is_statement_start(&self) -> bool {
-        matches!(self.current().kind, TokenKind::Identifier)
+        matches!(self.current().kind, TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Apostrophe)
     }
 
     fn expression_infix_binding_power(&self) -> Option<(BinaryOperator, u8, u8)> {
@@ -1590,86 +1569,15 @@ impl<'a> Parser<'a> {
             TokenKind::Shr => Some((BinaryOperator::Shr, 45, 46)),
             // 按位运算符，优先级介于比较和逻辑运算之间（C 语言约定）。
             TokenKind::Ampersand => Some((BinaryOperator::BitAnd, 38, 39)),
-            TokenKind::Caret => Some((BinaryOperator::BitXor, 36, 37)),
+            TokenKind::Caret => Some((BinaryOperator::Power, 36, 37)),
             TokenKind::Pipe => Some((BinaryOperator::BitOr, 34, 35)),
             _ => None,
         }
     }
 
-    fn parse_block_body(&mut self) -> Result<DeclarationBody, ParseError> {
-        let open = self.expect_symbol(TokenKind::LBrace)?;
-        let mut statements = Vec::new();
-        let mut tail_expression = None;
-
-        while !self.check_symbol(TokenKind::RBrace) {
-            if self.is_eof() {
-                return Err(ParseError::invalid("unterminated block body"));
-            }
-            if self.match_symbol(TokenKind::Semicolon) {
-                continue;
-            }
-
-            if self.check_keyword("let") || self.check_keyword("mut") {
-                statements.push(self.parse_let_statement()?);
-                continue;
-            }
-
-            let expr = self.parse_expression_bp(0)?;
-            if self.match_symbol(TokenKind::Semicolon) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            // `if`/`loop`/`match` 等控制流表达式可作为语句使用，不需要分号终止。
-            if matches!(expr, TermExpression::If { .. } | TermExpression::Loop { .. } | TermExpression::Match { .. }) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            // 换行隐式终止：当下一个 token 是新语句起始关键字时，当前表达式作为语句结束。
-            if self.is_statement_start() {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-                continue;
-            }
-
-            if !self.check_symbol(TokenKind::RBrace) {
-                return Err(self.error_here("expected ';' or '}' after expression"));
-            }
-
-            if expression_requires_statement(&expr) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
-            }
-            else {
-                tail_expression = Some(Box::new(expr));
-            }
-            break;
-        }
-
-        let close = self.expect_symbol(TokenKind::RBrace)?;
-        Ok(DeclarationBody { statements, tail_expression, span: span(open.span.end, close.span.start) })
-    }
-
-    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        let start = self.current().span.start;
-        let saw_let = self.match_keyword("let");
-        let is_mutable = self.match_keyword("mut");
-        if !saw_let && !is_mutable {
-            return Err(self.error_here("expected let binding"));
-        }
-
-        let pattern = self.parse_pattern_expression()?;
-        let ty = if self.match_symbol(TokenKind::Colon) { Some(self.parse_type_expression_bp(0)?) } else { None };
-        let initializer = if self.match_symbol(TokenKind::Equal) { Some(self.parse_expression_bp(0)?) } else { None };
-        // 接受 `;`、`}`、EOF 或新语句起始关键字作为隐式终止符。
-        if !self.match_symbol(TokenKind::Semicolon) && !self.check_symbol(TokenKind::RBrace) && !self.is_eof() && !self.is_statement_start() {
-            return Err(self.error_here("expected ';' or statement boundary after let binding"));
-        }
-
-        Ok(Statement::Let { statement: LetStatement { is_mutable, pattern, ty, initializer }, span: span(start, self.previous().span.end) })
-    }
-
     fn is_expression_terminator(&self) -> bool {
         matches!(self.current().kind, TokenKind::Semicolon | TokenKind::RBrace | TokenKind::Comma | TokenKind::RParen | TokenKind::RBracket)
+            || matches!(self.current().kind, TokenKind::Keyword(Keyword::Case | Keyword::Else))
     }
 
     fn parse_comma_separated_until<T>(
@@ -1759,15 +1667,20 @@ impl<'a> Parser<'a> {
         let name = self.expect_identifier_text()?.to_string();
         let bounds = if self.match_symbol(TokenKind::Colon) { self.parse_trait_bound_list()? } else { Vec::new() };
         let default_type = if self.match_symbol(TokenKind::Equal) { Some(self.parse_type_expression_bp(0)?) } else { None };
-        Ok(GenericParameterDeclaration { name, bounds, default_type, span: span(start, self.previous().span.end) })
+        Ok(GenericParameterDeclaration {
+            name: IdentifierNode::new(valkyrie_types::Identifier::new(&name), span(start, self.previous().span.end)),
+            bounds,
+            default_type,
+            span: span(start, self.previous().span.end),
+        })
     }
 
     fn parse_where_constraints(&mut self) -> Result<Vec<WhereConstraintDeclaration>, ParseError> {
-        if !self.check_keyword("where") {
+        if !self.check_token_keyword(Keyword::Where) {
             return Ok(Vec::new());
         }
 
-        self.expect_keyword("where")?;
+        self.expect_token_keyword(Keyword::Where)?;
         let constraints = self.parse_comma_separated_until(TokenKind::LBrace, |parser| parser.parse_where_constraint())?;
         Ok(constraints)
     }
@@ -1810,6 +1723,8 @@ impl<'a> Parser<'a> {
         if self.check_symbol(TokenKind::RBrace)
             || self.is_eof()
             || self.check_symbol(TokenKind::LBracket)
+            || self.current_keyword_text().is_some_and(|text| DECLARATION_MODIFIERS.contains(&text) || next_item_keywords.contains(&text))
+            || self.current_keyword_text().is_some_and(|text| next_item_keywords.contains(&text))
             || self.current_identifier_text().is_some_and(|text| DECLARATION_MODIFIERS.contains(&text) || next_item_keywords.contains(&text))
         {
             return Ok(());
@@ -1848,12 +1763,23 @@ impl<'a> Parser<'a> {
         (self.current().kind == TokenKind::Identifier).then(|| self.slice(self.current().span.clone()))
     }
 
-    fn check_keyword(&self, text: &str) -> bool {
-        self.current_identifier_text().is_some_and(|current| current == text)
+    fn current_keyword_text(&self) -> Option<&'static str> {
+        match self.current().kind {
+            TokenKind::Keyword(keyword) => Some(keyword.as_str()),
+            _ => None,
+        }
     }
 
-    fn match_keyword(&mut self, text: &str) -> bool {
-        if self.check_keyword(text) {
+    fn current_modifier_text(&self) -> Option<&str> {
+        self.current_identifier_text().or_else(|| self.current_keyword_text())
+    }
+
+    fn check_token_keyword(&self, keyword: Keyword) -> bool {
+        self.current().kind == TokenKind::Keyword(keyword)
+    }
+
+    fn match_token_keyword(&mut self, keyword: Keyword) -> bool {
+        if self.check_token_keyword(keyword) {
             self.bump();
             true
         }
@@ -1862,8 +1788,61 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn expect_token_keyword(&mut self, keyword: Keyword) -> Result<Token, ParseError> {
+        if self.check_token_keyword(keyword) {
+            return Ok(self.bump().clone());
+        }
+        Err(ParseError::invalid_at(format!("expected keyword `{}`", keyword.as_str()), self.current().span.clone()))
+    }
+
+    fn check_identifier_text_eq(&self, text: &str) -> bool {
+        self.current_identifier_text().is_some_and(|current| current == text)
+    }
+
+    fn match_identifier_text_eq(&mut self, text: &str) -> bool {
+        if self.check_identifier_text_eq(text) {
+            self.bump();
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn expect_identifier_text_eq(&mut self, text: &str) -> Result<Token, ParseError> {
+        if self.check_identifier_text_eq(text) {
+            return Ok(self.bump().clone());
+        }
+        Err(self.error_here(format!("expected identifier `{}`", text)))
+    }
+
+    #[allow(dead_code)]
+    #[deprecated(note = "use tokenized keyword checks instead: TokenKind::Keyword(...), expect_token_keyword, or match_token_keyword")]
+    fn check_keyword(&self, text: &str) -> bool {
+        Keyword::from_str(text).is_some_and(|keyword| self.current().kind == TokenKind::Keyword(keyword))
+            || self.current_identifier_text().is_some_and(|current| current == text)
+    }
+
+    #[allow(dead_code)]
+    #[deprecated(note = "use tokenized keyword checks instead: TokenKind::Keyword(...), expect_token_keyword, or match_token_keyword")]
+    fn match_keyword(&mut self, text: &str) -> bool {
+        if Keyword::from_str(text).is_some_and(|keyword| self.current().kind == TokenKind::Keyword(keyword))
+            || self.current_identifier_text().is_some_and(|current| current == text)
+        {
+            self.bump();
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    #[allow(dead_code)]
+    #[deprecated(note = "use tokenized keyword checks instead: TokenKind::Keyword(...), expect_token_keyword, or match_token_keyword")]
     fn expect_keyword(&mut self, text: &str) -> Result<Token, ParseError> {
-        if self.check_keyword(text) {
+        if Keyword::from_str(text).is_some_and(|keyword| self.current().kind == TokenKind::Keyword(keyword))
+            || self.current_identifier_text().is_some_and(|current| current == text)
+        {
             return Ok(self.bump().clone());
         }
         Err(self.error_here(format!("expected keyword '{}'", text)))
@@ -1875,6 +1854,55 @@ impl<'a> Parser<'a> {
             return Ok(self.slice(span));
         }
         Err(self.error_here("expected identifier"))
+    }
+
+    fn parse_label_name(&mut self) -> Result<String, ParseError> {
+        self.expect_symbol(TokenKind::Apostrophe)?;
+        Ok(self.expect_identifier_text()?.to_string())
+    }
+
+    #[allow(dead_code)]
+    fn expect_keyword_text(&mut self) -> Result<String, ParseError> {
+        if let TokenKind::Keyword(keyword) = self.current().kind {
+            self.bump();
+            return Ok(keyword.as_str().to_string());
+        }
+        if let Some(text) = self.current_identifier_text() {
+            let owned = text.to_string();
+            self.bump();
+            return Ok(owned);
+        }
+        Err(self.error_here("expected keyword"))
+    }
+
+    fn expect_member_name_text(&mut self) -> Result<String, ParseError> {
+        match self.current().kind {
+            TokenKind::Identifier => {
+                let span = self.bump().span.clone();
+                Ok(self.slice(span).to_string())
+            }
+            TokenKind::Keyword(keyword) => {
+                self.bump();
+                Ok(keyword.as_str().to_string())
+            }
+            TokenKind::BacktickSymbol => self.expect_name_text(),
+            _ => Err(self.error_here("expected member name")),
+        }
+    }
+
+    fn expect_type_name_text(&mut self) -> Result<String, ParseError> {
+        match self.current().kind {
+            TokenKind::Identifier => {
+                let span = self.bump().span.clone();
+                Ok(self.slice(span).to_string())
+            }
+            TokenKind::Keyword(keyword) => {
+                self.bump();
+                Ok(keyword.as_str().to_string())
+            }
+            TokenKind::BacktickSymbol => self.expect_name_text(),
+            _ => Err(self.error_here("expected type name")),
+        }
     }
 
     /// 期望一个名称文本，接受普通标识符或反引号包裹的标识符。
@@ -1909,6 +1937,12 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.index + offset).is_some_and(|token| token.kind == TokenKind::Identifier)
     }
 
+    fn nth_is_type_name(&self, offset: usize) -> bool {
+        self.tokens
+            .get(self.index + offset)
+            .is_some_and(|token| matches!(token.kind, TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::BacktickSymbol))
+    }
+
     fn match_symbol(&mut self, symbol: TokenKind) -> bool {
         if self.check_symbol(symbol) {
             self.bump();
@@ -1940,7 +1974,7 @@ impl<'a> Parser<'a> {
     fn error_here(&self, message: impl Into<String>) -> ParseError {
         let current = self.current();
         let token_text = if matches!(current.kind, TokenKind::Eof) { "<eof>" } else { self.slice(current.span.clone()) };
-        ParseError::invalid(format!("{} near '{}' @byte {}", message.into(), token_text, current.span.start))
+        ParseError::invalid_at(format!("{} near '{}'", message.into(), token_text), current.span.clone())
     }
 }
 
@@ -2222,8 +2256,12 @@ fn expression_requires_statement(expression: &TermExpression) -> bool {
         TermExpression::Return { .. }
             | TermExpression::Break { .. }
             | TermExpression::Continue { .. }
-            | TermExpression::If { .. }
-            | TermExpression::Loop { .. }
+            | TermExpression::Yield { .. }
+            | TermExpression::YieldFrom { .. }
+            | TermExpression::Fallthrough { .. }
+            | TermExpression::If(_)
+            | TermExpression::Loop(_)
+            | TermExpression::Case { .. }
             | TermExpression::Match { .. }
     )
 }
@@ -2232,25 +2270,47 @@ fn with_term_span(expression: TermExpression, span: Range<usize>) -> TermExpress
     match expression {
         TermExpression::Name { path, .. } => TermExpression::Name { path, span },
         TermExpression::Literal { literal, .. } => TermExpression::Literal { literal, span },
-        TermExpression::Unary { op, expr, .. } => TermExpression::Unary { op, expr, span },
-        TermExpression::Binary { op, lhs, rhs, .. } => TermExpression::Binary { op, lhs, rhs, span },
+        TermExpression::Unary(term_unary) => {
+            let TermUnaryExpression { operator, base: expr, .. } = *term_unary;
+            TermExpression::Unary(Box::new(TermUnaryExpression { operator, base: expr, span }))
+        }
+        TermExpression::Binary(term_binary) => {
+            let TermBinaryExpression { operator, lhs, rhs, .. } = *term_binary;
+            TermExpression::Binary(Box::new(TermBinaryExpression { operator, lhs, rhs, span }))
+        }
         TermExpression::Call { callee, args, .. } => TermExpression::Call { callee, args, span },
         TermExpression::MemberAccess { object, member, .. } => TermExpression::MemberAccess { object, member, span },
-        TermExpression::Subscript { object, index, .. } => TermExpression::Subscript { object, index, span },
+        TermExpression::Subscript { object, index, kind, .. } => TermExpression::Subscript { object, index, kind, span },
         TermExpression::Tuple { items, .. } => TermExpression::Tuple { items, span },
         TermExpression::Array { items, .. } => TermExpression::Array { items, span },
-        TermExpression::As { expr, ty, .. } => TermExpression::As { expr, ty, span },
+        TermExpression::As(term_as) => {
+            let TermAsExpression { base: expr, target: ty, .. } = *term_as;
+            TermExpression::As(Box::new(TermAsExpression { base: expr, target: ty, span }))
+        }
         TermExpression::Turbofish { expr, arguments, .. } => TermExpression::Turbofish { expr, arguments, span },
         TermExpression::Assign { target, value, .. } => TermExpression::Assign { target, value, span },
         TermExpression::Return { value, .. } => TermExpression::Return { value, span },
-        TermExpression::Break { value, .. } => TermExpression::Break { value, span },
-        TermExpression::Continue { .. } => TermExpression::Continue { span },
-        TermExpression::If { condition, then_body, else_body, .. } => TermExpression::If { condition, then_body, else_body, span },
-        TermExpression::Loop { pattern, iterator, condition, body, .. } => TermExpression::Loop { pattern, iterator, condition, body, span },
+        TermExpression::Break { label, value, .. } => TermExpression::Break { label, value, span },
+        TermExpression::Continue { label, .. } => TermExpression::Continue { label, span },
+        TermExpression::Yield { value, .. } => TermExpression::Yield { value, span },
+        TermExpression::YieldFrom { value, .. } => TermExpression::YieldFrom { value, span },
+        TermExpression::Raise { value, .. } => TermExpression::Raise { value, span },
+        TermExpression::Resume { value, .. } => TermExpression::Resume { value, span },
+        TermExpression::Catch { expr, arms, .. } => TermExpression::Catch { expr, arms, span },
+        TermExpression::If(if_stmt) => {
+            let IfStatement { condition, then_body, else_body, .. } = *if_stmt;
+            TermExpression::If(Box::new(IfStatement { condition, then_body, else_body, span }))
+        }
+        TermExpression::Loop(loop_stmt) => {
+            let LoopStatement { label, pattern, iterator, condition, body, .. } = *loop_stmt;
+            TermExpression::Loop(Box::new(LoopStatement { label, pattern, iterator, condition, body, span }))
+        }
         TermExpression::Match { scrutinee, arms, .. } => TermExpression::Match { scrutinee, arms, span },
+        TermExpression::Case { scrutinee, arms, .. } => TermExpression::Case { scrutinee, arms, span },
         TermExpression::Construct { path, fields, .. } => TermExpression::Construct { path, fields, span },
         TermExpression::Lambda { params, return_type, body, .. } => TermExpression::Lambda { params, return_type, body, span },
         TermExpression::Block { body, .. } => TermExpression::Block { body, span },
+        TermExpression::Fallthrough { .. } => TermExpression::Fallthrough { span },
     }
 }
 
@@ -2262,8 +2322,6 @@ fn with_type_span(expression: TypeExpression, span: Range<usize>) -> TypeExpress
         }
         TypeExpression::Array { item, .. } => TypeExpression::Array { item, span },
         TypeExpression::Tuple { items, .. } => TypeExpression::Tuple { items, span },
-        TypeExpression::Unit { .. } => TypeExpression::Unit { span },
-        TypeExpression::SelfType { .. } => TypeExpression::SelfType { span },
         TypeExpression::Associated { name, ty, .. } => TypeExpression::Associated { name, ty, span },
         TypeExpression::Nullable { item, .. } => TypeExpression::Nullable { item, span },
         TypeExpression::Function { params, return_type, .. } => TypeExpression::Function { params, return_type, span },

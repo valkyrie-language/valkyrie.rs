@@ -156,13 +156,26 @@ fn dump_metadata(out: &mut String, md: &super::pe_parser::MetadataRoot) {
         out.push_str(&format!("    {:<10} offset=0x{:08X} size=0x{:08X}\n", s.name, s.offset, s.size));
     }
 
-    out.push_str(&format!("\n  #Strings size: {}\n", md.strings.len()));
-    out.push_str(&format!("  #US size: {}\n", md.user_strings.len()));
-    out.push_str(&format!("  #GUID size: {}\n", md.guid.len()));
-    out.push_str(&format!("  #Blob size: {}\n", md.blob.len()));
+    out.push_str(&format!(
+        r#"
+  #Strings size: {}
+  #US size: {}
+  #GUID size: {}
+  #Blob size: {}
+"#,
+        md.strings.len(),
+        md.user_strings.len(),
+        md.guid.len(),
+        md.blob.len()
+    ));
 
-    out.push_str(&format!("\n  Valid tables: 0x{:016X}\n", md.valid_tables));
-    out.push_str(&format!("  Sorted tables: 0x{:016X}\n", md.sorted_tables));
+    out.push_str(&format!(
+        r#"
+  Valid tables: 0x{:016X}
+  Sorted tables: 0x{:016X}
+"#,
+        md.valid_tables, md.sorted_tables
+    ));
 
     out.push_str("\n  Table row counts:\n");
     for i in 0..64u32 {

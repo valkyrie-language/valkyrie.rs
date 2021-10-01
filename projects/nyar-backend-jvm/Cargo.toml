@@ -1,0 +1,15 @@
+[package]
+name = "nyar-backend-jvm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+miette = { workspace = true }
+nyar = { workspace = true }
+serde = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

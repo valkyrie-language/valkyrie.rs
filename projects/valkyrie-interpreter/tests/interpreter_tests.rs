@@ -8,30 +8,18 @@ fn convert_error(e: &valkyrie_types::ValkyrieError) -> TestError {
         ValkyrieErrorKind::VmError { code, key, message } => {
             TestError { code: format!("E{:04X}", code), key: key.clone(), message: message.clone(), location: None }
         }
-        ValkyrieErrorKind::RuntimeError { message } => TestError {
-            code: format!("E{:04X}", e.code()),
-            key: "error.runtime".to_string(),
-            message: message.clone(),
-            location: None,
-        },
-        ValkyrieErrorKind::CompileError { message } => TestError {
-            code: format!("E{:04X}", e.code()),
-            key: "error.compile".to_string(),
-            message: message.clone(),
-            location: None,
-        },
-        ValkyrieErrorKind::ParseError { message } => TestError {
-            code: format!("E{:04X}", e.code()),
-            key: "error.parse".to_string(),
-            message: message.clone(),
-            location: None,
-        },
-        ValkyrieErrorKind::SyntaxError { message } => TestError {
-            code: format!("E{:04X}", e.code()),
-            key: "error.syntax".to_string(),
-            message: message.clone(),
-            location: None,
-        },
+        ValkyrieErrorKind::RuntimeError { message } => {
+            TestError { code: format!("E{:04X}", e.code()), key: "error.runtime".to_string(), message: message.clone(), location: None }
+        }
+        ValkyrieErrorKind::CompileError { message } => {
+            TestError { code: format!("E{:04X}", e.code()), key: "error.compile".to_string(), message: message.clone(), location: None }
+        }
+        ValkyrieErrorKind::ParseError { message } => {
+            TestError { code: format!("E{:04X}", e.code()), key: "error.parse".to_string(), message: message.clone(), location: None }
+        }
+        ValkyrieErrorKind::SyntaxError { message } => {
+            TestError { code: format!("E{:04X}", e.code()), key: "error.syntax".to_string(), message: message.clone(), location: None }
+        }
         ValkyrieErrorKind::TypeError { expected, found } => TestError {
             code: format!("E{:04X}", e.code()),
             key: "error.type".to_string(),
@@ -86,10 +74,9 @@ fn create_executor() -> impl valkyrie_testing::TestExecutor {
 #[test]
 fn test_control_flow_conditional() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("conditional"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("conditional"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Conditional tests should pass");
 }
@@ -97,10 +84,9 @@ fn test_control_flow_conditional() {
 #[test]
 fn test_control_flow_loop() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("loop"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("loop"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Loop tests should pass");
 }
@@ -108,10 +94,9 @@ fn test_control_flow_loop() {
 #[test]
 fn test_control_flow_match() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("match"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("match"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Match tests should pass");
 }
@@ -119,10 +104,9 @@ fn test_control_flow_match() {
 #[test]
 fn test_control_flow_exception() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("exception"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("exception"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Exception tests should pass");
 }
@@ -130,10 +114,9 @@ fn test_control_flow_exception() {
 #[test]
 fn test_control_flow_keyword() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("keyword"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("control_flow").join("keyword"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Keyword tests should pass");
 }
@@ -191,10 +174,9 @@ fn test_oop_value_type() {
 #[test]
 fn test_oop_special_class() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("special_class"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("special_class"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Special class tests should pass");
 }
@@ -212,10 +194,9 @@ fn test_oop_widget() {
 #[test]
 fn test_oop_with_expression() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("with_expression"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("with_expression"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("With expression tests should pass");
 }
@@ -223,10 +204,9 @@ fn test_oop_with_expression() {
 #[test]
 fn test_oop_escape_analysis() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("escape_analysis"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("escape_analysis"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Escape analysis tests should pass");
 }
@@ -234,10 +214,9 @@ fn test_oop_escape_analysis() {
 #[test]
 fn test_oop_associated_type() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("associated_type"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("associated_type"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Associated type tests should pass");
 }
@@ -245,10 +224,9 @@ fn test_oop_associated_type() {
 #[test]
 fn test_oop_renaming_inheritance() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("renaming_inheritance"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("renaming_inheritance"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Renaming inheritance tests should pass");
 }
@@ -256,10 +234,9 @@ fn test_oop_renaming_inheritance() {
 #[test]
 fn test_oop_witness_serde() {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tester =
-        InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("witness_serde"), create_executor())
-            .with_extension("valkyrie")
-            .with_timeout(std::time::Duration::from_secs(10));
+    let tester = InterpreterTester::new(here.join("tests").join("fixtures").join("oop").join("witness_serde"), create_executor())
+        .with_extension("valkyrie")
+        .with_timeout(std::time::Duration::from_secs(10));
 
     tester.run_tests().expect("Witness serde tests should pass");
 }

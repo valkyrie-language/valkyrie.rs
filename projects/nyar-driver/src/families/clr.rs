@@ -1,37 +1,46 @@
-use clr_backend::{compile_clr_bundle, ClrCompileRequest};
+use clr_backend::{write_dotnet_runtime_config, ClrBinaryBackend};
 use miette::Result;
-use nyar::TargetBackendFamily;
+use nyar::{
+    backends::{clr::ClrImageKind, TargetCodeGenBackend},
+    BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane,
+};
 
 use super::BundledFamilyCompiler;
-use crate::{DriverCompileReport, DriverCompileRequest, DriverRunContract};
+use crate::{DriverBackendInput, DriverCompileReport, DriverCompileRequest, DriverRunContract};
 
 pub(super) struct ClrFamilyCompiler;
 
-impl BundledFamilyCompiler for ClrFamilyCompiler {
-    fn family(&self) -> TargetBackendFamily {
-        TargetBackendFamily::Clr
-    }
+pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) -> bool {
+    requirement.lane == TargetLane::Clr
+        && requirement.input_kind == BackendInputKind::MsilText
+        && requirement.target.family == TargetFamily::Clr
+}
 
+impl BundledFamilyCompiler for ClrFamilyCompiler {
     fn compile(&self, request: DriverCompileRequest<'_>) -> Result<DriverCompileReport> {
-        let report = compile_clr_bundle(ClrCompileRequest {
-            parser_root: request.parser_root,
-            hir_module: request.hir_module,
-            lir_module: request.lir_module,
-            output_dir: request.output_dir,
-            artifact_name: request.artifact_name,
-            emit_msil: request.emit_msil,
-            generate_runtime_config: request.generate_runtime_config,
-            options: request.options,
-        })?;
+        let DriverBackendInput::Clr(input) = request.input
+        else {
+            return Err(miette::miette!("`CLR` 家族请求必须携带 `ClrBinaryBackendInput`"));
+        };
+        let has_entry = input.module.global_methods.iter().any(|method| method.is_entry_point)
+            || input.module.types.iter().flat_map(|ty| ty.methods.iter()).any(|method| method.is_entry_point);
+        let image_kind = input.image_kind.unwrap_or_else(|| ClrImageKind::infer(has_entry));
+        let output_dir = input.output_dir.clone();
+        let backend = ClrBinaryBackend::new();
+        backend.validate(&input)?;
+        let artifacts = backend.compile(input, request.options)?;
+        if request.generate_runtime_config && image_kind == ClrImageKind::Executable {
+            write_dotnet_runtime_config(&output_dir, request.artifact_name)?;
+        }
 
         Ok(DriverCompileReport {
-            artifacts: report.artifacts,
-            entry_symbol: report.entry_symbol.clone(),
+            artifacts,
+            entry_symbol: if image_kind == ClrImageKind::Executable { Some("Main".to_string()) } else { None },
             run_contract: Some(DriverRunContract {
-                logical_entry: report.entry_symbol.unwrap_or_default(),
-                physical_entry: report.artifact_file_name.clone(),
+                logical_entry: "Main".to_string(),
+                physical_entry: format!("{}.{}", request.artifact_name, image_kind.file_extension()),
                 invocation: "dotnet".to_string(),
-                validate: format!("dotnet exec {}", report.artifact_file_name),
+                validate: format!("dotnet exec {}.{}", request.artifact_name, image_kind.file_extension()),
             }),
         })
     }

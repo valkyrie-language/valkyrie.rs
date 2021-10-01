@@ -1,4 +1,21 @@
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 use legion::{CanonicalTarget, DependencySpec, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest};
+
+fn workspace_repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("valkyrie.v")
+}
+
+fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
+    match spec {
+        DependencySpec::Workspace => true,
+        DependencySpec::Detailed { version: Some(version), path: None, abi: None } => version == "workspace",
+        _ => false,
+    }
+}
 
 #[test]
 fn parses_project_manifest_dependencies() {
@@ -92,4 +109,62 @@ fn parses_publish_formats() {
     let manifest = ProjectManifest::parse(source).unwrap();
     assert_eq!(manifest.publish.len(), 1);
     assert_eq!(manifest.publish[0].publish_format, Some(PublishFormat::WebApp));
+}
+
+#[test]
+fn parses_sdk_vendor_metadata() {
+    let source = r#"
+    {
+        name: "std.adaptor.wasm",
+        sdk-vendor: {
+            organization: "valkyrie",
+            host: "browser",
+            kind: "platform-sdk",
+            targets: ["wasm32-unknown-browser-wasm"],
+            publish: ["web-app"]
+        }
+    }
+    "#;
+
+    let manifest = ProjectManifest::parse(source).unwrap();
+    let sdk_vendor = manifest.sdk_vendor.as_ref().unwrap();
+    assert_eq!(sdk_vendor.organization.as_deref(), Some("valkyrie"));
+    assert_eq!(sdk_vendor.host.as_deref(), Some("browser"));
+    assert_eq!(sdk_vendor.kind.as_deref(), Some("platform-sdk"));
+    assert_eq!(sdk_vendor.targets, vec!["wasm32-unknown-browser-wasm".to_string()]);
+    assert_eq!(sdk_vendor.publish, vec!["web-app".to_string()]);
+}
+
+#[test]
+fn parses_actual_legion_tools_manifest_with_explicit_module_dependencies() {
+    let manifest_path = workspace_repo_root().join("projects").join("legion.tools").join("legion.von");
+    let source = fs::read_to_string(&manifest_path).unwrap();
+    let manifest = ProjectManifest::parse(&source).unwrap();
+
+    assert_eq!(manifest.name, "legion.tools");
+    assert!(manifest.auto_link.core);
+    assert!(!manifest.auto_link.std);
+
+    assert!(is_workspace_like_dependency(manifest.dependencies.get("nyar").unwrap()));
+    assert!(is_workspace_like_dependency(manifest.dependencies.get("std").unwrap()));
+    assert!(is_workspace_like_dependency(manifest.dependencies.get("std.data.text.von").unwrap()));
+
+    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::clr()));
+    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("jvm").unwrap()));
+    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("wasm").unwrap()));
+    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("nyar").unwrap()));
+}
+
+#[test]
+fn parses_actual_workspace_members_for_module_system_bootstrap() {
+    let manifest_path = workspace_repo_root().join("legions.von");
+    let source = fs::read_to_string(&manifest_path).unwrap();
+    let manifest = WorkspaceManifest::parse(&source).unwrap();
+
+    assert!(manifest.members.contains(&"projects/legion.tools".to_string()));
+    assert!(manifest.members.contains(&"projects/nyar".to_string()));
+    assert!(manifest.members.contains(&"projects/std".to_string()));
+    assert!(manifest.members.contains(&"examples/test.module_system".to_string()));
+    assert!(!manifest.workspace.auto_link.core);
+    assert!(!manifest.workspace.auto_link.std);
 }

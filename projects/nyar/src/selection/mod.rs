@@ -2,22 +2,15 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    abstractions::{BackendInputKind, BinaryTarget},
-    packaging::TargetLane,
-};
+use crate::planning::PartitionBackendRequirement;
 
 /// 候选后端元信息。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackendCandidate {
     /// 后端名。
     pub name: String,
-    /// 所属路线。
-    pub lane: TargetLane,
-    /// 接受的输入种类。
-    pub input_kind: BackendInputKind,
-    /// 支持目标。
-    pub target: BinaryTarget,
+    /// 该候选后端所满足的需求。
+    pub requirement: PartitionBackendRequirement,
     /// 选择优先级，越大越优先。
     pub priority: u16,
 }
@@ -35,11 +28,8 @@ impl BackendSelector {
         self.candidates.push(candidate);
     }
 
-    /// 为指定路线和输入选择优先级最高的后端。
-    pub fn select(&self, lane: TargetLane, input_kind: BackendInputKind) -> Option<&BackendCandidate> {
-        self.candidates
-            .iter()
-            .filter(|candidate| candidate.lane == lane && candidate.input_kind == input_kind)
-            .max_by_key(|candidate| candidate.priority)
+    /// 为已经完成规划的后端需求选择优先级最高的候选。
+    pub fn select(&self, requirement: &PartitionBackendRequirement) -> Option<&BackendCandidate> {
+        self.candidates.iter().filter(|candidate| candidate.requirement == *requirement).max_by_key(|candidate| candidate.priority)
     }
 }

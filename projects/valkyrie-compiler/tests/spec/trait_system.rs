@@ -10,7 +10,7 @@ use valkyrie_compiler::{
 use valkyrie_types::{
     hir::{
         HirAssociatedType, HirAssociatedTypeImpl, HirBlock, HirDocumentation, HirField, HirFunction, HirIdentifier, HirImpl, HirModule,
-        HirParam, HirStruct, HirTrait, HirType, HirVisibility,
+        HirParam, HirStruct, HirTrait, HirVisibility, ValkyrieType,
     },
     witness::{MethodPath, ModuleId, TraitId, TypeId, TypeKind, TypeMetadata},
     Identifier, NamePath, SourceID, SourceSpan,
@@ -20,13 +20,13 @@ use valkyrie_types::{
 fn named_trait_satisfaction_produces_witness() {
     let iterator_trait = trait_with_assoc_type(
         "Iterator",
-        vec![method("next", vec![], HirType::Named(Identifier::new("Option")))],
+        vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))],
         vec![HirAssociatedType::new(Identifier::new("Item"), span())],
     );
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Named(Identifier::new("Option")))]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))]);
     let explicit_impl = HirImpl {
-        methods: vec![method("next", vec![], HirType::Named(Identifier::new("Option")))],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())])
+        methods: vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))],
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Integer32, span())])
     };
 
     let witness = satisfy_named_trait(&counter, &iterator_trait, &[explicit_impl]).unwrap();
@@ -35,7 +35,7 @@ fn named_trait_satisfaction_produces_witness() {
         witness,
         NamedTraitWitness {
             trait_path: NamePath::new(vec![Identifier::new("Iterator")]),
-            target: HirType::Named(Identifier::new("Counter")),
+            target: ValkyrieType::Named(Identifier::new("Counter")),
             source: TraitWitnessSource::ExplicitImpl,
             method_bindings: vec![TraitMethodBinding {
                 name: Identifier::new("next"),
@@ -43,17 +43,17 @@ fn named_trait_satisfaction_produces_witness() {
                 implementation_container: Identifier::new("Counter"),
                 is_default: false,
             }],
-            associated_types: BTreeMap::from([(Identifier::new("Item"), HirType::Integer32)]),
+            associated_types: BTreeMap::from([(Identifier::new("Item"), ValkyrieType::Integer32)]),
         }
     );
 }
 
 #[test]
 fn explicit_impl_beats_structural_witness() {
-    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
-    let console = struct_with_methods("Console", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
+    let console = struct_with_methods("Console", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let explicit_impl =
-        HirImpl { methods: vec![method("write", vec![HirType::Utf8], HirType::Unit)], ..trait_impl("Console", "Writer", vec![]) };
+        HirImpl { methods: vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)], ..trait_impl("Console", "Writer", vec![]) };
 
     let witness = satisfy_named_trait(&console, &writer_trait, &[explicit_impl]).unwrap();
 
@@ -62,8 +62,8 @@ fn explicit_impl_beats_structural_witness() {
 
 #[test]
 fn trait_module_view_resolves_named_trait_against_real_module_objects() {
-    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
-    let console = struct_with_methods("Console", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
+    let console = struct_with_methods("Console", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let module = module_with_traits(vec![writer_trait], vec![console], vec![]);
 
     let witness = TraitModuleView::from_module(&module).satisfy_named_trait(&Identifier::new("Console"), &Identifier::new("Writer")).unwrap();
@@ -73,7 +73,7 @@ fn trait_module_view_resolves_named_trait_against_real_module_objects() {
 
 #[test]
 fn trait_module_view_reports_unknown_trait_from_real_module_objects() {
-    let console = struct_with_methods("Console", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let console = struct_with_methods("Console", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let module = module_with_traits(vec![], vec![console], vec![]);
 
     let error = TraitModuleView::from_module(&module).satisfy_named_trait(&Identifier::new("Console"), &Identifier::new("Writer")).unwrap_err();
@@ -85,14 +85,13 @@ fn trait_module_view_reports_unknown_trait_from_real_module_objects() {
 fn trait_module_view_reads_real_hir_module_objects_from_compiler() {
     let compiler = ValkyrieCompiler::new(SourceID(37));
     let module = compiler
-        .compile_source(
-            "trait Writer {\n\
-             micro write(text: utf8);\n\
-             }\n\
-             class Console {\n\
-             micro write(text: utf8) {}\n\
-             }\n",
-        )
+        .compile_source(r#"trait Writer {
+    micro write(text: utf8);
+}
+class Console {
+    micro write(text: utf8) {}
+}
+"#)
         .unwrap();
 
     let witness = TraitModuleView::from_module(&module).satisfy_named_trait(&Identifier::new("Console"), &Identifier::new("Writer")).unwrap();
@@ -102,22 +101,26 @@ fn trait_module_view_reads_real_hir_module_objects_from_compiler() {
 
 #[test]
 fn trait_module_view_requires_transitive_super_trait_impl_chain() {
-    let readable = trait_with_methods("Readable", vec![method("read", vec![], HirType::Utf8)]);
+    let readable = trait_with_methods("Readable", vec![method("read", vec![], ValkyrieType::Utf8)]);
     let seekable = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_methods("Seekable", vec![method("seek", vec![], HirType::Unit)])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_methods("Seekable", vec![method("seek", vec![], ValkyrieType::Unit)])
     };
     let buffered = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Seekable"))],
-        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Seekable"))],
+        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)])
     };
     let reader = struct_with_methods(
         "Reader",
-        vec![method("read", vec![], HirType::Utf8), method("seek", vec![], HirType::Unit), method("fill_buf", vec![], HirType::Utf8)],
+        vec![
+            method("read", vec![], ValkyrieType::Utf8),
+            method("seek", vec![], ValkyrieType::Unit),
+            method("fill_buf", vec![], ValkyrieType::Utf8),
+        ],
     );
-    let seekable_impl = HirImpl { methods: vec![method("seek", vec![], HirType::Unit)], ..trait_impl("Reader", "Seekable", vec![]) };
+    let seekable_impl = HirImpl { methods: vec![method("seek", vec![], ValkyrieType::Unit)], ..trait_impl("Reader", "Seekable", vec![]) };
     let buffered_impl =
-        HirImpl { methods: vec![method("fill_buf", vec![], HirType::Utf8)], ..trait_impl("Reader", "BufferedReadable", vec![]) };
+        HirImpl { methods: vec![method("fill_buf", vec![], ValkyrieType::Utf8)], ..trait_impl("Reader", "BufferedReadable", vec![]) };
     let module = module_with_traits(vec![readable, seekable, buffered], vec![reader], vec![seekable_impl, buffered_impl]);
 
     let error = TraitModuleView::from_module(&module)
@@ -134,23 +137,27 @@ fn trait_module_view_requires_transitive_super_trait_impl_chain() {
 
 #[test]
 fn trait_module_view_accepts_transitive_super_trait_impl_chain() {
-    let readable = trait_with_methods("Readable", vec![method("read", vec![], HirType::Utf8)]);
+    let readable = trait_with_methods("Readable", vec![method("read", vec![], ValkyrieType::Utf8)]);
     let seekable = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_methods("Seekable", vec![method("seek", vec![], HirType::Unit)])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_methods("Seekable", vec![method("seek", vec![], ValkyrieType::Unit)])
     };
     let buffered = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Seekable"))],
-        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Seekable"))],
+        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)])
     };
     let reader = struct_with_methods(
         "Reader",
-        vec![method("read", vec![], HirType::Utf8), method("seek", vec![], HirType::Unit), method("fill_buf", vec![], HirType::Utf8)],
+        vec![
+            method("read", vec![], ValkyrieType::Utf8),
+            method("seek", vec![], ValkyrieType::Unit),
+            method("fill_buf", vec![], ValkyrieType::Utf8),
+        ],
     );
-    let readable_impl = HirImpl { methods: vec![method("read", vec![], HirType::Utf8)], ..trait_impl("Reader", "Readable", vec![]) };
-    let seekable_impl = HirImpl { methods: vec![method("seek", vec![], HirType::Unit)], ..trait_impl("Reader", "Seekable", vec![]) };
+    let readable_impl = HirImpl { methods: vec![method("read", vec![], ValkyrieType::Utf8)], ..trait_impl("Reader", "Readable", vec![]) };
+    let seekable_impl = HirImpl { methods: vec![method("seek", vec![], ValkyrieType::Unit)], ..trait_impl("Reader", "Seekable", vec![]) };
     let buffered_impl =
-        HirImpl { methods: vec![method("fill_buf", vec![], HirType::Utf8)], ..trait_impl("Reader", "BufferedReadable", vec![]) };
+        HirImpl { methods: vec![method("fill_buf", vec![], ValkyrieType::Utf8)], ..trait_impl("Reader", "BufferedReadable", vec![]) };
     let module = module_with_traits(vec![readable, seekable, buffered], vec![reader], vec![readable_impl, seekable_impl, buffered_impl]);
 
     let witness =
@@ -162,8 +169,8 @@ fn trait_module_view_accepts_transitive_super_trait_impl_chain() {
 
 #[test]
 fn ambiguous_explicit_impls_do_not_fall_back_to_structural_entry() {
-    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
-    let console = struct_with_methods("Console", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
+    let console = struct_with_methods("Console", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let first_impl = trait_impl("Console", "Writer", vec![]);
     let second_impl = trait_impl("Console", "Writer", vec![]);
 
@@ -173,16 +180,16 @@ fn ambiguous_explicit_impls_do_not_fall_back_to_structural_entry() {
         error,
         TraitSatisfactionError::AmbiguousExplicitImpls {
             trait_path: NamePath::new(vec![Identifier::new("Writer")]),
-            target: HirType::Named(Identifier::new("Console")),
+            target: ValkyrieType::Named(Identifier::new("Console")),
         }
     );
 }
 
 #[test]
 fn same_shape_traits_do_not_merge_identity() {
-    let trait_a = trait_with_methods("Readable", vec![method("read", vec![], HirType::Utf8)]);
-    let trait_b = trait_with_methods("StringSource", vec![method("read", vec![], HirType::Utf8)]);
-    let file = struct_with_methods("FileReader", vec![method("read", vec![], HirType::Utf8)]);
+    let trait_a = trait_with_methods("Readable", vec![method("read", vec![], ValkyrieType::Utf8)]);
+    let trait_b = trait_with_methods("StringSource", vec![method("read", vec![], ValkyrieType::Utf8)]);
+    let file = struct_with_methods("FileReader", vec![method("read", vec![], ValkyrieType::Utf8)]);
 
     let witness_a = satisfy_named_trait(&file, &trait_a, &[]).unwrap();
     let witness_b = satisfy_named_trait(&file, &trait_b, &[]).unwrap();
@@ -202,10 +209,10 @@ fn open_trait_dispatch_is_not_pretended_static() {
 fn trait_with_associated_types_requires_named_binding() {
     let iterator_trait = trait_with_assoc_type(
         "Iterator",
-        vec![method("next", vec![], HirType::Named(Identifier::new("Option")))],
+        vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))],
         vec![HirAssociatedType::new(Identifier::new("Item"), span())],
     );
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Named(Identifier::new("Option")))]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))]);
 
     let error = satisfy_named_trait(&counter, &iterator_trait, &[]).unwrap_err();
 
@@ -217,10 +224,10 @@ fn trait_with_associated_types_requires_named_binding() {
 
 #[test]
 fn trait_structural_entry_rejects_ambiguous_row_match() {
-    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let writer_trait = trait_with_methods("Writer", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let overloaded = struct_with_methods(
         "OverloadedWriter",
-        vec![method("write", vec![HirType::Utf8], HirType::Unit), method("write", vec![HirType::Integer32], HirType::Unit)],
+        vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit), method("write", vec![ValkyrieType::Integer32], ValkyrieType::Unit)],
     );
 
     let error = satisfy_named_trait(&overloaded, &writer_trait, &[]).unwrap_err();
@@ -236,10 +243,11 @@ fn trait_structural_entry_rejects_ambiguous_row_match() {
 #[test]
 fn trait_with_super_traits_requires_explicit_impl() {
     let child_trait = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_methods("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)])
     };
-    let reader = struct_with_methods("Reader", vec![method("read", vec![], HirType::Utf8), method("fill_buf", vec![], HirType::Utf8)]);
+    let reader =
+        struct_with_methods("Reader", vec![method("read", vec![], ValkyrieType::Utf8), method("fill_buf", vec![], ValkyrieType::Utf8)]);
 
     let error = satisfy_named_trait(&reader, &child_trait, &[]).unwrap_err();
 
@@ -252,10 +260,10 @@ fn trait_with_super_traits_requires_explicit_impl() {
 #[test]
 fn trait_default_methods_do_not_become_structural_requirements() {
     let buffered = HirTrait {
-        default_methods: vec![method("close", vec![], HirType::Unit)],
-        ..trait_with_methods("BufferedWriter", vec![method("write", vec![HirType::Utf8], HirType::Unit)])
+        default_methods: vec![method("close", vec![], ValkyrieType::Unit)],
+        ..trait_with_methods("BufferedWriter", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)])
     };
-    let writer = struct_with_methods("ConsoleWriter", vec![method("write", vec![HirType::Utf8], HirType::Unit)]);
+    let writer = struct_with_methods("ConsoleWriter", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
 
     let witness = satisfy_named_trait(&writer, &buffered, &[]).unwrap();
 
@@ -284,14 +292,14 @@ fn trait_default_methods_do_not_become_structural_requirements() {
 fn public_field_satisfies_named_trait_through_getter_and_setter_rows() {
     let sized_trait = trait_with_methods(
         "SizedSlot",
-        vec![method("get_size", vec![], HirType::Integer32), method("set_size", vec![HirType::Integer32], HirType::Unit)],
+        vec![method("get_size", vec![], ValkyrieType::Integer32), method("set_size", vec![ValkyrieType::Integer32], ValkyrieType::Unit)],
     );
     let slot = struct_with_fields(
         "Slot",
         vec![HirField {
             name: Identifier::new("size"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer32,
+            ty: ValkyrieType::Integer32,
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -306,12 +314,14 @@ fn public_field_satisfies_named_trait_through_getter_and_setter_rows() {
 #[test]
 fn explicit_impl_can_fall_back_to_trait_default_method_binding() {
     let comparable = HirTrait {
-        default_methods: vec![method("ne", vec![HirType::Integer32], HirType::Boolean)],
-        ..trait_with_methods("Comparable", vec![method("eq", vec![HirType::Integer32], HirType::Boolean)])
+        default_methods: vec![method("ne", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)],
+        ..trait_with_methods("Comparable", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)])
     };
-    let value = struct_with_methods("NumberBox", vec![method("eq", vec![HirType::Integer32], HirType::Boolean)]);
-    let explicit_impl =
-        HirImpl { methods: vec![method("eq", vec![HirType::Integer32], HirType::Boolean)], ..trait_impl("NumberBox", "Comparable", vec![]) };
+    let value = struct_with_methods("NumberBox", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)]);
+    let explicit_impl = HirImpl {
+        methods: vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)],
+        ..trait_impl("NumberBox", "Comparable", vec![])
+    };
 
     let witness = satisfy_named_trait(&value, &comparable, &[explicit_impl]).unwrap();
 
@@ -337,7 +347,7 @@ fn explicit_impl_can_fall_back_to_trait_default_method_binding() {
 
 #[test]
 fn explicit_impl_requires_required_method_binding() {
-    let comparable = trait_with_methods("Comparable", vec![method("eq", vec![HirType::Integer32], HirType::Boolean)]);
+    let comparable = trait_with_methods("Comparable", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)]);
     let value = struct_with_methods("NumberBox", vec![]);
     let explicit_impl = trait_impl("NumberBox", "Comparable", vec![]);
 
@@ -354,10 +364,12 @@ fn explicit_impl_requires_required_method_binding() {
 
 #[test]
 fn operator_method_binding_uses_plain_method_name_in_witness_entries() {
-    let additive = trait_with_methods("Add", vec![method("infix +", vec![HirType::Integer32], HirType::Integer32)]);
-    let vector = struct_with_methods("Vec2", vec![method("infix +", vec![HirType::Integer32], HirType::Integer32)]);
-    let explicit_impl =
-        HirImpl { methods: vec![method("infix +", vec![HirType::Integer32], HirType::Integer32)], ..trait_impl("Vec2", "Add", vec![]) };
+    let additive = trait_with_methods("Add", vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)]);
+    let vector = struct_with_methods("Vec2", vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)]);
+    let explicit_impl = HirImpl {
+        methods: vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
+        ..trait_impl("Vec2", "Add", vec![])
+    };
 
     let witness = satisfy_named_trait(&vector, &additive, &[explicit_impl]).unwrap();
     let method_entries = build_witness_method_entries(&witness, ModuleId::LOCAL, vec![Identifier::new("math")], TypeId::new(7));
@@ -375,20 +387,23 @@ fn operator_method_binding_uses_plain_method_name_in_witness_entries() {
 #[test]
 fn witness_table_preserves_operator_and_default_method_bindings() {
     let additive = HirTrait {
-        default_methods: vec![method("prefix -", vec![HirType::Integer32], HirType::Integer32)],
+        default_methods: vec![method("prefix -", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
         ..trait_with_assoc_type(
             "Add",
-            vec![method("infix +", vec![HirType::Integer32], HirType::Integer32)],
+            vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
             vec![HirAssociatedType::new(Identifier::new("Output"), span())],
         )
     };
     let vector = struct_with_methods(
         "Vec2",
-        vec![method("infix +", vec![HirType::Integer32], HirType::Integer32), method("prefix -", vec![HirType::Integer32], HirType::Integer32)],
+        vec![
+            method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32),
+            method("prefix -", vec![ValkyrieType::Integer32], ValkyrieType::Integer32),
+        ],
     );
     let explicit_impl = HirImpl {
-        methods: vec![method("infix +", vec![HirType::Integer32], HirType::Integer32)],
-        ..trait_impl("Vec2", "Add", vec![HirAssociatedTypeImpl::new(Identifier::new("Output"), HirType::Integer32, span())])
+        methods: vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
+        ..trait_impl("Vec2", "Add", vec![HirAssociatedTypeImpl::new(Identifier::new("Output"), ValkyrieType::Integer32, span())])
     };
 
     let witness = satisfy_named_trait(&vector, &additive, &[explicit_impl]).unwrap();
@@ -399,7 +414,7 @@ fn witness_table_preserves_operator_and_default_method_bindings() {
         vec![Identifier::new("math")],
         TypeMetadata::new(TypeId::new(7), Identifier::new("Vec2"), TypeKind::Struct),
         |_, ty| match ty {
-            HirType::Integer32 => TypeId::new(32),
+            ValkyrieType::Integer32 => TypeId::new(32),
             _ => TypeId::new(999),
         },
     );
@@ -470,7 +485,7 @@ fn trait_impl(target: &str, trait_name: &str, associated_type_impls: Vec<HirAsso
     HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new(target)),
+        target: ValkyrieType::Named(Identifier::new(target)),
         trait_path: Some(NamePath::new(vec![Identifier::new(trait_name)])),
         methods: vec![],
         associated_type_impls,
@@ -498,7 +513,7 @@ fn module_with_traits(traits: Vec<HirTrait>, structs: Vec<HirStruct>, impls: Vec
     }
 }
 
-fn method(name: &str, params: Vec<HirType>, return_type: HirType) -> HirFunction {
+fn method(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> HirFunction {
     HirFunction {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),

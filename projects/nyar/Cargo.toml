@@ -2,10 +2,13 @@
 name = "nyar"
 version.workspace = true
 edition.workspace = true
-description = "Shared backend infrastructure for Nyar-family compilers"
+ description = "Generic optimization backend orchestration for multi-frontend compilers"
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
 miette = { workspace = true }
+nyar-analyzer = { workspace = true }
+nyar-optimizer = { workspace = true }
+nyar-types = { workspace = true }
 serde = { workspace = true }

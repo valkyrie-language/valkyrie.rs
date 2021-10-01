@@ -1,6 +1,6 @@
 //! Property definitions for HIR.
 
-use super::{HirDocumentation, HirFunction, HirType, HirVisibility};
+use super::{HirDocumentation, HirFunction, HirVisibility, ValkyrieType};
 use crate::Identifier;
 
 /// A property in a struct (computed field with getter/setter).
@@ -16,7 +16,7 @@ pub struct HirProperty {
     /// Documentation for the property.
     pub doc: HirDocumentation,
     /// The type of the property.
-    pub ty: HirType,
+    pub ty: ValkyrieType,
     /// The getter function for the property.
     pub getter: Option<HirFunction>,
     /// The setter function for the property.
@@ -64,7 +64,7 @@ pub struct HirProperty {
 
 impl HirProperty {
     /// Creates a new property with the given name and type.
-    pub fn new(name: Identifier, ty: HirType) -> Self {
+    pub fn new(name: Identifier, ty: ValkyrieType) -> Self {
         Self {
             name,
             doc: HirDocumentation::default(),
@@ -84,22 +84,22 @@ impl HirProperty {
     }
 
     /// Creates a static property.
-    pub fn static_property(name: Identifier, ty: HirType) -> Self {
+    pub fn static_property(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, ty).with_static(true)
     }
 
     /// Creates an abstract property.
-    pub fn abstract_property(name: Identifier, ty: HirType) -> Self {
+    pub fn abstract_property(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, ty).with_abstract(true)
     }
 
     /// Creates a virtual property.
-    pub fn virtual_property(name: Identifier, ty: HirType) -> Self {
+    pub fn virtual_property(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, ty).with_virtual(true)
     }
 
     /// Creates a lazy property.
-    pub fn lazy_property(name: Identifier, ty: HirType) -> Self {
+    pub fn lazy_property(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, ty).with_lazy(true)
     }
 

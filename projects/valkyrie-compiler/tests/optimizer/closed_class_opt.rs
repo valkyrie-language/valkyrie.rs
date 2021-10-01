@@ -7,6 +7,10 @@ use valkyrie_compiler::optimizer::{
 use valkyrie_types::hir::{HirDocumentation, HirField, HirStruct, HirType, HirVisibility};
 use valkyrie_types::Identifier;
 
+fn int64_type() -> HirType {
+    HirType::Integer64 { signed: true }
+}
+
 fn create_closed_class(name: &str) -> HirStruct {
     HirStruct {
         name: Identifier::new(name),
@@ -17,7 +21,7 @@ fn create_closed_class(name: &str) -> HirStruct {
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Int64,
+            ty: int64_type(),
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -187,7 +191,7 @@ fn test_stack_allocation_analyzer_with_size() {
         HirField {
             name: Identifier::new("f1"),
             doc: HirDocumentation::default(),
-            ty: HirType::Int64,
+            ty: int64_type(),
             visibility: HirVisibility::public(),
             is_readonly: false,
         };

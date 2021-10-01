@@ -1,27 +1,33 @@
 # nyar src
 
-这里是共享后端基础设施源码。
+这里是通用优化后端综合层源码。
 
 ## 职责
-- 维护目标容器、镜像、文本汇编和产物编排协议。
-- 为 `CLR / JVM / WASM / native / VM` 等路线提供公共后端数据层。
+- 维护中性规划、目标 lane、backend 选择和产物编排协议。
+- 为 `CLR / JVM / WASM / native / VM` 等路线提供公共综合层，而不是具体前端的延长线。
 
 ## 分层原则
 - `src/abstractions` 只放最小公共协议，不放统一物理 `IR`。
+- `src/planning` 只放中性分析结果到 `ArtifactPartitionPlan` 的规划层。
 - `src/packaging` 只放 `ArtifactPartitionPlan` 之后的承接协议，例如 `ArtifactSet`、`OutputSpec`、lane 分发边界。
 - `src/data_formats/*` 只放目标路线自己的容器和低层输入模型，例如 `MSIL`、`PE`、`COFF`。
 - 任何目标专用约束都应在本路线自己的数据模型里表达，而不是回流到共享大对象。
 
 ## 与主链的关系
-- `HIR / MIR` 才是语言语义的主表示；`nyar` 不替代这条主链。
-- `Optimize (EGraph)` 与 `ArtifactPartitionPlan` 负责决定哪些调用已静态化、哪些分区走哪条路线。
-- `nyar` 只接住已经完成语义定界的后端输入，并把它们送往目标相关编码、布局和打包。
+- 具体前端自己的 `AST / HIR / MIR / LIR` 仍留在下游。
+- 下游必须先把品牌化语义闭合成中性分析结果，再把它们送入 `nyar`。
+- `nyar` 只接住已经完成语义定界的中性规划输入，并把它们送往目标相关编码、布局和打包。
 
 ## 详细分层
 
 ### abstractions
 - 放最小公共协议，例如目标家族、backend input kind、产物格式与 backend 最小接口。
 - 不放 `HIR`、不放 `MIR`、不放统一 `LIR`。
+
+### planning
+- 负责承接中性分析结果，生成 `ArtifactPartitionPlan`。
+- 这里可以表达能力标签、运行时需求、目标 lane 和 backend 输入边界。
+- 这里不重新理解某个前端的原始语法和类型系统。
 
 ### lanes
 - 负责承接 `ArtifactPartitionPlan` 输出。
@@ -47,7 +53,7 @@
 - 不负责重新解释调用语义。
 
 ## HIR / MIR / LIR 与源码目录的关系
-- `HIR / MIR` 的定义与变换应继续留在 `valkyrie-compiler`。
+- `HIR / MIR` 的定义与变换应继续留在上游编译器。
 - `nyar` 不定义语言级 `HIR / MIR`，只消费它们在 `ArtifactPartitionPlan` 之后形成的 target-specific 结果。
 - `nyar` 内部的 `data_formats/*` 更接近目标相关 `LIR / Backend Input`，而不是上游语义主表示。
 - 若未来 `CPU / VM` 线需要 `NyarIR`，它也应被视为 `CPU / VM` 路线的低层表示，而不是所有目标共享的最后一层。

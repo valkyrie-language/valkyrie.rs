@@ -1,4 +1,4 @@
-use super::{HirExpr, HirIdentifier};
+use super::{HirExpr, HirIdentifier, HirResolvedCall};
 use crate::{Identifier, SourceSpan};
 use std::cmp::Ordering;
 
@@ -171,102 +171,134 @@ pub enum HirKind {
     Function(Box<HirKind>, Box<HirKind>),
 }
 
+/// An associated type projection like `Self::Item` or `<T as Trait>::Item`.
+///
+/// This represents accessing an associated type from a trait implementation.
+/// For Generic Associated Types (GATs), the `type_args` field contains the
+/// type arguments passed to the GAT's type parameters.
+///
+/// # Examples
+///
+/// Simple associated type:
+/// ```v
+/// trait Iterator {
+///     type Item
+///     micro next(self) -> Self::Item?
+/// }
+///
+/// micro process<T: Iterator>(iter: T) -> T::Item {
+///     iter.next()?
+/// }
+/// ```
+///
+/// Generic Associated Type (GAT):
+/// ```v
+/// trait LendingIterator {
+///     type Item<'a> where Self: 'a
+///     micro next<'a>(&'a mut self) -> Option<Self::Item<'a>>
+/// }
+///
+/// // Here Self::Item<'a> would have type_args = [HirType::Lifetime("'a")]
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum HirType {
-    /// The zero type in ADT model
-    Void,
-    /// The one type in ADT model
-    Unit,
-    Boolean,
-    Integer32,
-    Integer64,
-    Float32,
-    Float64,
-    Utf8,
-    Utf16,
-    Infer,
-    Named(Identifier),
-    Apply(Box<HirType>, Vec<HirType>),
-    Generic {
-        name: Identifier,
-        kind: HirKind,
-        bounds: Vec<Identifier>,
-    },
-    SelfType,
-    Function {
-        params: Vec<HirType>,
-        return_type: Box<HirType>,
-    },
-    Tuple(Vec<HirType>),
-    Array(Box<HirType>),
-    TypeLambda {
-        params: Vec<HirGeneric>,
-        body: Box<HirType>,
-    },
-    /// A trait object type representing dynamic dispatch.
+pub struct AssociatedType {
+    /// The base type (e.g., `Self` or a type parameter).
+    pub base: ValkyrieType,
+    /// The name of the associated type.
+    pub name: Identifier,
+    /// Type arguments for Generic Associated Types (GATs).
     ///
-    /// Trait objects use witness tables for dynamic method dispatch.
-    /// At runtime, a trait object is represented as a fat pointer:
-    /// - data pointer: points to the actual data
-    /// - witness table pointer: points to the vtable for the trait implementation
-    TraitObject {
-        /// The trait being implemented.
-        trait_path: Identifier,
-        /// Type parameters for the trait (if any).
-        type_args: Vec<HirType>,
-    },
-    /// An associated type projection like `Self::Item` or `<T as Trait>::Item`.
-    ///
-    /// This represents accessing an associated type from a trait implementation.
-    /// For Generic Associated Types (GATs), the `type_args` field contains the
-    /// type arguments passed to the GAT's type parameters.
-    ///
-    /// # Examples
-    ///
-    /// Simple associated type:
-    /// ```v
-    /// trait Iterator {
-    ///     type Item
-    ///     micro next(self) -> Self::Item?
-    /// }
-    ///
-    /// micro process<T: Iterator>(iter: T) -> T::Item {
-    ///     iter.next()?
-    /// }
-    /// ```
-    ///
-    /// Generic Associated Type (GAT):
-    /// ```v
-    /// trait LendingIterator {
-    ///     type Item<'a> where Self: 'a
-    ///     micro next<'a>(&'a mut self) -> Option<Self::Item<'a>>
-    /// }
-    ///
-    /// // Here Self::Item<'a> would have type_args = [HirType::Lifetime("'a")]
-    /// ```
-    AssociatedType {
-        /// The base type (e.g., `Self` or a type parameter).
-        base: Box<HirType>,
-        /// The name of the associated type.
-        name: Identifier,
-        /// Type arguments for Generic Associated Types (GATs).
-        ///
-        /// For example, in `T::Item<'a>`, this would contain the lifetime
-        /// argument `'a`. For non-GAT associated types, this is empty.
-        type_args: Vec<HirType>,
-    },
+    /// For example, in `T::Item<'a>`, this would contain the lifetime
+    /// argument `'a`. For non-GAT associated types, this is empty.
+    pub type_arguments: Vec<ValkyrieType>,
 }
 
-impl Default for HirType {
+/// A trait object type representing dynamic dispatch.
+///
+/// Trait objects use witness tables for dynamic method dispatch.
+/// At runtime, a trait object is represented as a fat pointer:
+/// - data pointer: points to the actual data
+/// - witness table pointer: points to the vtable for the trait implementation
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TraitObject {
+    /// The trait being implemented.
+    pub trait_path: Identifier,
+    /// Type parameters for the trait (if any).
+    pub type_arguments: Vec<ValkyrieType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FunctionType {
+    pub params: Vec<ValkyrieType>,
+    pub return_type: ValkyrieType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TypeLambda {
+    pub params: Vec<GenericType>,
+    pub body: ValkyrieType,
+}
+
+/// Type model of Valkyrie language.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ValkyrieType {
+    /// `void`, the zero type in ADT model
+    Void,
+    /// `unit`, the one type in ADT model
+    Unit,
+    /// `bool`
+    Boolean,
+    Integer8 {
+        signed: bool,
+    },
+    Integer16 {
+        signed: bool,
+    },
+    Integer32 {
+        signed: bool,
+    },
+    Integer64 {
+        signed: bool,
+    },
+    Integer128 {
+        signed: bool,
+    },
+    /// `f32`
+    Float32,
+    /// `f64`
+    Float64,
+    /// `char`, the Unicode character
+    Character,
+    Utf8,
+    Utf16,
+    Named(Identifier),
+    Apply(Box<ValkyrieType>, Vec<ValkyrieType>),
+    /// `T<X>`
+    Generic(GenericType),
+    Function(Box<FunctionType>),
+    Tuple(Vec<ValkyrieType>),
+    /// `[T]` 或者 `[T; N]`
+    Array(Box<ValkyrieType>),
+    /// `micro(T) -> U`
+    TypeLambda(Box<TypeLambda>),
+    TraitObject(TraitObject),
+    Associated(Box<AssociatedType>),
+    /// `auto`, automatic infer type
+    AutoType,
+    /// `Self`, the type slot
+    SelfType,
+}
+
+impl Default for ValkyrieType {
     fn default() -> Self {
-        HirType::Unit
+        ValkyrieType::Unit
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct HirGeneric {
+pub struct GenericType {
     pub name: Identifier,
     pub kind: HirKind,
     pub bounds: Vec<Identifier>,
@@ -297,29 +329,29 @@ pub struct HirAssociatedTypeImpl {
     /// The name of the associated type being implemented.
     pub name: Identifier,
     /// The concrete type that the associated type is bound to.
-    pub concrete_type: HirType,
+    pub concrete_type: ValkyrieType,
     /// Type arguments for Generic Associated Types (GATs).
     ///
     /// For example, in `type Item<'a> = &'a T`, this would contain the
     /// lifetime argument `'a`. For non-GAT associated types, this is empty.
-    pub type_args: Vec<HirType>,
+    pub type_args: Vec<ValkyrieType>,
     /// Source span for error reporting.
     pub span: SourceSpan,
 }
 
 impl HirAssociatedTypeImpl {
     /// Creates a new associated type implementation.
-    pub fn new(name: Identifier, concrete_type: HirType, span: SourceSpan) -> Self {
+    pub fn new(name: Identifier, concrete_type: ValkyrieType, span: SourceSpan) -> Self {
         Self { name, concrete_type, type_args: Vec::new(), span }
     }
 
     /// Creates a GAT implementation with type arguments.
-    pub fn with_type_args(name: Identifier, concrete_type: HirType, type_args: Vec<HirType>, span: SourceSpan) -> Self {
+    pub fn with_type_args(name: Identifier, concrete_type: ValkyrieType, type_args: Vec<ValkyrieType>, span: SourceSpan) -> Self {
         Self { name, concrete_type, type_args, span }
     }
 
     /// Returns true if this is a GAT implementation with type arguments.
-    pub fn is_gat_impl(&self) -> bool {
+    pub fn is_gat_imply(&self) -> bool {
         !self.type_args.is_empty()
     }
 }
@@ -331,7 +363,7 @@ pub struct HirAssociatedConstImpl {
     /// The name of the associated constant being implemented.
     pub name: Identifier,
     /// Optional explicit constant type annotation.
-    pub const_type: Option<HirType>,
+    pub const_type: Option<ValkyrieType>,
     /// The concrete value assigned to the associated constant.
     pub value: HirExpr,
     /// Source span for error reporting.
@@ -342,7 +374,25 @@ pub struct HirAssociatedConstImpl {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HirParam {
     pub name: HirIdentifier,
-    pub ty: HirType,
+    pub ty: ValkyrieType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum HirExtractorPattern {
+    Constructor {
+        name: crate::NamePath,
+        canonical_callee: crate::NamePath,
+        fields: Vec<HirPattern>,
+        resolved: Option<HirResolvedCall>,
+    },
+    Array {
+        canonical_callee: crate::NamePath,
+        prefix: Vec<HirPattern>,
+        rest: Option<HirIdentifier>,
+        suffix: Vec<HirPattern>,
+        resolved: Option<HirResolvedCall>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -352,10 +402,13 @@ pub enum HirPattern {
     Variable(HirIdentifier),
     Tuple(Vec<HirPattern>),
     Literal(HirLiteral),
-    Constructor { name: Identifier, fields: Vec<HirPattern> },
+    Range { start: Option<HirLiteral>, end: Option<HirLiteral>, inclusive_end: bool },
+    Extractor(HirExtractorPattern),
     Or(Vec<HirPattern>),
+    Name(crate::NamePath),
     Type(crate::NamePath),
-    Object { name: crate::NamePath, fields: Vec<(Identifier, HirPattern)> },
+    TypedBind { identifier: HirIdentifier, ty: crate::NamePath },
+    Object { name: Option<crate::NamePath>, fields: Vec<(Identifier, HirPattern)>, rest: Option<HirIdentifier> },
     Else,
 }
 

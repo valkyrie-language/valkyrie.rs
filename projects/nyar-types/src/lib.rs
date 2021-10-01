@@ -2,85 +2,46 @@
 
 //! Minimal shared types used by the current Rust bootstrap path.
 
-use std::fmt;
+pub use self::{
+    errors::{NyarError, NyarErrorKind},
+    source::{Location, Position, SourceID, SourceSpan},
+    symbols::{Identifier, NamePath, QualifiedName, SymbolIdentity},
+};
+mod errors;
+mod source;
+mod symbols;
 
-/// Fully qualified name in different languages.
+/// Stable capability tag shared across analyzers, planners and backends.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct QualifiedName {
-    parts: Vec<String>,
-}
+pub struct CapabilityTag(String);
 
-impl QualifiedName {
-    /// Creates a qualified name from explicit parts.
-    pub fn new(parts: Vec<String>) -> Self {
-        Self { parts }
+impl CapabilityTag {
+    /// Creates a new capability tag.
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
     }
 
-    /// Returns the parts as string slices.
-    pub fn parts(&self) -> Vec<&str> {
-        self.parts.iter().map(String::as_str).collect()
+    /// Returns the tag as a string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
-impl From<&str> for QualifiedName {
+impl From<&str> for CapabilityTag {
     fn from(value: &str) -> Self {
-        let parts: Vec<String> = if value.is_empty() { Vec::new() } else { value.split("::").map(|s| s.to_string()).collect() };
-        Self { parts }
+        Self::new(value)
     }
 }
 
-impl From<String> for QualifiedName {
+impl From<String> for CapabilityTag {
     fn from(value: String) -> Self {
-        Self::from(value.as_str())
+        Self::new(value)
     }
 }
 
-impl fmt::Display for QualifiedName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.parts.join("::"))
-    }
-}
-
-/// Minimal shared error kind for compatibility during bootstrap.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct NyarErrorKind {
-    key: String,
-    message: String,
-}
-
-impl NyarErrorKind {
-    /// Creates a new error kind.
-    pub fn new(key: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { key: key.into(), message: message.into() }
-    }
-
-    /// Returns the stable diagnostic key.
-    pub fn key(&self) -> &str {
-        &self.key
-    }
-}
-
-impl fmt::Display for NyarErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-/// Minimal shared error wrapper for compatibility during bootstrap.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct NyarError {
-    /// Numeric error code.
-    pub code: u32,
-    /// Structured error payload.
-    pub kind: NyarErrorKind,
-}
-
-impl NyarError {
-    /// Creates a new shared error.
-    pub fn new(code: u32, key: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { code, kind: NyarErrorKind::new(key, message) }
+impl std::fmt::Display for CapabilityTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }

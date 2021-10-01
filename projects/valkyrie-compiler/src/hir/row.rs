@@ -11,19 +11,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use valkyrie_types::{
-    hir::{HirField, HirProperty, HirStruct, HirType},
+    hir::{HirField, HirProperty, HirStruct, ValkyrieType},
     Identifier,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RowMethodSignature {
     pub name: Identifier,
-    pub params: Vec<HirType>,
-    pub return_type: HirType,
+    pub params: Vec<ValkyrieType>,
+    pub return_type: ValkyrieType,
 }
 
 impl RowMethodSignature {
-    pub fn new(name: &str, params: Vec<HirType>, return_type: HirType) -> Self {
+    pub fn new(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> Self {
         Self { name: Identifier::new(name), params, return_type }
     }
 
@@ -179,14 +179,18 @@ fn synthetic_getter_signature(field: &HirField) -> RowMethodSignature {
 }
 
 fn synthetic_setter_signature_from_field(field: &HirField) -> RowMethodSignature {
-    RowMethodSignature { name: Identifier::new(&format!("set_{}", field.name)), params: vec![field.ty.clone()], return_type: HirType::Unit }
+    RowMethodSignature {
+        name: Identifier::new(&format!("set_{}", field.name)),
+        params: vec![field.ty.clone()],
+        return_type: ValkyrieType::Unit,
+    }
 }
 
 fn synthetic_setter_signature(property: &HirProperty) -> RowMethodSignature {
     RowMethodSignature {
         name: Identifier::new(&format!("set_{}", property.name)),
         params: vec![property.ty.clone()],
-        return_type: HirType::Unit,
+        return_type: ValkyrieType::Unit,
     }
 }
 

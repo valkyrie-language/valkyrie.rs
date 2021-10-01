@@ -1,6 +1,4 @@
-mod derive;
+mod mir;
 mod module;
 mod pipeline;
 mod smoke;
-mod spec;
-mod type_checker;

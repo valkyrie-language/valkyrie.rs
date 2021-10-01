@@ -12,6 +12,7 @@ jvm-backend = { workspace = true }
 miette = { workspace = true }
 native-backend = { workspace = true }
 nyar = { workspace = true }
-valkyrie-compiler = { workspace = true }
-valkyrie-parser = { workspace = true }
 wasi-backend = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

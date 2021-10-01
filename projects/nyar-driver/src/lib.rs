@@ -3,32 +3,51 @@
 
 mod families;
 
-use std::path::Path;
-
+use clr_backend::ClrBinaryBackendInput;
+use jvm_backend::JvmBinaryBackendInput;
 use miette::Result;
-use nyar::{backends::CompilationOptions, packaging::ArtifactSet, RunnerFamily, TargetBackendFamily};
-use valkyrie_compiler::{hir::HirModule, lir::LirModule};
-use valkyrie_parser::ValkyrieRoot;
+use native_backend::NativeBinaryBackendInput;
+use nyar::{
+    backends::CompilationOptions, packaging::ArtifactSet, BackendInputKind, BinaryTarget, PartitionBackendRequirement, RunnerFamily, TargetLane,
+};
+use wasi_backend::WasmBinaryBackendInput;
+
+/// 驱动层接收的目标专用输入。
+#[derive(Debug, Clone)]
+pub enum DriverBackendInput {
+    /// `CLR` 二进制输入。
+    Clr(ClrBinaryBackendInput),
+    /// `JVM` 二进制输入。
+    Jvm(JvmBinaryBackendInput),
+    /// `WASM/WASI` 二进制输入。
+    Wasm(WasmBinaryBackendInput),
+    /// `native` 二进制输入。
+    Native(NativeBinaryBackendInput),
+}
+
+impl DriverBackendInput {
+    /// 根据当前输入与目标，生成驱动层使用的后端需求。
+    pub fn requirement(&self, target: BinaryTarget) -> PartitionBackendRequirement {
+        match self {
+            Self::Clr(_) => PartitionBackendRequirement { lane: TargetLane::Clr, input_kind: BackendInputKind::MsilText, target },
+            Self::Jvm(_) => PartitionBackendRequirement { lane: TargetLane::Jvm, input_kind: BackendInputKind::JvmClassFile, target },
+            Self::Wasm(_) => PartitionBackendRequirement { lane: TargetLane::Wasm, input_kind: BackendInputKind::WasmModule, target },
+            Self::Native(_) => PartitionBackendRequirement { lane: TargetLane::Native, input_kind: BackendInputKind::CoffObject, target },
+        }
+    }
+}
 
 /// 驱动层编译请求。
 #[derive(Debug)]
 pub struct DriverCompileRequest<'a> {
-    /// 前端语法根。
-    pub parser_root: &'a ValkyrieRoot,
-    /// 前端 `HIR`。
-    pub hir_module: &'a HirModule,
-    /// 已选择 lane 的 `LIR`。
-    pub lir_module: LirModule,
-    /// 输出目录。
-    pub output_dir: &'a Path,
     /// 逻辑产物名。
     pub artifact_name: &'a str,
-    /// 目标后端家族。
-    pub backend_family: TargetBackendFamily,
+    /// 已经完成规划的后端需求。
+    pub requirement: PartitionBackendRequirement,
+    /// 目标专用输入。
+    pub input: DriverBackendInput,
     /// 运行家族。
     pub runner_family: RunnerFamily,
-    /// 是否输出 `MSIL` sidecar。
-    pub emit_msil: bool,
     /// 是否生成 runtime config。
     pub generate_runtime_config: bool,
     /// 通用编译选项。

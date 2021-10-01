@@ -1,15 +1,4 @@
-//! `WASI` 运行时宿主，基于 `wasmtime`。
-//!
-//! 为 `legion bootstrap --target wasi` 提供宿主支持：
-//! 加载 `WASM` 模块，注入自定义导入函数，读取源文件并收集输出字节。
-//!
-//! 约定的导入函数（`env` 模块）：
-//! - `read_source_byte() -> i32`：读取源文件下一字节，`EOF` 返回 `-1`
-//! - `emit_byte(byte: i32)`：收集输出字节
-//! - `add(a, b) -> i32`：整数加法
-//! - `sub(a, b) -> i32`：整数减法
-//! - `lt(a, b) -> i32`：小于比较，返回 `0` / `1`
-//! - `eq(a, b) -> i32`：等于比较，返回 `0` / `1`
+#![doc = include_str!("readme.md")]
 
 use std::path::Path;
 
@@ -25,7 +14,7 @@ impl WasiRuntime {
     pub const FAMILY: &'static str = "wasi";
 
     /// `ABI` 标识。
-    pub const ABI: &'static str = "wasip1";
+    pub const ABI: &'static str = "wasi";
 
     /// 启动器名称。
     pub const LAUNCHER: &'static str = "wasmtime";
@@ -65,21 +54,18 @@ pub struct WasiHostResult {
 ///
 /// 返回 `WasiHostResult`，包含 `main` 返回值和收集的输出字节。
 pub fn run_wasi_module(wasm_path: &Path, source_path: &Path) -> Result<WasiHostResult> {
-    let source_bytes = std::fs::read(source_path)
-        .into_diagnostic()
-        .map_err(|e| e.wrap_err(format!("读取源文件失败: {}", source_path.display())))?;
+    let source_bytes =
+        std::fs::read(source_path).into_diagnostic().map_err(|e| e.wrap_err(format!("读取源文件失败: {}", source_path.display())))?;
 
     let engine = Engine::default();
-    let module = Module::from_file(&engine, wasm_path)
-        .map_err(|e| miette!("加载 WASM 模块失败: {}: {}", wasm_path.display(), e))?;
+    let module = Module::from_file(&engine, wasm_path).map_err(|e| miette!("加载 WASM 模块失败: {}: {}", wasm_path.display(), e))?;
 
     let mut store = Store::new(&engine, HostState::new(source_bytes));
 
     // 构建导入函数集合。
     let imports = build_imports(&mut store, &module);
 
-    let instance = Instance::new(&mut store, &module, &imports)
-        .map_err(|e| miette!("实例化 WASM 模块失败，可能是导入函数不匹配: {}", e))?;
+    let instance = Instance::new(&mut store, &module, &imports).map_err(|e| miette!("实例化 WASM 模块失败，可能是导入函数不匹配: {}", e))?;
 
     // 查找并调用 main 入口。
     let main_func = instance
@@ -88,9 +74,7 @@ pub fn run_wasi_module(wasm_path: &Path, source_path: &Path) -> Result<WasiHostR
         .ok_or_else(|| miette!("WASM 模块未导出 main 或 _start 入口"))?;
 
     let mut results = [wasmtime::Val::I32(0)];
-    main_func
-        .call(&mut store, &[], &mut results)
-        .map_err(|e| miette!("调用 main 函数失败: {}", e))?;
+    main_func.call(&mut store, &[], &mut results).map_err(|e| miette!("调用 main 函数失败: {}", e))?;
 
     let exit_code = match results[0] {
         wasmtime::Val::I32(v) => v,
@@ -133,29 +117,39 @@ fn build_imports(store: &mut Store<HostState>, module: &Module) -> Vec<wasmtime:
 
     for import in module.imports() {
         let func = match (import.module(), import.name()) {
-            ("env", "read_source_byte") => {
-                Func::wrap(&mut *store, |mut caller: Caller<'_, HostState>| -> i32 {
-                    let state = caller.data_mut();
-                    if state.source_pos < state.source_bytes.len() {
-                        let byte = state.source_bytes[state.source_pos] as i32;
-                        state.source_pos += 1;
-                        byte
-                    }
-                    else {
-                        -1
-                    }
-                })
-            }
-            ("env", "emit_byte") => {
-                Func::wrap(&mut *store, |mut caller: Caller<'_, HostState>, byte: i32| {
-                    let state = caller.data_mut();
-                    state.output_bytes.push((byte & 0xFF) as u8);
-                })
-            }
+            ("env", "read_source_byte") => Func::wrap(&mut *store, |mut caller: Caller<'_, HostState>| -> i32 {
+                let state = caller.data_mut();
+                if state.source_pos < state.source_bytes.len() {
+                    let byte = state.source_bytes[state.source_pos] as i32;
+                    state.source_pos += 1;
+                    byte
+                }
+                else {
+                    -1
+                }
+            }),
+            ("env", "emit_byte") => Func::wrap(&mut *store, |mut caller: Caller<'_, HostState>, byte: i32| {
+                let state = caller.data_mut();
+                state.output_bytes.push((byte & 0xFF) as u8);
+            }),
             ("env", "add") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 { a.wrapping_add(b) }),
             ("env", "sub") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 { a.wrapping_sub(b) }),
-            ("env", "lt") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 { if a < b { 1 } else { 0 } }),
-            ("env", "eq") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 { if a == b { 1 } else { 0 } }),
+            ("env", "lt") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 {
+                if a < b {
+                    1
+                }
+                else {
+                    0
+                }
+            }),
+            ("env", "eq") => Func::wrap(&mut *store, |a: i32, b: i32| -> i32 {
+                if a == b {
+                    1
+                }
+                else {
+                    0
+                }
+            }),
             _ => {
                 continue;
             }

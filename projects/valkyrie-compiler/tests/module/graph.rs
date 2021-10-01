@@ -1,9 +1,9 @@
 use valkyrie_compiler::module::*;
 
-use nyar_types::QualifiedName;
+use nyar_types::{Identifier, QualifiedName};
 
 fn qn(s: &str) -> QualifiedName {
-    QualifiedName::from(s)
+    QualifiedName::new(s.split("::").map(Identifier::new).collect())
 }
 
 #[test]

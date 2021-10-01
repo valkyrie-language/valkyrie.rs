@@ -1,5 +1,5 @@
 use valkyrie_types::{
-    hir::{HirDocumentation, HirField, HirParent, HirStruct, HirType, HirVisibility},
+    hir::{HirDocumentation, HirField, HirParent, HirStruct, HirVisibility, ValkyrieType},
     Identifier, NamePath,
 };
 
@@ -15,7 +15,7 @@ fn field(name: &str) -> HirField {
     HirField {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
-        ty: HirType::Integer64,
+        ty: ValkyrieType::Integer64 { signed: false },
         visibility: HirVisibility::public(),
         is_readonly: false,
     }

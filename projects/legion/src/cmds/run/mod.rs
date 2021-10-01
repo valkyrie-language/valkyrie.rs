@@ -8,8 +8,9 @@ use std::{
 
 use clap::Args;
 use miette::{miette, IntoDiagnostic, Result};
-use nyar::{CanonicalTarget, RunnerFamily};
 use serde::{Deserialize, Serialize};
+use valkyrie_compiler::{CanonicalTarget, RunnerFamily};
+use valkyrie_interpreter::WasiRuntime;
 
 use crate::{
     manifest::RunnerBinding,
@@ -28,6 +29,9 @@ pub struct RunArgs {
     /// 输出目录。
     #[arg(short = 'o', long = "output")]
     pub output_dir: Option<PathBuf>,
+    /// 强制按 workspace 成员解析；若项目未注册则直接报错，不回退到 package 模式。
+    #[arg(long, default_value_t = false)]
+    pub workspace: bool,
     /// 覆盖 runner 命令，例如 `clr=C:\dotnet\dotnet.exe`。
     #[arg(long = "runner", value_name = "target=command")]
     pub runner: Vec<String>,
@@ -65,11 +69,9 @@ struct RunCommand {
 /// 执行 `legion run`。
 pub fn run(args: &RunArgs) -> Result<ExitCode> {
     let workspace = LegionWorkspace::discover(&args.project_dir)?;
-    let plan = workspace.build_plan(&BuildRequest {
-        project_dir: args.project_dir.clone(),
-        target: args.target.clone(),
-        output_dir: args.output_dir.clone(),
-    })?;
+    let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
+    let (plan, fallback_to_package) =
+        if args.workspace { (workspace.build_plan(&request)?, false) } else { workspace.build_plan_with_local_fallback(&request)? };
 
     let command = plan_run_command(
         &workspace,
@@ -83,6 +85,12 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", plan.output_dir.display());
+    if fallback_to_package {
+        println!("mode: package");
+    }
+    else {
+        println!("mode: workspace");
+    }
     println!("artifact: {}", command.artifact.display());
     println!("runner: {}", command.command);
     println!("args: {}", shell_join(&command.args));
@@ -134,20 +142,46 @@ fn apply_run_contract_to_runner(
     runner: &mut RunnerTemplate,
     runner_target: RunnerFamily,
     _artifact: &Path,
-    _run_contract: Option<&RunContract>,
+    run_contract: Option<&RunContract>,
 ) {
-    if runner_target != RunnerFamily::Clr || !uses_default_clr_runner(runner) {
-        return;
+    match runner_target {
+        RunnerFamily::Clr if uses_default_clr_runner(runner) => {
+            runner.command = "dotnet".to_string();
+            runner.args = vec!["exec".to_string(), "{artifact}".to_string()];
+        }
+        RunnerFamily::Jvm if uses_default_jvm_runner(runner) => {
+            if run_contract.is_some() {
+                runner.command = "java".to_string();
+                runner.args = vec!["-jar".to_string(), "{artifact}".to_string()];
+            }
+        }
+        RunnerFamily::Wasi if uses_default_wasi_runner(runner) => {
+            runner.command = WasiRuntime::LAUNCHER.to_string();
+            runner.args = match run_contract {
+                Some(contract) if !contract.logical_entry.is_empty() && !contract.logical_entry.eq_ignore_ascii_case("_start") => {
+                    vec!["--invoke".to_string(), "{entry}".to_string(), "{artifact}".to_string()]
+                }
+                _ => vec!["{artifact}".to_string()],
+            };
+        }
+        _ => {}
     }
-
-    // 对 `CLR` 默认统一走 `dotnet exec`，避免直启 `.exe`
-    // 触发 Windows / 宿主弹窗，把错误尽量保留在终端里。
-    runner.command = "dotnet".to_string();
-    runner.args = vec!["exec".to_string(), "{artifact}".to_string()];
 }
 
 fn uses_default_clr_runner(runner: &RunnerTemplate) -> bool {
     runner.target == RunnerFamily::Clr && runner.command == "dotnet" && runner.args == ["exec".to_string(), "{artifact}".to_string()]
+}
+
+fn uses_default_jvm_runner(runner: &RunnerTemplate) -> bool {
+    runner.target == RunnerFamily::Jvm
+        && runner.command == "java"
+        && runner.args == ["-cp".to_string(), "{classpath}".to_string(), "{entry}".to_string()]
+}
+
+fn uses_default_wasi_runner(runner: &RunnerTemplate) -> bool {
+    runner.target == RunnerFamily::Wasi
+        && runner.command == "wasmtime"
+        && runner.args == ["--invoke".to_string(), "main".to_string(), "{artifact}".to_string()]
 }
 
 fn resolve_runner(
@@ -213,7 +247,7 @@ fn default_runner(target: RunnerFamily) -> RunnerTemplate {
         RunnerFamily::Windows => RunnerTemplate { target: RunnerFamily::Windows, command: "{artifact}".to_string(), args: Vec::new() },
         RunnerFamily::Wasi => RunnerTemplate {
             target: RunnerFamily::Wasi,
-            command: "wasmtime".to_string(),
+            command: WasiRuntime::LAUNCHER.to_string(),
             args: vec!["--invoke".to_string(), "main".to_string(), "{artifact}".to_string()],
         },
     }
@@ -242,6 +276,7 @@ fn build_placeholders(
     values.insert("classpath", classpath);
 
     let entry = match run_contract {
+        Some(contract) if runner_target == RunnerFamily::Jvm && !contract.logical_entry.is_empty() => contract.logical_entry.clone(),
         Some(contract) if !contract.physical_entry.is_empty() => contract.physical_entry.clone(),
         Some(contract) if !contract.logical_entry.is_empty() => contract.logical_entry.clone(),
         _ if runner_target == RunnerFamily::Jvm => artifact
@@ -282,7 +317,7 @@ fn read_run_contract(output_dir: &Path) -> Result<Option<RunContract>> {
         else {
             continue;
         };
-        let value = value.trim().to_string();
+        let value = parse_von_scalar(value);
         match key.trim() {
             "logical_entry" => logical_entry = value,
             "physical_entry" => physical_entry = value,
@@ -293,6 +328,11 @@ fn read_run_contract(output_dir: &Path) -> Result<Option<RunContract>> {
     }
 
     Ok(Some(RunContract { logical_entry, physical_entry, invocation, validate }))
+}
+
+/// 解析 `run-contract.txt` 中的简单 `VON` 标量字符串。
+fn parse_von_scalar(value: &str) -> String {
+    value.trim().trim_end_matches(',').trim().trim_matches('"').to_string()
 }
 
 fn discover_artifact(

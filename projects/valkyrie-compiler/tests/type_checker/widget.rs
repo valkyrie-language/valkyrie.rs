@@ -1,7 +1,8 @@
 use valkyrie_compiler::type_checker::*;
 use valkyrie_types::{
     hir::{
-        HirDocumentation, HirFunction, HirGeneric, HirIdentifier, HirModule, HirParam, HirType, HirVisibility, HirWidget, HirWidgetLifecycle,
+        GenericType, HirDocumentation, HirFunction, HirIdentifier, HirModule, HirParam, HirVisibility, HirWidget, HirWidgetLifecycle,
+        ValkyrieType,
     },
     Identifier, NamePath, SourceSpan,
 };
@@ -10,7 +11,7 @@ fn create_test_widget(name: &str, methods: Vec<HirFunction>) -> HirWidget {
     HirWidget {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
-        generics: Vec::<HirGeneric>::new(),
+        generics: Vec::<GenericType>::new(),
         fields: vec![],
         methods,
         visibility: HirVisibility::public(),
@@ -20,7 +21,7 @@ fn create_test_widget(name: &str, methods: Vec<HirFunction>) -> HirWidget {
     }
 }
 
-fn create_render_method(return_type: HirType) -> HirFunction {
+fn create_render_method(return_type: ValkyrieType) -> HirFunction {
     HirFunction {
         name: Identifier::new("render"),
         doc: HirDocumentation::default(),
@@ -32,7 +33,7 @@ fn create_render_method(return_type: HirType) -> HirFunction {
                 shadow_index: 0,
                 span: SourceSpan::new(valkyrie_types::SourceID::default(), 0, 0),
             },
-            ty: HirType::Named(Identifier::new("Self")),
+            ty: ValkyrieType::Named(Identifier::new("Self")),
         }],
         return_type,
         body: valkyrie_types::hir::HirBlock {
@@ -54,7 +55,7 @@ fn create_event_handler_method(name: &str) -> HirFunction {
         annotations: vec![],
         generics: vec![],
         params: vec![],
-        return_type: HirType::Unit,
+        return_type: ValkyrieType::Unit,
         body: valkyrie_types::hir::HirBlock {
             statements: vec![],
             expr: None,
@@ -90,7 +91,7 @@ fn create_test_module(widgets: Vec<HirWidget>) -> HirModule {
 #[test]
 fn test_widget_with_valid_render_method() {
     let mut checker = WidgetChecker::new();
-    let widget = create_test_widget("MyWidget", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
+    let widget = create_test_widget("MyWidget", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
     let module = create_test_module(vec![widget]);
 
     let errors = checker.check_module(&module);
@@ -112,7 +113,7 @@ fn test_widget_missing_render_method() {
 #[test]
 fn test_widget_invalid_render_return_type() {
     let mut checker = WidgetChecker::new();
-    let widget = create_test_widget("MyWidget", vec![create_render_method(HirType::Integer64)]);
+    let widget = create_test_widget("MyWidget", vec![create_render_method(ValkyrieType::Integer64 { signed: true })]);
     let module = create_test_module(vec![widget]);
 
     let errors = checker.check_module(&module);
@@ -126,7 +127,7 @@ fn test_widget_error_display() {
     assert!(err.to_string().contains("MyWidget"));
     assert!(err.to_string().contains("render"));
 
-    let err = WidgetError::invalid_render_return_type(Identifier::new("MyWidget"), HirType::Integer64, None);
+    let err = WidgetError::invalid_render_return_type(Identifier::new("MyWidget"), ValkyrieType::Integer64 { signed: true }, None);
     assert!(err.to_string().contains("Element"));
 
     let err = WidgetError::invalid_state_update(Identifier::new("MyWidget"), Identifier::new("_count"), None);
@@ -137,9 +138,9 @@ fn test_widget_error_display() {
 fn test_is_element_type() {
     let checker = WidgetChecker::new();
 
-    assert!(checker.is_element_type(&HirType::Named(Identifier::new("Element"))));
-    assert!(!checker.is_element_type(&HirType::Named(Identifier::new("String"))));
-    assert!(!checker.is_element_type(&HirType::Integer64));
+    assert!(checker.is_element_type(&ValkyrieType::Named(Identifier::new("Element"))));
+    assert!(!checker.is_element_type(&ValkyrieType::Named(Identifier::new("String"))));
+    assert!(!checker.is_element_type(&ValkyrieType::Integer64 { signed: true }));
 }
 
 #[test]
@@ -190,8 +191,8 @@ fn test_is_valid_state_update_context() {
 #[test]
 fn test_get_widget_names() {
     let mut checker = WidgetChecker::new();
-    let widget1 = create_test_widget("Widget1", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
-    let widget2 = create_test_widget("Widget2", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
+    let widget1 = create_test_widget("Widget1", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
+    let widget2 = create_test_widget("Widget2", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
     let module = create_test_module(vec![widget1, widget2]);
 
     checker.check_module(&module);
@@ -202,7 +203,7 @@ fn test_get_widget_names() {
 #[test]
 fn test_checker_clear() {
     let mut checker = WidgetChecker::new();
-    let widget = create_test_widget("MyWidget", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
+    let widget = create_test_widget("MyWidget", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
     let module = create_test_module(vec![widget]);
 
     checker.check_module(&module);
@@ -217,8 +218,8 @@ fn test_checker_clear() {
 #[test]
 fn test_collect_widgets_from_submodules() {
     let mut checker = WidgetChecker::new();
-    let widget1 = create_test_widget("Widget1", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
-    let widget2 = create_test_widget("Widget2", vec![create_render_method(HirType::Named(Identifier::new("Element")))]);
+    let widget1 = create_test_widget("Widget1", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
+    let widget2 = create_test_widget("Widget2", vec![create_render_method(ValkyrieType::Named(Identifier::new("Element")))]);
 
     let submodule = HirModule {
         name: NamePath::new(vec![Identifier::new("submodule")]),
@@ -265,7 +266,7 @@ fn test_find_render_method() {
     let checker = WidgetChecker::new();
     let widget = create_test_widget(
         "MyWidget",
-        vec![create_render_method(HirType::Named(Identifier::new("Element"))), create_event_handler_method("onClick")],
+        vec![create_render_method(ValkyrieType::Named(Identifier::new("Element"))), create_event_handler_method("onClick")],
     );
 
     let render = checker.find_render_method(&widget);

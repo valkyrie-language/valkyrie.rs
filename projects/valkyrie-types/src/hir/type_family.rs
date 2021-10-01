@@ -1,6 +1,6 @@
 //! Type function and type family definitions for HIR.
 
-use super::{HirBlock, HirDocumentation, HirGeneric, HirParam, HirType};
+use super::{GenericType, HirBlock, HirDocumentation, HirParam, ValkyrieType};
 use crate::Identifier;
 
 /// A type function in HIR.
@@ -13,13 +13,13 @@ pub struct HirTypeFunction {
     /// The name of the type function.
     pub name: Identifier,
     /// Documentation for the type function.
-    pub doc: HirDocumentation,
+    pub documents: HirDocumentation,
     /// Generic parameters for the type function.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Parameters of the type function.
     pub params: Vec<HirParam>,
     /// The return type of the type function.
-    pub return_type: HirType,
+    pub return_type: ValkyrieType,
     /// The body of the type function.
     pub body: HirBlock,
 }
@@ -34,9 +34,9 @@ pub struct HirTypeFamily {
     /// The name of the type family.
     pub name: Identifier,
     /// Documentation for the type family.
-    pub doc: HirDocumentation,
+    pub documents: HirDocumentation,
     /// The cases of the type family.
     ///
     /// Each case maps an input type to an output type.
-    pub cases: Vec<(HirType, HirType)>,
+    pub cases: Vec<(ValkyrieType, ValkyrieType)>,
 }

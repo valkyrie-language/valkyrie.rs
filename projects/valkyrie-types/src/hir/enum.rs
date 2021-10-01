@@ -1,6 +1,6 @@
 //! Enum, variant, flags, and flag member definitions for HIR.
 
-use super::{HirDocumentation, HirExpr, HirField, HirGeneric, HirVisibility};
+use super::{GenericType, HirDocumentation, HirExpr, HirField, HirVisibility};
 use crate::Identifier;
 
 /// An enum in HIR.
@@ -30,7 +30,7 @@ pub struct HirEnum {
     /// Documentation for the enum.
     pub doc: HirDocumentation,
     /// Generic parameters for the enum.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// The variants of the enum.
     pub variants: Vec<HirVariant>,
     /// Visibility of the enum.
@@ -56,12 +56,12 @@ pub struct HirVariant {
     /// The fields contained in this variant.
     pub fields: Vec<HirField>,
     /// 元组变体的类型列表，如 `Some(T)` 中的 `[T]`。
-    pub tuple_types: Vec<super::HirType>,
+    pub tuple_types: Vec<super::ValkyrieType>,
     /// Optional constructor result type for GADT-style variants.
     ///
     /// When present, this variant refines the instantiated base `unite`
     /// type returned by the constructor, such as `Expr<f64>`.
-    pub result_type: Option<super::HirType>,
+    pub result_type: Option<super::ValkyrieType>,
 }
 
 /// A flags (bit flags) type in HIR.

@@ -1,15 +1,15 @@
 # nyar
 
-`nyar` 是所有编译器共享的后端基础设施层。
+`nyar` 是面向多前端的通用优化后端综合包。
 
 ## 职责
-- 提供目标文件容器模型，例如 `PE`、`COFF`。
-- 提供文本汇编和低层镜像模型，例如 `MSIL`、`CLR image`。
-- 提供目标 lane、产物描述与打包协议。
-- 作为 `legion spy`、后端打包器和目标发射器共享的数据层。
+- 承接 `nyar-analyzer` 提供的中性程序事实，以及 `nyar-optimizer` 提供的 `Object Algebraic` / `E-Graph` / `Futamura projection` 骨架。
+- 生成 `ArtifactPartitionPlan`、目标 lane、backend 选择与打包协议。
+- 统一多目标路线的编排策略，而不是统一所有目标的物理表示。
+- 作为通用优化后端平台的综合入口，供具体前端在下游自行接入。
 
 ## 核心判断
-- `Valkyrie` 的语言主链是 `AST -> HIR -> MIR (SSA) -> Optimize (EGraph) -> ArtifactPartitionPlan -> target-specific LIR / Backend Input -> ArtifactSet`。
+- 上游前端应先完成自己的语义闭合、分析和翻译，再把中性结果送入 `nyar-analyzer / nyar`。
 - `nyar` 统一的是编排协议，不是所有目标共用的一份物理 `IR`。
 - `ArtifactPartitionPlan` 之后必须进入各自 target lane，再落到目标专用低层输入。
 - `CLR / JVM / WASM / native / VM / GPU` 的约束彼此不同，不能重新糊成统一兼容壳。
@@ -17,7 +17,11 @@
 
 ## 目标结构
 ```text
-ArtifactPartitionPlan
+ProgramFacts
+  -> Object Algebraic Program
+  -> E-Graph Optimization Session
+  -> Futamura Projection Plan
+  -> ArtifactPartitionPlan
   -> Target Lowering Lane
   -> Target-specific LIR / Backend Input
   -> validate()
@@ -83,14 +87,15 @@ ArtifactPartitionPlan
 - 对某些路线，`LIR` 仍可细分成“目标专用低层指令表示”和“最终容器表示”两段，例如 `native` 线的低层操作模型与最终 `COFF / PE`。
 - `nyar` 的 `data_formats/*` 放的是这类目标专用低层表示和最终容器，不是上游语言级 `LIR` 的总超集。
 
-## nyar 与 HIR / MIR / LIR 的接口
-- `valkyrie-compiler` 负责 `HIR -> MIR (SSA) -> Optimize -> ArtifactPartitionPlan`。
-- `nyar` 从 `ArtifactPartitionPlan` 之后开始接手：target lane、backend input、validate、compile、packaging。
-- `nyar` 不拥有 `HIR`，不拥有语言级 `MIR`，也不拥有“所有目标共用的一份 LIR”。
-- `nyar` 拥有的是目标相关 `LIR / Backend Input` 家族，以及最终容器与产物交付协议。
+## nyar 与下游前端的接口
+- 下游前端负责把自己的语言事实翻译成中性 `ProgramFacts`，并把可优化语义翻译成 `Object Algebraic` 输入。
+- `nyar` 从 `ProgramFacts / Object Algebraic Program -> ArtifactPartitionPlan` 开始接手：target lane、backend input、validate、compile、packaging。
+- `nyar` 不拥有 `AST/HIR/MIR/LIR` 的品牌化定义。
+- `nyar` 拥有的是中性规划协议、目标相关 `Backend Input` 家族，以及最终容器与产物交付协议。
 
 ## 目录与详细设计
 - `src/abstractions`：目标无关公共协议，例如 `TargetFamily`、`BackendInputKind`、最小 backend trait。
+- `src/planning`：把中性分析结果转成 `ArtifactPartitionPlan` 的规划层。
 - `src/lanes`：从 `ArtifactPartitionPlan` 分区承接到 target-specific input 的路线层。
 - `src/selection`：根据 lane、input kind、target 选择最合适的 backend。
 - `src/backends`：每个后端显式声明 `validate()` 与 `compile()`，不再吃一份万能输入。
@@ -104,7 +109,7 @@ ArtifactPartitionPlan
 - `CLR` 自举是当前最高优先级，因此 `CLR` lane 必须优先保证“拒绝未闭合 witness 伪装成静态调用”。
 
 ## 禁止
-- 不在这里放 `Valkyrie` 专属 `AST / HIR / MIR / LIR`。
+- 不在这里放任何单一语言专属的 `AST / HIR / MIR / LIR`。
 - 不把这里做成跨语言统一 `god ir`。
 - 不让语言前端语义直接耦合进 `PE / COFF / MSIL` 容器层。
 - 不把 `Generate*` 风格的大统一 lowering 总线搬回 Rust。

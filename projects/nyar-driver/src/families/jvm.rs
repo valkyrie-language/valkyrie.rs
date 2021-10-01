@@ -1,29 +1,33 @@
-use jvm_backend::{compile_jvm_bundle, JvmCompileRequest};
+use jvm_backend::{internal_name_to_binary_name, JvmBinaryBackend};
 use miette::Result;
-use nyar::TargetBackendFamily;
+use nyar::{backends::TargetCodeGenBackend, BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane};
 
 use super::BundledFamilyCompiler;
-use crate::{DriverCompileReport, DriverCompileRequest, DriverRunContract};
+use crate::{DriverBackendInput, DriverCompileReport, DriverCompileRequest, DriverRunContract};
 
 /// `JVM` 后端家族编译器。
 pub(super) struct JvmFamilyCompiler;
 
-impl BundledFamilyCompiler for JvmFamilyCompiler {
-    fn family(&self) -> TargetBackendFamily {
-        TargetBackendFamily::Jvm
-    }
+pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) -> bool {
+    requirement.lane == TargetLane::Jvm
+        && requirement.input_kind == BackendInputKind::JvmClassFile
+        && requirement.target.family == TargetFamily::Jvm
+}
 
+impl BundledFamilyCompiler for JvmFamilyCompiler {
     fn compile(&self, request: DriverCompileRequest<'_>) -> Result<DriverCompileReport> {
-        let report = compile_jvm_bundle(JvmCompileRequest {
-            lir_module: request.lir_module,
-            output_dir: request.output_dir.to_path_buf(),
-            emit_class_file: true,
-            options: request.options,
-        })?;
+        let DriverBackendInput::Jvm(input) = request.input
+        else {
+            return Err(miette::miette!("`JVM` 家族请求必须携带 `JvmBinaryBackendInput`"));
+        };
+        let entry_class = internal_name_to_binary_name(&input.class_file.internal_name);
+        let backend = JvmBinaryBackend::new();
+        backend.validate(&input)?;
+        let artifacts = backend.compile(input, request.options)?;
         Ok(DriverCompileReport {
-            artifacts: report.artifacts,
-            entry_symbol: Some(report.entry_class.clone()),
-            run_contract: Some(jvm_run_contract(request.artifact_name, &report.entry_class)),
+            artifacts,
+            entry_symbol: Some(entry_class.clone()),
+            run_contract: Some(jvm_run_contract(request.artifact_name, &entry_class)),
         })
     }
 }
@@ -35,20 +39,5 @@ fn jvm_run_contract(artifact_name: &str, entry_class: &str) -> DriverRunContract
         physical_entry: format!("{}.jar", artifact_name),
         invocation: "java".to_string(),
         validate: format!("java -jar {}.jar", artifact_name),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::jvm_run_contract;
-
-    #[test]
-    fn creates_jar_run_contract() {
-        let contract = jvm_run_contract("demo", "legion.tools.Main");
-
-        assert_eq!(contract.logical_entry, "legion.tools.Main");
-        assert_eq!(contract.physical_entry, "demo.jar");
-        assert_eq!(contract.invocation, "java");
-        assert_eq!(contract.validate, "java -jar demo.jar");
     }
 }

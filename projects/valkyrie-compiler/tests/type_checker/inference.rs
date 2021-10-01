@@ -1,6 +1,6 @@
 use valkyrie_compiler::type_checker::*;
 use valkyrie_types::{
-    hir::{HirBlock, HirExpr, HirExprKind, HirLiteral, HirType},
+    hir::{FunctionType, HirBlock, HirExpr, HirExprKind, HirLiteral, ValkyrieType},
     Identifier, NamePath, SourceID, SourceSpan,
 };
 
@@ -23,7 +23,7 @@ fn test_int_literal() {
     let mut inf = TypeInference::new();
     let expr = HirExpr { kind: HirExprKind::Literal(HirLiteral::Integer64(42)), span: test_span() };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Integer64);
+    assert_eq!(t, ValkyrieType::Integer64 { signed: true });
 }
 
 #[test]
@@ -31,7 +31,7 @@ fn test_float_literal() {
     let mut inf = TypeInference::new();
     let expr = HirExpr { kind: HirExprKind::Literal(HirLiteral::Float64(ordered_float::OrderedFloat(3.14))), span: test_span() };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Float64);
+    assert_eq!(t, ValkyrieType::Float64);
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_bool_literal() {
     let mut inf = TypeInference::new();
     let expr = HirExpr { kind: HirExprKind::Literal(HirLiteral::Bool(true)), span: test_span() };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Boolean);
+    assert_eq!(t, ValkyrieType::Boolean);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn test_string_literal_defaults_to_utf8() {
         span: test_span(),
     };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Utf8);
+    assert_eq!(t, ValkyrieType::Utf8);
 }
 
 #[test]
@@ -62,20 +62,20 @@ fn test_unit_literal() {
     let mut inf = TypeInference::new();
     let expr = HirExpr { kind: HirExprKind::Literal(HirLiteral::Unit), span: test_span() };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Unit);
+    assert_eq!(t, ValkyrieType::Unit);
 }
 
 #[test]
 fn test_variable_propagation() {
     let mut inf = TypeInference::new();
-    inf.bind_variable(Identifier::new("x"), HirType::Integer64);
+    inf.bind_variable(Identifier::new("x"), ValkyrieType::Integer64 { signed: true });
 
     let expr = HirExpr {
         kind: HirExprKind::Variable(valkyrie_types::hir::HirIdentifier { name: Identifier::new("x"), shadow_index: 0, span: test_span() }),
         span: test_span(),
     };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Integer64);
+    assert_eq!(t, ValkyrieType::Integer64 { signed: true });
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn test_binary_add() {
     let right = HirExpr { kind: HirExprKind::Literal(HirLiteral::Integer64(2)), span: test_span() };
     let expr = operator_call("infix +", vec![left, right]);
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Integer64);
+    assert_eq!(t, ValkyrieType::Integer64 { signed: true });
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn test_binary_comparison() {
     let right = HirExpr { kind: HirExprKind::Literal(HirLiteral::Integer64(2)), span: test_span() };
     let expr = operator_call("infix <", vec![left, right]);
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Boolean);
+    assert_eq!(t, ValkyrieType::Boolean);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn test_bool_equality_call() {
     let right = HirExpr { kind: HirExprKind::Literal(HirLiteral::Bool(false)), span: test_span() };
     let expr = operator_call("infix ==", vec![left, right]);
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Boolean);
+    assert_eq!(t, ValkyrieType::Boolean);
 }
 
 #[test]
@@ -129,7 +129,7 @@ fn test_unary_neg() {
     let inner = HirExpr { kind: HirExprKind::Literal(HirLiteral::Integer64(42)), span: test_span() };
     let expr = operator_call("prefix -", vec![inner]);
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Integer64);
+    assert_eq!(t, ValkyrieType::Integer64 { signed: true });
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn test_unary_not() {
     let inner = HirExpr { kind: HirExprKind::Literal(HirLiteral::Bool(true)), span: test_span() };
     let expr = operator_call("prefix !", vec![inner]);
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Boolean);
+    assert_eq!(t, ValkyrieType::Boolean);
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn test_if_expression_bool_result() {
         span: test_span(),
     };
     let t = inf.infer(&expr).unwrap();
-    assert_eq!(t, HirType::Boolean);
+    assert_eq!(t, ValkyrieType::Boolean);
 }
 
 #[test]
@@ -179,32 +179,32 @@ fn test_fresh_var() {
 #[test]
 fn test_unify_same_types() {
     let mut inf = TypeInference::new();
-    let result = inf.unify(&HirType::Integer64, &HirType::Integer64);
+    let result = inf.unify(&ValkyrieType::Integer64 { signed: true }, &ValkyrieType::Integer64 { signed: true });
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_unify_different_types() {
     let mut inf = TypeInference::new();
-    let result = inf.unify(&HirType::Integer64, &HirType::Boolean);
+    let result = inf.unify(&ValkyrieType::Integer64 { signed: true }, &ValkyrieType::Boolean);
     assert!(matches!(result, Err(TypeError::Mismatch { .. })));
 }
 
 #[test]
 fn test_unify_with_infer() {
     let mut inf = TypeInference::new();
-    let result = inf.unify(&HirType::Infer, &HirType::Integer64);
+    let result = inf.unify(&ValkyrieType::AutoType, &ValkyrieType::Integer64 { signed: true });
     assert!(result.is_ok());
 
-    let result = inf.unify(&HirType::Integer64, &HirType::Infer);
+    let result = inf.unify(&ValkyrieType::Integer64 { signed: true }, &ValkyrieType::AutoType);
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_unify_array_types() {
     let mut inf = TypeInference::new();
-    let t1 = HirType::Array(Box::new(HirType::Integer64));
-    let t2 = HirType::Array(Box::new(HirType::Integer64));
+    let t1 = ValkyrieType::Array(Box::new(ValkyrieType::Integer64 { signed: true }));
+    let t2 = ValkyrieType::Array(Box::new(ValkyrieType::Integer64 { signed: true }));
     let result = inf.unify(&t1, &t2);
     assert!(result.is_ok());
 }
@@ -212,8 +212,8 @@ fn test_unify_array_types() {
 #[test]
 fn test_unify_function_types() {
     let mut inf = TypeInference::new();
-    let t1 = HirType::Function { params: vec![HirType::Integer64], return_type: Box::new(HirType::Boolean) };
-    let t2 = HirType::Function { params: vec![HirType::Integer64], return_type: Box::new(HirType::Boolean) };
+    let t1 = ValkyrieType::Function(Box::new(FunctionType { params: vec![ValkyrieType::Integer64 { signed: true }], return_type: ValkyrieType::Boolean }));
+    let t2 = ValkyrieType::Function(Box::new(FunctionType { params: vec![ValkyrieType::Integer64 { signed: true }], return_type: ValkyrieType::Boolean }));
     let result = inf.unify(&t1, &t2);
     assert!(result.is_ok());
 }
@@ -221,7 +221,7 @@ fn test_unify_function_types() {
 #[test]
 fn test_apply_subst() {
     let inf = TypeInference::new();
-    let t = HirType::Array(Box::new(HirType::Integer64));
+    let t = ValkyrieType::Array(Box::new(ValkyrieType::Integer64 { signed: true }));
     let result = inf.apply_subst(&t);
     assert_eq!(result, t);
 }
@@ -230,26 +230,26 @@ fn test_apply_subst() {
 fn test_is_numeric() {
     let inf = TypeInference::new();
 
-    assert!(inf.is_numeric(&HirType::Integer32));
-    assert!(inf.is_numeric(&HirType::Integer64));
-    assert!(inf.is_numeric(&HirType::Float32));
-    assert!(inf.is_numeric(&HirType::Float64));
+    assert!(inf.is_numeric(&ValkyrieType::Integer32 { signed: true }));
+    assert!(inf.is_numeric(&ValkyrieType::Integer64 { signed: true }));
+    assert!(inf.is_numeric(&ValkyrieType::Float32));
+    assert!(inf.is_numeric(&ValkyrieType::Float64));
 
-    assert!(!inf.is_numeric(&HirType::Boolean));
-    assert!(!inf.is_numeric(&HirType::Utf8));
-    assert!(!inf.is_numeric(&HirType::Unit));
+    assert!(!inf.is_numeric(&ValkyrieType::Boolean));
+    assert!(!inf.is_numeric(&ValkyrieType::Utf8));
+    assert!(!inf.is_numeric(&ValkyrieType::Unit));
 }
 
 #[test]
 fn test_is_integer() {
     let inf = TypeInference::new();
 
-    assert!(inf.is_integer(&HirType::Integer32));
-    assert!(inf.is_integer(&HirType::Integer64));
+    assert!(inf.is_integer(&ValkyrieType::Integer32 { signed: true }));
+    assert!(inf.is_integer(&ValkyrieType::Integer64 { signed: true }));
 
-    assert!(!inf.is_integer(&HirType::Float32));
-    assert!(!inf.is_integer(&HirType::Float64));
-    assert!(!inf.is_integer(&HirType::Boolean));
+    assert!(!inf.is_integer(&ValkyrieType::Float32));
+    assert!(!inf.is_integer(&ValkyrieType::Float64));
+    assert!(!inf.is_integer(&ValkyrieType::Boolean));
 }
 
 #[test]
@@ -257,7 +257,7 @@ fn test_clear() {
     let mut inf = TypeInference::new();
     inf.fresh_var();
     inf.fresh_var();
-    inf.bind_variable(Identifier::new("x"), HirType::Integer64);
+    inf.bind_variable(Identifier::new("x"), ValkyrieType::Integer64 { signed: true });
 
     inf.clear();
 

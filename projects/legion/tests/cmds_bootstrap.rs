@@ -1,9 +1,9 @@
 mod support;
 
 use legion::cmds::bootstrap::{run, BootstrapArgs, BootstrapStage};
-use nyar::CanonicalTarget;
 use std::{panic::AssertUnwindSafe, path::PathBuf};
 use support::create_smoke_project;
+use valkyrie_compiler::CanonicalTarget;
 
 #[test]
 #[cfg_attr(target_os = "windows", ignore = "seed launch is unstable under sandboxed Windows hosts")]

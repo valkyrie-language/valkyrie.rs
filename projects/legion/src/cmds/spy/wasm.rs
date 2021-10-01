@@ -1,14 +1,4 @@
-//! legion spy wasm 子模式：WASM 二进制反汇编与分析。
-//!
-//! 支持的能力：
-//! - 解析任意 `WASM` 二进制（基于 `wasi-backend` 的 `WasmBinaryModule`）
-//! - 列出所有段（`--list`）
-//! - 列出所有函数（`--list --func` 或默认）
-//! - 反汇编指定函数（`--func <index|name>`）
-//! - 查看 `imports` / `exports`
-//! - 按绝对偏移定位错误上下文（`--offset <abs>`）
-//! - `JSON` 输出（`--json`）
-//! - 函数体原始字节 `dump`（`--hex`）
+#![doc = include_str!("readme.md")]
 
 use std::{fs, path::Path, process::ExitCode};
 
@@ -40,7 +30,13 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
     let Some(target) = &opts.input
     else {
         return Err(miette!(
-            "用法：legion spy wasm <file> [--func <index|name>] [--list] [--offset <abs>] [--json] [--hex]\n  file             目标 WASM 二进制文件\n  --func <i|name>  反汇编指定函数（索引或名称）\n  --list           列出所有函数 / 段\n  --offset <abs>   定位绝对偏移量处的指令\n  --json           以 JSON 格式输出\n  --hex            dump 函数体原始字节（配合 --func）"
+            r#"用法：legion spy wasm <file> [--func <index|name>] [--list] [--offset <abs>] [--json] [--hex]
+  file             目标 WASM 二进制文件
+  --func <i|name>  反汇编指定函数（索引或名称）
+  --list           列出所有函数 / 段
+  --offset <abs>   定位绝对偏移量处的指令
+  --json           以 JSON 格式输出
+  --hex            dump 函数体原始字节（配合 --func）"#
         ));
     };
 
@@ -952,7 +948,22 @@ fn print_json_overview(module: &WasmBinaryModule, data: &[u8]) {
         .collect();
 
     println!(
-        "{{\n  \"size\": {},\n  \"version\": {},\n  \"sections\": [\n{}\n  ],\n  \"imports\": [\n{}\n  ],\n  \"exports\": [\n{}\n  ],\n  \"functions\": [\n{}\n  ]\n}}",
+        r#"{{
+  "size": {},
+  "version": {},
+  "sections": [
+{}
+  ],
+  "imports": [
+{}
+  ],
+  "exports": [
+{}
+  ],
+  "functions": [
+{}
+  ]
+}}"#,
         data.len(),
         module.version,
         sections.join(",\n"),
@@ -978,7 +989,16 @@ fn print_json_function(func: &WasmFunction, data: &[u8]) {
         .collect();
 
     println!(
-        "{{\n  \"index\": {},\n  \"name\": {},\n  \"code_offset\": {},\n  \"body_len\": {},\n  \"local_groups\": {},\n  \"instructions\": [\n{}\n  ]\n}}",
+        r#"{{
+  "index": {},
+  "name": {},
+  "code_offset": {},
+  "body_len": {},
+  "local_groups": {},
+  "instructions": [
+{}
+  ]
+}}"#,
         func.index,
         json_string(func.name.as_deref().unwrap_or("")),
         func.code_offset,
@@ -992,7 +1012,13 @@ fn print_json_offset(offset: usize, func: Option<&WasmFunction>, _data: &[u8]) {
     match func {
         Some(f) => {
             println!(
-                "{{\n  \"offset\": {},\n  \"in_function\": true,\n  \"function_index\": {},\n  \"function_name\": {},\n  \"function_range\": [{}, {}]\n}}",
+                r#"{{
+  "offset": {},
+  "in_function": true,
+  "function_index": {},
+  "function_name": {},
+  "function_range": [{}, {}]
+}}"#,
                 offset,
                 f.index,
                 json_string(f.name.as_deref().unwrap_or("")),
@@ -1001,7 +1027,13 @@ fn print_json_offset(offset: usize, func: Option<&WasmFunction>, _data: &[u8]) {
             );
         }
         None => {
-            println!("{{\n  \"offset\": {},\n  \"in_function\": false\n}}", offset);
+            println!(
+                r#"{{
+  "offset": {},
+  "in_function": false
+}}"#,
+                offset
+            );
         }
     }
 }

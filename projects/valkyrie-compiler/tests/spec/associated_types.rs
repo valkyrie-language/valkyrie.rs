@@ -10,10 +10,14 @@ use valkyrie_types::{
     Identifier, NamePath, SourceID, SourceSpan,
 };
 
+fn int32_type() -> HirType {
+    HirType::Integer32 { signed: true }
+}
+
 #[test]
 fn associated_types_belong_only_to_named_traits() {
     let row_error = RowRequirement::try_from_items(vec![
-        RowRequirementItem::Method(RowMethodSignature::new("next", vec![], HirType::Integer32)),
+        RowRequirementItem::Method(RowMethodSignature::new("next", vec![], int32_type())),
         RowRequirementItem::AssociatedType(Identifier::new("Item")),
     ])
     .unwrap_err();
@@ -21,30 +25,28 @@ fn associated_types_belong_only_to_named_traits() {
     assert_eq!(row_error, RowRequirementError::UnsupportedAssociatedType { name: Identifier::new("Item") });
 
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
-    let explicit_impl =
-        trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
+    let explicit_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())]);
 
     let resolved = resolve_associated_type(&counter, &iterator_trait, &[explicit_impl], &Identifier::new("Item")).unwrap();
-    assert_eq!(resolved, HirType::Integer32);
+    assert_eq!(resolved, int32_type());
 }
 
 #[test]
 fn associated_type_solution_must_be_unique() {
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
-    let explicit_impl =
-        trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
+    let explicit_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())]);
 
     let resolved = resolve_associated_type(&counter, &iterator_trait, &[explicit_impl], &Identifier::new("Item")).unwrap();
-    assert_eq!(resolved, HirType::Integer32);
+    assert_eq!(resolved, int32_type());
 }
 
 #[test]
 fn ambiguous_associated_type_inference_fails() {
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
-    let first_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
+    let first_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())]);
     let second_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Utf8, span())]);
 
     let error = resolve_associated_type(&counter, &iterator_trait, &[first_impl, second_impl], &Identifier::new("Item")).unwrap_err();
@@ -61,10 +63,10 @@ fn ambiguous_associated_type_inference_fails() {
 #[test]
 fn more_specific_where_impl_wins_for_associated_type_resolution() {
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let general_impl = HirImpl {
         where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())])
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())])
     };
     let specific_impl = HirImpl {
         where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone", "Debug"])],
@@ -78,10 +80,10 @@ fn more_specific_where_impl_wins_for_associated_type_resolution() {
 #[test]
 fn incomparable_where_impls_keep_associated_type_resolution_ambiguous() {
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let first_impl = HirImpl {
         where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer32, span())])
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())])
     };
     let second_impl = HirImpl {
         where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Debug"])],
@@ -102,7 +104,7 @@ fn incomparable_where_impls_keep_associated_type_resolution_ambiguous() {
 #[test]
 fn missing_associated_type_binding_fails() {
     let iterator_trait = iterator_trait();
-    let counter = struct_with_methods("Counter", vec![method("next", vec![], HirType::Integer32)]);
+    let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let explicit_impl = trait_impl("Counter", "Iterator", vec![]);
 
     let error = resolve_associated_type(&counter, &iterator_trait, &[explicit_impl], &Identifier::new("Item")).unwrap_err();
@@ -121,7 +123,7 @@ fn iterator_trait() -> HirTrait {
         name: Identifier::new("Iterator"),
         doc: HirDocumentation::default(),
         generics: vec![],
-        methods: vec![method("next", vec![], HirType::Integer32)],
+        methods: vec![method("next", vec![], int32_type())],
         associated_types: vec![HirAssociatedType::new(Identifier::new("Item"), span())],
         associated_constants: vec![],
         super_traits: vec![],
@@ -133,7 +135,6 @@ fn iterator_trait() -> HirTrait {
 fn struct_with_methods(name: &str, methods: Vec<HirFunction>) -> HirStruct {
     HirStruct {
         name: Identifier::new(name),
-        namespace: vec![],
         doc: HirDocumentation::default(),
         generics: vec![],
         parents: vec![],

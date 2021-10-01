@@ -2,7 +2,7 @@
 
 pub mod token;
 
-pub use token::{Token, TokenKind};
+pub use token::{Keyword, Token, TokenKind};
 
 use crate::parser::ParseError;
 use std::ops::Range;
@@ -115,6 +115,8 @@ impl<'a> Lexer<'a> {
             '}' => self.push_token(TokenKind::RBrace, start, start + 1),
             '[' => self.push_token(TokenKind::LBracket, start, start + 1),
             ']' => self.push_token(TokenKind::RBracket, start, start + 1),
+            '⁅' => self.push_token(TokenKind::LOffsetBracket, start, start + ch.len_utf8()),
+            '⁆' => self.push_token(TokenKind::ROffsetBracket, start, start + ch.len_utf8()),
             '<' => {
                 if self.starts_with("<=") {
                     self.push_token(TokenKind::LessEq, start, start + 2);
@@ -138,6 +140,7 @@ impl<'a> Lexer<'a> {
                 }
             }
             ',' => self.push_token(TokenKind::Comma, start, start + 1),
+            '\'' => self.push_token(TokenKind::Apostrophe, start, start + 1),
             ':' => {
                 if self.starts_with("::") {
                     self.push_token(TokenKind::DoubleColon, start, start + 2);
@@ -163,7 +166,23 @@ impl<'a> Lexer<'a> {
                     self.push_token(TokenKind::Minus, start, start + 1);
                 }
             }
-            '.' => self.push_token(TokenKind::Dot, start, start + 1),
+            '.' => {
+                if self.starts_with("...") {
+                    self.push_token(TokenKind::Ellipsis, start, start + 3);
+                }
+                else if self.starts_with("..=") {
+                    self.push_token(TokenKind::DotDotEq, start, start + 3);
+                }
+                else if self.starts_with("..<") {
+                    self.push_token(TokenKind::DotDotLt, start, start + 3);
+                }
+                else if self.starts_with("..") {
+                    self.push_token(TokenKind::DotDot, start, start + 2);
+                }
+                else {
+                    self.push_token(TokenKind::Dot, start, start + 1);
+                }
+            }
             '+' => self.push_token(TokenKind::Plus, start, start + 1),
             '*' => self.push_token(TokenKind::Star, start, start + 1),
             '/' => self.push_token(TokenKind::Slash, start, start + 1),
@@ -221,7 +240,9 @@ impl<'a> Lexer<'a> {
             }
             self.offset += ch.len_utf8();
         }
-        self.push_token(TokenKind::Identifier, start, self.offset);
+        let text = &self.source[start..self.offset];
+        let kind = Keyword::from_str(text).map(TokenKind::Keyword).unwrap_or(TokenKind::Identifier);
+        self.push_token(kind, start, self.offset);
     }
 
     fn lex_number(&mut self, start: usize) {
@@ -270,8 +291,8 @@ impl<'a> Lexer<'a> {
             self.offset += ch.len_utf8();
         }
 
-        // 浮点数小数部分。
-        if self.peek_char() == Some('.') {
+        // 浮点数小数部分；`1..` / `1..=` / `1..<` 仍应保留给 range token。
+        if self.peek_char() == Some('.') && !self.starts_with("..") {
             self.offset += '.'.len_utf8();
             while let Some(ch) = self.peek_char() {
                 if !ch.is_ascii_digit() {

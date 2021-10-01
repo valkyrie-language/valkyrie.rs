@@ -9,7 +9,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use valkyrie_types::{
-    hir::{HirDocumentation, HirEnum, HirGeneric, HirKind, HirModule, HirParent, HirStruct, HirType, HirVariant, HirVisibility},
+    hir::{
+        GenericType, HirDocumentation, HirEnum, HirKind, HirModule, HirParent, HirStruct, HirVariant, HirVisibility, TraitObject, TypeLambda,
+        ValkyrieType,
+    },
     Identifier, NamePath,
 };
 
@@ -246,14 +249,14 @@ fn inherits_from(
 }
 
 fn parent_name(parent: &HirParent) -> Option<Identifier> {
-    parent.name.0.last().cloned()
+    parent.name.parts().last().cloned()
 }
 
 fn lower_variant(
     variant: &HirVariant,
     enum_def: &HirEnum,
     base_path: &NamePath,
-    base_parent_generics: &[HirType],
+    base_parent_generics: &[ValkyrieType],
     visibility: HirVisibility,
 ) -> HirStruct {
     let parent_generics = variant
@@ -288,8 +291,8 @@ fn lower_variant(
     }
 }
 
-fn lower_unite_generic_argument(generic: &HirGeneric) -> HirType {
-    HirType::Generic { name: generic.name.clone(), kind: lower_unite_kind(&generic.kind), bounds: generic.bounds.clone() }
+fn lower_unite_generic_argument(generic: &GenericType) -> ValkyrieType {
+    ValkyrieType::Generic(GenericType { name: generic.name.clone(), kind: lower_unite_kind(&generic.kind), bounds: generic.bounds.clone() })
 }
 
 fn lower_unite_kind(kind: &HirKind) -> HirKind {
@@ -299,81 +302,86 @@ fn lower_unite_kind(kind: &HirKind) -> HirKind {
     }
 }
 
-fn parse_variant_result_type(enum_def: &HirEnum, result_type: &HirType) -> Option<Vec<HirType>> {
+fn parse_variant_result_type(enum_def: &HirEnum, result_type: &ValkyrieType) -> Option<Vec<ValkyrieType>> {
     match result_type {
-        HirType::Named(name) if name == &enum_def.name && enum_def.generics.is_empty() => Some(vec![]),
-        HirType::Apply(base, args) => match base.as_ref() {
-            HirType::Named(name) if name == &enum_def.name && args.len() == enum_def.generics.len() => Some(args.clone()),
+        ValkyrieType::Named(name) if name == &enum_def.name && enum_def.generics.is_empty() => Some(vec![]),
+        ValkyrieType::Apply(base, args) => match base.as_ref() {
+            ValkyrieType::Named(name) if name == &enum_def.name && args.len() == enum_def.generics.len() => Some(args.clone()),
             _ => None,
         },
         _ => None,
     }
 }
 
-fn referenced_generics(declared: &[HirGeneric], ty: &HirType) -> Vec<HirGeneric> {
+fn referenced_generics(declared: &[GenericType], ty: &ValkyrieType) -> Vec<GenericType> {
     let mut names = BTreeSet::new();
     collect_generic_names(ty, &mut names);
     declared.iter().filter(|generic| names.contains(&generic.name)).cloned().collect()
 }
 
-fn references_only_declared_generics(declared: &[HirGeneric], ty: &HirType) -> bool {
+fn references_only_declared_generics(declared: &[GenericType], ty: &ValkyrieType) -> bool {
     let declared_names = declared.iter().map(|generic| generic.name.clone()).collect::<BTreeSet<_>>();
     let mut referenced_names = BTreeSet::new();
     collect_generic_names(ty, &mut referenced_names);
     referenced_names.is_subset(&declared_names)
 }
 
-fn collect_generic_names(ty: &HirType, names: &mut BTreeSet<Identifier>) {
+fn collect_generic_names(ty: &ValkyrieType, names: &mut BTreeSet<Identifier>) {
     match ty {
-        HirType::Generic { name, .. } => {
+        ValkyrieType::Generic(GenericType { name, .. }) => {
             names.insert(name.clone());
         }
-        HirType::Apply(base, args) => {
+        ValkyrieType::Apply(base, args) => {
             collect_generic_names(base, names);
             for arg in args {
                 collect_generic_names(arg, names);
             }
         }
-        HirType::Function { params, return_type } => {
-            for param in params {
+        ValkyrieType::Function(function) => {
+            for param in &function.params {
                 collect_generic_names(param, names);
             }
-            collect_generic_names(return_type, names);
+            collect_generic_names(&function.return_type, names);
         }
-        HirType::Tuple(items) => {
+        ValkyrieType::Tuple(items) => {
             for item in items {
                 collect_generic_names(item, names);
             }
         }
-        HirType::Array(item) => {
+        ValkyrieType::Array(item) => {
             collect_generic_names(item, names);
         }
-        HirType::TypeLambda { params: _, body } => {
+        ValkyrieType::TypeLambda(type_lambda) => {
+            let TypeLambda { params: _, body } = type_lambda.as_ref();
             collect_generic_names(body, names);
         }
-        HirType::TraitObject { type_args, .. } => {
+        ValkyrieType::TraitObject(TraitObject { type_arguments: type_args, .. }) => {
             for arg in type_args {
                 collect_generic_names(arg, names);
             }
         }
-        HirType::AssociatedType { base, type_args, .. } => {
-            collect_generic_names(base, names);
-            for arg in type_args {
+        ValkyrieType::Associated(associated) => {
+            collect_generic_names(&associated.base, names);
+            for arg in &associated.type_arguments {
                 collect_generic_names(arg, names);
             }
         }
-        HirType::Integer32
-        | HirType::Integer64
-        | HirType::Float32
-        | HirType::Float64
-        | HirType::Boolean
-        | HirType::Utf8
-        | HirType::Utf16
-        | HirType::Unit
-        | HirType::Void
-        | HirType::Infer
-        | HirType::Named(_)
-        | HirType::SelfType => {}
+        ValkyrieType::Integer8 { .. }
+        | ValkyrieType::Integer16 { .. }
+        | ValkyrieType::Integer32 { .. }
+        | ValkyrieType::Integer64 { .. }
+        | ValkyrieType::Integer128 { .. }
+        | ValkyrieType::Float32
+        | ValkyrieType::Float64
+        | ValkyrieType::Boolean
+        | ValkyrieType::Character
+        | ValkyrieType::Utf8
+        | ValkyrieType::Utf16
+        | ValkyrieType::Unit
+        | ValkyrieType::Void
+        | ValkyrieType::AutoType
+        | ValkyrieType::Named(_)
+        | ValkyrieType::r#SelfType => {}
     }
 }
 

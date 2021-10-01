@@ -1,5 +1,5 @@
 use valkyrie_compiler::type_checker::{ConstructorChainChecker, ConstructorChainError, ConstructorChainErrorKind};
-use valkyrie_types::{hir::HirType, Identifier};
+use valkyrie_types::{hir::ValkyrieType, Identifier};
 
 #[test]
 fn test_checker_creation() {
@@ -56,8 +56,8 @@ fn test_super_call_argument_type_mismatch_error() {
         Identifier::new("Child"),
         Identifier::new("Parent"),
         0,
-        HirType::Integer32,
-        HirType::Utf8,
+        ValkyrieType::Integer32,
+        ValkyrieType::Utf8,
         None,
     );
     assert!(error.message.contains("type mismatch"));

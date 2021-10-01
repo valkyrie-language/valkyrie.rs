@@ -40,7 +40,7 @@ pub enum HirStatementKind {
         /// The optional initializer expression.
         initializer: Option<Box<HirExpr>>,
         /// The optional type annotation.
-        ty: Option<super::HirType>,
+        ty: Option<super::ValkyrieType>,
     },
     /// An expression statement.
     Expr(Box<HirExpr>),
@@ -100,7 +100,7 @@ impl HirAttribute {
 
     /// Checks if this is a `@derive` attribute.
     pub fn is_derive(&self) -> bool {
-        self.name.0.first().map(|id| id.as_str() == "derive").unwrap_or(false)
+        self.name.parts().first().map(|id| id.as_str() == "derive").unwrap_or(false)
     }
 
     /// Extracts derive trait paths from this attribute.

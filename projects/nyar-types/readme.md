@@ -1,11 +1,11 @@
 # nyar-types
 
-`nyar-types` 是当前 Rust 自举主链使用的最小共享类型集。
+`nyar-types` 是 `nyar` 平台的底层共享类型包。
 
 ## 职责
-- 提供当前主链实际需要的通用名类型，例如 `QualifiedName`。
-- 提供最小兼容错误类型，例如 `NyarError`。
-- 只服务于当前 workspace 打通，不承载语言级 `HIR / MIR / LIR`。
+- 提供跨前端、跨分析层、跨 backend 都稳定成立的基础类型。
+- 提供通用名类型、能力标签、逻辑符号标识、最小错误载体。
+- 不承载语言级 `HIR / MIR / LIR`，也不承载目标专属容器模型。
 
 ## 禁止
 - 不在这里扩张成新的 `god object` 类型仓库。

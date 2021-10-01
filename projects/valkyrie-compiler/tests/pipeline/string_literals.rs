@@ -6,9 +6,15 @@ use valkyrie_types::{
 
 #[test]
 fn lowers_brace_interpolation_and_escaped_braces_into_hir_segments() {
-    let compiler = ValkyrieCompiler::new(SourceID(901));
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 901 });
     let module = compiler
-        .compile_source("micro main(name: utf8) {\n    let message = \"Hello, {name}!\";\n    let literal = \"Template: \\{name\\}\";\n}\n")
+        .compile_source(
+            r#"micro main(name: utf8) {
+    let message = "Hello, {name}!";
+    let literal = "Template: \{name\}";
+}
+"#,
+        )
         .unwrap();
 
     let HirStatementKind::Let { initializer: Some(message), .. } = &module.functions[0].body.statements[0].kind

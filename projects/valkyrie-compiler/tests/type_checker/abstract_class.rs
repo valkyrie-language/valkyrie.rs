@@ -14,7 +14,7 @@ fn create_abstract_class(name: &str, abstract_methods: Vec<Identifier>) -> HirSt
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: valkyrie_types::hir::HirType::Integer64,
+            ty: valkyrie_types::hir::ValkyrieType::Integer64,
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -41,7 +41,7 @@ fn create_concrete_class(name: &str, parents: Vec<HirParent>, methods: Vec<Ident
             annotations: vec![],
             generics: vec![],
             params: vec![],
-            return_type: valkyrie_types::hir::HirType::Unit,
+            return_type: valkyrie_types::hir::ValkyrieType::Unit,
             body: valkyrie_types::hir::HirBlock { statements: vec![], expr: None, span: SourceSpan::new(SourceID::default(), 0, 0) },
             span: SourceSpan::new(SourceID::default(), 0, 0),
             visibility: HirVisibility::public(),
@@ -59,7 +59,7 @@ fn create_concrete_class(name: &str, parents: Vec<HirParent>, methods: Vec<Ident
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: valkyrie_types::hir::HirType::Integer64,
+            ty: valkyrie_types::hir::ValkyrieType::Integer64,
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -154,7 +154,7 @@ fn test_abstract_method_with_body_error() {
         annotations: vec![],
         generics: vec![],
         params: vec![],
-        return_type: valkyrie_types::hir::HirType::Unit,
+        return_type: valkyrie_types::hir::ValkyrieType::Unit,
         body: valkyrie_types::hir::HirBlock {
             statements: vec![],
             expr: Some(Box::new(HirExpr {

@@ -2,7 +2,8 @@
 
 use valkyrie_types::{
     hir::{
-        HirAssociatedTypeImpl, HirAttribute, HirBlock, HirDocumentation, HirFunction, HirImpl, HirModule, HirStruct, HirType, HirVisibility,
+        HirAssociatedTypeImpl, HirAttribute, HirBlock, HirDocumentation, HirFunction, HirImpl, HirModule, HirStruct, HirVisibility,
+        ValkyrieType,
     },
     Identifier, NamePath, SourceID, SourceSpan,
 };
@@ -253,7 +254,7 @@ impl DeriveRegistry {
     }
 
     pub fn derive_trait(&self, target: &HirStruct, trait_path: &NamePath, existing_impls: &[HirImpl]) -> Result<Vec<HirImpl>, DeriveError> {
-        let trait_name = trait_path.0.last().map(|part| part.as_str()).unwrap_or("");
+        let trait_name = trait_path.parts().last().map(|part| part.as_str()).unwrap_or("");
 
         if existing_impls.iter().any(|impl_block| impl_block.trait_path.as_ref() == Some(trait_path)) {
             return Err(DeriveError::conflict(target.name.clone(), trait_name, "existing impl"));
@@ -411,7 +412,7 @@ fn make_impl(target: &HirStruct, trait_name: &str, methods: Vec<HirFunction>) ->
     HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(target.name.clone()),
+        target: ValkyrieType::Named(target.name.clone()),
         trait_path: Some(NamePath::new(vec![Identifier::new(trait_name)])),
         methods,
         associated_type_impls: Vec::<HirAssociatedTypeImpl>::new(),
@@ -426,7 +427,7 @@ fn make_method(name: &str) -> HirFunction {
         annotations: Vec::<HirAttribute>::new(),
         generics: vec![],
         params: vec![],
-        return_type: HirType::Unit,
+        return_type: ValkyrieType::Unit,
         body: HirBlock { statements: vec![], expr: None, span: empty_span() },
         span: empty_span(),
         visibility: HirVisibility::public(),

@@ -10,10 +10,12 @@ use std::{
 };
 
 use clap::Args;
-use miette::{miette, IntoDiagnostic, Result, WrapErr};
-use nyar::{backends::CompilationOptions, packaging::ArtifactSet, ArtifactKind, CanonicalTarget, TargetBackendFamily};
+use miette::{miette, IntoDiagnostic, NamedSource, Report, Result, WrapErr};
 use nyar_driver::{compile_with_bundled_backends, DriverCompileRequest, DriverRunContract};
-use valkyrie_compiler::{lir::LirTargetLane, LirLowerer, ValkyrieCompiler};
+use serde::Serialize;
+use valkyrie_compiler::{
+    lir::LirTargetLane, ArtifactKind, ArtifactSet, CanonicalTarget, CompilationOptions, LirLowerer, TargetBackendFamily, ValkyrieCompiler,
+};
 use valkyrie_parser::AstParser;
 
 use crate::{
@@ -34,26 +36,38 @@ pub struct BuildArgs {
     /// 输出目录。
     #[arg(short = 'o', long = "output")]
     pub output_dir: Option<PathBuf>,
+    /// 强制按 workspace 成员解析；若项目未注册则直接报错，不回退到 package 模式。
+    #[arg(long, default_value_t = false)]
+    pub workspace: bool,
 }
 
 /// 执行 `legion build`。
 pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     let workspace = LegionWorkspace::discover(&args.project_dir)?;
-    let plan = workspace.build_plan(&BuildRequest {
-        project_dir: args.project_dir.clone(),
-        target: args.target.clone(),
-        output_dir: args.output_dir.clone(),
-    })?;
+    let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
+    let (plan, fallback_to_package) =
+        if args.workspace { (workspace.build_plan(&request)?, false) } else { workspace.build_plan_with_local_fallback(&request)? };
 
     println!("workspace: {}", plan.workspace_root.display());
+    if fallback_to_package {
+        println!("mode: package");
+        println!("note: 当前目录存在 `legion.von`，但未注册到 workspace members，已回退到 package 模式");
+    }
+    else {
+        println!("mode: workspace");
+    }
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", plan.output_dir.display());
     println!("sources: {}", plan.project.source_files.len());
+    println!("host contracts: {}", plan.project.host_contracts.len());
+    println!("selected host providers: {}", plan.project.selected_host_providers.len());
 
     if plan.project.source_files.is_empty() {
         return Err(miette!("没有找到任何源码文件"));
     }
+
+    write_host_selection_spec(&plan.output_dir, &plan.project.selected_host_providers)?;
 
     let combined_source = load_combined_source(&plan.project.source_files)?;
     let arch = plan.project.build_target.target.arch.as_str();
@@ -61,8 +75,8 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     // 写入预处理后的源码，用于定位 parser 错误的字节偏移。
     let _ = fs::write("target/preprocessed-source.v", &combined_source);
     let compiler = ValkyrieCompiler::default();
-    let parser_root = AstParser::parse_root(&combined_source)?;
-    let hir_module = compiler.compile_source(&combined_source)?;
+    let parser_root = AstParser::parse_root(&combined_source).map_err(|error| attach_source_to_report(error, &combined_source))?;
+    let hir_module = compiler.lower_root(&parser_root).map_err(|error| attach_source_to_report(error, &combined_source))?;
     let target_profile = plan.project.build_target.target.to_profile(None);
     let lir_module = LirLowerer::lower_module_for_lane(&hir_module, lir_lane_for_backend(target_profile.backend_family));
 
@@ -80,15 +94,24 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
         optimize: false,
     };
 
-    let report = compile_with_bundled_backends(DriverCompileRequest {
-        parser_root: &parser_root,
-        hir_module: &hir_module,
+    let driver_input = valkyrie_compiler::lower_to_driver_input(
+        &hir_module,
         lir_module,
-        output_dir: &plan.output_dir,
+        target_profile.backend_family,
+        target_profile.runner_family(),
+        plan.output_dir.clone(),
+    )?;
+
+    if plan.project.build_target.msil {
+        let _ = valkyrie_compiler::write_clr_msil_sidecar(&plan.output_dir, &plan.project.name, &driver_input);
+    }
+
+    let requirement = driver_input.requirement(options.target.clone());
+    let report = compile_with_bundled_backends(DriverCompileRequest {
         artifact_name: &plan.project.name,
-        backend_family: target_profile.backend_family,
+        requirement,
+        input: driver_input,
         runner_family: target_profile.runner_family(),
-        emit_msil: plan.project.build_target.msil,
         generate_runtime_config: target_profile.artifact_policy.generate_runtime_config,
         options: &options,
     })?;
@@ -169,6 +192,36 @@ fn write_run_contract_spec(output_dir: &Path, spec: &DriverRunContract) -> Resul
     fs::write(&contract_path, content)
         .into_diagnostic()
         .map_err(|error| error.wrap_err(format!("写入运行契约失败 {}", contract_path.display())))
+}
+
+fn attach_source_to_report(error: impl Into<Report>, source: &str) -> Report {
+    error.into().with_source_code(NamedSource::new("combined-source.v", source.to_string()))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct HostSelectionEntry {
+    contract: String,
+    provider: String,
+    source_file: String,
+    line: usize,
+}
+
+fn write_host_selection_spec(output_dir: &Path, providers: &[crate::planner::PlannedHostProvider]) -> Result<()> {
+    let output_path = output_dir.join("host-selection.txt");
+    let entries: Vec<HostSelectionEntry> = providers
+        .iter()
+        .map(|item| HostSelectionEntry {
+            contract: item.contract.clone(),
+            provider: item.symbol.clone(),
+            source_file: item.source_file.display().to_string(),
+            line: item.line,
+        })
+        .collect();
+    let content = write_von_pretty(&entries).wrap_err_with(|| format!("序列化 host 选择结果失败 {}", output_path.display()))?;
+    fs::create_dir_all(output_dir).into_diagnostic().map_err(|error| error.wrap_err(format!("创建输出目录失败 {}", output_dir.display())))?;
+    fs::write(&output_path, content)
+        .into_diagnostic()
+        .map_err(|error| error.wrap_err(format!("写入 host 选择结果失败 {}", output_path.display())))
 }
 
 /// 预处理源码中的模板指令，根据目标架构选择正确的分支。

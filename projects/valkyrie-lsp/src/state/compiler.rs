@@ -2,7 +2,7 @@ use super::{DocumentState, GlobalSymbol, ServerState, SymbolHasher};
 use oak_lsp::types::SymbolKind;
 use oak_valkyrie::ast::ValkyrieRoot as ProgramRoot;
 use tracing::{debug, error, info};
-use valkyrie_compiler::pipeline::ValkyrieCompiler;
+use valkyrie_compiler::ValkyrieCompiler;
 use valkyrie_types::{SourceID, ValkyrieError};
 
 impl ServerState {

@@ -2,7 +2,7 @@ use valkyrie_compiler::type_checker::{ImplyChecker, ImplyErrorKind};
 use valkyrie_types::{
     hir::{
         HirAssociatedConst, HirAssociatedConstImpl, HirAssociatedType, HirAssociatedTypeImpl, HirBlock, HirDocumentation, HirExpr, HirExprKind,
-        HirFunction, HirIdentifier, HirImpl, HirLiteral, HirModule, HirParam, HirTrait, HirType, HirVisibility, HirWhereConstraint,
+        HirFunction, HirIdentifier, HirImpl, HirLiteral, HirModule, HirParam, HirTrait, HirVisibility, HirWhereConstraint, ValkyrieType,
     },
     Identifier, NamePath, SourceID, SourceSpan,
 };
@@ -11,16 +11,16 @@ use valkyrie_types::{
 fn imply_checker_reports_missing_members_and_signature_mismatch() {
     let trait_def = trait_with_contract(
         "Iterator",
-        vec![method("next", vec![HirType::Integer64], HirType::Integer64)],
+        vec![method("next", vec![ValkyrieType::Integer64], ValkyrieType::Integer64)],
         vec![HirAssociatedType::new(Identifier::new("Item"), span())],
-        vec![HirAssociatedConst::new(Identifier::new("SIZE"), HirType::Integer64, span())],
+        vec![HirAssociatedConst::new(Identifier::new("SIZE"), ValkyrieType::Integer64, span())],
     );
     let impl_block = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Display"])],
-        target: HirType::Named(Identifier::new("Counter")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Display"])],
+        target: ValkyrieType::Named(Identifier::new("Counter")),
         trait_path: Some(path("Iterator")),
-        methods: vec![method("next", vec![HirType::Boolean], HirType::Integer64)],
+        methods: vec![method("next", vec![ValkyrieType::Boolean], ValkyrieType::Integer64)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -40,22 +40,22 @@ fn imply_checker_reports_missing_members_and_signature_mismatch() {
 
 #[test]
 fn imply_checker_reports_duplicate_trait_impls_when_where_matches() {
-    let trait_def = trait_with_contract("Display", vec![method("show", vec![], HirType::Utf8)], vec![], vec![]);
+    let trait_def = trait_with_contract("Display", vec![method("show", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let first_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
     let second_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -65,28 +65,28 @@ fn imply_checker_reports_duplicate_trait_impls_when_where_matches() {
     assert!(errors.iter().any(|error| matches!(
         error.kind,
         ImplyErrorKind::DuplicateImpl { ref target, trait_name: Some(ref trait_name) }
-            if target == &HirType::Named(Identifier::new("Box")) && trait_name == &path("Display")
+            if target == &ValkyrieType::Named(Identifier::new("Box")) && trait_name == &path("Display")
     )));
 }
 
 #[test]
 fn imply_checker_reports_overlapping_trait_impls_when_where_is_incomparable() {
-    let trait_def = trait_with_contract("Display", vec![method("show", vec![], HirType::Utf8)], vec![], vec![]);
+    let trait_def = trait_with_contract("Display", vec![method("show", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let first_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
     let second_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Debug"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Debug"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -96,28 +96,28 @@ fn imply_checker_reports_overlapping_trait_impls_when_where_is_incomparable() {
     assert!(errors.iter().any(|error| matches!(
         error.kind,
         ImplyErrorKind::OverlappingImpl { ref target, trait_name: Some(ref trait_name) }
-            if target == &HirType::Named(Identifier::new("Box")) && trait_name == &path("Display")
+            if target == &ValkyrieType::Named(Identifier::new("Box")) && trait_name == &path("Display")
     )));
 }
 
 #[test]
 fn imply_checker_accepts_more_specific_where_impl() {
-    let trait_def = trait_with_contract("Display", vec![method("show", vec![], HirType::Utf8)], vec![], vec![]);
+    let trait_def = trait_with_contract("Display", vec![method("show", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let general_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
     let specific_impl = HirImpl {
         generics: vec![],
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone", "Debug"])],
-        target: HirType::Named(Identifier::new("Box")),
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone", "Debug"])],
+        target: ValkyrieType::Named(Identifier::new("Box")),
         trait_path: Some(path("Display")),
-        methods: vec![method("show", vec![], HirType::Utf8)],
+        methods: vec![method("show", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -129,17 +129,17 @@ fn imply_checker_accepts_more_specific_where_impl() {
 
 #[test]
 fn imply_checker_reports_missing_super_trait_impl() {
-    let readable = trait_with_contract("Readable", vec![method("read", vec![], HirType::Utf8)], vec![], vec![]);
+    let readable = trait_with_contract("Readable", vec![method("read", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let buffered = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)], vec![], vec![])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)], vec![], vec![])
     };
     let impl_block = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Reader")),
+        target: ValkyrieType::Named(Identifier::new("Reader")),
         trait_path: Some(path("BufferedReadable")),
-        methods: vec![method("fill_buf", vec![], HirType::Utf8)],
+        methods: vec![method("fill_buf", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -151,32 +151,32 @@ fn imply_checker_reports_missing_super_trait_impl() {
         ImplyErrorKind::MissingSuperTraitImpl { ref trait_name, ref super_trait, ref target }
             if trait_name == &path("BufferedReadable")
                 && super_trait == &path("Readable")
-                && target == &HirType::Named(Identifier::new("Reader"))
+                && target == &ValkyrieType::Named(Identifier::new("Reader"))
     )));
 }
 
 #[test]
 fn imply_checker_accepts_explicit_super_trait_impl_chain() {
-    let readable = trait_with_contract("Readable", vec![method("read", vec![], HirType::Utf8)], vec![], vec![]);
+    let readable = trait_with_contract("Readable", vec![method("read", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let buffered = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)], vec![], vec![])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)], vec![], vec![])
     };
     let readable_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Reader")),
+        target: ValkyrieType::Named(Identifier::new("Reader")),
         trait_path: Some(path("Readable")),
-        methods: vec![method("read", vec![], HirType::Utf8)],
+        methods: vec![method("read", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
     let buffered_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Reader")),
+        target: ValkyrieType::Named(Identifier::new("Reader")),
         trait_path: Some(path("BufferedReadable")),
-        methods: vec![method("fill_buf", vec![], HirType::Utf8)],
+        methods: vec![method("fill_buf", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -188,30 +188,30 @@ fn imply_checker_accepts_explicit_super_trait_impl_chain() {
 
 #[test]
 fn imply_checker_reports_missing_transitive_super_trait_impl() {
-    let readable = trait_with_contract("Readable", vec![method("read", vec![], HirType::Utf8)], vec![], vec![]);
+    let readable = trait_with_contract("Readable", vec![method("read", vec![], ValkyrieType::Utf8)], vec![], vec![]);
     let seekable = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Readable"))],
-        ..trait_with_contract("Seekable", vec![method("seek", vec![], HirType::Unit)], vec![], vec![])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Readable"))],
+        ..trait_with_contract("Seekable", vec![method("seek", vec![], ValkyrieType::Unit)], vec![], vec![])
     };
     let buffered = HirTrait {
-        super_traits: vec![HirType::Named(Identifier::new("Seekable"))],
-        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], HirType::Utf8)], vec![], vec![])
+        super_traits: vec![ValkyrieType::Named(Identifier::new("Seekable"))],
+        ..trait_with_contract("BufferedReadable", vec![method("fill_buf", vec![], ValkyrieType::Utf8)], vec![], vec![])
     };
     let seekable_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Reader")),
+        target: ValkyrieType::Named(Identifier::new("Reader")),
         trait_path: Some(path("Seekable")),
-        methods: vec![method("seek", vec![], HirType::Unit)],
+        methods: vec![method("seek", vec![], ValkyrieType::Unit)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
     let buffered_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Reader")),
+        target: ValkyrieType::Named(Identifier::new("Reader")),
         trait_path: Some(path("BufferedReadable")),
-        methods: vec![method("fill_buf", vec![], HirType::Utf8)],
+        methods: vec![method("fill_buf", vec![], ValkyrieType::Utf8)],
         associated_type_impls: vec![],
         associated_const_impls: vec![],
     };
@@ -223,7 +223,7 @@ fn imply_checker_reports_missing_transitive_super_trait_impl() {
         ImplyErrorKind::MissingSuperTraitImpl { ref trait_name, ref super_trait, ref target }
             if trait_name == &path("BufferedReadable")
                 && super_trait == &path("Readable")
-                && target == &HirType::Named(Identifier::new("Reader"))
+                && target == &ValkyrieType::Named(Identifier::new("Reader"))
     )));
 }
 
@@ -231,25 +231,25 @@ fn imply_checker_reports_missing_transitive_super_trait_impl() {
 fn imply_checker_reports_unknown_and_duplicate_associated_members() {
     let trait_def = trait_with_contract(
         "Iterator",
-        vec![method("next", vec![], HirType::Integer64)],
+        vec![method("next", vec![], ValkyrieType::Integer64)],
         vec![HirAssociatedType::new(Identifier::new("Item"), span())],
-        vec![HirAssociatedConst::new(Identifier::new("SIZE"), HirType::Integer64, span()).with_default(literal_i64(1))],
+        vec![HirAssociatedConst::new(Identifier::new("SIZE"), ValkyrieType::Integer64, span()).with_default(literal_i64(1))],
     );
     let impl_block = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Counter")),
+        target: ValkyrieType::Named(Identifier::new("Counter")),
         trait_path: Some(path("Iterator")),
-        methods: vec![method("next", vec![], HirType::Integer64)],
+        methods: vec![method("next", vec![], ValkyrieType::Integer64)],
         associated_type_impls: vec![
-            HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer64, span()),
-            HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Integer64, span()),
-            HirAssociatedTypeImpl::new(Identifier::new("Extra"), HirType::Boolean, span()),
+            HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Integer64, span()),
+            HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Integer64, span()),
+            HirAssociatedTypeImpl::new(Identifier::new("Extra"), ValkyrieType::Boolean, span()),
         ],
         associated_const_impls: vec![
-            associated_const_impl("SIZE", Some(HirType::Boolean)),
-            associated_const_impl("SIZE", Some(HirType::Integer64)),
-            associated_const_impl("UNKNOWN", Some(HirType::Integer64)),
+            associated_const_impl("SIZE", Some(ValkyrieType::Boolean)),
+            associated_const_impl("SIZE", Some(ValkyrieType::Integer64)),
+            associated_const_impl("UNKNOWN", Some(ValkyrieType::Integer64)),
         ],
     };
 
@@ -276,20 +276,20 @@ fn imply_checker_reports_unknown_and_duplicate_associated_members() {
 fn imply_checker_reports_associated_const_value_type_mismatch() {
     let trait_def = trait_with_contract(
         "Iterator",
-        vec![method("next", vec![], HirType::Integer64)],
+        vec![method("next", vec![], ValkyrieType::Integer64)],
         vec![],
-        vec![HirAssociatedConst::new(Identifier::new("SIZE"), HirType::Integer64, span())],
+        vec![HirAssociatedConst::new(Identifier::new("SIZE"), ValkyrieType::Integer64, span())],
     );
     let impl_block = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Counter")),
+        target: ValkyrieType::Named(Identifier::new("Counter")),
         trait_path: Some(path("Iterator")),
-        methods: vec![method("next", vec![], HirType::Integer64)],
+        methods: vec![method("next", vec![], ValkyrieType::Integer64)],
         associated_type_impls: vec![],
         associated_const_impls: vec![HirAssociatedConstImpl {
             name: Identifier::new("SIZE"),
-            const_type: Some(HirType::Integer64),
+            const_type: Some(ValkyrieType::Integer64),
             value: HirExpr { kind: HirExprKind::Literal(HirLiteral::Bool(true)), span: span() },
             span: span(),
         }],
@@ -300,7 +300,7 @@ fn imply_checker_reports_associated_const_value_type_mismatch() {
     assert!(errors.iter().any(|error| matches!(
         error.kind,
         ImplyErrorKind::AssociatedConstValueTypeMismatch { ref name, ref expected, ref found, .. }
-            if name == &Identifier::new("SIZE") && expected == &HirType::Integer64 && found == &HirType::Boolean
+            if name == &Identifier::new("SIZE") && expected == &ValkyrieType::Integer64 && found == &ValkyrieType::Boolean
     )));
 }
 
@@ -309,7 +309,7 @@ fn imply_checker_reports_unknown_trait() {
     let impl_block = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Counter")),
+        target: ValkyrieType::Named(Identifier::new("Counter")),
         trait_path: Some(path("MissingTrait")),
         methods: vec![],
         associated_type_impls: vec![],
@@ -362,7 +362,7 @@ fn module(traits: Vec<HirTrait>, impls: Vec<HirImpl>) -> HirModule {
     }
 }
 
-fn method(name: &str, params: Vec<HirType>, return_type: HirType) -> HirFunction {
+fn method(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> HirFunction {
     HirFunction {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
@@ -385,7 +385,7 @@ fn method(name: &str, params: Vec<HirType>, return_type: HirType) -> HirFunction
     }
 }
 
-fn associated_const_impl(name: &str, const_type: Option<HirType>) -> HirAssociatedConstImpl {
+fn associated_const_impl(name: &str, const_type: Option<ValkyrieType>) -> HirAssociatedConstImpl {
     HirAssociatedConstImpl { name: Identifier::new(name), const_type, value: literal_i64(1), span: span() }
 }
 
@@ -393,7 +393,7 @@ fn literal_i64(value: i64) -> HirExpr {
     HirExpr { kind: HirExprKind::Literal(HirLiteral::Integer64(value)), span: span() }
 }
 
-fn where_constraint(target: HirType, bounds: Vec<&str>) -> HirWhereConstraint {
+fn where_constraint(target: ValkyrieType, bounds: Vec<&str>) -> HirWhereConstraint {
     HirWhereConstraint { target, bounds: bounds.into_iter().map(path).collect(), span: span() }
 }
 

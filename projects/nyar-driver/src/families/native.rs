@@ -1,23 +1,27 @@
 use miette::Result;
-use native_backend::{compile_native_bundle, NativeCompileRequest};
-use nyar::TargetBackendFamily;
+use native_backend::NativeBinaryBackend;
+use nyar::{backends::TargetCodeGenBackend, BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane};
 
 use super::BundledFamilyCompiler;
-use crate::{DriverCompileReport, DriverCompileRequest};
+use crate::{DriverBackendInput, DriverCompileReport, DriverCompileRequest};
 
 pub(super) struct NativeFamilyCompiler;
 
-impl BundledFamilyCompiler for NativeFamilyCompiler {
-    fn family(&self) -> TargetBackendFamily {
-        TargetBackendFamily::Native
-    }
+pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) -> bool {
+    requirement.lane == TargetLane::Native
+        && requirement.input_kind == BackendInputKind::CoffObject
+        && requirement.target.family == TargetFamily::Native
+}
 
+impl BundledFamilyCompiler for NativeFamilyCompiler {
     fn compile(&self, request: DriverCompileRequest<'_>) -> Result<DriverCompileReport> {
-        let report = compile_native_bundle(NativeCompileRequest {
-            lir_module: request.lir_module,
-            output_dir: request.output_dir.to_path_buf(),
-            options: request.options,
-        })?;
-        Ok(DriverCompileReport { artifacts: report.artifacts, entry_symbol: None, run_contract: None })
+        let DriverBackendInput::Native(input) = request.input
+        else {
+            return Err(miette::miette!("`native` 家族请求必须携带 `NativeBinaryBackendInput`"));
+        };
+        let backend = NativeBinaryBackend::new();
+        backend.validate(&input)?;
+        let artifacts = backend.compile(input, request.options)?;
+        Ok(DriverCompileReport { artifacts, entry_symbol: None, run_contract: None })
     }
 }

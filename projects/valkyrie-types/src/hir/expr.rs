@@ -1,6 +1,6 @@
 //! Expression, capture, and capture mode definitions for HIR.
 
-use super::{HirBlock, HirFunction, HirGeneric, HirIdentifier, HirLiteral, HirMatchArm, HirParam, HirPattern, HirType};
+use super::{GenericType, HirBlock, HirFunction, HirIdentifier, HirLiteral, HirMatchArm, HirParam, HirPattern, ValkyrieType};
 use crate::{Identifier, NamePath, SourceSpan};
 
 /// An expression in HIR.
@@ -54,7 +54,7 @@ pub struct HirCapture {
     /// The identifier of the captured variable.
     pub identifier: HirIdentifier,
     /// The type of the captured variable.
-    pub ty: HirType,
+    pub ty: ValkyrieType,
     /// How the variable is captured.
     pub mode: CaptureMode,
     /// Whether the capture is mutable.
@@ -65,6 +65,32 @@ pub struct HirCapture {
     /// whether the captured variable should be stored on the stack
     /// or heap based on whether the anonymous class escapes.
     pub storage_hint: CaptureStorage,
+}
+
+/// Resolved callable domain after HIR overload selection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum HirCallableDomain {
+    /// 普通函数调用。
+    Function,
+    /// 普通构造调用。
+    Constructor,
+    /// 运算符语法糖降级后的可调用项。
+    Operator,
+    /// extractor 语法糖降级后的可调用项。
+    Extractor,
+}
+
+/// Resolved call metadata attached to canonical HIR calls.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct HirResolvedCall {
+    /// The resolved symbol path.
+    pub symbol: NamePath,
+    /// The callable domain.
+    pub domain: HirCallableDomain,
+    /// The resolved return type.
+    pub return_type: ValkyrieType,
 }
 
 /// The kind of an expression.
@@ -83,6 +109,8 @@ pub enum HirExprKind {
         callee: Box<HirExpr>,
         /// The arguments.
         args: Vec<HirExpr>,
+        /// HIR overload resolution result for canonical calls.
+        resolved: Option<HirResolvedCall>,
     },
     /// A constructor call.
     Construct {
@@ -90,6 +118,8 @@ pub enum HirExprKind {
         name: Identifier,
         /// The arguments.
         args: Vec<HirExpr>,
+        /// HIR overload resolution result for constructor calls.
+        resolved: Option<HirResolvedCall>,
     },
     /// Field initialization expression.
     ///
@@ -105,25 +135,6 @@ pub enum HirExprKind {
         /// The field value.
         value: Box<HirExpr>,
     },
-    /// Subscript expression.
-    Subscript {
-        /// The object expression.
-        object: Box<HirExpr>,
-        /// The index expression.
-        index: Box<HirExpr>,
-    },
-    /// 数组元素赋值表达式：`object[index] = value`。
-    ///
-    /// 将 `value` 写入 `object` 数组的 `index` 位置。
-    /// 结果类型为 `Unit`。
-    StoreSubscript {
-        /// 被写入的数组对象。
-        object: Box<HirExpr>,
-        /// 索引表达式。
-        index: Box<HirExpr>,
-        /// 要写入的值。
-        value: Box<HirExpr>,
-    },
     /// 数组创建表达式：`new [ElementType](length)`。
     ///
     /// 创建一个指定元素类型和长度的一维零基数组。
@@ -131,9 +142,17 @@ pub enum HirExprKind {
     /// 结果类型为 `Array<ElementType>`。
     ArrayNew {
         /// 数组元素类型。
-        element_type: HirType,
+        element_type: ValkyrieType,
         /// 数组长度表达式。
         length: Box<HirExpr>,
+    },
+    /// 数组字面量表达式：`[item1, item2, ...]`。
+    ///
+    /// 表示按顺序提供的一组数组元素。
+    /// 它拥有独立的构造语义，不借用 `[]=` 语法糖来表达。
+    ArrayLiteral {
+        /// 数组元素列表。
+        items: Vec<HirExpr>,
     },
     /// 字段访问表达式：`object.field`。
     ///
@@ -161,18 +180,18 @@ pub enum HirExprKind {
         /// The callee expression before applying generics.
         callee: Box<HirExpr>,
         /// The generic arguments.
-        arguments: Vec<HirType>,
+        arguments: Vec<ValkyrieType>,
     },
     /// A block expression.
     Block(Box<HirBlock>),
     /// A lambda expression.
     Lambda {
         /// Generic parameters.
-        generics: Vec<HirGeneric>,
+        generics: Vec<GenericType>,
         /// Parameters.
         params: Vec<HirParam>,
         /// Return type.
-        return_type: HirType,
+        return_type: ValkyrieType,
         /// The body.
         body: Box<HirBlock>,
     },
@@ -210,6 +229,17 @@ pub enum HirExprKind {
         /// The scrutinee.
         scrutinee: Box<HirExpr>,
         /// The match arms.
+        arms: Vec<HirMatchArm>,
+    },
+    /// A statement-oriented case region.
+    ///
+    /// Uses the same source syntax shape as `match`, but preserves
+    /// statement semantics so `fallthrough` does not leak into
+    /// value-producing match expressions.
+    Case {
+        /// The scrutinee.
+        scrutinee: Box<HirExpr>,
+        /// The case arms.
         arms: Vec<HirMatchArm>,
     },
     /// A loop expression.
@@ -252,6 +282,12 @@ pub enum HirExprKind {
     Yield(Option<Box<HirExpr>>),
     /// A yield from expression.
     YieldFrom(Box<HirExpr>),
+    /// An await postfix control-flow expression.
+    Await(Box<HirExpr>),
+    /// An awake postfix control-flow expression.
+    Awake(Box<HirExpr>),
+    /// A block postfix control-flow expression.
+    BlockOn(Box<HirExpr>),
     /// A raise (throw) expression.
     Raise(Box<HirExpr>),
     /// A resume expression.
@@ -266,6 +302,10 @@ pub enum HirExprKind {
         /// The catch arms.
         arms: Vec<HirMatchArm>,
     },
+    /// A case fallthrough control-flow marker.
+    ///
+    /// 仅允许出现在 `case` statement 体系中；当前作为占位，`match` 表达式与普通块中使用应被语义层拒绝。
+    Fallthrough,
     /// With expression for functional record updates.
     ///
     /// Creates a new record by copying an existing one and updating specified fields.

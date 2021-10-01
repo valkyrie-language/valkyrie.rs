@@ -1,6 +1,6 @@
 //! Struct, parent, and field definitions for HIR.
 
-use super::{HirDocumentation, HirFunction, HirProperty, HirType, HirVisibility};
+use super::{HirDocumentation, HirFunction, HirProperty, HirVisibility, ValkyrieType};
 use crate::{Identifier, NamePath};
 
 /// A parent class with optional alias for renamed inheritance.
@@ -32,7 +32,7 @@ pub struct HirParent {
     pub alias: Option<Identifier>,
 
     /// Generic arguments for the parent class.
-    pub generics: Vec<HirType>,
+    pub generics: Vec<ValkyrieType>,
 
     /// Runtime offset for accessing parent fields in the object layout.
     ///
@@ -57,12 +57,12 @@ impl HirParent {
     }
 
     /// Creates a parent reference with generic arguments.
-    pub fn with_generics(name: NamePath, generics: Vec<HirType>) -> Self {
+    pub fn with_generics(name: NamePath, generics: Vec<ValkyrieType>) -> Self {
         Self { name, alias: None, generics, offset: None }
     }
 
     /// Creates a fully specified parent reference.
-    pub fn full(name: NamePath, alias: Option<Identifier>, generics: Vec<HirType>) -> Self {
+    pub fn full(name: NamePath, alias: Option<Identifier>, generics: Vec<ValkyrieType>) -> Self {
         Self { name, alias, generics, offset: None }
     }
 
@@ -79,7 +79,7 @@ impl HirParent {
 
     /// Returns the alias or the parent name as a fallback.
     pub fn alias_or_name(&self) -> &str {
-        self.alias.as_ref().map(|a| a.as_str()).unwrap_or_else(|| self.name.0.first().map(|id| id.as_str()).unwrap_or(""))
+        self.alias.as_ref().map(|a| a.as_str()).unwrap_or_else(|| self.name.parts().first().map(|id| id.as_str()).unwrap_or(""))
     }
 
     /// Returns the storage slot name used to access this parent.
@@ -89,7 +89,7 @@ impl HirParent {
     /// is normalized to `snake_case`.
     pub fn slot_name(&self) -> Identifier {
         self.alias.clone().unwrap_or_else(|| {
-            let base_name = self.name.0.last().map(|id| id.as_str()).unwrap_or("");
+            let base_name = self.name.parts().last().map(|id| id.as_str()).unwrap_or("");
             Identifier::new(&to_snake_case(base_name))
         })
     }
@@ -148,7 +148,7 @@ pub struct HirStruct {
     /// Documentation for the struct.
     pub doc: HirDocumentation,
     /// Generic parameters for the struct.
-    pub generics: Vec<super::HirGeneric>,
+    pub generics: Vec<super::GenericType>,
     /// Parent classes this struct inherits from.
     pub parents: Vec<HirParent>,
     /// Fields of the struct.
@@ -321,24 +321,24 @@ pub struct AbstractPropertyRequirement {
     /// Whether a setter implementation is required.
     pub requires_setter: bool,
     /// The type of the property.
-    pub ty: HirType,
+    pub ty: ValkyrieType,
     /// The parent class that declared this abstract property.
     pub parent_class: Option<Identifier>,
 }
 
 impl AbstractPropertyRequirement {
     /// Creates a new abstract property requirement.
-    pub fn new(name: Identifier, requires_getter: bool, requires_setter: bool, ty: HirType) -> Self {
+    pub fn new(name: Identifier, requires_getter: bool, requires_setter: bool, ty: ValkyrieType) -> Self {
         Self { name, requires_getter, requires_setter, ty, parent_class: None }
     }
 
     /// Creates a requirement for a read-only property (getter only).
-    pub fn readonly(name: Identifier, ty: HirType) -> Self {
+    pub fn readonly(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, true, false, ty)
     }
 
     /// Creates a requirement for a read-write property (getter and setter).
-    pub fn readwrite(name: Identifier, ty: HirType) -> Self {
+    pub fn readwrite(name: Identifier, ty: ValkyrieType) -> Self {
         Self::new(name, true, true, ty)
     }
 
@@ -373,7 +373,7 @@ pub struct HirField {
     /// Documentation for the field.
     pub doc: HirDocumentation,
     /// The type of the field.
-    pub ty: HirType,
+    pub ty: ValkyrieType,
     /// Visibility of the field.
     pub visibility: HirVisibility,
     /// Whether this field is read-only.

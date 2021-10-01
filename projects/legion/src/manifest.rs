@@ -4,8 +4,8 @@ use std::{
 };
 
 use miette::{Diagnostic, Severity};
-use nyar::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use valkyrie_compiler::{CanonicalTarget, PublishFormat, RunnerSelector};
 use von_parser::{from_str, VonError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -74,6 +74,20 @@ impl Default for PublishTargetSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct SdkVendorConfig {
+    #[serde(default)]
+    pub organization: Option<String>,
+    #[serde(default)]
+    pub host: Option<String>,
+    #[serde(default)]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub targets: Vec<String>,
+    #[serde(default)]
+    pub publish: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct WorkspaceDefaults {
     #[serde(default)]
     pub version: Option<String>,
@@ -122,6 +136,8 @@ pub struct ProjectManifest {
     pub build: Vec<BuildTargetSpec>,
     #[serde(default)]
     pub publish: Vec<PublishTargetSpec>,
+    #[serde(rename = "sdk-vendor", default)]
+    pub sdk_vendor: Option<SdkVendorConfig>,
 }
 
 #[derive(Debug)]

@@ -1,10 +1,10 @@
 use valkyrie_compiler::derive::*;
 use valkyrie_types::{
-    hir::{HirDocumentation, HirField, HirType, HirVisibility},
+    hir::{HirDocumentation, HirField, HirVisibility, ValkyrieType},
     Identifier,
 };
 
-fn create_test_struct(name: &str, fields: Vec<(&str, HirType)>) -> valkyrie_types::hir::HirStruct {
+fn create_test_struct(name: &str, fields: Vec<(&str, ValkyrieType)>) -> valkyrie_types::hir::HirStruct {
     valkyrie_types::hir::HirStruct {
         name: Identifier::new(name),
         namespace: vec![],
@@ -44,7 +44,7 @@ fn test_hash_derive_name() {
 #[test]
 fn test_can_derive_simple_struct() {
     let derive = HashDerive::new();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
     assert!(derive.can_derive(&target).is_ok());
 }
 
@@ -59,7 +59,7 @@ fn test_cannot_derive_abstract_class() {
 #[test]
 fn test_derive_generates_impl() {
     let derive = HashDerive::new();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
     let result = derive.derive(&target);
     assert!(result.is_ok());
 
@@ -80,6 +80,6 @@ fn test_derive_empty_struct() {
 #[test]
 fn test_hash_with_string_field() {
     let derive = HashDerive::new();
-    let target = create_test_struct("Person", vec![("name", HirType::Utf8), ("age", HirType::Integer32)]);
+    let target = create_test_struct("Person", vec![("name", ValkyrieType::Utf8), ("age", ValkyrieType::Integer32)]);
     assert!(derive.can_derive(&target).is_ok());
 }

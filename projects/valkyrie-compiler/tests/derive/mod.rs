@@ -6,11 +6,11 @@ mod injection;
 
 use valkyrie_compiler::derive::*;
 use valkyrie_types::{
-    hir::{HirDocumentation, HirField, HirImpl, HirStruct, HirType, HirVisibility},
+    hir::{HirDocumentation, HirField, HirImpl, HirStruct, HirVisibility, ValkyrieType},
     Identifier, NamePath,
 };
 
-fn create_test_struct(name: &str, fields: Vec<(&str, HirType)>) -> HirStruct {
+fn create_test_struct(name: &str, fields: Vec<(&str, ValkyrieType)>) -> HirStruct {
     HirStruct {
         name: Identifier::new(name),
         namespace: vec![],
@@ -99,7 +99,7 @@ fn test_derive_result() {
 #[test]
 fn test_derive_trait_success() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
 
     let trait_path = NamePath::new(vec![Identifier::new("Debug")]);
     let result = registry.derive_trait(&target, &trait_path, &[]);
@@ -114,14 +114,14 @@ fn test_derive_trait_success() {
 #[test]
 fn test_derive_trait_conflict() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
 
     let trait_path = NamePath::new(vec![Identifier::new("Debug")]);
 
     let existing_impl = HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new("Point")),
+        target: ValkyrieType::Named(Identifier::new("Point")),
         trait_path: Some(trait_path.clone()),
         methods: vec![],
         associated_type_impls: vec![],
@@ -138,7 +138,7 @@ fn test_derive_trait_conflict() {
 #[test]
 fn test_derive_all() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
 
     let traits = vec![NamePath::new(vec![Identifier::new("Debug")]), NamePath::new(vec![Identifier::new("Clone")])];
 
@@ -150,7 +150,7 @@ fn test_derive_all() {
 #[test]
 fn test_derive_eq_generates_two_impls() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32), ("y", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32), ("y", ValkyrieType::Integer32)]);
 
     let traits = vec![NamePath::new(vec![Identifier::new("Eq")])];
 
@@ -166,7 +166,7 @@ fn test_derive_eq_generates_two_impls() {
 #[test]
 fn test_derive_all_with_unknown_trait() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32)]);
 
     let traits = vec![NamePath::new(vec![Identifier::new("Debug")]), NamePath::new(vec![Identifier::new("UnknownTrait")])];
 
@@ -179,7 +179,7 @@ fn test_derive_all_with_unknown_trait() {
 #[test]
 fn test_can_derive() {
     let registry = create_builtin_registry();
-    let target = create_test_struct("Point", vec![("x", HirType::Integer32)]);
+    let target = create_test_struct("Point", vec![("x", ValkyrieType::Integer32)]);
 
     assert!(registry.can_derive(&target, "Debug").is_ok());
     assert!(registry.can_derive(&target, "UnknownTrait").is_err());

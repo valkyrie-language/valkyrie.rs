@@ -33,7 +33,7 @@ Valkyrie types map to JVM descriptors:
     - For `i64/f32/f64`: Use `lcmp/fcmpl/dcmpl` instructions, followed by `if<cond>` instructions to generate boolean values.
     - For object types (class, unite, string): Use `if_acmp<cond>` to implement reference equality comparison.
 - **Bitwise and Logical Operations**:
-    - `And`, `Or`, `Xor` mapped to `iand/land`, `ior/lor`, `ixor/lxor`.
+    - `And`, `OrPatternExpression`, `Xor` mapped to `iand/land`, `ior/lor`, `ixor/lxor`.
     - `Shl`, `Shr` mapped to `ishl/lshl`, `ishr/lshr`.
 - **Unary Operations**:
     - `Neg` mapped to `ineg/lneg/fneg/dneg`.

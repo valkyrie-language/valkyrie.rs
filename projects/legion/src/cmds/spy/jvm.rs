@@ -17,7 +17,11 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
     let Some(target) = &options.input
     else {
         return Err(miette!(
-            "用法：legion spy jvm <file> [--method <name>] [--list] [--json]\n  file               目标文件（.class / .jar）\n  --method <name>    输出包含指定名称的方法体\n  --list             列出所有方法签名\n  --json             以 JSON 格式输出"
+            r#"用法：legion spy jvm <file> [--method <name>] [--list] [--json]
+  file               目标文件（.class / .jar）
+  --method <name>    输出包含指定名称的方法体
+  --list             列出所有方法签名
+  --json             以 JSON 格式输出"#
         ));
     };
 

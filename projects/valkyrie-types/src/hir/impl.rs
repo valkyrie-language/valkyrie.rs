@@ -1,6 +1,6 @@
 //! Impl and derive definitions for HIR.
 
-use super::{HirAssociatedConstImpl, HirAssociatedTypeImpl, HirFunction, HirGeneric, HirType};
+use super::{GenericType, HirAssociatedConstImpl, HirAssociatedTypeImpl, HirFunction, ValkyrieType};
 use crate::{NamePath, SourceSpan};
 
 /// A structured `where` constraint attached to an impl block.
@@ -8,7 +8,7 @@ use crate::{NamePath, SourceSpan};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HirWhereConstraint {
     /// The constrained type.
-    pub target: HirType,
+    pub target: ValkyrieType,
     /// Trait bounds that the target must satisfy.
     pub bounds: Vec<NamePath>,
     /// Source span for error reporting.
@@ -53,11 +53,11 @@ pub struct HirImpl {
     ///
     /// For example, in `impl<T: Clone> Clone for Box<T>`, this would contain
     /// the generic parameter `T` with its `Clone` bound.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Structured `where` constraints attached to the impl header.
     pub where_constraints: Vec<HirWhereConstraint>,
     /// The target type being implemented.
-    pub target: HirType,
+    pub target: ValkyrieType,
     /// The trait being implemented (None for inherent impl blocks).
     pub trait_path: Option<NamePath>,
     /// Methods defined in this impl block.

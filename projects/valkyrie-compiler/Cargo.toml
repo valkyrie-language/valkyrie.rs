@@ -8,9 +8,17 @@ license.workspace = true
 repository = "https://github.com/valkyrie-language/valkyrie.rs"
 
 [dependencies]
+nyar = { workspace = true }
+nyar-driver = { workspace = true }
+clr-backend = { workspace = true }
+jvm-backend = { workspace = true }
+wasi-backend = { workspace = true }
+native-backend = { workspace = true }
+nyar-binary-format = { workspace = true }
 valkyrie-parser = { workspace = true }
 valkyrie-types = { workspace = true }
 nyar-types = { workspace = true }
 ordered-float = { workspace = true }
+miette = { workspace = true }
 
 [dev-dependencies]

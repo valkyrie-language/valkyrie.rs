@@ -1,6 +1,6 @@
 use valkyrie_compiler::type_checker::*;
 use valkyrie_types::{
-    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirModule, HirParent, HirProperty, HirStruct, HirType, HirVisibility},
+    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirModule, HirParent, HirProperty, HirStruct, HirVisibility, ValkyrieType},
     Identifier, NamePath, SourceID, SourceSpan,
 };
 
@@ -14,7 +14,7 @@ fn create_property_class(name: &str, properties: Vec<HirProperty>, parents: Vec<
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64 { signed: true },
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -32,7 +32,7 @@ fn create_property_class(name: &str, properties: Vec<HirProperty>, parents: Vec<
     }
 }
 
-fn create_getter(name: &str, ty: HirType, is_abstract: bool) -> HirFunction {
+fn create_getter(name: &str, ty: ValkyrieType, is_abstract: bool) -> HirFunction {
     HirFunction {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
@@ -50,7 +50,7 @@ fn create_getter(name: &str, ty: HirType, is_abstract: bool) -> HirFunction {
 
 fn create_property(
     name: &str,
-    ty: HirType,
+    ty: ValkyrieType,
     is_static: bool,
     is_virtual: bool,
     is_override: bool,
@@ -100,7 +100,7 @@ fn create_module(structs: Vec<HirStruct>) -> HirModule {
 fn test_virtual_static_conflict() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("pi", HirType::Float64, true, true, false, false, false, false);
+    let prop = create_property("pi", ValkyrieType::Float64, true, true, false, false, false, false);
     let class = create_property_class("MathConstants", vec![prop], vec![], false);
     let module = create_module(vec![class]);
 
@@ -115,7 +115,7 @@ fn test_virtual_static_conflict() {
 fn test_valid_static_property() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("pi", HirType::Float64, true, false, false, false, false, false);
+    let prop = create_property("pi", ValkyrieType::Float64, true, false, false, false, false, false);
     let class = create_property_class("MathConstants", vec![prop], vec![], false);
     let module = create_module(vec![class]);
 
@@ -127,8 +127,8 @@ fn test_valid_static_property() {
 fn test_lazy_property_with_setter() {
     let mut checker = PropertyChecker::new();
 
-    let mut prop = create_property("cached_value", HirType::Integer64, false, false, false, false, true, false);
-    prop.setter = Some(create_getter("cached_value", HirType::Integer64, false));
+    let mut prop = create_property("cached_value", ValkyrieType::Integer64 { signed: true }, false, false, false, false, true, false);
+    prop.setter = Some(create_getter("cached_value", ValkyrieType::Integer64 { signed: true }, false));
     prop.is_readonly = false;
 
     let class = create_property_class("Container", vec![prop], vec![], false);
@@ -143,7 +143,7 @@ fn test_lazy_property_with_setter() {
 fn test_valid_lazy_property() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("cached_value", HirType::Integer64, false, false, false, false, true, false);
+    let prop = create_property("cached_value", ValkyrieType::Integer64 { signed: true }, false, false, false, false, true, false);
     let class = create_property_class("Container", vec![prop], vec![], false);
     let module = create_module(vec![class]);
 
@@ -156,7 +156,7 @@ fn test_valid_lazy_property() {
 fn test_override_without_parent() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("area", HirType::Float64, false, false, true, false, false, false);
+    let prop = create_property("area", ValkyrieType::Float64, false, false, true, false, false, false);
     let class = create_property_class("Circle", vec![prop], vec![], false);
     let module = create_module(vec![class]);
 
@@ -169,7 +169,7 @@ fn test_override_without_parent() {
 fn test_abstract_property_in_concrete_class() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("id", HirType::Integer64, false, false, false, true, false, false);
+    let prop = create_property("id", ValkyrieType::Integer64 { signed: true }, false, false, false, true, false, false);
     let class = create_property_class("Entity", vec![prop], vec![], false);
     let module = create_module(vec![class]);
 
@@ -182,7 +182,7 @@ fn test_abstract_property_in_concrete_class() {
 fn test_valid_abstract_property() {
     let mut checker = PropertyChecker::new();
 
-    let prop = create_property("id", HirType::Integer64, false, false, false, true, false, false);
+    let prop = create_property("id", ValkyrieType::Integer64 { signed: true }, false, false, false, true, false, false);
     let class = create_property_class("Entity", vec![prop], vec![], true);
     let module = create_module(vec![class]);
 
@@ -211,7 +211,7 @@ fn test_property_error_display() {
 fn test_setter_validation_analyzer() {
     let mut analyzer = SetterValidationAnalyzer::new();
 
-    let prop = create_property("value", HirType::Integer64, false, false, false, false, false, false);
+    let prop = create_property("value", ValkyrieType::Integer64 { signed: true }, false, false, false, false, false, false);
     let conditions = analyzer.analyze(&prop);
 
     assert!(!conditions.is_empty());

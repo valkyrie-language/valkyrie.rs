@@ -1,13 +1,13 @@
 use valkyrie_compiler::hir::row::{RowMethodSignature, RowRequirement, RowRequirementError, RowRequirementItem};
 use valkyrie_types::{
-    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirIdentifier, HirParam, HirProperty, HirStruct, HirType, HirVisibility},
+    hir::{HirBlock, HirDocumentation, HirField, HirFunction, HirIdentifier, HirParam, HirProperty, HirStruct, HirVisibility, ValkyrieType},
     Identifier, SourceID, SourceSpan,
 };
 
 #[test]
 fn row_syntax_is_not_a_named_trait_entity() {
-    let first = RowRequirement::from_methods(vec![method_sig("g", vec![], HirType::Unit)]);
-    let second = RowRequirement::from_methods(vec![method_sig("g", vec![], HirType::Unit)]);
+    let first = RowRequirement::from_methods(vec![method_sig("g", vec![], ValkyrieType::Unit)]);
+    let second = RowRequirement::from_methods(vec![method_sig("g", vec![], ValkyrieType::Unit)]);
 
     assert_eq!(first, second);
     assert_eq!(first.methods().len(), 1);
@@ -15,9 +15,9 @@ fn row_syntax_is_not_a_named_trait_entity() {
 
 #[test]
 fn row_satisfaction_is_method_based() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("size", vec![], HirType::Integer32)]);
-    let field_only = struct_with_field("HasFieldOnly", "size", HirType::Integer32);
-    let method_based = struct_with_methods("HasMethod", vec![method("size", vec![], HirType::Integer32)]);
+    let requirement = RowRequirement::from_methods(vec![method_sig("size", vec![], ValkyrieType::Integer32)]);
+    let field_only = struct_with_field("HasFieldOnly", "size", ValkyrieType::Integer32);
+    let method_based = struct_with_methods("HasMethod", vec![method("size", vec![], ValkyrieType::Integer32)]);
 
     assert!(!requirement.is_satisfied_by(&field_only));
     assert!(requirement.is_satisfied_by(&method_based));
@@ -26,19 +26,19 @@ fn row_satisfaction_is_method_based() {
 #[test]
 fn public_field_exposes_getter_and_setter_rows() {
     let requirement = RowRequirement::from_methods(vec![
-        method_sig("get_size", vec![], HirType::Integer32),
-        method_sig("set_size", vec![HirType::Integer32], HirType::Unit),
+        method_sig("get_size", vec![], ValkyrieType::Integer32),
+        method_sig("set_size", vec![ValkyrieType::Integer32], ValkyrieType::Unit),
     ]);
-    let candidate = struct_with_field("HasPublicField", "size", HirType::Integer32);
+    let candidate = struct_with_field("HasPublicField", "size", ValkyrieType::Integer32);
 
     assert!(requirement.is_satisfied_by(&candidate));
 }
 
 #[test]
 fn readonly_public_field_exposes_only_getter_row() {
-    let getter_requirement = RowRequirement::from_methods(vec![method_sig("get_id", vec![], HirType::Integer64)]);
-    let setter_requirement = RowRequirement::from_methods(vec![method_sig("set_id", vec![HirType::Integer64], HirType::Unit)]);
-    let candidate = struct_with_field_with_visibility("Entity", "id", HirType::Integer64, HirVisibility::public(), true);
+    let getter_requirement = RowRequirement::from_methods(vec![method_sig("get_id", vec![], ValkyrieType::Integer64)]);
+    let setter_requirement = RowRequirement::from_methods(vec![method_sig("set_id", vec![ValkyrieType::Integer64], ValkyrieType::Unit)]);
+    let candidate = struct_with_field_with_visibility("Entity", "id", ValkyrieType::Integer64, HirVisibility::public(), true);
 
     assert!(getter_requirement.is_satisfied_by(&candidate));
     assert!(!setter_requirement.is_satisfied_by(&candidate));
@@ -46,17 +46,19 @@ fn readonly_public_field_exposes_only_getter_row() {
 
 #[test]
 fn private_field_does_not_expose_row_methods() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("get_secret", vec![], HirType::Utf8)]);
-    let candidate = struct_with_field_with_visibility("Vault", "secret", HirType::Utf8, HirVisibility::private(), false);
+    let requirement = RowRequirement::from_methods(vec![method_sig("get_secret", vec![], ValkyrieType::Utf8)]);
+    let candidate = struct_with_field_with_visibility("Vault", "secret", ValkyrieType::Utf8, HirVisibility::private(), false);
 
     assert!(!requirement.is_satisfied_by(&candidate));
 }
 
 #[test]
 fn private_method_does_not_participate_in_row_validation() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("secret", vec![], HirType::Unit)]);
-    let candidate =
-        struct_with_methods_and_visibility("Vault", vec![method_with_visibility("secret", vec![], HirType::Unit, HirVisibility::private())]);
+    let requirement = RowRequirement::from_methods(vec![method_sig("secret", vec![], ValkyrieType::Unit)]);
+    let candidate = struct_with_methods_and_visibility(
+        "Vault",
+        vec![method_with_visibility("secret", vec![], ValkyrieType::Unit, HirVisibility::private())],
+    );
 
     assert!(!requirement.is_satisfied_by(&candidate));
 }
@@ -64,19 +66,21 @@ fn private_method_does_not_participate_in_row_validation() {
 #[test]
 fn public_property_exposes_accessor_rows() {
     let requirement = RowRequirement::from_methods(vec![
-        method_sig("area", vec![], HirType::Integer32),
-        method_sig("set_area", vec![HirType::Integer32], HirType::Unit),
+        method_sig("area", vec![], ValkyrieType::Integer32),
+        method_sig("set_area", vec![ValkyrieType::Integer32], ValkyrieType::Unit),
     ]);
-    let candidate = struct_with_properties("Rect", vec![property_with_visibility("area", HirType::Integer32, HirVisibility::public(), false)]);
+    let candidate =
+        struct_with_properties("Rect", vec![property_with_visibility("area", ValkyrieType::Integer32, HirVisibility::public(), false)]);
 
     assert!(requirement.is_satisfied_by(&candidate));
 }
 
 #[test]
 fn readonly_public_property_exposes_only_getter_row() {
-    let getter_requirement = RowRequirement::from_methods(vec![method_sig("area", vec![], HirType::Integer32)]);
-    let setter_requirement = RowRequirement::from_methods(vec![method_sig("set_area", vec![HirType::Integer32], HirType::Unit)]);
-    let candidate = struct_with_properties("Rect", vec![property_with_visibility("area", HirType::Integer32, HirVisibility::public(), true)]);
+    let getter_requirement = RowRequirement::from_methods(vec![method_sig("area", vec![], ValkyrieType::Integer32)]);
+    let setter_requirement = RowRequirement::from_methods(vec![method_sig("set_area", vec![ValkyrieType::Integer32], ValkyrieType::Unit)]);
+    let candidate =
+        struct_with_properties("Rect", vec![property_with_visibility("area", ValkyrieType::Integer32, HirVisibility::public(), true)]);
 
     assert!(getter_requirement.is_satisfied_by(&candidate));
     assert!(!setter_requirement.is_satisfied_by(&candidate));
@@ -84,8 +88,9 @@ fn readonly_public_property_exposes_only_getter_row() {
 
 #[test]
 fn private_property_does_not_participate_in_row_validation() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("area", vec![], HirType::Integer32)]);
-    let candidate = struct_with_properties("Rect", vec![property_with_visibility("area", HirType::Integer32, HirVisibility::private(), true)]);
+    let requirement = RowRequirement::from_methods(vec![method_sig("area", vec![], ValkyrieType::Integer32)]);
+    let candidate =
+        struct_with_properties("Rect", vec![property_with_visibility("area", ValkyrieType::Integer32, HirVisibility::private(), true)]);
 
     assert!(!requirement.is_satisfied_by(&candidate));
 }
@@ -93,11 +98,11 @@ fn private_property_does_not_participate_in_row_validation() {
 #[test]
 fn mixed_visibility_members_only_contribute_public_rows() {
     let requirement = RowRequirement::from_methods(vec![
-        method_sig("ping", vec![], HirType::Unit),
-        method_sig("get_size", vec![], HirType::Integer32),
-        method_sig("set_size", vec![HirType::Integer32], HirType::Unit),
-        method_sig("area", vec![], HirType::Integer32),
-        method_sig("set_area", vec![HirType::Integer32], HirType::Unit),
+        method_sig("ping", vec![], ValkyrieType::Unit),
+        method_sig("get_size", vec![], ValkyrieType::Integer32),
+        method_sig("set_size", vec![ValkyrieType::Integer32], ValkyrieType::Unit),
+        method_sig("area", vec![], ValkyrieType::Integer32),
+        method_sig("set_area", vec![ValkyrieType::Integer32], ValkyrieType::Unit),
     ]);
     let candidate = struct_with_members(
         "Surface",
@@ -105,38 +110,39 @@ fn mixed_visibility_members_only_contribute_public_rows() {
             HirField {
                 name: Identifier::new("size"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Integer32,
+                ty: ValkyrieType::Integer32,
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             },
             HirField {
                 name: Identifier::new("secret"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Utf8,
+                ty: ValkyrieType::Utf8,
                 visibility: HirVisibility::private(),
                 is_readonly: false,
             },
         ],
         vec![
-            method_with_visibility("ping", vec![], HirType::Unit, HirVisibility::public()),
-            method_with_visibility("hidden", vec![], HirType::Unit, HirVisibility::private()),
+            method_with_visibility("ping", vec![], ValkyrieType::Unit, HirVisibility::public()),
+            method_with_visibility("hidden", vec![], ValkyrieType::Unit, HirVisibility::private()),
         ],
         vec![
-            property_with_visibility("area", HirType::Integer32, HirVisibility::public(), false),
-            property_with_visibility("code", HirType::Utf8, HirVisibility::private(), false),
+            property_with_visibility("area", ValkyrieType::Integer32, HirVisibility::public(), false),
+            property_with_visibility("code", ValkyrieType::Utf8, HirVisibility::private(), false),
         ],
     );
 
     assert!(requirement.is_satisfied_by(&candidate));
-    assert!(!RowRequirement::from_methods(vec![method_sig("get_secret", vec![], HirType::Utf8)]).is_satisfied_by(&candidate));
-    assert!(!RowRequirement::from_methods(vec![method_sig("hidden", vec![], HirType::Unit)]).is_satisfied_by(&candidate));
-    assert!(!RowRequirement::from_methods(vec![method_sig("code", vec![], HirType::Utf8)]).is_satisfied_by(&candidate));
+    assert!(!RowRequirement::from_methods(vec![method_sig("get_secret", vec![], ValkyrieType::Utf8)]).is_satisfied_by(&candidate));
+    assert!(!RowRequirement::from_methods(vec![method_sig("hidden", vec![], ValkyrieType::Unit)]).is_satisfied_by(&candidate));
+    assert!(!RowRequirement::from_methods(vec![method_sig("code", vec![], ValkyrieType::Utf8)]).is_satisfied_by(&candidate));
 }
 
 #[test]
 fn row_rejects_missing_methods() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("read", vec![], HirType::Utf8), method_sig("close", vec![], HirType::Unit)]);
-    let candidate = struct_with_methods("Reader", vec![method("read", vec![], HirType::Utf8)]);
+    let requirement =
+        RowRequirement::from_methods(vec![method_sig("read", vec![], ValkyrieType::Utf8), method_sig("close", vec![], ValkyrieType::Unit)]);
+    let candidate = struct_with_methods("Reader", vec![method("read", vec![], ValkyrieType::Utf8)]);
 
     let errors = requirement.check_struct(&candidate).unwrap_err();
 
@@ -145,8 +151,8 @@ fn row_rejects_missing_methods() {
 
 #[test]
 fn row_rejects_signature_mismatch() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("write", vec![HirType::Utf8], HirType::Unit)]);
-    let candidate = struct_with_methods("Writer", vec![method("write", vec![HirType::Integer32], HirType::Unit)]);
+    let requirement = RowRequirement::from_methods(vec![method_sig("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
+    let candidate = struct_with_methods("Writer", vec![method("write", vec![ValkyrieType::Integer32], ValkyrieType::Unit)]);
 
     let errors = requirement.check_struct(&candidate).unwrap_err();
 
@@ -155,15 +161,15 @@ fn row_rejects_signature_mismatch() {
         &errors[0],
         RowRequirementError::SignatureMismatch { name, expected, actual }
         if name == &Identifier::new("write")
-            && expected == &method_sig("write", vec![HirType::Utf8], HirType::Unit)
-            && actual == &method_sig("write", vec![HirType::Integer32], HirType::Unit)
+            && expected == &method_sig("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)
+            && actual == &method_sig("write", vec![ValkyrieType::Integer32], ValkyrieType::Unit)
     ));
 }
 
 #[test]
 fn row_rejects_associated_types() {
     let error = RowRequirement::try_from_items(vec![
-        RowRequirementItem::Method(method_sig("next", vec![], HirType::Named(Identifier::new("Option")))),
+        RowRequirementItem::Method(method_sig("next", vec![], ValkyrieType::Named(Identifier::new("Option")))),
         RowRequirementItem::AssociatedType(Identifier::new("Item")),
     ])
     .unwrap_err();
@@ -173,8 +179,9 @@ fn row_rejects_associated_types() {
 
 #[test]
 fn row_rejects_duplicate_method_requirements() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("read", vec![], HirType::Utf8), method_sig("read", vec![], HirType::Utf8)]);
-    let candidate = struct_with_methods("Reader", vec![method("read", vec![], HirType::Utf8)]);
+    let requirement =
+        RowRequirement::from_methods(vec![method_sig("read", vec![], ValkyrieType::Utf8), method_sig("read", vec![], ValkyrieType::Utf8)]);
+    let candidate = struct_with_methods("Reader", vec![method("read", vec![], ValkyrieType::Utf8)]);
 
     let errors = requirement.check_struct(&candidate).unwrap_err();
 
@@ -183,10 +190,10 @@ fn row_rejects_duplicate_method_requirements() {
 
 #[test]
 fn row_rejects_ambiguous_candidate_methods() {
-    let requirement = RowRequirement::from_methods(vec![method_sig("write", vec![HirType::Utf8], HirType::Unit)]);
+    let requirement = RowRequirement::from_methods(vec![method_sig("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let candidate = struct_with_methods(
         "OverloadedWriter",
-        vec![method("write", vec![HirType::Utf8], HirType::Unit), method("write", vec![HirType::Integer32], HirType::Unit)],
+        vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit), method("write", vec![ValkyrieType::Integer32], ValkyrieType::Unit)],
     );
 
     let errors = requirement.check_struct(&candidate).unwrap_err();
@@ -194,18 +201,18 @@ fn row_rejects_ambiguous_candidate_methods() {
     assert_eq!(errors, vec![RowRequirementError::AmbiguousCandidateMethod { name: Identifier::new("write") }]);
 }
 
-fn method_sig(name: &str, params: Vec<HirType>, return_type: HirType) -> RowMethodSignature {
+fn method_sig(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> RowMethodSignature {
     RowMethodSignature::new(name, params, return_type)
 }
 
-fn struct_with_field(name: &str, field_name: &str, field_type: HirType) -> HirStruct {
+fn struct_with_field(name: &str, field_name: &str, field_type: ValkyrieType) -> HirStruct {
     struct_with_field_with_visibility(name, field_name, field_type, HirVisibility::public(), false)
 }
 
 fn struct_with_field_with_visibility(
     name: &str,
     field_name: &str,
-    field_type: HirType,
+    field_type: ValkyrieType,
     visibility: HirVisibility,
     is_readonly: bool,
 ) -> HirStruct {
@@ -264,11 +271,11 @@ fn struct_with_members(name: &str, fields: Vec<HirField>, methods: Vec<HirFuncti
     }
 }
 
-fn method(name: &str, params: Vec<HirType>, return_type: HirType) -> HirFunction {
+fn method(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> HirFunction {
     method_with_visibility(name, params, return_type, HirVisibility::public())
 }
 
-fn method_with_visibility(name: &str, params: Vec<HirType>, return_type: HirType, visibility: HirVisibility) -> HirFunction {
+fn method_with_visibility(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType, visibility: HirVisibility) -> HirFunction {
     HirFunction {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
@@ -291,13 +298,13 @@ fn method_with_visibility(name: &str, params: Vec<HirType>, return_type: HirType
     }
 }
 
-fn property_with_visibility(name: &str, ty: HirType, visibility: HirVisibility, is_readonly: bool) -> HirProperty {
+fn property_with_visibility(name: &str, ty: ValkyrieType, visibility: HirVisibility, is_readonly: bool) -> HirProperty {
     HirProperty {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),
         ty: ty.clone(),
         getter: Some(method_with_visibility(name, vec![], ty.clone(), visibility)),
-        setter: (!is_readonly).then(|| method_with_visibility(&format!("set_{name}"), vec![ty], HirType::Unit, visibility)),
+        setter: (!is_readonly).then(|| method_with_visibility(&format!("set_{name}"), vec![ty], ValkyrieType::Unit, visibility)),
         is_readonly,
         visibility,
         is_abstract: false,

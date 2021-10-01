@@ -1,6 +1,6 @@
 //! Function definitions for HIR.
 
-use super::{HirAttribute, HirBlock, HirGeneric, HirParam, HirType, HirVisibility};
+use super::{GenericType, HirAttribute, HirBlock, HirParam, HirVisibility, ValkyrieType};
 use crate::{Identifier, SourceSpan};
 
 /// A function in HIR.
@@ -17,11 +17,11 @@ pub struct HirFunction {
     /// Attributes applied to the function (e.g., `@inline`, `@deprecated`).
     pub annotations: Vec<HirAttribute>,
     /// Generic parameters for the function.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Parameters of the function.
     pub params: Vec<HirParam>,
     /// The return type of the function.
-    pub return_type: HirType,
+    pub return_type: ValkyrieType,
     /// The function body block.
     pub body: HirBlock,
     /// The source span for error reporting.

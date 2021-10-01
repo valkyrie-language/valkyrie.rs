@@ -2,12 +2,13 @@
 name = "nyar-types"
 version.workspace = true
 edition.workspace = true
-description = "Minimal shared types for the current Valkyrie workspace bootstrap path"
+ description = "Stable shared types for the generic Nyar backend platform"
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
 serde = { workspace = true, optional = true }
+url = { workspace = true }
 
 [features]
 default = []

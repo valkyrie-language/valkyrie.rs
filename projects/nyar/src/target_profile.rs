@@ -534,12 +534,12 @@ impl CanonicalTarget {
             | CanonicalSpecification::MacOs
             | CanonicalSpecification::Android
             | CanonicalSpecification::Ios => TargetHostKind::Native,
-            CanonicalSpecification::Unknown if matches!(abi, CanonicalAbi::WasiP1 | CanonicalAbi::WasiP2) => TargetHostKind::Wasi,
+            CanonicalSpecification::Unknown if abi == CanonicalAbi::Wasi => TargetHostKind::Wasi,
             _ => TargetHostKind::Unknown,
         }
     }
 
-    fn derive_host_flavor(self, abi: CanonicalAbi) -> &'static str {
+    fn derive_host_flavor(self, _abi: CanonicalAbi) -> &'static str {
         match self.arch {
             CanonicalArch::NyarVm => "nyarvm",
             CanonicalArch::Clr => "dotnet",
@@ -557,14 +557,7 @@ impl CanonicalTarget {
                 CanonicalVendor::Bun => "bun",
                 _ => match self.specification {
                     CanonicalSpecification::Browser => "web-standard",
-                    CanonicalSpecification::Wasi => {
-                        if abi == CanonicalAbi::WasiP2 {
-                            "wasi-preview2"
-                        }
-                        else {
-                            "wasi-preview1"
-                        }
-                    }
+                    CanonicalSpecification::Wasi => "wasi-component-model",
                     CanonicalSpecification::Windows => "win32",
                     CanonicalSpecification::Linux => "linux-gnu",
                     CanonicalSpecification::MacOs => "apple-darwin",
@@ -592,7 +585,7 @@ impl CanonicalTarget {
                 CanonicalVendor::Node | CanonicalVendor::Deno | CanonicalVendor::Bun => &["javascript", "esmodule", "filesystem", "timers"],
                 _ => match self.specification {
                     CanonicalSpecification::Browser => &["javascript", "dom", "canvas", "fetch", "esmodule"],
-                    CanonicalSpecification::Wasi => &["wasi", "filesystem", "cli"],
+                    CanonicalSpecification::Wasi => &["wasi", "filesystem", "cli", "component-model"],
                     CanonicalSpecification::Windows | CanonicalSpecification::Linux | CanonicalSpecification::MacOs => {
                         &["native", "filesystem", "process"]
                     }
@@ -606,8 +599,8 @@ impl CanonicalTarget {
     }
 
     fn derive_entry_policy(self, abi: CanonicalAbi) -> EntryPolicy {
-        if matches!(abi, CanonicalAbi::WasiP1 | CanonicalAbi::WasiP2) {
-            return EntryPolicy { default_entry: "_start".to_string(), wrap_strategy: WrapStrategy::Direct, generate_wrapper: false };
+        if abi == CanonicalAbi::Wasi {
+            return EntryPolicy { default_entry: "main".to_string(), wrap_strategy: WrapStrategy::Hosted, generate_wrapper: true };
         }
         match self.arch {
             CanonicalArch::Clr => {
@@ -638,14 +631,14 @@ impl CanonicalTarget {
             },
             CanonicalArch::Wasm32 | CanonicalArch::Wasm64 => ArtifactPolicy {
                 primary_extension: ".wasm".to_string(),
-                default_publish_format: if abi == CanonicalAbi::WasiP2 { PublishFormat::WasmComponent } else { PublishFormat::WasmModule },
-                supported_publish_formats: if abi == CanonicalAbi::WasiP2 {
+                default_publish_format: if abi == CanonicalAbi::Wasi { PublishFormat::WasmComponent } else { PublishFormat::WasmModule },
+                supported_publish_formats: if abi == CanonicalAbi::Wasi {
                     vec![PublishFormat::WasmComponent, PublishFormat::Oci]
                 }
                 else {
                     vec![PublishFormat::WasmModule, PublishFormat::WebApp, PublishFormat::Extension, PublishFormat::MiniGame]
                 },
-                required_adaptors: if abi == CanonicalAbi::WasiP2 {
+                required_adaptors: if abi == CanonicalAbi::Wasi {
                     vec!["std:wasi".to_string()]
                 }
                 else {

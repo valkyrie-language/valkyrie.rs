@@ -1,6 +1,6 @@
 //! Widget, widget lifecycle, and singleton definitions for HIR.
 
-use super::{HirDocumentation, HirExpr, HirField, HirFunction, HirGeneric, HirParent, HirProperty, HirVisibility};
+use super::{GenericType, HirDocumentation, HirExpr, HirField, HirFunction, HirParent, HirProperty, HirVisibility};
 use crate::{Identifier, NamePath};
 
 /// A widget in HIR.
@@ -47,7 +47,7 @@ pub struct HirWidget {
     /// Documentation for the widget.
     pub doc: HirDocumentation,
     /// Generic parameters for the widget.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Fields of the widget (both state and non-state fields).
     pub fields: Vec<HirField>,
     /// Methods defined on the widget.
@@ -118,7 +118,7 @@ pub struct HirSingleton {
     /// Documentation for the singleton.
     pub doc: HirDocumentation,
     /// Generic parameters for the singleton.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Parent traits this singleton implements.
     pub parents: Vec<HirParent>,
     /// Fields of the singleton.

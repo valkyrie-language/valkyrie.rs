@@ -42,7 +42,12 @@ fn empty_input_produces_empty_list() {
 
 #[test]
 fn unbalanced_block_is_captured_to_eof() {
-    let methods = MsilParser::parse_methods(".method public void Foo() cil managed\n{\n  ret\n");
+    let methods = MsilParser::parse_methods(
+        r#".method public void Foo() cil managed
+{
+  ret
+"#,
+    );
     assert_eq!(methods.len(), 1, "不闭合的方法仍应被收录");
     assert!(!methods[0].body.is_empty());
 }

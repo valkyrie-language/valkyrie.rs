@@ -19,7 +19,7 @@ pub mod widget;
 pub use types::{AccessLevel, *};
 
 pub use context::RenameContext;
-pub use expr::{CaptureMode, CaptureStorage, HirCapture, HirExpr, HirExprKind};
+pub use expr::{CaptureMode, CaptureStorage, HirCallableDomain, HirCapture, HirExpr, HirExprKind, HirResolvedCall};
 pub use function::HirFunction;
 pub use identifier::HirIdentifier;
 pub use module::{HirDocumentation, HirModule};

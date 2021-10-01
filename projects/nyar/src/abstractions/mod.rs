@@ -321,10 +321,8 @@ pub enum CanonicalAbi {
     Jvm,
     /// `WASM`
     WebAssembly,
-    /// `WASI Preview 1`
-    WasiP1,
-    /// `WASI Preview 2`
-    WasiP2,
+    /// `WASI component model`
+    Wasi,
     /// `MSVC`
     Msvc,
     /// `GNU`
@@ -342,8 +340,7 @@ impl CanonicalAbi {
             "clr" => Some(Self::Clr),
             "jvm" => Some(Self::Jvm),
             "wasm" | "webassembly" | "web-assembly" => Some(Self::WebAssembly),
-            "wasip1" | "wasi-p1" => Some(Self::WasiP1),
-            "wasip2" | "wasi-p2" => Some(Self::WasiP2),
+            "wasi" | "wasip1" | "wasi-p1" | "wasip2" | "wasi-p2" => Some(Self::Wasi),
             "msvc" | "microsoft-x64" => Some(Self::Msvc),
             "gnu" => Some(Self::Gnu),
             "systemv" | "system-v" => Some(Self::SystemV),
@@ -358,8 +355,7 @@ impl CanonicalAbi {
             Self::Clr => "clr",
             Self::Jvm => "jvm",
             Self::WebAssembly => "wasm",
-            Self::WasiP1 => "wasip1",
-            Self::WasiP2 => "wasip2",
+            Self::Wasi => "wasi",
             Self::Msvc => "msvc",
             Self::Gnu => "gnu",
             Self::SystemV => "systemv",
@@ -473,11 +469,8 @@ impl CanonicalTarget {
             "clr" => Some(Self::clr()),
             "jvm" => Some(Self::jvm()),
             "wasm" => Some(Self::wasm()),
-            "wasi" | "wasip1" => {
-                Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::WasiP1)))
-            }
-            "wasip2" => {
-                Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::WasiP2)))
+            "wasi" | "wasip1" | "wasip2" => {
+                Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::Wasi)))
             }
             "node" => {
                 Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Node, CanonicalSpecification::Unknown, Some(CanonicalAbi::WebAssembly)))

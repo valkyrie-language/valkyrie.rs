@@ -33,7 +33,7 @@ Valkyrie 類型映射到 JVM 描述符：
     - 對於 `i64/f32/f64`：使用 `lcmp/fcmpl/dcmpl` 指令，隨後配合 `if<cond>` 指令生成布爾值。
     - 對於對象類型（class, unite, string）：使用 `if_acmp<cond>` 實現引用相等性比較。
 - **位運算與邏輯運算**：
-    - `And`, `Or`, `Xor` 映射到 `iand/land`, `ior/lor`, `ixor/lxor`。
+    - `And`, `OrPatternExpression`, `Xor` 映射到 `iand/land`, `ior/lor`, `ixor/lxor`。
     - `Shl`, `Shr` 映射到 `ishl/lshl`, `ishr/lshr`。
 - **一元運算**：
     - `Neg` 映射到 `ineg/lneg/fneg/dneg`。

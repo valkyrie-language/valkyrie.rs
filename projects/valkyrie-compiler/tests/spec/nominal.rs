@@ -6,7 +6,7 @@ use valkyrie_compiler::{
     ValkyrieCompiler,
 };
 use valkyrie_types::{
-    hir::{HirDocumentation, HirEnum, HirField, HirGeneric, HirKind, HirModule, HirStruct, HirType, HirVariant, HirVisibility},
+    hir::{GenericType, HirDocumentation, HirEnum, HirField, HirKind, HirModule, HirStruct, HirVariant, HirVisibility, ValkyrieType},
     Identifier, NamePath, SourceID,
 };
 
@@ -80,8 +80,8 @@ fn unite_variants_preserve_base_generics_in_parent_edge() {
     assert_eq!(
         left_parent.generics,
         vec![
-            HirType::Generic { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] },
-            HirType::Generic { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] },
+            ValkyrieType::Generic(GenericType { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] }),
+            ValkyrieType::Generic(GenericType { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] }),
         ]
     );
 }
@@ -95,11 +95,14 @@ fn gadt_variant_result_type_refines_parent_generics() {
 
     let literal = &lowered.variants[0];
     assert!(literal.generics.is_empty());
-    assert_eq!(literal.parents[0].generics, vec![HirType::Float64]);
+    assert_eq!(literal.parents[0].generics, vec![ValkyrieType::Float64]);
 
     let branch = &lowered.variants[1];
-    assert_eq!(branch.generics, vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }]);
-    assert_eq!(branch.parents[0].generics, vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }]);
+    assert_eq!(branch.generics, vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }]);
+    assert_eq!(
+        branch.parents[0].generics,
+        vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })]
+    );
 }
 
 #[test]
@@ -170,7 +173,7 @@ fn unite_definition_rejects_duplicate_variant_names() {
 #[test]
 fn unite_definition_rejects_variant_result_type_outside_family() {
     let mut expr = gadt_unite();
-    expr.variants[0].result_type = Some(HirType::Named(Identifier::new("Other")));
+    expr.variants[0].result_type = Some(ValkyrieType::Named(Identifier::new("Other")));
 
     let error = validate_unite_definition(&expr).unwrap_err();
 
@@ -180,9 +183,9 @@ fn unite_definition_rejects_variant_result_type_outside_family() {
 #[test]
 fn unite_definition_rejects_variant_result_type_with_undeclared_generic() {
     let mut expr = gadt_unite();
-    expr.variants[1].result_type = Some(HirType::Apply(
-        Box::new(HirType::Named(Identifier::new("Expr"))),
-        vec![HirType::Generic { name: Identifier::new("U"), kind: HirKind::Type, bounds: vec![] }],
+    expr.variants[1].result_type = Some(ValkyrieType::Apply(
+        Box::new(ValkyrieType::Named(Identifier::new("Expr"))),
+        vec![ValkyrieType::Generic(GenericType { name: Identifier::new("U"), kind: HirKind::Type, bounds: vec![] })],
     ));
 
     let error = validate_unite_definition(&expr).unwrap_err();
@@ -193,7 +196,7 @@ fn unite_definition_rejects_variant_result_type_with_undeclared_generic() {
 #[test]
 fn unite_definition_rejects_bare_result_type_for_generic_family() {
     let mut expr = gadt_unite();
-    expr.variants[1].result_type = Some(HirType::Named(Identifier::new("Expr")));
+    expr.variants[1].result_type = Some(ValkyrieType::Named(Identifier::new("Expr")));
 
     let error = validate_unite_definition(&expr).unwrap_err();
 
@@ -212,10 +215,9 @@ fn nominal_module_view_resolves_unite_variants_as_real_named_types() {
 fn nominal_module_view_reads_real_hir_module_objects_from_compiler() {
     let compiler = ValkyrieCompiler::new(SourceID(31));
     let module = compiler
-        .compile_source(
-            "class Animal {}\n\
-             class Dog(Animal) {}\n",
-        )
+        .compile_source(r#"class Animal {}
+class Dog(Animal) {}
+"#)
         .unwrap();
     let view = NominalModuleView::from_module(&module);
 
@@ -226,14 +228,13 @@ fn nominal_module_view_reads_real_hir_module_objects_from_compiler() {
 fn nominal_module_view_reads_real_unite_family_from_compiler() {
     let compiler = ValkyrieCompiler::new(SourceID(33));
     let module = compiler
-        .compile_source(
-            "unite Option {\n\
-    Some {\n\
-        value: i64,\n\
-    }\n\
-    None\n\
-}\n",
-        )
+        .compile_source(r#"unite Option {
+    Some {
+        value: i64,
+    }
+    None
+}
+"#)
         .unwrap();
     let view = NominalModuleView::from_module(&module);
 
@@ -244,7 +245,7 @@ fn nominal_module_view_reads_real_unite_family_from_compiler() {
 #[test]
 fn nominal_module_view_surfaces_invalid_unite_definition() {
     let mut invalid = gadt_unite();
-    invalid.variants[1].result_type = Some(HirType::Named(Identifier::new("Other")));
+    invalid.variants[1].result_type = Some(ValkyrieType::Named(Identifier::new("Other")));
     let view = NominalModuleView::from_module(&module_with_unite(invalid));
 
     let error = view.lower_unite(&Identifier::new("Expr"), UniteLayout::Tagged).unwrap_err();
@@ -296,7 +297,7 @@ fn option_unite() -> HirEnum {
             fields: vec![HirField {
                 name: Identifier::new("value"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Integer32,
+                ty: ValkyrieType::Integer32,
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             }],
@@ -332,8 +333,8 @@ fn generic_unite() -> HirEnum {
     let mut enum_def = HirEnum::new_unity(Identifier::new("Either"));
     enum_def.visibility = HirVisibility::public();
     enum_def.generics = vec![
-        HirGeneric { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] },
-        HirGeneric { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] },
+        GenericType { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] },
+        GenericType { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] },
     ];
     enum_def.variants = vec![
         HirVariant {
@@ -342,7 +343,7 @@ fn generic_unite() -> HirEnum {
             fields: vec![HirField {
                 name: Identifier::new("value"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Generic { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] },
+                ty: ValkyrieType::Generic(GenericType { name: Identifier::new("L"), kind: HirKind::Type, bounds: vec![] }),
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             }],
@@ -355,7 +356,7 @@ fn generic_unite() -> HirEnum {
             fields: vec![HirField {
                 name: Identifier::new("value"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Generic { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] },
+                ty: ValkyrieType::Generic(GenericType { name: Identifier::new("R"), kind: HirKind::Type, bounds: vec![] }),
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             }],
@@ -369,7 +370,7 @@ fn generic_unite() -> HirEnum {
 fn gadt_unite() -> HirEnum {
     let mut enum_def = HirEnum::new_unity(Identifier::new("Expr"));
     enum_def.visibility = HirVisibility::public();
-    enum_def.generics = vec![HirGeneric { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }];
+    enum_def.generics = vec![GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }];
     enum_def.variants = vec![
         HirVariant {
             name: Identifier::new("Literal"),
@@ -377,12 +378,12 @@ fn gadt_unite() -> HirEnum {
             fields: vec![HirField {
                 name: Identifier::new("value"),
                 doc: HirDocumentation::default(),
-                ty: HirType::Float64,
+                ty: ValkyrieType::Float64,
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             }],
             tuple_types: vec![],
-            result_type: Some(HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Float64])),
+            result_type: Some(ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Float64])),
         },
         HirVariant {
             name: Identifier::new("If"),
@@ -391,25 +392,25 @@ fn gadt_unite() -> HirEnum {
                 HirField {
                     name: Identifier::new("condition"),
                     doc: HirDocumentation::default(),
-                    ty: HirType::Apply(Box::new(HirType::Named(Identifier::new("Expr"))), vec![HirType::Boolean]),
+                    ty: ValkyrieType::Apply(Box::new(ValkyrieType::Named(Identifier::new("Expr"))), vec![ValkyrieType::Boolean]),
                     visibility: HirVisibility::public(),
                     is_readonly: false,
                 },
                 HirField {
                     name: Identifier::new("then_branch"),
                     doc: HirDocumentation::default(),
-                    ty: HirType::Apply(
-                        Box::new(HirType::Named(Identifier::new("Expr"))),
-                        vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+                    ty: ValkyrieType::Apply(
+                        Box::new(ValkyrieType::Named(Identifier::new("Expr"))),
+                        vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })],
                     ),
                     visibility: HirVisibility::public(),
                     is_readonly: false,
                 },
             ],
             tuple_types: vec![],
-            result_type: Some(HirType::Apply(
-                Box::new(HirType::Named(Identifier::new("Expr"))),
-                vec![HirType::Generic { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] }],
+            result_type: Some(ValkyrieType::Apply(
+                Box::new(ValkyrieType::Named(Identifier::new("Expr"))),
+                vec![ValkyrieType::Generic(GenericType { name: Identifier::new("T"), kind: HirKind::Type, bounds: vec![] })],
             )),
         },
     ];

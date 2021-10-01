@@ -1,85 +1,12 @@
 #![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 #![allow(missing_docs)]
-#![feature(new_range_api)]
 
 pub mod hir;
 pub mod witness;
 
-use std::sync::Arc;
-
 use miette::{Diagnostic, LabeledSpan as MietteLabeledSpan, Severity};
-
-/// Unique identifier for a source file
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SourceID(pub u32);
-
-/// A span in source code
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SourceSpan {
-    pub source: SourceID,
-    pub start: u32,
-    pub end: u32,
-}
-
-impl SourceSpan {
-    pub fn new(source: SourceID, start: u32, end: u32) -> Self {
-        Self { source, start, end }
-    }
-
-    pub fn get_start(&self) -> u32 {
-        self.start
-    }
-
-    pub fn get_end(&self) -> u32 {
-        self.end
-    }
-}
-
-/// An identifier in the source code
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Identifier(Arc<str>);
-
-impl Identifier {
-    pub fn new(s: &str) -> Self {
-        Self(Arc::from(s))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// A path of identifiers (e.g., `std::collections::HashMap`)
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct NamePath(pub Vec<Identifier>);
-
-impl NamePath {
-    pub fn new(parts: Vec<Identifier>) -> Self {
-        Self(parts)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl std::fmt::Display for NamePath {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let parts: Vec<&str> = self.0.iter().map(|i| i.as_str()).collect();
-        write!(f, "{}", parts.join("::"))
-    }
-}
+pub use nyar_types::{Identifier, NamePath, QualifiedName, SourceID, SourceSpan};
 
 /// Severity level for diagnostic reports
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -284,7 +211,7 @@ impl std::fmt::Display for ValkyrieError {
 
         for label in &self.labels {
             if label.primary {
-                write!(f, " at {}:{}-{}", label.span.source.0, label.span.start, label.span.end)?;
+                write!(f, " at {}:{}-{}", label.span.source.version_id, label.span.get_start(), label.span.get_end())?;
             }
         }
 
@@ -329,7 +256,9 @@ impl Diagnostic for ValkyrieError {
         }
 
         Some(Box::new(self.labels.iter().map(|label| {
-            let span = (label.span.start as usize, label.span.end.saturating_sub(label.span.start) as usize);
+            let start = label.span.get_start();
+            let end = label.span.get_end();
+            let span = (start as usize, end.saturating_sub(start) as usize);
             let text = if let Some(key) = &label.key {
                 Some(key.clone())
             }

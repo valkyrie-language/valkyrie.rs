@@ -1,6 +1,6 @@
 //! Trait and associated type definitions for HIR.
 
-use super::{HirDocumentation, HirExpr, HirFunction, HirGeneric, HirType, HirVisibility};
+use super::{GenericType, HirDocumentation, HirExpr, HirFunction, HirVisibility, ValkyrieType};
 use crate::{Identifier, SourceSpan};
 
 /// A trait in HIR.
@@ -18,7 +18,7 @@ pub struct HirTrait {
     /// Documentation for the trait.
     pub doc: HirDocumentation,
     /// Generic parameters for the trait.
-    pub generics: Vec<HirGeneric>,
+    pub generics: Vec<GenericType>,
     /// Required methods that implementors must provide.
     pub methods: Vec<HirFunction>,
     /// Associated types defined by the trait.
@@ -26,7 +26,7 @@ pub struct HirTrait {
     /// Associated constants defined by the trait.
     pub associated_constants: Vec<HirAssociatedConst>,
     /// Super-traits that this trait extends.
-    pub super_traits: Vec<HirType>,
+    pub super_traits: Vec<ValkyrieType>,
     /// Default method implementations provided by the trait.
     pub default_methods: Vec<HirFunction>,
     /// Visibility of the trait.
@@ -74,11 +74,11 @@ pub struct HirAssociatedType {
     ///
     /// For example, in `type Item<'a>`, this would contain the lifetime
     /// parameter `'a`. For non-GAT associated types, this is empty.
-    pub type_params: Vec<HirGeneric>,
+    pub type_params: Vec<GenericType>,
     /// Bounds that the associated type must satisfy.
-    pub bounds: Vec<HirType>,
+    pub bounds: Vec<ValkyrieType>,
     /// Default type for the associated type (optional).
-    pub default: Option<HirType>,
+    pub default: Option<ValkyrieType>,
     /// Source span for error reporting.
     pub span: SourceSpan,
 }
@@ -95,18 +95,18 @@ impl HirAssociatedType {
     }
 
     /// Creates a generic associated type (GAT) with type parameters.
-    pub fn with_type_params(name: Identifier, type_params: Vec<HirGeneric>, span: SourceSpan) -> Self {
+    pub fn with_type_params(name: Identifier, type_params: Vec<GenericType>, span: SourceSpan) -> Self {
         Self { name, doc: HirDocumentation::default(), type_params, bounds: Vec::new(), default: None, span }
     }
 
     /// Adds a bound to the associated type.
-    pub fn with_bound(mut self, bound: HirType) -> Self {
+    pub fn with_bound(mut self, bound: ValkyrieType) -> Self {
         self.bounds.push(bound);
         self
     }
 
     /// Sets the default type for the associated type.
-    pub fn with_default(mut self, default: HirType) -> Self {
+    pub fn with_default(mut self, default: ValkyrieType) -> Self {
         self.default = Some(default);
         self
     }
@@ -131,7 +131,7 @@ pub struct HirAssociatedConst {
     /// Documentation for the associated constant.
     pub doc: HirDocumentation,
     /// Declared type of the associated constant.
-    pub const_type: HirType,
+    pub const_type: ValkyrieType,
     /// Optional default value for the associated constant.
     pub default_value: Option<HirExpr>,
     /// Source span for error reporting.
@@ -140,7 +140,7 @@ pub struct HirAssociatedConst {
 
 impl HirAssociatedConst {
     /// Creates a new associated constant with the given name and type.
-    pub fn new(name: Identifier, const_type: HirType, span: SourceSpan) -> Self {
+    pub fn new(name: Identifier, const_type: ValkyrieType, span: SourceSpan) -> Self {
         Self { name, doc: HirDocumentation::default(), const_type, default_value: None, span }
     }
 

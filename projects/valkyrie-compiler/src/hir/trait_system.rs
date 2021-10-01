@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::hir::row::{RowMethodSignature, RowRequirement, RowRequirementError};
 use valkyrie_types::{
-    hir::{HirImpl, HirModule, HirStruct, HirTrait, HirType},
+    hir::{HirImpl, HirModule, HirStruct, HirTrait, ValkyrieType as HirType},
     witness::{MethodEntry, MethodId, MethodPath, ModuleId, TraitId, TypeId, TypeMetadata, WitnessTable, WitnessTableBuilder},
     Identifier, NamePath,
 };
@@ -192,7 +192,7 @@ fn ensure_explicit_super_trait_chain_inner(
         if find_matching_explicit_impl(target, &super_trait_path, impls)?.is_none() {
             return Err(TraitSatisfactionError::MissingExplicitImplForSuperTraits { trait_path: super_trait_path });
         }
-        if let Some(super_trait_name) = super_trait_path.0.last() {
+        if let Some(super_trait_name) = super_trait_path.parts().last() {
             if let Some(super_trait_def) = traits.get(super_trait_name) {
                 ensure_explicit_super_trait_chain_inner(target, super_trait_def, impls, traits, visited)?;
             }

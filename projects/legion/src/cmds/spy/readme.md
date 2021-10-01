@@ -1,10 +1,14 @@
-# PE Parser
+# `legion spy wasm`
 
-直接解析 `PE/COFF/CLI` 二进制结构，不依赖 `ildasm`。
+`legion spy wasm` 提供 `WASM` 二进制的反汇编与分析能力。
 
-## 范围
+## 支持的能力
 
-1. `DOS` 头、`PE` 签名、`COFF` 头、可选头、数据目录与节头。
-2. `CLI` 头与元数据根。
-3. `#Strings`、`#US`、`#GUID`、`#Blob`、`#~` 流。
-4. 核心元数据表，如 `Module`、`TypeRef`、`TypeDef`、`MethodDef`、`Assembly`、`AssemblyRef`。
+- 解析任意 `WASM` 二进制。
+- 列出所有段。
+- 列出所有函数。
+- 反汇编指定函数。
+- 查看 `imports` / `exports`。
+- 按绝对偏移定位错误上下文。
+- 以 `JSON` 形式输出。
+- dump 函数体原始字节。

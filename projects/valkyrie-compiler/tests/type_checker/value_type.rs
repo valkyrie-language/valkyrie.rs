@@ -1,6 +1,6 @@
 use valkyrie_compiler::type_checker::*;
 use valkyrie_types::{
-    hir::{HirDocumentation, HirField, HirModule, HirStruct, HirType, HirVisibility},
+    hir::{HirDocumentation, HirField, HirModule, HirStruct, HirVisibility, ValkyrieType},
     Identifier,
 };
 
@@ -14,7 +14,7 @@ fn create_value_type_struct(name: &str, parents: Vec<valkyrie_types::hir::HirPar
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64 { signed: true },
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -42,7 +42,7 @@ fn create_reference_type_struct(name: &str, parents: Vec<valkyrie_types::hir::Hi
         fields: vec![HirField {
             name: Identifier::new("x"),
             doc: HirDocumentation::default(),
-            ty: HirType::Integer64,
+            ty: ValkyrieType::Integer64 { signed: true },
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -174,12 +174,12 @@ fn test_copy_semantics_validator() {
     let struct_def = create_value_type_struct("Point", vec![]);
     validator.register_value_type(&struct_def);
 
-    let ty = HirType::Named(Identifier::new("Point"));
+    let ty = ValkyrieType::Named(Identifier::new("Point"));
     assert_eq!(validator.validate_assignment(&ty), AssignmentSemantics::Copy);
     assert_eq!(validator.validate_parameter_passing(&ty), ParameterSemantics::Copy);
     assert_eq!(validator.validate_return(&ty), ReturnSemantics::Copy);
 
-    let ref_ty = HirType::Named(Identifier::new("MyClass"));
+    let ref_ty = ValkyrieType::Named(Identifier::new("MyClass"));
     assert_eq!(validator.validate_assignment(&ref_ty), AssignmentSemantics::Reference);
 }
 
@@ -208,9 +208,9 @@ fn test_is_value_type() {
 
     checker.check_module(&module);
 
-    assert!(checker.is_value_type(&HirType::Named(Identifier::new("Point"))));
-    assert!(!checker.is_value_type(&HirType::Named(Identifier::new("Unknown"))));
-    assert!(!checker.is_value_type(&HirType::Integer64));
+    assert!(checker.is_value_type(&ValkyrieType::Named(Identifier::new("Point"))));
+    assert!(!checker.is_value_type(&ValkyrieType::Named(Identifier::new("Unknown"))));
+    assert!(!checker.is_value_type(&ValkyrieType::Integer64 { signed: true }));
 }
 
 #[test]
