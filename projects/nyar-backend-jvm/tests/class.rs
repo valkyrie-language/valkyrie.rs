@@ -1,4 +1,4 @@
-use nyar_jvm_backend::{
+use nyar_backend_jvm::{
     encode_instructions, ConstantPoolBuilder, JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodRef, JvmMethodSignature,
     JvmTypeDescriptor,
 };

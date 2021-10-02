@@ -11,10 +11,12 @@ use legion::{
 };
 use miette::{GraphicalReportHandler, Report};
 use support::create_smoke_project_with_build;
-use tempfile::Builder;
+use tempfile::{Builder, TempDir};
 
-fn workspace_repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("valkyrie.v")
+struct WorkspaceFixture {
+    _temp_dir: TempDir,
+    root_dir: PathBuf,
+    project_dir: PathBuf,
 }
 
 #[test]
@@ -61,12 +63,12 @@ fn renders_pretty_report_for_missing_workspace() {
 }
 
 #[test]
-fn builds_actual_legion_tools_plan_with_explicit_dependency_closure() {
-    let workspace_root = workspace_repo_root();
-    let project_dir = fs::canonicalize(workspace_root.join("projects").join("legion.tools")).unwrap();
-    let workspace = LegionWorkspace::discover(&project_dir).unwrap();
-    let plan =
-        workspace.build_plan(&BuildRequest { project_dir: project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
+fn builds_legion_tools_like_plan_with_explicit_dependency_closure() {
+    let fixture = create_legion_tools_workspace_fixture();
+    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
+        .unwrap();
 
     let dependency_names: Vec<&str> = plan.project.dependencies.iter().map(|item| item.name.as_str()).collect();
     assert_eq!(dependency_names, vec!["core", "nyar", "std", "std.data.text.von"]);
@@ -90,14 +92,163 @@ fn builds_actual_legion_tools_plan_with_explicit_dependency_closure() {
 }
 
 #[test]
-fn actual_legion_tools_build_context_keeps_nyar_import_explicit() {
+fn legion_tools_like_build_context_keeps_nyar_import_explicit() {
+    let fixture = create_legion_tools_workspace_fixture();
     let build_context =
-        fs::read_to_string(workspace_repo_root().join("projects").join("legion.tools").join("source").join("build_context.v")).unwrap();
+        fs::read_to_string(fixture.root_dir.join("projects").join("legion.tools").join("source").join("build_context.v")).unwrap();
 
     assert!(build_context.contains("using nyar;"));
     assert!(build_context.contains("micro legion_parse_canonical_target(target: utf8) -> CanonicalTarget {"));
     assert!(build_context.contains("return parse_target(canonical)"));
     assert!(build_context.contains("return format_target(parsed)"));
+}
+
+fn create_legion_tools_workspace_fixture() -> WorkspaceFixture {
+    let temp_dir = Builder::new().prefix("legion-tools-workspace").tempdir().unwrap();
+    let root_dir = canonicalize_lossy(temp_dir.path());
+    let project_dir = root_dir.join("projects").join("legion.tools");
+
+    fs::create_dir_all(root_dir.join("projects")).unwrap();
+    fs::write(
+        root_dir.join("legions.von"),
+        r#"{
+    name: "planner-fixture",
+    members: [
+        "projects/core",
+        "projects/nyar",
+        "projects/std",
+        "projects/std.data.text.von",
+        "projects/legion.tools"
+    ]
+}
+"#,
+    )
+    .unwrap();
+
+    write_workspace_project(
+        &root_dir,
+        "projects/core",
+        r#"{
+    name: "core",
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}
+"#,
+        &[("source/_.v", "namespace core;\n")],
+    );
+    write_workspace_project(
+        &root_dir,
+        "projects/nyar",
+        r#"{
+    name: "nyar",
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}
+"#,
+        &[("source/types/targets/CanonicalTarget.v", "namespace nyar;\n")],
+    );
+    write_workspace_project(
+        &root_dir,
+        "projects/std",
+        r#"{
+    name: "std",
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}
+"#,
+        &[("source/_.v", "namespace std;\n")],
+    );
+    write_workspace_project(
+        &root_dir,
+        "projects/std.data.text.von",
+        r#"{
+    name: "std.data.text.von",
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}
+"#,
+        &[("source/_.v", "namespace std.data.text.von;\n")],
+    );
+    write_workspace_project(
+        &root_dir,
+        "projects/legion.tools",
+        r#"{
+    name: "legion.tools",
+    auto_link: {
+        core: true,
+        std: false
+    },
+    dependencies: {
+        "nyar": { version: "workspace" },
+        "std": { version: "workspace" },
+        "std.data.text.von": { version: "workspace" }
+    },
+    build: [
+        {
+            target: "clr"
+        },
+        {
+            target: "jvm"
+        },
+        {
+            target: "wasm"
+        },
+        {
+            target: "nyar"
+        }
+    ]
+}
+"#,
+        &[(
+            "source/build_context.v",
+            r#"namespace legion.tools;
+using nyar;
+
+micro legion_parse_canonical_target(target: utf8) -> CanonicalTarget {
+    let canonical = legion_normalize_short_target(target)
+    return parse_target(canonical)
+}
+
+micro legion_format_canonical_target(parsed: CanonicalTarget) -> utf8 {
+    return format_target(parsed)
+}
+
+micro legion_normalize_short_target(value: utf8) -> utf8 {
+    return value
+}
+"#,
+        )],
+    );
+
+    WorkspaceFixture { _temp_dir: temp_dir, root_dir, project_dir }
+}
+
+fn write_workspace_project(root_dir: &Path, relative_dir: &str, manifest: &str, sources: &[(&str, &str)]) {
+    let project_dir = root_dir.join(relative_dir);
+    fs::create_dir_all(&project_dir).unwrap();
+    fs::write(project_dir.join("legion.von"), manifest).unwrap();
+
+    for (relative_file, content) in sources {
+        let file_path = project_dir.join(relative_file);
+        fs::create_dir_all(file_path.parent().unwrap()).unwrap();
+        fs::write(file_path, content).unwrap();
+    }
+}
+
+fn canonicalize_lossy(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 #[test]

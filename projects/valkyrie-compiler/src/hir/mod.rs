@@ -24,6 +24,8 @@ pub mod row;
 pub mod trait_system;
 /// `AST` 类型到 `HIR` 类型的 lowering。
 pub mod type_lowering;
+/// 统一类型判定入口。
+pub mod type_relation;
 
 pub(crate) use ast_validation::validate_ast_root;
 pub use capture_analysis::CaptureAnalyzer;

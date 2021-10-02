@@ -8,6 +8,7 @@ mod overload;
 mod row;
 mod support;
 mod trait_system;
+mod type_relation;
 
 #[test]
 fn spec_suite_is_wired() {

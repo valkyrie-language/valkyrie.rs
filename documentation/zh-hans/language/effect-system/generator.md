@@ -74,7 +74,7 @@ let total_count = processor.return_value()  # 获取最终返回值
 
 你可能会好奇，为什么 `sequence` 作为一个普通函数，其尾随闭包中的 `yield` 可以被"拦截"？这背后的核心机制是 Valkyrie 的 **代数效应 (Algebraic Effects)**。
 
-1.  **Yield 是一个效应**：在 Valkyrie 中，`yield` 并不是一个绑定在函数定义上的硬编码关键字。它本质上是通过 `raise` 触发的一个 `Yield` 效应，类似于一种可以恢复的异常。
+1.  **Yield 是一个效应**：在 Valkyrie 中，`yield` 并不是一个绑定在函数定义上的硬编码关键字。它本质上是通过 `raise` 触发的一个 `YieldStatement` 效应，类似于一种可以恢复的异常。
 2.  **处理器栈 (Handler Stack)**：Valkyrie 虚拟机维护着一个处理器栈。当执行到 `yield` 时，虚拟机会暂停当前执行流，并沿着调用栈向上寻找最近的匹配处理器（Handler）。
 3.  **穿透能力**：由于效应是基于虚拟机栈管理的，它具有"穿透"普通函数和闭包的能力。即使 `sequence` 是一个普通函数，闭包是一个普通闭包，其中的 `yield` 也会一直向上冒泡，直到被 `sequence` 内部设置的 `catch` 块捕获。
 4.  **恢复执行 (Resume)**：`sequence` 内部的处理器在捕获到 `yield` 效应后，会同时获得一个"延续 (Continuation)"。这使得 `sequence` 可以将值返回给迭代器，并在下次调用 `next()` 时，通过这个延续精确地恢复闭包的执行。

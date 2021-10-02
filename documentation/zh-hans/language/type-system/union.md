@@ -1,6 +1,6 @@
 # 联合类型 (Unite Types)
 
-联合类型是 Valkyrie 中表示多种可能值的强大类型系统特性，使用 `unite` 定义。`unite` 的默认表示是抽象类；`[tag(XXXKind)]` 是可选优化，用于要求 tagged union；少数特例还会走利基优化，但通常不需要在前端专门考虑。
+联合类型用于表示多种可能值，并使用 `unite` 定义。`unite` 的默认表示是抽象类；`[tag(XXXKind)]` 是可选优化，用于要求 tagged union；少数特例还会走利基优化，但通常不需要在前端单独处理。
 
 ## 基本联合类型
 
@@ -55,7 +55,7 @@ unite TaggedResult⟨T, E⟩ {
 }
 ```
 
-## 联合类型的使用
+## 使用
 
 ### 模式匹配
 
@@ -93,7 +93,7 @@ if let Some { value } = option {
 }
 ```
 
-## 联合类型方法
+## 关联方法
 
 ### 关联方法
 
@@ -207,7 +207,7 @@ unite Option⟨T⟩ {
 }
 ```
 
-## 高级特性
+## 扩展形式
 
 ### 泛型联合类型
 
@@ -247,7 +247,17 @@ unite Tree⟨T⟩ {
 }
 ```
 
-## 最佳实践
+## 声明边界与名义身份
+
+`unite` 不只是若干分支的表面语法，它还是一个具名声明家族。
+
+- `unite` 的 variants 来自同一条 `unite` 声明。
+- 一个值不会因为“结构上像某个 variant”就自动成为这个 `unite`。
+- 穷尽性检查依赖的是这组已声明分支，而不是后验的结构兼容。
+
+因此，`unite` 虽然表达 union，但在语言语义中仍然保留具名 identity。
+
+## 书写约定
 
 ### 1. 使用描述性的变体名称
 
@@ -283,7 +293,7 @@ unite Person {
 }
 ```
 
-### 3. 提供便利方法
+### 3. 辅助方法
 
 ```valkyrie
 unite ValidationResult⟨T⟩ {
@@ -305,7 +315,7 @@ unite ValidationResult⟨T⟩ {
 }
 ```
 
-### 4. 错误处理模式
+### 4. 错误处理
 
 ```valkyrie
 # 使用 Result 进行错误处理
@@ -329,4 +339,8 @@ micro process_data(input: String) -> Result⟨ProcessedData, Error⟩ {
 }
 ```
 
-联合类型是 Valkyrie 类型系统的核心特性，它提供了类型安全的方式来处理多种可能的值，特别适合错误处理、状态表示和数据建模等场景。
+联合类型用于以类型安全的方式处理多种可能值，适用于错误处理、状态表示和数据建模等场景。
+
+---
+
+**上一页**: [代数数据类型 (ADT)](./algebraic-data-types.md) | **下一页**: [指针与引用](./pointer-type.md)

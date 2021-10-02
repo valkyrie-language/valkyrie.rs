@@ -1,9 +1,9 @@
 use std::fs;
 
 use nyar::backends::clr::ClrImageKind;
-use nyar_clr_backend::{
+use nyar_backend_clr::{
     MsilAssembly, MsilInstruction, MsilInstructionOperand, MsilMethodBody, MsilMethodRef, MsilMethodSignature, MsilModule, MsilOpcode,
-    MsilType, PeWriter, PeWriterOptions,
+    MsilType, MsilTypeDef, PeWriter, PeWriterError, PeWriterOptions,
 };
 use tempfile::TempDir;
 
@@ -98,6 +98,44 @@ fn materialize_console_exe_for_runtime_validation() {
     println!("{}", artifact_path.display());
 }
 
+#[test]
+fn local_type_methods_require_qualified_names_for_token_lookup() {
+    let module = build_ambiguous_local_type_module(MsilMethodRef {
+        owner: None,
+        name: "Run".to_string(),
+        signature: MsilMethodSignature::new(MsilType::Int32, Vec::new()),
+    });
+
+    let error = PeWriter::new(PeWriterOptions {
+        assembly_name: "sample".to_string(),
+        module_name: "sample.dll".to_string(),
+        image_kind: ClrImageKind::DynamicLibrary,
+    })
+    .write_module(&module)
+    .unwrap_err();
+
+    assert!(matches!(error, PeWriterError::MissingLocalMethodToken(name) if name == "Run"));
+}
+
+#[test]
+fn local_type_methods_resolve_by_qualified_owner_without_short_name_fallback() {
+    let module = build_ambiguous_local_type_module(MsilMethodRef {
+        owner: Some("demo.Alpha".to_string()),
+        name: "Run".to_string(),
+        signature: MsilMethodSignature::new(MsilType::Int32, Vec::new()),
+    });
+
+    let bytes = PeWriter::new(PeWriterOptions {
+        assembly_name: "sample".to_string(),
+        module_name: "sample.dll".to_string(),
+        image_kind: ClrImageKind::DynamicLibrary,
+    })
+    .write_module(&module)
+    .unwrap();
+
+    assert!(!bytes.is_empty());
+}
+
 fn build_library_module() -> MsilModule {
     MsilModule {
         assembly: MsilAssembly { name: "sample".to_string(), externs: vec!["mscorlib".to_string()] },
@@ -159,6 +197,68 @@ fn build_console_executable_module() -> MsilModule {
             ],
             max_stack: 1,
             is_entry_point: true,
+        }],
+    }
+}
+
+fn build_ambiguous_local_type_module(call_target: MsilMethodRef) -> MsilModule {
+    MsilModule {
+        assembly: MsilAssembly { name: "sample".to_string(), externs: vec!["mscorlib".to_string()] },
+        types: vec![
+            MsilTypeDef {
+                full_name: "Alpha".to_string(),
+                namespace: "demo".to_string(),
+                fields: vec![],
+                methods: vec![MsilMethodBody {
+                    method: MsilMethodRef {
+                        owner: Some("demo.Alpha".to_string()),
+                        name: "Run".to_string(),
+                        signature: MsilMethodSignature::new(MsilType::Int32, Vec::new()),
+                    },
+                    locals: vec![],
+                    instructions: vec![
+                        MsilInstruction { label: None, opcode: MsilOpcode::LdcI4_1, operand: None },
+                        MsilInstruction { label: None, opcode: MsilOpcode::Ret, operand: None },
+                    ],
+                    max_stack: 1,
+                    is_entry_point: false,
+                }],
+                is_value_type: false,
+            },
+            MsilTypeDef {
+                full_name: "Beta".to_string(),
+                namespace: "demo".to_string(),
+                fields: vec![],
+                methods: vec![MsilMethodBody {
+                    method: MsilMethodRef {
+                        owner: Some("demo.Beta".to_string()),
+                        name: "Run".to_string(),
+                        signature: MsilMethodSignature::new(MsilType::Int32, Vec::new()),
+                    },
+                    locals: vec![],
+                    instructions: vec![
+                        MsilInstruction { label: None, opcode: MsilOpcode::LdcI4_2, operand: None },
+                        MsilInstruction { label: None, opcode: MsilOpcode::Ret, operand: None },
+                    ],
+                    max_stack: 1,
+                    is_entry_point: false,
+                }],
+                is_value_type: false,
+            },
+        ],
+        global_methods: vec![MsilMethodBody {
+            method: MsilMethodRef {
+                owner: Some("sample.dll".to_string()),
+                name: "Caller".to_string(),
+                signature: MsilMethodSignature::new(MsilType::Int32, Vec::new()),
+            },
+            locals: vec![],
+            instructions: vec![
+                MsilInstruction { label: None, opcode: MsilOpcode::Call, operand: Some(MsilInstructionOperand::Method(call_target)) },
+                MsilInstruction { label: None, opcode: MsilOpcode::Ret, operand: None },
+            ],
+            max_stack: 1,
+            is_entry_point: false,
         }],
     }
 }

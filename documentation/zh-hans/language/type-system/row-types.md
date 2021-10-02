@@ -1,17 +1,32 @@
 # 行类型与行多态 (Row Types & Row Polymorphism)
 
-在当前的 Valkyrie 设计里，`row` 不是“字段结构兼容”的别名，而是更轻量的 **方法行约束**。它主要用于表达：某个值当前是否提供一组必需的方法签名。
+在当前的 Valkyrie 设计里，`row` 不是“字段结构兼容”的别名，而是方法行约束。它用于表达某个值当前是否提供一组必需的方法签名。
 
-## 核心定位
+## 语义定义
 
 - `row` 是匿名能力约束，不是具名 `trait`。
 - `row` 只描述“你现在会不会这些方法”，不描述“你是谁”。
 - `row` 不产生独立 witness，也不参与具名 trait coherence。
 - `field` 在语义上视为 `getter + setter` 两个方法，因此 row 判定最终仍落在方法面上。
 
-换句话说，匿名 `trait` 语法在语义上应理解为 `method row requirement`，而不是另一种具名协议系统。
+匿名 `trait` 语法在语义上应解释为 `method row requirement`，而不是另一种具名协议系统。
 
-## 基本例子
+## 形式化定义
+
+设 `R` 为一个匿名 row requirement，`A` 为某个候选类型。
+
+- `M(A)` 表示 `A` 的公开方法面。
+- `M(A) ⊒ R` 表示 `A` 的方法面覆盖 `R` 的全部 requirement。
+- 若形参类型写作匿名 row，则实参是否可接受，仅由 `M(A) ⊒ R` 判定。
+
+据此，row 的正式语义规则为：
+
+- row 判定必须只检查方法面。
+- row 判定不得直接依赖物理字段布局。
+- row 判定可以接受任何能提供所需方法面的值，包括 `class`、匿名对象和局部适配器。
+- row 判定结果不得自动提升为具名 `trait` 满足事实。
+
+## 最小示例
 
 ```valkyrie
 micro invoke_g(value: { g() -> unit }) {
@@ -19,13 +34,13 @@ micro invoke_g(value: { g() -> unit }) {
 }
 ```
 
-这里的 `{ g() -> unit }` 表示：
+这里的 `{ g() -> unit }` 仅表示：
 
 - 形参不要求某个具名 `trait`
 - 也不要求某个 `class`
 - 只要求传入值当前提供 `g() -> unit`
 
-如果某个 `class`、匿名对象或局部适配器都满足这个方法签名，它们都可以传入。
+任何满足该方法签名的 `class`、匿名对象或局部适配器都可以传入。
 
 ## row 判定是方法判定，不是字段判定
 
@@ -41,11 +56,17 @@ micro rename(value: {
 }
 ```
 
-可以把它理解为：
+对应规则如下：
 
 - 只读属性要求 getter
 - 可写属性要求 getter + setter
 - row 层只关心调用面，不关心底层是不是对象字段、计算属性还是代理方法
+
+可以形式化写成：
+
+- 只读属性 requirement 归约为 getter method requirement。
+- 可写属性 requirement 归约为 getter 与 setter 两个 method requirement。
+- 因此 row 层不存在独立的“field 结构兼容”判定。
 
 ## 开放行
 
@@ -64,6 +85,8 @@ micro use_clock⟨R⟩(value: {
 
 - 让约束保持开放
 - 不抹掉原值上其他可用的方法事实
+
+形式化地说，`...R` 只表示“其余未显式枚举的方法 requirement”，不引入新的名义类型关系，也不引入具名协议 identity。
 
 ## row 不是名义子类型
 
@@ -110,10 +133,10 @@ micro f2⟨T: Writer⟩(x: T) { ... }
 - trait inheritance
 - 独立 impl/witness 身份
 
-例如下面这种写法应被视为非法或未定义：
+例如，下面这种写法应视为非法或未定义：
 
 ```valkyrie
-# 不推荐，也不应视为合法 row 设计
+# 非法 row 设计
 { type Item, next() -> Option⟨Item⟩ }
 ```
 
@@ -126,11 +149,18 @@ trait Iterator {
 }
 ```
 
+因此，匿名 row 的禁止规则可以写成：
+
+- 匿名 row 不得声明 `associated type`。
+- 匿名 row 不得声明默认实现。
+- 匿名 row 不得形成独立 witness。
+- 匿名 row 不得参与 impl coherence。
+
 ## row 与重载解析
 
 在重载或候选选择里，row 的优先级应低于名义类型和具名 trait。
 
-推荐顺序是：
+顺序如下：
 
 ```text
 nominal exact
@@ -139,11 +169,13 @@ nominal exact
   > row
 ```
 
-这保证了：
+该顺序表示：
 
 - 具体 `class` 优先于协议约束
 - 具名 `trait` 优先于匿名能力约束
 - row 只作为最轻量的能力匹配手段
+
+若两个候选都仅通过 row 判定命中，且不存在额外规则能区分二者，则实现应报告歧义，而不是继续发明匿名 row 的偏序。
 
 ## row 在编译流水线里的位置
 
@@ -151,7 +183,13 @@ nominal exact
 - 进入 `MIR` 时，它应已经闭合为具体成员调用。
 - 后端不应再看到“开放 row evidence object”。
 
-这也是为什么 row 文档必须和编译架构文档保持一致：它是前端静态判定，不是后端可见协议实体。
+等价地说：
+
+- `HIR` 必须保留 row closure 的结果。
+- `MIR` 不得把 row 继续表示为独立 witness object。
+- backend 不得重新执行 row match。
+
+row 文档必须与编译架构文档保持一致：它是前端静态判定，而不是后端可见协议实体。
 
 ## 与展开语法的一致性
 
@@ -167,16 +205,16 @@ let new_user = { name: "new", ...old_user }
 
 在 row requirement 中使用同样的 `...R`，表示“保留其余 requirement”，而不是重新引入字段结构兼容模型。
 
-## 使用建议
+## 选型规则
 
-- 想表达“只要会这些方法就行”，用 row。
-- 想表达“这是一个真正的协议，有关联类型、默认实现或协议身份”，用具名 `trait`。
-- 想表达“这是一个对象类型本体或继承层级”，用 `class`。
-- 想表达“这是一个具名 union 与一组互斥分支”，用 `unite`。
+- 仅要求局部方法面时，使用 row。
+- 需要具名协议语义，例如关联类型、默认实现或协议身份时，使用具名 `trait`。
+- 需要对象类型本体或继承层级时，使用 `class`。
+- 需要具名 union 与互斥分支集合时，使用 `unite`。
 
-## 总结
+## 结论
 
-row 的核心不是“对象长得像什么”，而是“这个值当前能做什么”。
+row 关注的是值当前可提供的方法面，而不是对象的外观形状。
 
 - row 是匿名方法约束
 - trait 是具名协议

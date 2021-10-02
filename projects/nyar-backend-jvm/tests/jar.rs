@@ -1,4 +1,4 @@
-use nyar_jvm_backend::{JvmClassFile, JvmJarPackage, JvmMethodDescriptor, JvmTypeDescriptor};
+use nyar_backend_jvm::{JvmClassFile, JvmJarPackage, JvmMethodDescriptor, JvmTypeDescriptor};
 
 #[test]
 fn round_trips_jar_archive() {

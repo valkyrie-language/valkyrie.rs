@@ -7,4 +7,5 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+nyar-optimizer = { workspace = true }
 nyar-types = { workspace = true }

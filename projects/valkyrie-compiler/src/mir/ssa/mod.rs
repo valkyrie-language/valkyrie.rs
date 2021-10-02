@@ -3,18 +3,26 @@
 use std::collections::BTreeMap;
 
 use valkyrie_types::{
-    hir::{HirExpr, HirExprKind, HirFunction, HirLiteral, HirMatchArm, HirModule, HirPattern, HirStatement, HirStatementKind, ValkyrieType},
+    hir::{HirExpr, HirFunction, HirMatchArm, HirModule, HirPattern, HirStatement, HirStatementKind, ValkyrieType},
     Identifier, NamePath,
 };
 
+mod builtin_helpers;
 mod control_flow_lowering;
 mod effect_lowering;
+mod expr_helpers;
+mod expr_lowering;
 mod frame_planning;
 mod match_lowering;
 mod pattern_lowering;
 mod suspend_analysis;
 /// `MIR` 降低测试辅助入口。
 pub mod test_support;
+
+use crate::symbols::stable_hir_function_symbol;
+use builtin_helpers::{builtin_call_output_type, plain_type_pattern_matches, resolve_builtin_call};
+use expr_helpers::{callee_name_matches, future_resume_type, infer_builder_operand_type, lower_callee_operand, named_type_name};
+use expr_lowering::lower_literal;
 
 /// `SSA` 形式的 `MIR` 模块。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -161,6 +169,8 @@ pub struct MirSuspendPoint {
     pub payload_type: Option<ValkyrieType>,
     /// 挂起时需要后续做 spill 分析的候选 SSA 值。
     pub spill_candidates: Vec<MirValueRef>,
+    /// 若挂起点位于 handler arm 内，关联的 continuation 索引。
+    pub continuation_index: Option<usize>,
 }
 
 /// 单个 suspend 状态对应的 frame layout 计划。
@@ -397,7 +407,7 @@ pub struct MirLowerer;
 
 impl MirLowerer {
     pub fn lower_module(module: &HirModule) -> MirModule {
-        let return_types = collect_module_return_types(&module.functions);
+        let return_types = collect_module_return_types(module);
         let struct_field_layouts = collect_struct_field_layouts(&module.structs);
         let struct_parent_index = collect_struct_parent_index(&module.structs);
         let structs = module.structs.iter().map(lower_struct).collect();
@@ -407,7 +417,7 @@ impl MirLowerer {
             functions: module
                 .functions
                 .iter()
-                .map(|function| lower_function(function, &return_types, &struct_field_layouts, &struct_parent_index))
+                .map(|function| lower_function(module, function, &return_types, &struct_field_layouts, &struct_parent_index))
                 .collect(),
             structs,
             imports,
@@ -422,8 +432,8 @@ fn lower_struct(hir_struct: &valkyrie_types::hir::HirStruct) -> MirStruct {
     MirStruct { name: hir_struct.name.to_string(), namespace, fields, is_value_type: hir_struct.is_value_type }
 }
 
-fn collect_module_return_types(functions: &[HirFunction]) -> BTreeMap<String, ValkyrieType> {
-    functions.iter().map(|function| (function.name.to_string(), function.return_type.clone())).collect()
+fn collect_module_return_types(module: &HirModule) -> BTreeMap<String, ValkyrieType> {
+    module.functions.iter().map(|function| (stable_hir_function_symbol(&module.name, function), function.return_type.clone())).collect()
 }
 
 fn collect_struct_field_layouts(structs: &[valkyrie_types::hir::HirStruct]) -> BTreeMap<String, Vec<(String, ValkyrieType)>> {
@@ -448,6 +458,7 @@ fn collect_struct_parent_index(structs: &[valkyrie_types::hir::HirStruct]) -> BT
 }
 
 fn lower_function(
+    module: &HirModule,
     function: &HirFunction,
     return_types: &BTreeMap<String, ValkyrieType>,
     struct_field_layouts: &BTreeMap<String, Vec<(String, ValkyrieType)>>,
@@ -498,7 +509,7 @@ fn lower_function(
 
     let param_types = function.params.iter().map(|p| p.ty.clone()).collect();
     let mut mir_function = MirFunction {
-        symbol: function.name.to_string(),
+        symbol: stable_hir_function_symbol(&module.name, function),
         return_type: function.return_type.clone(),
         param_types,
         value_types: builder.value_types,
@@ -777,563 +788,5 @@ impl MirBuilder {
             self.value_types.insert(value, return_type);
         }
         value
-    }
-
-    fn lower_expr_to_operand(&mut self, expr: &HirExpr) -> MirOperand {
-        self.lower_expr_to_operand_with_hint(expr, None)
-    }
-
-    fn lower_expr_to_operand_with_hint(&mut self, expr: &HirExpr, expected_type: Option<&ValkyrieType>) -> MirOperand {
-        match &expr.kind {
-            HirExprKind::Literal(literal) => {
-                let (constant, ty) = lower_literal(literal, expected_type);
-                let value = self.next_value(MirValueOrigin::Literal);
-                self.instructions
-                    .push(MirInstruction { output: Some(value), kind: MirInstructionKind::LoadConstant { constant, ty: ty.clone() } });
-                if let Some(ty) = ty {
-                    self.value_types.insert(value, ty);
-                }
-                MirOperand::Value(value)
-            }
-            HirExprKind::Variable(identifier) => self
-                .bindings
-                .get(identifier.name.as_str())
-                .cloned()
-                .unwrap_or_else(|| MirOperand::Symbol(NamePath::new(vec![identifier.name.clone()]))),
-            HirExprKind::Path(path) => {
-                let value = self.next_value(MirValueOrigin::Path);
-                self.instructions.push(MirInstruction { output: Some(value), kind: MirInstructionKind::LoadSymbol { path: path.clone() } });
-                MirOperand::Value(value)
-            }
-            HirExprKind::Call { callee, args, resolved } => {
-                // 检测实例方法调用：`obj.method()` 其中 `obj` 的根是已绑定的变量（参数或 let 绑定）。
-                // 此时不应将 `obj.method` 解析为静态路径，而应将 `obj` 作为接收者参数传入，
-                // 方法名作为单组件 callee，使后端能正确识别为实例方法调用。
-                // 例如 `args.length()` 降级为 `length(args)`，`left.starts_with("/")` 降级为 `starts_with(left, "/")`。
-                //
-                // 处理两种 callee 形式：
-                // 1. `FieldAccess`：直接字段访问表达式
-                // 2. `Path`：`extract_dotted_path` 将点分路径统一解析为 `Path`，
-                //    需在此检测首段是否为绑定变量，以区分方法调用与模块路径调用。
-                if let Some((receiver_operand, method_name)) = self.extract_method_call(callee) {
-                    let mut arguments = args.iter().map(|arg| self.lower_expr_to_operand(arg)).collect::<Vec<_>>();
-                    arguments.insert(0, receiver_operand);
-                    let callee = MirOperand::Symbol(NamePath::new(vec![method_name.clone()]));
-                    let value = self.next_value(MirValueOrigin::CallResult);
-                    self.instructions.push(MirInstruction {
-                        output: Some(value),
-                        kind: MirInstructionKind::Call {
-                            dispatch: MirDispatchKind::Static,
-                            callee,
-                            arguments,
-                            builtin: None,
-                            witness: None,
-                            effect: None,
-                        },
-                    });
-                    if let Some(return_type) = self.return_types.get(method_name.as_str()).cloned() {
-                        self.value_types.insert(value, return_type);
-                    }
-                    return MirOperand::Value(value);
-                }
-                let callee = lower_callee_operand(callee, resolved.as_ref(), self);
-                let arguments = args.iter().map(|arg| self.lower_expr_to_operand(arg)).collect::<Vec<_>>();
-                let builtin = resolve_builtin_call(&callee, &arguments, &self.value_types);
-                let value = self.next_value(MirValueOrigin::CallResult);
-                self.instructions.push(MirInstruction {
-                    output: Some(value),
-                    kind: MirInstructionKind::Call {
-                        dispatch: MirDispatchKind::Static,
-                        callee: callee.clone(),
-                        arguments: arguments.clone(),
-                        builtin,
-                        witness: None,
-                        effect: None,
-                    },
-                });
-                if let Some(ty) = builtin
-                    .and_then(|builtin| builtin_call_output_type(builtin, &arguments, &self.value_types))
-                    .or_else(|| resolved.as_ref().map(|call| call.return_type.clone()))
-                    .or_else(|| match &callee {
-                        MirOperand::Symbol(path) => self.return_types.get(&path.to_string()).cloned(),
-                        _ => None,
-                    })
-                {
-                    self.value_types.insert(value, ty);
-                }
-                MirOperand::Value(value)
-            }
-            HirExprKind::ArrayNew { element_type, length } => {
-                // 数组创建：求值长度，生成 ArrayNew 指令。
-                let length_operand = self.lower_expr_to_operand(length);
-                let value = self.next_value(MirValueOrigin::Temporary);
-                self.instructions.push(MirInstruction {
-                    output: Some(value),
-                    kind: MirInstructionKind::ArrayNew { element_type: element_type.clone(), length: length_operand },
-                });
-                self.value_types.insert(value, ValkyrieType::Array(Box::new(element_type.clone())));
-                MirOperand::Value(value)
-            }
-            HirExprKind::ArrayLiteral { items } => {
-                let array_item_type = match expected_type {
-                    Some(ValkyrieType::Array(item)) => Some(item.as_ref()),
-                    _ => None,
-                };
-                let element_type = infer_array_literal_element_type(items, array_item_type);
-                let item_operands =
-                    items.iter().map(|item| self.lower_expr_to_operand_with_hint(item, Some(&element_type))).collect::<Vec<_>>();
-                let array_value = self.next_value(MirValueOrigin::Temporary);
-                self.instructions.push(MirInstruction {
-                    output: Some(array_value),
-                    kind: MirInstructionKind::ArrayLiteral { element_type: element_type.clone(), items: item_operands },
-                });
-                self.value_types.insert(array_value, ValkyrieType::Array(Box::new(element_type)));
-                MirOperand::Value(array_value)
-            }
-            HirExprKind::Construct { name, args, resolved } => {
-                // 结构体构造：收集字段名与字段值，生成 StructNew 指令。
-                let mut fields = Vec::with_capacity(args.len());
-                for arg in args {
-                    if let HirExprKind::FieldInit { name, value } = &arg.kind {
-                        let value_operand = self.lower_expr_to_operand(value);
-                        fields.push((name.to_string(), value_operand));
-                    }
-                }
-                let value = self.next_value(MirValueOrigin::Temporary);
-                self.instructions
-                    .push(MirInstruction { output: Some(value), kind: MirInstructionKind::StructNew { type_name: name.to_string(), fields } });
-                self.value_types
-                    .insert(value, resolved.as_ref().map(|call| call.return_type.clone()).unwrap_or_else(|| ValkyrieType::Named(name.clone())));
-                MirOperand::Value(value)
-            }
-            HirExprKind::FieldAccess { object, field } => {
-                // 字段读取：求值对象，生成 FieldGet 指令。
-                let object_operand = self.lower_expr_to_operand(object);
-                let value = self.next_value(MirValueOrigin::Temporary);
-                self.instructions.push(MirInstruction {
-                    output: Some(value),
-                    kind: MirInstructionKind::FieldGet { object: object_operand, field: field.to_string() },
-                });
-                MirOperand::Value(value)
-            }
-            HirExprKind::StoreField { object, field, value } => {
-                // 字段写入：求值对象和值，生成 FieldSet 指令。
-                let object_operand = self.lower_expr_to_operand(object);
-                let value_operand = self.lower_expr_to_operand(value);
-                self.instructions.push(MirInstruction {
-                    output: None,
-                    kind: MirInstructionKind::FieldSet { object: object_operand, field: field.to_string(), value: value_operand },
-                });
-                MirOperand::Constant(MirConstant::Unit)
-            }
-            HirExprKind::Return(value) => {
-                let terminand = value.as_deref().map(|e| self.lower_expr_to_operand(e));
-                self.terminate(MirTerminator::Return { value: terminand });
-                MirOperand::Constant(MirConstant::Unit)
-            }
-            HirExprKind::Assign { target, value } => {
-                // 求值右侧表达式得到操作数。
-                let operand = self.lower_expr_to_operand(value);
-                // 为赋值创建新的 SSA 值，存储到命名槽位（复用原 let 的槽位）。
-                let name = target.as_str().to_string();
-                let new_value = self.next_value(MirValueOrigin::LetBinding { name: name.clone() });
-                self.instructions.push(MirInstruction {
-                    output: Some(new_value),
-                    kind: MirInstructionKind::StoreVar { name: name.clone(), value: operand.clone(), ty: None },
-                });
-                if let Some(ty) = infer_builder_operand_type(&operand, &self.value_types) {
-                    self.value_types.insert(new_value, ty);
-                }
-                // 更新绑定指向新值。
-                self.bindings.insert(name, MirOperand::Value(new_value));
-                MirOperand::Constant(MirConstant::Unit)
-            }
-            HirExprKind::If { condition, then_branch, else_branch } => self.lower_if_expr(condition, then_branch, else_branch),
-            HirExprKind::Block(body) => self.lower_block_expr(body),
-            HirExprKind::Loop { label, pattern, iterator, condition, body, .. } => {
-                self.lower_loop_expr(label, pattern, iterator, condition, body)
-            }
-            HirExprKind::Break { label, expr } => self.lower_break_expr(label, expr),
-            HirExprKind::Continue { label } => self.lower_continue_expr(label),
-            HirExprKind::Match { scrutinee, arms } => self.lower_match_expr(scrutinee, arms),
-            HirExprKind::Case { scrutinee, arms } => self.lower_case_expr(scrutinee, arms),
-            HirExprKind::Yield(value) => self.lower_yield_expr(value.as_deref()),
-            HirExprKind::YieldFrom(value) => self.lower_yield_from_expr(value),
-            HirExprKind::Await(value) => self.lower_await_expr(value),
-            HirExprKind::Awake(value) => self.lower_awake_expr(value),
-            HirExprKind::BlockOn(value) => self.lower_block_on_expr(value),
-            HirExprKind::Raise(value) => self.lower_raise_expr(value),
-            HirExprKind::Resume(value) => self.lower_resume_expr(value),
-            HirExprKind::Catch { expr, arms } => self.lower_catch_expr(expr, arms),
-            HirExprKind::Fallthrough => self.lower_fallthrough_expr(),
-            _ => {
-                let value = self.next_value(MirValueOrigin::Temporary);
-                self.instructions.push(MirInstruction {
-                    output: Some(value),
-                    kind: MirInstructionKind::LoadSymbol { path: NamePath::new(vec![Identifier::new("unsupported_hir_expr")]) },
-                });
-                MirOperand::Value(value)
-            }
-        }
-    }
-
-    fn resolve_static_expr(&self, expr: &HirExpr) -> Option<HirExpr> {
-        match &expr.kind {
-            HirExprKind::Variable(identifier) => self.static_bindings.get(identifier.name.as_str()).cloned().or_else(|| Some(expr.clone())),
-            _ => Some(expr.clone()),
-        }
-    }
-
-    fn resolve_static_iterable_items(&self, expr: &HirExpr) -> Option<Vec<HirExpr>> {
-        let resolved = self.resolve_static_expr(expr)?;
-        match resolved.kind {
-            HirExprKind::ArrayLiteral { items } => Some(items),
-            HirExprKind::Call { callee, args, .. } if callee_name_matches(&callee.kind, "array") => Some(args),
-            HirExprKind::Call { callee, args, resolved: call_resolved } if callee_name_matches(&callee.kind, "tuple") => {
-                Some(vec![HirExpr { kind: HirExprKind::Call { callee, args, resolved: call_resolved }, span: resolved.span }])
-            }
-            _ => None,
-        }
-    }
-
-    /// 检测 callee 是否为实例方法调用，返回 `(接收者操作数, 方法名)`。
-    ///
-    /// 处理两种 callee 形式：
-    /// 1. `FieldAccess { object, field }`：当 `object` 的根变量在 `bindings` 中时，
-    ///    将 `object` 作为接收者，`field` 作为方法名。
-    /// 2. `Path([first, second, ...])`：当 `first` 在 `bindings` 中时，
-    ///    将 `first` 对应的绑定值作为接收者，`second` 作为方法名。
-    ///    仅处理 2 段路径；多段路径（如 `obj.field.method`）需要字段访问支持，暂不处理。
-    fn extract_method_call(&mut self, callee: &HirExpr) -> Option<(MirOperand, Identifier)> {
-        match &callee.kind {
-            HirExprKind::FieldAccess { object, field } => {
-                let root_name = root_variable_name(object)?;
-                if !self.bindings.contains_key(root_name) {
-                    return None;
-                }
-                let receiver_operand = self.lower_expr_to_operand(object);
-                Some((receiver_operand, field.clone()))
-            }
-            HirExprKind::Path(path) if path.parts().len() == 2 => {
-                let receiver_name = &path.parts()[0];
-                if !self.bindings.contains_key(receiver_name.as_str()) {
-                    return None;
-                }
-                let receiver_operand = self.bindings.get(receiver_name.as_str()).cloned()?;
-                let method_name = path.parts()[1].clone();
-                Some((receiver_operand, method_name))
-            }
-            _ => None,
-        }
-    }
-}
-
-fn infer_array_literal_element_type(items: &[HirExpr], hint: Option<&ValkyrieType>) -> ValkyrieType {
-    if let Some(hint) = hint {
-        return hint.clone();
-    }
-    match items.first().map(|item| &item.kind) {
-        Some(HirExprKind::Literal(HirLiteral::Bool(_))) => ValkyrieType::Boolean,
-        Some(HirExprKind::Literal(HirLiteral::String(_))) => ValkyrieType::Utf8,
-        Some(HirExprKind::Literal(HirLiteral::Float64(_))) => ValkyrieType::Float64,
-        Some(HirExprKind::Literal(HirLiteral::Integer64(_))) => ValkyrieType::Integer32 { signed: true },
-        _ => ValkyrieType::Integer32 { signed: true },
-    }
-}
-
-fn infer_builder_constant_type(constant: &MirConstant) -> Option<ValkyrieType> {
-    Some(match constant {
-        MirConstant::Int(value) if *value >= i32::MIN as i64 && *value <= i32::MAX as i64 => ValkyrieType::Integer32 { signed: true },
-        MirConstant::Int(_) => ValkyrieType::Integer64 { signed: true },
-        MirConstant::Float64(_) => ValkyrieType::Float64,
-        MirConstant::Bool(_) => ValkyrieType::Boolean,
-        MirConstant::String(_) => ValkyrieType::Utf8,
-        MirConstant::Unit => ValkyrieType::Unit,
-    })
-}
-
-fn infer_builder_operand_type(operand: &MirOperand, value_types: &BTreeMap<MirValueRef, ValkyrieType>) -> Option<ValkyrieType> {
-    match operand {
-        MirOperand::Value(value_ref) => value_types.get(value_ref).cloned(),
-        MirOperand::Constant(constant) => infer_builder_constant_type(constant),
-        MirOperand::Symbol(_) => None,
-    }
-}
-
-fn named_type_name(ty: &ValkyrieType) -> Option<&str> {
-    match ty {
-        ValkyrieType::Named(name) => Some(name.as_str()),
-        ValkyrieType::Apply(base, _) => named_type_name(base),
-        _ => None,
-    }
-}
-
-fn future_resume_type(ty: &ValkyrieType) -> Option<ValkyrieType> {
-    match ty {
-        ValkyrieType::Apply(base, arguments) if arguments.len() == 1 && matches!(named_type_name(base), Some("Future" | "Promise")) => {
-            arguments.first().cloned()
-        }
-        _ => None,
-    }
-}
-
-fn plain_type_pattern_matches(actual_type: &ValkyrieType, pattern_name: &NamePath) -> bool {
-    let Some(expected_name) = pattern_name.parts().last().map(|identifier| identifier.as_str())
-    else {
-        return false;
-    };
-
-    match actual_type {
-        ValkyrieType::Void => expected_name == "void",
-        ValkyrieType::Unit => expected_name == "unit",
-        ValkyrieType::Boolean => expected_name == "bool",
-        ValkyrieType::Integer8 { signed } => expected_name == if *signed { "i8" } else { "u8" },
-        ValkyrieType::Integer16 { signed } => expected_name == if *signed { "i16" } else { "u16" },
-        ValkyrieType::Integer32 { signed } => expected_name == if *signed { "i32" } else { "u32" },
-        ValkyrieType::Integer64 { signed } => expected_name == if *signed { "i64" } else { "u64" },
-        ValkyrieType::Integer128 { signed } => expected_name == if *signed { "i128" } else { "u128" },
-        ValkyrieType::Float32 => expected_name == "f32",
-        ValkyrieType::Float64 => expected_name == "f64",
-        ValkyrieType::Character => expected_name == "char",
-        ValkyrieType::Utf8 => expected_name == "utf8",
-        ValkyrieType::Utf16 => expected_name == "utf16",
-        ValkyrieType::Named(name) => name.as_str() == expected_name,
-        ValkyrieType::Apply(base, _) => plain_type_pattern_matches(base, pattern_name),
-        ValkyrieType::Array(_) => expected_name == "array",
-        ValkyrieType::Tuple(_) => expected_name == "tuple",
-        ValkyrieType::Function(_) => expected_name == "function",
-        ValkyrieType::TraitObject(_) => expected_name == "trait_object",
-        ValkyrieType::Associated(_) => expected_name == "associated",
-        ValkyrieType::AutoType => expected_name == "auto",
-        ValkyrieType::SelfType => expected_name == "Self",
-        ValkyrieType::Generic(generic) => generic.name.as_str() == expected_name,
-        ValkyrieType::TypeLambda(_) => expected_name == "type_lambda",
-    }
-}
-
-fn resolve_builtin_call(
-    callee: &MirOperand,
-    arguments: &[MirOperand],
-    value_types: &BTreeMap<MirValueRef, ValkyrieType>,
-) -> Option<MirBuiltinCall> {
-    let MirOperand::Symbol(path) = callee
-    else {
-        return None;
-    };
-    let first = arguments.first().and_then(|arg| infer_builder_operand_type(arg, value_types));
-    let second = arguments.get(1).and_then(|arg| infer_builder_operand_type(arg, value_types));
-    match path.to_string().as_str() {
-        "suffix []" if matches!(first, Some(ValkyrieType::Array(_))) && is_builder_integer_type(second.as_ref()) => {
-            Some(MirBuiltinCall::ArrayGet)
-        }
-        "suffix []=" if matches!(first, Some(ValkyrieType::Array(_))) && is_builder_integer_type(second.as_ref()) => {
-            Some(MirBuiltinCall::ArraySet)
-        }
-        "len" | "length" if matches!(first, Some(ValkyrieType::Array(_))) => Some(MirBuiltinCall::ArrayLength),
-        "prefix -" if is_builder_numeric_type(first.as_ref()) => Some(MirBuiltinCall::NumericNeg),
-        "infix &&" if matches!(first, Some(ValkyrieType::Boolean)) && matches!(second, Some(ValkyrieType::Boolean)) => {
-            Some(MirBuiltinCall::LogicalAnd)
-        }
-        "infix ||" if matches!(first, Some(ValkyrieType::Boolean)) && matches!(second, Some(ValkyrieType::Boolean)) => {
-            Some(MirBuiltinCall::LogicalOr)
-        }
-        "prefix !" if matches!(first, Some(ValkyrieType::Boolean)) => Some(MirBuiltinCall::LogicalNot),
-        "ExitCode" if is_builder_integer_type(first.as_ref()) => Some(MirBuiltinCall::Identity),
-        "infix +" => resolve_binary_numeric_builtin(first.as_ref(), second.as_ref(), MirBuiltinBinaryOp::Add),
-        "infix -" => resolve_binary_numeric_builtin(first.as_ref(), second.as_ref(), MirBuiltinBinaryOp::Sub),
-        "infix *" => resolve_binary_numeric_builtin(first.as_ref(), second.as_ref(), MirBuiltinBinaryOp::Mul),
-        "infix /" => resolve_binary_numeric_builtin(first.as_ref(), second.as_ref(), MirBuiltinBinaryOp::Div),
-        "infix %" => resolve_binary_numeric_builtin(first.as_ref(), second.as_ref(), MirBuiltinBinaryOp::Rem),
-        "infix ==" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Eq),
-        "infix !=" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Ne),
-        "infix <" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Lt),
-        "infix <=" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Le),
-        "infix >" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Gt),
-        "infix >=" => resolve_compare_builtin(first.as_ref(), second.as_ref(), MirBuiltinCompareOp::Ge),
-        _ => None,
-    }
-}
-
-fn resolve_binary_numeric_builtin(lhs: Option<&ValkyrieType>, rhs: Option<&ValkyrieType>, op: MirBuiltinBinaryOp) -> Option<MirBuiltinCall> {
-    if lhs == rhs && is_builder_numeric_type(lhs) {
-        Some(MirBuiltinCall::BinaryNumeric(op))
-    }
-    else {
-        None
-    }
-}
-
-fn resolve_compare_builtin(lhs: Option<&ValkyrieType>, rhs: Option<&ValkyrieType>, op: MirBuiltinCompareOp) -> Option<MirBuiltinCall> {
-    if lhs == rhs && (is_builder_numeric_type(lhs) || matches!(lhs, Some(ValkyrieType::Boolean))) {
-        Some(MirBuiltinCall::Compare(op))
-    }
-    else {
-        None
-    }
-}
-
-fn builtin_call_output_type(
-    builtin: MirBuiltinCall,
-    arguments: &[MirOperand],
-    value_types: &BTreeMap<MirValueRef, ValkyrieType>,
-) -> Option<ValkyrieType> {
-    match builtin {
-        MirBuiltinCall::BinaryNumeric(_) | MirBuiltinCall::NumericNeg | MirBuiltinCall::Identity => {
-            arguments.first().and_then(|argument| infer_builder_operand_type(argument, value_types))
-        }
-        MirBuiltinCall::Compare(_) | MirBuiltinCall::LogicalAnd | MirBuiltinCall::LogicalOr | MirBuiltinCall::LogicalNot => {
-            Some(ValkyrieType::Boolean)
-        }
-        MirBuiltinCall::ArrayGet => match arguments.first().and_then(|argument| infer_builder_operand_type(argument, value_types))? {
-            ValkyrieType::Array(item) => Some(*item),
-            _ => None,
-        },
-        MirBuiltinCall::ArraySet => Some(ValkyrieType::Unit),
-        MirBuiltinCall::ArrayLength => Some(ValkyrieType::Integer32 { signed: true }),
-    }
-}
-
-fn is_builder_numeric_type(ty: Option<&ValkyrieType>) -> bool {
-    matches!(
-        ty,
-        Some(
-            ValkyrieType::Integer8 { .. }
-                | ValkyrieType::Integer16 { .. }
-                | ValkyrieType::Integer32 { .. }
-                | ValkyrieType::Integer64 { .. }
-                | ValkyrieType::Integer128 { .. }
-                | ValkyrieType::Float32
-                | ValkyrieType::Float64
-        )
-    )
-}
-
-fn is_builder_integer_type(ty: Option<&ValkyrieType>) -> bool {
-    matches!(
-        ty,
-        Some(
-            ValkyrieType::Integer8 { .. }
-                | ValkyrieType::Integer16 { .. }
-                | ValkyrieType::Integer32 { .. }
-                | ValkyrieType::Integer64 { .. }
-                | ValkyrieType::Integer128 { .. }
-        )
-    )
-}
-
-/// 判断 callee 名称是否匹配预期。
-///
-/// 同时支持 `HirExprKind::Path`（多部分路径）和 `HirExprKind::Variable`（单部分名称），
-/// 因为 `lower_name_expression` 会将单部分名称降级为 `Variable`。
-fn callee_name_matches(kind: &HirExprKind, expected: &str) -> bool {
-    match kind {
-        HirExprKind::Path(path) if path.to_string() == expected => true,
-        HirExprKind::Variable(ident) if ident.name.as_str() == expected => true,
-        _ => false,
-    }
-}
-
-fn lower_callee_operand(expr: &HirExpr, resolved: Option<&valkyrie_types::hir::HirResolvedCall>, builder: &mut MirBuilder) -> MirOperand {
-    if let Some(resolved) = resolved {
-        return MirOperand::Symbol(resolved.symbol.clone());
-    }
-    match &expr.kind {
-        HirExprKind::Path(path) => MirOperand::Symbol(path.clone()),
-        HirExprKind::Variable(identifier) => builder
-            .bindings
-            .get(identifier.name.as_str())
-            .cloned()
-            .unwrap_or_else(|| MirOperand::Symbol(NamePath::new(vec![identifier.name.clone()]))),
-        HirExprKind::GenericApply { callee, .. } => lower_callee_operand(callee, None, builder),
-        // 字段访问链作为 callee 时，尝试解析为符号路径。
-        // 例如 `std.iterator.collect_array` 会被降级为嵌套 FieldAccess，
-        // 此处将其重新组合为 NamePath，以便后端生成静态调用。
-        HirExprKind::FieldAccess { .. } => match try_resolve_as_path(expr) {
-            Some(path) => MirOperand::Symbol(path),
-            None => builder.lower_expr_to_operand(expr),
-        },
-        _ => builder.lower_expr_to_operand(expr),
-    }
-}
-
-/// 尝试将表达式解析为 `NamePath`。
-///
-/// 递归处理 `Variable` 和 `FieldAccess` 链，将其组合为完整路径。
-/// 例如 `std.iterator.collect_array` 会被解析为 `NamePath(["std", "iterator", "collect_array"])`。
-/// 若表达式不是纯路径形式（如对象是复杂表达式），返回 `None`。
-fn try_resolve_as_path(expr: &HirExpr) -> Option<NamePath> {
-    match &expr.kind {
-        HirExprKind::Variable(identifier) => Some(NamePath::new(vec![identifier.name.clone()])),
-        HirExprKind::Path(path) => Some(path.clone()),
-        HirExprKind::FieldAccess { object, field } => {
-            let mut path = try_resolve_as_path(object)?;
-            path.append(field.clone());
-            Some(path)
-        }
-        _ => None,
-    }
-}
-
-/// 递归提取 `FieldAccess` 链的根变量名。
-///
-/// 例如 `request.target.length` 的根变量是 `request`。
-/// 若表达式不是 `Variable` 或 `FieldAccess` 链，返回 `None`。
-/// 用于区分实例方法调用（`obj.method()`）和静态路径调用（`module.function()`）。
-fn root_variable_name(expr: &HirExpr) -> Option<&str> {
-    match &expr.kind {
-        HirExprKind::Variable(identifier) => Some(identifier.name.as_str()),
-        HirExprKind::FieldAccess { object, .. } => root_variable_name(object),
-        _ => None,
-    }
-}
-
-fn lower_literal(literal: &HirLiteral, expected_type: Option<&ValkyrieType>) -> (MirConstant, Option<ValkyrieType>) {
-    match literal {
-        HirLiteral::Integer64(value) => (
-            MirConstant::Int(*value),
-            Some(match expected_type {
-                Some(ValkyrieType::Integer32 { signed }) => ValkyrieType::Integer32 { signed: *signed },
-                Some(ValkyrieType::Integer64 { signed }) => ValkyrieType::Integer64 { signed: *signed },
-                _ if *value >= i32::MIN as i64 && *value <= i32::MAX as i64 => ValkyrieType::Integer32 { signed: true },
-                _ => ValkyrieType::Integer64 { signed: true },
-            }),
-        ),
-        HirLiteral::Float64(value) => (MirConstant::Float64(*value), Some(ValkyrieType::Float64)),
-        HirLiteral::Bool(value) => (MirConstant::Bool(*value), Some(ValkyrieType::Boolean)),
-        HirLiteral::String(value) => (
-            MirConstant::String(
-                value
-                    .segments
-                    .iter()
-                    .map(|segment| match segment {
-                        valkyrie_types::hir::HirStringSegment::Text(text) => text.clone(),
-                        valkyrie_types::hir::HirStringSegment::Interpolation { expr, .. } => {
-                            format!("${{{}}}", render_interpolation_expr(expr))
-                        }
-                    })
-                    .collect::<String>(),
-            ),
-            Some(ValkyrieType::Utf8),
-        ),
-        HirLiteral::Unit => (MirConstant::Unit, Some(ValkyrieType::Unit)),
-    }
-}
-
-fn render_interpolation_expr(expr: &HirExpr) -> String {
-    match &expr.kind {
-        HirExprKind::Variable(identifier) => identifier.name.to_string(),
-        HirExprKind::Path(path) => path.to_string(),
-        HirExprKind::Literal(HirLiteral::Integer64(value)) => value.to_string(),
-        HirExprKind::Literal(HirLiteral::Bool(value)) => value.to_string(),
-        HirExprKind::Literal(HirLiteral::String(value)) => value
-            .segments
-            .iter()
-            .map(|segment| match segment {
-                valkyrie_types::hir::HirStringSegment::Text(text) => text.clone(),
-                valkyrie_types::hir::HirStringSegment::Interpolation { .. } => "${...}".to_string(),
-            })
-            .collect(),
-        HirExprKind::Call { callee, .. } => format!("{}(...)", render_interpolation_expr(callee)),
-        _ => "...".to_string(),
     }
 }

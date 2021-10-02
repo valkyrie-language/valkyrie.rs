@@ -175,13 +175,8 @@ impl PeWriter {
 
     /// 将 `MsilModule` 写入为 `PE` 二进制。
     pub fn write_module(&self, module: &MsilModule) -> Result<Vec<u8>, PeWriterError> {
-        // 查找入口方法。
-        let entry_method = module
-            .global_methods
-            .iter()
-            .find(|m| m.is_entry_point)
-            .or_else(|| module.types.iter().flat_map(|type_def| type_def.methods.iter()).find(|m| m.is_entry_point));
-        if matches!(self.options.image_kind, ClrImageKind::Executable) && entry_method.is_none() {
+        let entry_method_key = find_entry_method_lookup_key(module, &self.options.module_name);
+        if matches!(self.options.image_kind, ClrImageKind::Executable) && entry_method_key.is_none() {
             return Err(PeWriterError::NoEntryPoint);
         }
 
@@ -310,7 +305,7 @@ impl PeWriter {
         let size_of_image = align_up(reloc_section_rva + reloc_virtual_size, SECTION_ALIGNMENT);
 
         let entry_token = if matches!(self.options.image_kind, ClrImageKind::Executable) {
-            entry_method.and_then(|m| local_method_tokens.get(&m.method.name)).copied().unwrap_or(METHOD_DEF_TOKEN_BASE | 1)
+            entry_method_key.as_ref().and_then(|key| local_method_tokens.get(key)).copied().unwrap_or(METHOD_DEF_TOKEN_BASE | 1)
         }
         else {
             0
@@ -809,7 +804,11 @@ fn build_local_method_token_map(module: &MsilModule) -> BTreeMap<String, u32> {
     let mut row = 1u32;
 
     for method in &module.global_methods {
-        tokens.insert(method.method.name.clone(), METHOD_DEF_TOKEN_BASE | row);
+        let token = METHOD_DEF_TOKEN_BASE | row;
+        tokens.insert(method.method.name.clone(), token);
+        if let Some(owner) = method.method.owner.as_deref() {
+            tokens.insert(format!("{}.{}", owner, method.method.name), token);
+        }
         row += 1;
     }
 
@@ -817,7 +816,6 @@ fn build_local_method_token_map(module: &MsilModule) -> BTreeMap<String, u32> {
         let qualified_name = type_def.qualified_name();
         for method in &type_def.methods {
             let token = METHOD_DEF_TOKEN_BASE | row;
-            tokens.insert(method.method.name.clone(), token);
             tokens.insert(format!("{}.{}", type_def.full_name, method.method.name), token);
             tokens.insert(format!("{}.{}", qualified_name, method.method.name), token);
             row += 1;
@@ -825,6 +823,27 @@ fn build_local_method_token_map(module: &MsilModule) -> BTreeMap<String, u32> {
     }
 
     tokens
+}
+
+fn find_entry_method_lookup_key(module: &MsilModule, module_name: &str) -> Option<String> {
+    if let Some(method) = module.global_methods.iter().find(|m| m.is_entry_point) {
+        return Some(
+            method
+                .method
+                .owner
+                .as_ref()
+                .map(|owner| format!("{}.{}", owner, method.method.name))
+                .unwrap_or_else(|| format!("{}.{}", module_name, method.method.name)),
+        );
+    }
+
+    for type_def in &module.types {
+        if let Some(method) = type_def.methods.iter().find(|m| m.is_entry_point) {
+            return Some(format!("{}.{}", type_def.qualified_name(), method.method.name));
+        }
+    }
+
+    None
 }
 
 fn build_local_type_token_map(module: &MsilModule) -> BTreeMap<String, u32> {

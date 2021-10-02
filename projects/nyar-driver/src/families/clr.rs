@@ -2,7 +2,7 @@ use clr_backend::{write_dotnet_runtime_config, ClrBinaryBackend};
 use miette::Result;
 use nyar::{
     backends::{clr::ClrImageKind, TargetCodeGenBackend},
-    BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane,
+    BackendInputKind, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement, TargetFamily, TargetLane,
 };
 
 use super::BundledFamilyCompiler;
@@ -14,6 +14,8 @@ pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) ->
     requirement.lane == TargetLane::Clr
         && requirement.input_kind == BackendInputKind::MsilText
         && requirement.target.family == TargetFamily::Clr
+        && requirement.host_boundary == HostProjectionBoundary::Clr
+        && requirement.reference_management == ReferenceManagement::HostGc
 }
 
 impl BundledFamilyCompiler for ClrFamilyCompiler {
@@ -29,7 +31,7 @@ impl BundledFamilyCompiler for ClrFamilyCompiler {
         let backend = ClrBinaryBackend::new();
         backend.validate(&input)?;
         let artifacts = backend.compile(input, request.options)?;
-        if request.generate_runtime_config && image_kind == ClrImageKind::Executable {
+        if request.generate_runtime_config {
             write_dotnet_runtime_config(&output_dir, request.artifact_name)?;
         }
 

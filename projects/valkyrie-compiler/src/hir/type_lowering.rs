@@ -2,9 +2,9 @@
 
 use std::{cell::RefCell, collections::BTreeSet};
 
-use valkyrie_parser::{ast::TypePath as AstTypePath, DeclarationStatement, ParseError, TypeExpression, ValkyrieRoot};
+use valkyrie_parser::{ast::TypePath as AstTypePath, ParseError, RootStatement, TypeExpression, ValkyrieRoot};
 use valkyrie_types::{
-    hir::{FunctionType, ValkyrieType},
+    hir::{FunctionType, RowMethodType, RowType, ValkyrieType},
     Identifier,
 };
 
@@ -59,6 +59,15 @@ pub(crate) fn validate_type_expression(ty: &TypeExpression) -> Result<(), ParseE
                 validate_type_expression(item)?;
             }
         }
+        TypeExpression::Pointer { item, .. } => validate_type_expression(item)?,
+        TypeExpression::Row { methods, .. } => {
+            for method in methods {
+                for param in &method.params {
+                    validate_type_expression(param)?;
+                }
+                validate_type_expression(&method.return_type)?;
+            }
+        }
         TypeExpression::Associated { .. } | TypeExpression::Nullable { .. } | TypeExpression::Function { .. } => {}
     }
     Ok(())
@@ -77,6 +86,17 @@ pub(crate) fn lower_type_expression(ty: &TypeExpression) -> ValkyrieType {
                 ValkyrieType::Tuple(items.iter().map(lower_type_expression).collect())
             }
         }
+        TypeExpression::Pointer { item, .. } => lower_type_expression(item),
+        TypeExpression::Row { methods, .. } => ValkyrieType::Row(RowType {
+            methods: methods
+                .iter()
+                .map(|method| RowMethodType {
+                    name: method.name.name.clone(),
+                    params: method.params.iter().map(lower_type_expression).collect(),
+                    return_type: lower_type_expression(&method.return_type),
+                })
+                .collect(),
+        }),
         TypeExpression::Associated { ty, .. } => lower_type_expression(ty),
         TypeExpression::Nullable { item, .. } => lower_type_expression(item),
         TypeExpression::Function { params, return_type, .. } => ValkyrieType::Function(Box::new(FunctionType {
@@ -106,6 +126,24 @@ pub(crate) fn render_type_expression(ty: &TypeExpression) -> String {
             }
             let inner = items.iter().map(render_type_expression).collect::<Vec<_>>().join(", ");
             format!("({inner})")
+        }
+        TypeExpression::Pointer { kind, item, .. } => {
+            let prefix = match kind {
+                valkyrie_parser::ast::PointerKind::ReadOnly => "◇",
+                valkyrie_parser::ast::PointerKind::Mutable => "◆",
+            };
+            format!("{prefix}{}", render_type_expression(item))
+        }
+        TypeExpression::Row { methods, .. } => {
+            let inner = methods
+                .iter()
+                .map(|method| {
+                    let params = method.params.iter().map(render_type_expression).collect::<Vec<_>>().join(", ");
+                    format!("{}({params}) -> {}", method.name, render_type_expression(&method.return_type))
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{ {inner} }}")
         }
         TypeExpression::Associated { name, ty, .. } => format!("{name}={}", render_type_expression(ty)),
         TypeExpression::Nullable { item, .. } => format!("{}?", render_type_expression(item)),
@@ -163,7 +201,7 @@ fn collect_shadowed_builtin_type_aliases(root: &ValkyrieRoot) -> BTreeSet<String
     root.statements
         .iter()
         .filter_map(|statement| match statement {
-            DeclarationStatement::TypeAlias(alias) if canonical_builtin_type(alias.name.name.as_str()).is_some() => {
+            RootStatement::TypeAlias(alias) if canonical_builtin_type(alias.name.name.as_str()).is_some() => {
                 Some(alias.name.name.as_str().to_string())
             }
             _ => None,

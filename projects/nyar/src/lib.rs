@@ -26,8 +26,8 @@ pub use self::{
 };
 pub use nyar_analyzer::{EntryContract, ExportContract, FunctionAnalysis, ImportContract, ProgramFacts, RuntimeRequirement};
 pub use nyar_optimizer::{
-    EGraphSnapshot, FutamuraProjectionFamily, ObjectAlgebraicBuilder, ObjectAlgebraicDimension, ObjectAlgebraicInterpreter,
-    ObjectAlgebraicProgram, OptimizationRequest, OptimizationResult, OptimizationSession, ProjectionPlan, ProjectionPolicy, RewritePhase,
-    RewriteRule, RewriteTheory,
+    EGraphSnapshot, FutamuraProjectionFamily, HostProjectionBoundary, ObjectAlgebraicBuilder, ObjectAlgebraicDimension,
+    ObjectAlgebraicInterpreter, ObjectAlgebraicProgram, OptimizationRequest, OptimizationResult, OptimizationSession, ProjectionPlan,
+    ProjectionPolicy, ReferenceManagement, RewritePhase, RewriteRule, RewriteTheory,
 };
 pub use nyar_types::{CapabilityTag, Identifier, NamePath, QualifiedName, SymbolIdentity};

@@ -5,13 +5,13 @@ use valkyrie_compiler::hir::{
 use valkyrie_types::{
     hir::{
         HirAssociatedType, HirAssociatedTypeImpl, HirBlock, HirDocumentation, HirFunction, HirIdentifier, HirImpl, HirParam, HirStruct,
-        HirTrait, HirType, HirVisibility, HirWhereConstraint,
+        HirTrait, HirVisibility, HirWhereConstraint, ValkyrieType,
     },
     Identifier, NamePath, SourceID, SourceSpan,
 };
 
-fn int32_type() -> HirType {
-    HirType::Integer32 { signed: true }
+fn int32_type() -> ValkyrieType {
+    ValkyrieType::Integer32 { signed: true }
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn ambiguous_associated_type_inference_fails() {
     let iterator_trait = iterator_trait();
     let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let first_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())]);
-    let second_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Utf8, span())]);
+    let second_impl = trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Utf8, span())]);
 
     let error = resolve_associated_type(&counter, &iterator_trait, &[first_impl, second_impl], &Identifier::new("Item")).unwrap_err();
 
@@ -55,7 +55,7 @@ fn ambiguous_associated_type_inference_fails() {
         error,
         TraitSatisfactionError::AmbiguousExplicitImpls {
             trait_path: NamePath::new(vec![Identifier::new("Iterator")]),
-            target: HirType::Named(Identifier::new("Counter")),
+            target: ValkyrieType::Named(Identifier::new("Counter")),
         }
     );
 }
@@ -65,16 +65,16 @@ fn more_specific_where_impl_wins_for_associated_type_resolution() {
     let iterator_trait = iterator_trait();
     let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let general_impl = HirImpl {
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
         ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())])
     };
     let specific_impl = HirImpl {
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone", "Debug"])],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Utf8, span())])
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone", "Debug"])],
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Utf8, span())])
     };
 
     let resolved = resolve_associated_type(&counter, &iterator_trait, &[general_impl, specific_impl], &Identifier::new("Item")).unwrap();
-    assert_eq!(resolved, HirType::Utf8);
+    assert_eq!(resolved, ValkyrieType::Utf8);
 }
 
 #[test]
@@ -82,12 +82,12 @@ fn incomparable_where_impls_keep_associated_type_resolution_ambiguous() {
     let iterator_trait = iterator_trait();
     let counter = struct_with_methods("Counter", vec![method("next", vec![], int32_type())]);
     let first_impl = HirImpl {
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Clone"])],
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Clone"])],
         ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32_type(), span())])
     };
     let second_impl = HirImpl {
-        where_constraints: vec![where_constraint(HirType::Named(Identifier::new("T")), vec!["Debug"])],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), HirType::Utf8, span())])
+        where_constraints: vec![where_constraint(ValkyrieType::Named(Identifier::new("T")), vec!["Debug"])],
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Utf8, span())])
     };
 
     let error = resolve_associated_type(&counter, &iterator_trait, &[first_impl, second_impl], &Identifier::new("Item")).unwrap_err();
@@ -96,7 +96,7 @@ fn incomparable_where_impls_keep_associated_type_resolution_ambiguous() {
         error,
         TraitSatisfactionError::AmbiguousExplicitImpls {
             trait_path: NamePath::new(vec![Identifier::new("Iterator")]),
-            target: HirType::Named(Identifier::new("Counter")),
+            target: ValkyrieType::Named(Identifier::new("Counter")),
         }
     );
 }
@@ -135,6 +135,7 @@ fn iterator_trait() -> HirTrait {
 fn struct_with_methods(name: &str, methods: Vec<HirFunction>) -> HirStruct {
     HirStruct {
         name: Identifier::new(name),
+        namespace: vec![],
         doc: HirDocumentation::default(),
         generics: vec![],
         parents: vec![],
@@ -157,7 +158,7 @@ fn trait_impl(target: &str, trait_name: &str, associated_type_impls: Vec<HirAsso
     HirImpl {
         generics: vec![],
         where_constraints: vec![],
-        target: HirType::Named(Identifier::new(target)),
+        target: ValkyrieType::Named(Identifier::new(target)),
         trait_path: Some(NamePath::new(vec![Identifier::new(trait_name)])),
         methods: vec![],
         associated_type_impls,
@@ -165,11 +166,11 @@ fn trait_impl(target: &str, trait_name: &str, associated_type_impls: Vec<HirAsso
     }
 }
 
-fn where_constraint(target: HirType, bounds: Vec<&str>) -> HirWhereConstraint {
+fn where_constraint(target: ValkyrieType, bounds: Vec<&str>) -> HirWhereConstraint {
     HirWhereConstraint { target, bounds: bounds.into_iter().map(|name| NamePath::new(vec![Identifier::new(name)])).collect(), span: span() }
 }
 
-fn method(name: &str, params: Vec<HirType>, return_type: HirType) -> HirFunction {
+fn method(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> HirFunction {
     HirFunction {
         name: Identifier::new(name),
         doc: HirDocumentation::default(),

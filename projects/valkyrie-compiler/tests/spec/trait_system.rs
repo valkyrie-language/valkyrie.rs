@@ -26,7 +26,7 @@ fn named_trait_satisfaction_produces_witness() {
     let counter = struct_with_methods("Counter", vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))]);
     let explicit_impl = HirImpl {
         methods: vec![method("next", vec![], ValkyrieType::Named(Identifier::new("Option")))],
-        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), ValkyrieType::Integer32, span())])
+        ..trait_impl("Counter", "Iterator", vec![HirAssociatedTypeImpl::new(Identifier::new("Item"), int32(), span())])
     };
 
     let witness = satisfy_named_trait(&counter, &iterator_trait, &[explicit_impl]).unwrap();
@@ -43,7 +43,7 @@ fn named_trait_satisfaction_produces_witness() {
                 implementation_container: Identifier::new("Counter"),
                 is_default: false,
             }],
-            associated_types: BTreeMap::from([(Identifier::new("Item"), ValkyrieType::Integer32)]),
+            associated_types: BTreeMap::from([(Identifier::new("Item"), int32())]),
         }
     );
 }
@@ -83,15 +83,17 @@ fn trait_module_view_reports_unknown_trait_from_real_module_objects() {
 
 #[test]
 fn trait_module_view_reads_real_hir_module_objects_from_compiler() {
-    let compiler = ValkyrieCompiler::new(SourceID(37));
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 37 });
     let module = compiler
-        .compile_source(r#"trait Writer {
+        .compile_source(
+            r#"trait Writer {
     micro write(text: utf8);
 }
 class Console {
     micro write(text: utf8) {}
 }
-"#)
+"#,
+        )
         .unwrap();
 
     let witness = TraitModuleView::from_module(&module).satisfy_named_trait(&Identifier::new("Console"), &Identifier::new("Writer")).unwrap();
@@ -227,7 +229,7 @@ fn trait_structural_entry_rejects_ambiguous_row_match() {
     let writer_trait = trait_with_methods("Writer", vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit)]);
     let overloaded = struct_with_methods(
         "OverloadedWriter",
-        vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit), method("write", vec![ValkyrieType::Integer32], ValkyrieType::Unit)],
+        vec![method("write", vec![ValkyrieType::Utf8], ValkyrieType::Unit), method("write", vec![int32()], ValkyrieType::Unit)],
     );
 
     let error = satisfy_named_trait(&overloaded, &writer_trait, &[]).unwrap_err();
@@ -290,16 +292,14 @@ fn trait_default_methods_do_not_become_structural_requirements() {
 
 #[test]
 fn public_field_satisfies_named_trait_through_getter_and_setter_rows() {
-    let sized_trait = trait_with_methods(
-        "SizedSlot",
-        vec![method("get_size", vec![], ValkyrieType::Integer32), method("set_size", vec![ValkyrieType::Integer32], ValkyrieType::Unit)],
-    );
+    let sized_trait =
+        trait_with_methods("SizedSlot", vec![method("get_size", vec![], int32()), method("set_size", vec![int32()], ValkyrieType::Unit)]);
     let slot = struct_with_fields(
         "Slot",
         vec![HirField {
             name: Identifier::new("size"),
             doc: HirDocumentation::default(),
-            ty: ValkyrieType::Integer32,
+            ty: int32(),
             visibility: HirVisibility::public(),
             is_readonly: false,
         }],
@@ -314,14 +314,12 @@ fn public_field_satisfies_named_trait_through_getter_and_setter_rows() {
 #[test]
 fn explicit_impl_can_fall_back_to_trait_default_method_binding() {
     let comparable = HirTrait {
-        default_methods: vec![method("ne", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)],
-        ..trait_with_methods("Comparable", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)])
+        default_methods: vec![method("ne", vec![int32()], ValkyrieType::Boolean)],
+        ..trait_with_methods("Comparable", vec![method("eq", vec![int32()], ValkyrieType::Boolean)])
     };
-    let value = struct_with_methods("NumberBox", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)]);
-    let explicit_impl = HirImpl {
-        methods: vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)],
-        ..trait_impl("NumberBox", "Comparable", vec![])
-    };
+    let value = struct_with_methods("NumberBox", vec![method("eq", vec![int32()], ValkyrieType::Boolean)]);
+    let explicit_impl =
+        HirImpl { methods: vec![method("eq", vec![int32()], ValkyrieType::Boolean)], ..trait_impl("NumberBox", "Comparable", vec![]) };
 
     let witness = satisfy_named_trait(&value, &comparable, &[explicit_impl]).unwrap();
 
@@ -347,7 +345,7 @@ fn explicit_impl_can_fall_back_to_trait_default_method_binding() {
 
 #[test]
 fn explicit_impl_requires_required_method_binding() {
-    let comparable = trait_with_methods("Comparable", vec![method("eq", vec![ValkyrieType::Integer32], ValkyrieType::Boolean)]);
+    let comparable = trait_with_methods("Comparable", vec![method("eq", vec![int32()], ValkyrieType::Boolean)]);
     let value = struct_with_methods("NumberBox", vec![]);
     let explicit_impl = trait_impl("NumberBox", "Comparable", vec![]);
 
@@ -364,12 +362,9 @@ fn explicit_impl_requires_required_method_binding() {
 
 #[test]
 fn operator_method_binding_uses_plain_method_name_in_witness_entries() {
-    let additive = trait_with_methods("Add", vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)]);
-    let vector = struct_with_methods("Vec2", vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)]);
-    let explicit_impl = HirImpl {
-        methods: vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
-        ..trait_impl("Vec2", "Add", vec![])
-    };
+    let additive = trait_with_methods("Add", vec![method("infix +", vec![int32()], int32())]);
+    let vector = struct_with_methods("Vec2", vec![method("infix +", vec![int32()], int32())]);
+    let explicit_impl = HirImpl { methods: vec![method("infix +", vec![int32()], int32())], ..trait_impl("Vec2", "Add", vec![]) };
 
     let witness = satisfy_named_trait(&vector, &additive, &[explicit_impl]).unwrap();
     let method_entries = build_witness_method_entries(&witness, ModuleId::LOCAL, vec![Identifier::new("math")], TypeId::new(7));
@@ -387,23 +382,17 @@ fn operator_method_binding_uses_plain_method_name_in_witness_entries() {
 #[test]
 fn witness_table_preserves_operator_and_default_method_bindings() {
     let additive = HirTrait {
-        default_methods: vec![method("prefix -", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
+        default_methods: vec![method("prefix -", vec![int32()], int32())],
         ..trait_with_assoc_type(
             "Add",
-            vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
+            vec![method("infix +", vec![int32()], int32())],
             vec![HirAssociatedType::new(Identifier::new("Output"), span())],
         )
     };
-    let vector = struct_with_methods(
-        "Vec2",
-        vec![
-            method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32),
-            method("prefix -", vec![ValkyrieType::Integer32], ValkyrieType::Integer32),
-        ],
-    );
+    let vector = struct_with_methods("Vec2", vec![method("infix +", vec![int32()], int32()), method("prefix -", vec![int32()], int32())]);
     let explicit_impl = HirImpl {
-        methods: vec![method("infix +", vec![ValkyrieType::Integer32], ValkyrieType::Integer32)],
-        ..trait_impl("Vec2", "Add", vec![HirAssociatedTypeImpl::new(Identifier::new("Output"), ValkyrieType::Integer32, span())])
+        methods: vec![method("infix +", vec![int32()], int32())],
+        ..trait_impl("Vec2", "Add", vec![HirAssociatedTypeImpl::new(Identifier::new("Output"), int32(), span())])
     };
 
     let witness = satisfy_named_trait(&vector, &additive, &[explicit_impl]).unwrap();
@@ -414,7 +403,7 @@ fn witness_table_preserves_operator_and_default_method_bindings() {
         vec![Identifier::new("math")],
         TypeMetadata::new(TypeId::new(7), Identifier::new("Vec2"), TypeKind::Struct),
         |_, ty| match ty {
-            ValkyrieType::Integer32 => TypeId::new(32),
+            ValkyrieType::Integer32 { signed: _ } => TypeId::new(32),
             _ => TypeId::new(999),
         },
     );
@@ -538,4 +527,8 @@ fn method(name: &str, params: Vec<ValkyrieType>, return_type: ValkyrieType) -> H
 
 fn span() -> SourceSpan {
     SourceSpan::new(SourceID::default(), 0, 0)
+}
+
+fn int32() -> ValkyrieType {
+    ValkyrieType::Integer32 { signed: true }
 }

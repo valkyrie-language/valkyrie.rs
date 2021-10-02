@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        ArrayPattern, DeclarationBody, ExtractPattern, LiteralExpression, MatchArm, MatchObjectField, ObjectPattern, OrPatternExpression,
-        PatternExpression, TermExpression, TuplePattern,
+        ArmStatement, ArrayPattern, CaseArm, DeclarationBody, ExtractPattern, LiteralExpression, MatchObjectField, ObjectPattern,
+        PatternExpression, PatternOrExpression, TermExpression, TuplePattern,
     },
     lexer::{Keyword, TokenKind},
 };
@@ -47,11 +47,11 @@ impl<'a> Parser<'a> {
             Ok(TermExpression::Match { scrutinee, arms, span })
         }
         else {
-            Ok(TermExpression::Case { scrutinee, arms, span })
+            Ok(TermExpression::Match { scrutinee, arms, span })
         }
     }
 
-    pub(super) fn parse_match_arm(&mut self) -> Result<MatchArm, ParseError> {
+    pub(super) fn parse_match_arm(&mut self) -> Result<ArmStatement, ParseError> {
         let start = self.current().span.start;
         let (pattern, guard) = if self.match_token_keyword(Keyword::Else) {
             self.expect_symbol(TokenKind::Colon)?;
@@ -71,11 +71,11 @@ impl<'a> Parser<'a> {
             }
             else {
                 let end = self.previous().span.end;
-                (Some(PatternExpression::Or(Box::new(OrPatternExpression { patterns, span: span(start, end) }))), guard)
+                (Some(PatternExpression::Or(Box::new(PatternOrExpression { patterns, span: span(start, end) }))), guard)
             }
         };
         let body = self.parse_match_arm_body()?;
-        Ok(MatchArm { pattern, guard, body, span: span(start, self.previous().span.end) })
+        Ok(ArmStatement::Case(CaseArm { pattern, guard, body, span: span(start, self.previous().span.end) }))
     }
 
     fn parse_match_single_pattern(&mut self) -> Result<PatternExpression, ParseError> {
@@ -295,18 +295,28 @@ impl<'a> Parser<'a> {
                 statements.push(self.parse_let_statement()?);
                 continue;
             }
+            if matches!(
+                self.current().kind,
+                TokenKind::Keyword(
+                    Keyword::Return | Keyword::Break | Keyword::Continue | Keyword::Yield | Keyword::Resume | Keyword::Fallthrough
+                )
+            ) {
+                statements.push(self.parse_control_flow_statement()?);
+                self.match_symbol(TokenKind::Semicolon);
+                continue;
+            }
 
             let expr = self.parse_expression_bp(0)?;
             let expr_span = expr.span().clone();
             if self.match_symbol(TokenKind::Semicolon) {
-                statements.push(crate::ast::Statement::Expr { span: expr_span, expression: expr });
+                statements.push(crate::ast::FunctionStatement::Term { span: expr_span, expression: expr });
                 continue;
             }
             if self.is_match_arm_terminator() {
                 tail_expression = Some(expr);
                 break;
             }
-            statements.push(crate::ast::Statement::Expr { span: expr_span, expression: expr });
+            statements.push(crate::ast::FunctionStatement::Term { span: expr_span, expression: expr });
         }
 
         let end = tail_expression

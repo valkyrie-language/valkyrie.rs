@@ -144,6 +144,13 @@ impl NominalModuleView {
         Ok(matches_nominal_parameter(candidate_struct, expected_struct, &declared_types))
     }
 
+    pub fn nominal_match_distance(&self, candidate: &Identifier, expected: &Identifier) -> Result<Option<usize>, NominalModuleError> {
+        let candidate_struct = self.lookup_named_type(candidate)?;
+        let expected_struct = self.lookup_named_type(expected)?;
+        let declared_types = self.named_types.values().cloned().collect::<Vec<_>>();
+        Ok(nominal_parameter_distance(candidate_struct, expected_struct, &declared_types))
+    }
+
     fn lookup_named_type(&self, name: &Identifier) -> Result<&HirStruct, NominalModuleError> {
         if let Some(found) = self.named_types.get(name) {
             return Ok(found);
@@ -165,6 +172,15 @@ pub fn matches_nominal_parameter(candidate: &HirStruct, expected: &HirStruct, de
     let index = declared_types.iter().map(|item| (item.name.clone(), item)).collect::<BTreeMap<_, _>>();
 
     inherits_from(candidate, &expected.name, &index, &mut BTreeSet::new())
+}
+
+pub fn nominal_parameter_distance(candidate: &HirStruct, expected: &HirStruct, declared_types: &[HirStruct]) -> Option<usize> {
+    if candidate.name == expected.name {
+        return Some(0);
+    }
+
+    let index = declared_types.iter().map(|item| (item.name.clone(), item)).collect::<BTreeMap<_, _>>();
+    inheritance_distance(candidate, &expected.name, &index, &mut BTreeSet::new())
 }
 
 pub fn validate_unite_definition(enum_def: &HirEnum) -> Result<(), UniteDefinitionError> {
@@ -246,6 +262,35 @@ fn inherits_from(
 
     visiting.remove(&candidate.name);
     found
+}
+
+fn inheritance_distance(
+    candidate: &HirStruct,
+    expected: &Identifier,
+    index: &BTreeMap<Identifier, &HirStruct>,
+    visiting: &mut BTreeSet<Identifier>,
+) -> Option<usize> {
+    if !visiting.insert(candidate.name.clone()) {
+        return None;
+    }
+
+    let best = candidate
+        .parents
+        .iter()
+        .filter_map(|parent| {
+            let parent_name = parent_name(parent)?;
+
+            if &parent_name == expected {
+                return Some(1);
+            }
+
+            let parent_struct = index.get(&parent_name)?;
+            inheritance_distance(parent_struct, expected, index, visiting).map(|distance| distance + 1)
+        })
+        .min();
+
+    visiting.remove(&candidate.name);
+    best
 }
 
 fn parent_name(parent: &HirParent) -> Option<Identifier> {
@@ -346,6 +391,14 @@ fn collect_generic_names(ty: &ValkyrieType, names: &mut BTreeSet<Identifier>) {
         ValkyrieType::Tuple(items) => {
             for item in items {
                 collect_generic_names(item, names);
+            }
+        }
+        ValkyrieType::Row(row) => {
+            for method in &row.methods {
+                for param in &method.params {
+                    collect_generic_names(param, names);
+                }
+                collect_generic_names(&method.return_type, names);
             }
         }
         ValkyrieType::Array(item) => {

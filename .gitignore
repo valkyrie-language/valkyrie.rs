@@ -28,6 +28,7 @@ htmlcov/
 
 # Antlr
 .antlr/
+.tmp/
 *.jar
 
 

@@ -1,4 +1,4 @@
-use nyar_wasi_backend::WatDocument;
+use nyar_backend_wasi::WatDocument;
 
 #[test]
 fn parses_named_module_fields() {

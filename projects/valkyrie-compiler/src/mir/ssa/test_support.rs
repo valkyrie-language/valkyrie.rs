@@ -106,7 +106,24 @@ pub fn lower_test_function(expr: HirExpr) -> MirFunction {
         is_abstract: false,
         is_final: false,
     };
-    lower_function(&function, &BTreeMap::new(), &BTreeMap::new(), &BTreeMap::new())
+    let module = HirModule {
+        name: NamePath::new(vec![Identifier::new("demo")]),
+        doc: HirDocumentation::default(),
+        imports: Vec::new(),
+        submodules: Vec::new(),
+        functions: vec![function.clone()],
+        structs: Vec::new(),
+        enums: Vec::new(),
+        flags: Vec::new(),
+        traits: Vec::new(),
+        impls: Vec::new(),
+        type_functions: Vec::new(),
+        type_families: Vec::new(),
+        widgets: Vec::new(),
+        singletons: Vec::new(),
+        statements: Vec::new(),
+    };
+    lower_function(&module, &function, &BTreeMap::new(), &BTreeMap::new(), &BTreeMap::new())
 }
 
 /// 构造一个最小模块并降低到 `MIR`。

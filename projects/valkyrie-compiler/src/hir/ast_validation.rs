@@ -3,10 +3,12 @@
 use std::ops::Range;
 
 use valkyrie_parser::{
-    ClassDeclaration, DeclarationBody, DeclarationStatement, FunctionDeclaration, FunctionParameter, GenericParameterDeclaration,
-    ImplyDeclaration, ObjectBody, ObjectFieldDeclaration, ObjectMethodDeclaration, ParseError, Statement, TermExpression,
+    ast::{ArmStatement, SubscriptItem},
+    ClassDeclaration, DeclarationBody, FunctionDeclaration, FunctionParameter, FunctionStatement, GenericParameterDeclaration,
+    ImplyDeclaration, ObjectBody, ObjectFieldDeclaration, ObjectMethodDeclaration, ParseError, RootStatement, TermExpression,
     TraitAssociatedConstDeclaration, TraitAssociatedTypeDeclaration, TraitDeclaration, UniteDeclaration, ValkyrieRoot,
 };
+use valkyrie_types::Identifier;
 
 use super::validate_type_expression;
 
@@ -20,26 +22,26 @@ pub(crate) fn validate_ast_root(root: &ValkyrieRoot) -> Result<(), ParseError> {
 
 #[derive(Debug, Clone, Default)]
 struct ValidationContext {
-    loop_labels: Vec<Option<String>>,
+    loop_labels: Vec<Option<Identifier>>,
     in_catch_arm: bool,
     in_match_arm: bool,
 }
 
-fn validate_declaration_statement(statement: &DeclarationStatement) -> Result<(), ParseError> {
+fn validate_declaration_statement(statement: &RootStatement) -> Result<(), ParseError> {
     match statement {
-        DeclarationStatement::Namespace(namespace) => {
+        RootStatement::Namespace(namespace) => {
             if let Some(body) = &namespace.body {
                 validate_declaration_body(body)?;
             }
         }
-        DeclarationStatement::Using(_) => {}
-        DeclarationStatement::Function(function) => validate_function_declaration(function)?,
-        DeclarationStatement::Class(class_decl) => validate_class_declaration(class_decl)?,
-        DeclarationStatement::Trait(trait_decl) => validate_trait_declaration(trait_decl)?,
-        DeclarationStatement::Imply(imply_decl) => validate_imply_declaration(imply_decl)?,
-        DeclarationStatement::Unite(unite_decl) => validate_unite_declaration(unite_decl)?,
-        DeclarationStatement::Attribute(_) => {}
-        DeclarationStatement::TypeAlias(_) => {}
+        RootStatement::Using(_) => {}
+        RootStatement::Function(function) => validate_function_declaration(function)?,
+        RootStatement::Class(class_decl) => validate_class_declaration(class_decl)?,
+        RootStatement::Trait(trait_decl) => validate_trait_declaration(trait_decl)?,
+        RootStatement::Imply(imply_decl) => validate_imply_declaration(imply_decl)?,
+        RootStatement::Unite(unite_decl) => validate_unite_declaration(unite_decl)?,
+        RootStatement::Attribute(_) => {}
+        RootStatement::TypeAlias(_) => {}
     }
     Ok(())
 }
@@ -206,9 +208,9 @@ fn validate_declaration_body_with_context(body: &DeclarationBody, context: &mut 
     Ok(())
 }
 
-fn validate_statement_with_context(statement: &Statement, context: &mut ValidationContext) -> Result<(), ParseError> {
+fn validate_statement_with_context(statement: &FunctionStatement, context: &mut ValidationContext) -> Result<(), ParseError> {
     match statement {
-        Statement::Let { statement, .. } => {
+        FunctionStatement::Let(statement) => {
             if let Some(ty) = &statement.ty {
                 validate_type_expression(ty)?;
             }
@@ -216,8 +218,41 @@ fn validate_statement_with_context(statement: &Statement, context: &mut Validati
                 validate_term_expression_with_context(initializer, context)?;
             }
         }
-        Statement::Expr { expression, .. } => validate_term_expression_with_context(expression, context)?,
-        Statement::Function { function, .. } => validate_function_declaration(function)?,
+        FunctionStatement::Term { expression, .. } => validate_term_expression_with_context(expression, context)?,
+        FunctionStatement::Function { function, .. } => validate_function_declaration(function)?,
+        FunctionStatement::Break(statement) => {
+            validate_loop_control_target("break", statement.label.as_ref(), &statement.span, context)?;
+            if let Some(value) = &statement.value {
+                validate_term_expression_with_context(value, context)?;
+            }
+        }
+        FunctionStatement::Continue(statement) => {
+            validate_loop_control_target("continue", statement.label.as_ref(), &statement.span, context)?;
+        }
+        FunctionStatement::Yield(statement) => {
+            if let Some(value) = &statement.value {
+                validate_term_expression_with_context(value, context)?;
+            }
+        }
+        FunctionStatement::YieldFrom(statement) => validate_term_expression_with_context(&statement.value, context)?,
+        FunctionStatement::Return(statement) => {
+            if let Some(value) = &statement.value {
+                validate_term_expression_with_context(value, context)?;
+            }
+        }
+        FunctionStatement::Resume(statement) => {
+            if !context.in_catch_arm {
+                return Err(ParseError::invalid_at("`resume` 只允许出现在 `catch` 分支内", statement.span.clone()));
+            }
+            if let Some(value) = &statement.value {
+                validate_term_expression_with_context(value, context)?;
+            }
+        }
+        FunctionStatement::Fallthrough(statement) => {
+            if !(context.in_match_arm && !context.in_catch_arm) {
+                return Err(ParseError::invalid_at("`fallthrough` 仅允许出现在 `case` statement 体系中", statement.span.clone()));
+            }
+        }
     }
     Ok(())
 }
@@ -230,30 +265,44 @@ fn validate_term_expression(expression: &TermExpression) -> Result<(), ParseErro
 fn validate_term_expression_with_context(expression: &TermExpression, context: &mut ValidationContext) -> Result<(), ParseError> {
     match expression {
         TermExpression::Name { .. } | TermExpression::Literal { .. } => {}
-        TermExpression::Continue { label, span } => {
-            validate_loop_control_target("continue", label.as_deref(), span, context)?;
-        }
-        TermExpression::Fallthrough { span } => {
-            if context.in_match_arm && !context.in_catch_arm {
-                return Ok(());
-            }
-            return Err(ParseError::invalid_at("`fallthrough` 仅允许出现在 `case` statement 体系中", span.clone()));
-        }
         TermExpression::Unary(term_unary) => validate_term_expression_with_context(&term_unary.base, context)?,
         TermExpression::Binary(term_binary) => {
             validate_term_expression_with_context(&term_binary.lhs, context)?;
             validate_term_expression_with_context(&term_binary.rhs, context)?;
         }
-        TermExpression::Call { callee, args, .. } => {
-            validate_term_expression_with_context(callee, context)?;
-            for arg in args {
+        TermExpression::Call(term_call) => {
+            validate_term_expression_with_context(&term_call.callee, context)?;
+            for arg in &term_call.args.terms {
                 validate_term_expression_with_context(arg, context)?;
             }
         }
-        TermExpression::MemberAccess { object, .. } => validate_term_expression_with_context(object, context)?,
-        TermExpression::Subscript { object, index, .. } => {
-            validate_term_expression_with_context(object, context)?;
-            validate_term_expression_with_context(index, context)?;
+        TermExpression::DotCall(term_dot) => {
+            validate_term_expression_with_context(&term_dot.base, context)?;
+            for arg in &term_dot.arguments.terms {
+                validate_term_expression_with_context(arg, context)?;
+            }
+        }
+        TermExpression::Subscript(term_subscript) => {
+            validate_term_expression_with_context(&term_subscript.base, context)?;
+            for subscript in &term_subscript.subscripts {
+                match subscript {
+                    SubscriptItem::Index { term, .. } => validate_term_expression_with_context(term, context)?,
+                    SubscriptItem::Slice { start, end, step, .. } => {
+                        if let Some(start) = start {
+                            validate_term_expression_with_context(start, context)?;
+                        }
+                        if let Some(end) = end {
+                            validate_term_expression_with_context(end, context)?;
+                        }
+                        if let Some(step) = step {
+                            validate_term_expression_with_context(step, context)?;
+                        }
+                    }
+                }
+            }
+        }
+        TermExpression::Dereference(term_dereference) => {
+            validate_term_expression_with_context(&term_dereference.base, context)?;
         }
         TermExpression::Tuple { items, .. } | TermExpression::Array { items, .. } => {
             for item in items {
@@ -263,6 +312,9 @@ fn validate_term_expression_with_context(expression: &TermExpression, context: &
         TermExpression::As(term_as) => {
             validate_term_expression_with_context(&term_as.base, context)?;
             validate_type_expression(&term_as.target)?;
+        }
+        TermExpression::Is(term_is) => {
+            validate_term_expression_with_context(&term_is.base, context)?;
         }
         TermExpression::Turbofish { expr, arguments, .. } => {
             validate_term_expression_with_context(expr, context)?;
@@ -274,30 +326,7 @@ fn validate_term_expression_with_context(expression: &TermExpression, context: &
             validate_term_expression_with_context(target, context)?;
             validate_term_expression_with_context(value, context)?;
         }
-        TermExpression::Return { value, .. } => {
-            if let Some(value) = value {
-                validate_term_expression_with_context(value, context)?;
-            }
-        }
-        TermExpression::Break { label, value, span } => {
-            validate_loop_control_target("break", label.as_deref(), span, context)?;
-            if let Some(value) = value {
-                validate_term_expression_with_context(value, context)?;
-            }
-        }
-        TermExpression::Yield { value, .. } => {
-            if let Some(value) = value {
-                validate_term_expression_with_context(value, context)?;
-            }
-        }
-        TermExpression::YieldFrom { value, .. } => validate_term_expression_with_context(value, context)?,
         TermExpression::Raise { value, .. } => validate_term_expression_with_context(value, context)?,
-        TermExpression::Resume { value, span } => {
-            if !context.in_catch_arm {
-                return Err(ParseError::invalid_at("`resume` 只允许出现在 `catch` 分支内", span.clone()));
-            }
-            validate_term_expression_with_context(value, context)?;
-        }
         TermExpression::If(if_stmt) => {
             validate_term_expression_with_context(&if_stmt.condition, context)?;
             validate_declaration_body_with_context(&if_stmt.then_body, context)?;
@@ -305,42 +334,83 @@ fn validate_term_expression_with_context(expression: &TermExpression, context: &
                 validate_declaration_body_with_context(else_body, context)?;
             }
         }
+        TermExpression::IfLet(if_let_stmt) => {
+            validate_term_expression_with_context(&if_let_stmt.item, context)?;
+            validate_declaration_body_with_context(&if_let_stmt.then_body, context)?;
+            if let Some(else_body) = &if_let_stmt.else_body {
+                validate_declaration_body_with_context(else_body, context)?;
+            }
+        }
         TermExpression::Loop(loop_stmt) => {
-            if let Some(iterator) = &loop_stmt.iterator {
-                validate_term_expression_with_context(iterator, context)?;
-            }
-            if let Some(condition) = &loop_stmt.condition {
-                validate_term_expression_with_context(condition, context)?;
-            }
-            context.loop_labels.push(loop_stmt.label.clone());
+            context.loop_labels.push(None);
             let result = validate_declaration_body_with_context(&loop_stmt.body, context);
             context.loop_labels.pop();
             result?;
         }
-        TermExpression::Match { scrutinee, arms, .. } | TermExpression::Case { scrutinee, arms, .. } => {
+        TermExpression::LoopIn(loop_in_stmt) => {
+            if let Some(iterator) = &loop_in_stmt.iterator {
+                validate_term_expression_with_context(iterator, context)?;
+            }
+            if let Some(condition) = &loop_in_stmt.condition {
+                validate_term_expression_with_context(condition, context)?;
+            }
+            context.loop_labels.push(loop_in_stmt.label.clone());
+            let result = validate_declaration_body_with_context(&loop_in_stmt.body, context);
+            context.loop_labels.pop();
+            result?;
+        }
+        TermExpression::While(while_stmt) => {
+            if let Some(condition) = &while_stmt.condition {
+                validate_term_expression_with_context(condition, context)?;
+            }
+            context.loop_labels.push(while_stmt.label.clone());
+            let result = validate_declaration_body_with_context(&while_stmt.body, context);
+            context.loop_labels.pop();
+            result?;
+        }
+        TermExpression::WhileLet(while_let_stmt) => {
+            if let Some(condition) = &while_let_stmt.condition {
+                validate_term_expression_with_context(condition, context)?;
+            }
+            context.loop_labels.push(while_let_stmt.label.clone());
+            let result = validate_declaration_body_with_context(&while_let_stmt.body, context);
+            context.loop_labels.pop();
+            result?;
+        }
+        TermExpression::Until(until_stmt) => {
+            if let Some(iterator) = &until_stmt.iterator {
+                validate_term_expression_with_context(iterator, context)?;
+            }
+            if let Some(condition) = &until_stmt.condition {
+                validate_term_expression_with_context(condition, context)?;
+            }
+            context.loop_labels.push(until_stmt.label.clone());
+            let result = validate_declaration_body_with_context(&until_stmt.body, context);
+            context.loop_labels.pop();
+            result?;
+        }
+        TermExpression::UntilNot(until_not_stmt) => {
+            if let Some(iterator) = &until_not_stmt.iterator {
+                validate_term_expression_with_context(iterator, context)?;
+            }
+            if let Some(condition) = &until_not_stmt.condition {
+                validate_term_expression_with_context(condition, context)?;
+            }
+            context.loop_labels.push(until_not_stmt.label.clone());
+            let result = validate_declaration_body_with_context(&until_not_stmt.body, context);
+            context.loop_labels.pop();
+            result?;
+        }
+        TermExpression::Match { scrutinee, arms, .. } => {
             validate_term_expression_with_context(scrutinee, context)?;
             for arm in arms {
-                if let Some(guard_expr) = &arm.guard {
-                    validate_term_expression_with_context(guard_expr, context)?;
-                }
-                let previous_in_match_arm = context.in_match_arm;
-                context.in_match_arm = true;
-                let result = validate_declaration_body_with_context(&arm.body, context);
-                context.in_match_arm = previous_in_match_arm;
-                result?;
+                validate_arm_statement(arm, context, false)?;
             }
         }
         TermExpression::Catch { expr, arms, .. } => {
             validate_term_expression_with_context(expr, context)?;
             for arm in arms {
-                if let Some(guard_expr) = &arm.guard {
-                    validate_term_expression_with_context(guard_expr, context)?;
-                }
-                let previous_in_catch_arm = context.in_catch_arm;
-                context.in_catch_arm = true;
-                let result = validate_declaration_body_with_context(&arm.body, context);
-                context.in_catch_arm = previous_in_catch_arm;
-                result?;
+                validate_arm_statement(arm, context, true)?;
             }
         }
         TermExpression::Construct { fields, .. } => {
@@ -359,9 +429,41 @@ fn validate_term_expression_with_context(expression: &TermExpression, context: &
     Ok(())
 }
 
+fn validate_arm_statement(arm: &ArmStatement, context: &mut ValidationContext, in_catch_arm: bool) -> Result<(), ParseError> {
+    match arm {
+        ArmStatement::Case(arm) => {
+            if let Some(guard_expr) = &arm.guard {
+                validate_term_expression_with_context(guard_expr, context)?;
+            }
+            let previous_in_match_arm = context.in_match_arm;
+            let previous_in_catch_arm = context.in_catch_arm;
+            context.in_match_arm = !in_catch_arm;
+            context.in_catch_arm = in_catch_arm;
+            let result = validate_declaration_body_with_context(&arm.body, context);
+            context.in_match_arm = previous_in_match_arm;
+            context.in_catch_arm = previous_in_catch_arm;
+            result
+        }
+        ArmStatement::Type(arm) => {
+            if let Some(guard_expr) = &arm.guard {
+                validate_term_expression_with_context(guard_expr, context)?;
+            }
+            let previous_in_match_arm = context.in_match_arm;
+            let previous_in_catch_arm = context.in_catch_arm;
+            context.in_match_arm = !in_catch_arm;
+            context.in_catch_arm = in_catch_arm;
+            let result = validate_declaration_body_with_context(&arm.body, context);
+            context.in_match_arm = previous_in_match_arm;
+            context.in_catch_arm = previous_in_catch_arm;
+            result
+        }
+        ArmStatement::Else(_) => Ok(()),
+    }
+}
+
 fn validate_loop_control_target(
     keyword: &str,
-    label: Option<&str>,
+    label: Option<&Identifier>,
     span: &Range<usize>,
     context: &ValidationContext,
 ) -> Result<(), ParseError> {
@@ -369,7 +471,7 @@ fn validate_loop_control_target(
         return Err(ParseError::invalid_at(format!("`{keyword}` 只能出现在循环内部"), span.clone()));
     }
     if let Some(label) = label {
-        if !context.loop_labels.iter().rev().any(|candidate| candidate.as_deref() == Some(label)) {
+        if !context.loop_labels.iter().rev().any(|candidate| candidate.as_ref() == Some(label)) {
             return Err(ParseError::invalid_at(format!("未找到 label `{label}` 对应的循环 region"), span.clone()));
         }
     }

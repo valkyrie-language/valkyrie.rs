@@ -6,6 +6,7 @@ use crate::{
     hir::validate_control_flow_module,
     lir::{LirEffectKind, LirFunction, LirModule, LirOperand, LirOperationKind, LirTerminator},
     mir::{MirConstant, MirEffectKind, MirFunction, MirInstructionKind, MirModule, MirOperand, MirTerminator, MirValueOrigin},
+    symbols::stable_hir_function_symbol,
 };
 use valkyrie_parser::ParseError;
 use valkyrie_types::hir::{HirModule, ValkyrieType};
@@ -32,11 +33,11 @@ impl ControlFlowScheduler {
 
     /// 校验跨层级控制流骨架是否保持一致。
     pub fn validate_pipeline(hir: &HirModule, mir: &MirModule, lir: &LirModule) -> Result<(), ParseError> {
-        let hir_functions: BTreeSet<&str> = hir.functions.iter().map(|function| function.name.as_str()).collect();
+        let hir_functions: BTreeSet<String> = hir.functions.iter().map(|function| stable_hir_function_symbol(&hir.name, function)).collect();
         let mir_functions: BTreeSet<&str> = mir.functions.iter().map(|function| function.symbol.as_str()).collect();
         let lir_functions: BTreeSet<&str> = lir.functions.iter().map(|function| function.symbol.as_str()).collect();
 
-        if hir_functions != mir_functions || mir_functions != lir_functions {
+        if hir_functions.iter().map(String::as_str).collect::<BTreeSet<_>>() != mir_functions || mir_functions != lir_functions {
             return Err(ParseError::invalid("控制流调度校验失败：`HIR / MIR / LIR` 的函数集合不一致"));
         }
 
@@ -892,6 +893,21 @@ fn display_type(ty: &ValkyrieType) -> String {
             display_type(&function.return_type)
         ),
         ValkyrieType::Tuple(items) => format!("({})", items.iter().map(display_type).collect::<Vec<_>>().join(", ")),
+        ValkyrieType::Row(row) => format!(
+            "{{ {} }}",
+            row.methods
+                .iter()
+                .map(|method| {
+                    format!(
+                        "{}({}) -> {}",
+                        method.name,
+                        method.params.iter().map(display_type).collect::<Vec<_>>().join(", "),
+                        display_type(&method.return_type)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         ValkyrieType::Array(item) => format!("[{}]", display_type(item)),
         ValkyrieType::TypeLambda(lambda) => format!(
             "type lambda({}) -> {}",

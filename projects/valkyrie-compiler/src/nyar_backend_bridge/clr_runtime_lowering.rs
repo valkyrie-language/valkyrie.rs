@@ -20,6 +20,10 @@ fn lower_runtime_frame_type(frame: &LirRuntimeFrame, runtime_namespace: &str) ->
         MsilField { name: "state_id".to_string(), ty: MsilType::Int32 },
         MsilField { name: "resume_target".to_string(), ty: MsilType::Int32 },
     ];
+    if let Some(_continuation_index) = frame.continuation_index {
+        fields.push(MsilField { name: "continuation_slot".to_string(), ty: MsilType::Int32 });
+        fields.push(MsilField { name: "continuation_index".to_string(), ty: MsilType::Int32 });
+    }
     fields.extend(
         frame.slots.iter().map(|slot| MsilField {
             name: slot.field_name.clone(),
@@ -41,12 +45,14 @@ fn lower_runtime_continuation_type(continuation: &LirRuntimeContinuation, runtim
         MsilField { name: "dispatch_block".to_string(), ty: MsilType::Int32 },
         MsilField { name: "resume_target".to_string(), ty: MsilType::Int32 },
         MsilField { name: "resume_parameter_ref".to_string(), ty: MsilType::Int32 },
+        MsilField { name: "frame_state_id".to_string(), ty: MsilType::Int32 },
         MsilField {
             name: continuation.resume_parameter_field.clone(),
             ty: continuation.resume_parameter_type.as_ref().map(lower_hir_type).unwrap_or(MsilType::Object),
         },
         MsilField { name: "handler_exit".to_string(), ty: MsilType::Int32 },
     ];
+    let _ = continuation.frame_state_id;
     MsilTypeDef {
         full_name: continuation.carrier.clone(),
         namespace: runtime_namespace.to_string(),

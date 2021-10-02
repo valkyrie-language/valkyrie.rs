@@ -1,6 +1,7 @@
 #![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 
+use nyar_optimizer::ReferenceManagement;
 use nyar_types::{CapabilityTag, Identifier, NamePath, QualifiedName};
 
 /// 中性入口约定。
@@ -50,6 +51,8 @@ pub struct FunctionAnalysis {
     pub can_suspend: bool,
     /// 是否需要宿主交互。
     pub uses_host_interop: bool,
+    /// 当前函数是否显式要求引用对象管理策略。
+    pub reference_management_hint: Option<ReferenceManagement>,
 }
 
 /// 单个模块的中性事实集合。
@@ -67,6 +70,8 @@ pub struct ProgramFacts {
     pub functions: Vec<FunctionAnalysis>,
     /// 能力标签。
     pub capabilities: Vec<CapabilityTag>,
+    /// 前端显式判定的引用对象管理策略；为空时由目标侧默认值补全。
+    pub reference_management: Option<ReferenceManagement>,
     /// 运行时需求。
     pub runtime_requirements: Vec<RuntimeRequirement>,
 }
@@ -80,5 +85,12 @@ impl ProgramFacts {
     /// 返回是否包含宿主导入。
     pub fn uses_imports(&self) -> bool {
         !self.imports.is_empty()
+    }
+
+    /// 基于一组操作符号，返回最细粒度可见的引用对象管理提示。
+    pub fn reference_management_for_operations(&self, operations: &[QualifiedName]) -> Option<ReferenceManagement> {
+        operations.iter().find_map(|operation| {
+            self.functions.iter().find(|function| function.symbol == *operation).and_then(|function| function.reference_management_hint)
+        })
     }
 }

@@ -33,7 +33,7 @@ Valkyrie types map to JVM descriptors:
     - For `i64/f32/f64`: Use `lcmp/fcmpl/dcmpl` instructions, followed by `if<cond>` instructions to generate boolean values.
     - For object types (class, unite, string): Use `if_acmp<cond>` to implement reference equality comparison.
 - **Bitwise and Logical Operations**:
-    - `And`, `OrPatternExpression`, `Xor` mapped to `iand/land`, `ior/lor`, `ixor/lxor`.
+    - `And`, `PatternOrExpression`, `Xor` mapped to `iand/land`, `ior/lor`, `ixor/lxor`.
     - `Shl`, `Shr` mapped to `ishl/lshl`, `ishr/lshr`.
 - **Unary Operations**:
     - `Neg` mapped to `ineg/lneg/fneg/dneg`.
@@ -46,7 +46,7 @@ Valkyrie types map to JVM descriptors:
     - Class/Unity methods: `ClassName$MethodName`.
     - Trait methods: `TraitName$MethodName`.
     - Impl methods: `[TraitName$]TargetName_MethodName`.
-- Method calls (`Call`) currently use `invokestatic`. The backend automatically retrieves the callee's signature from `UIR` or `CfgProgram` to generate correct descriptors.
+- Method calls (`TermCallExpression`) currently use `invokestatic`. The backend automatically retrieves the callee's signature from `UIR` or `CfgProgram` to generate correct descriptors.
 - For dynamic calls or function pointers, the backend uses `java/lang/invoke/MethodHandle`'s `invoke` method.
 
 ### Generic Support

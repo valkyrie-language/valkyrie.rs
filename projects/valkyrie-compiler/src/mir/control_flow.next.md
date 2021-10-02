@@ -86,7 +86,7 @@
 - `.block`
 - `resume`
 
-它们不能再伪装成普通 `Call`，因为这些操作会改变控制流连续性。
+它们不能再伪装成普通 `TermCallExpression`，因为这些操作会改变控制流连续性。
 
 但这里仍要保持语义分层：
 
@@ -277,7 +277,7 @@ typed lowering 再决定：
 - block parameter
 - `Jump(arguments)`
 - `Branch`
-- `Return`
+- `ReturnStatement`
 
 下一步不是推翻，而是继续补：
 

@@ -1,13 +1,4 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-
 use legion::{CanonicalTarget, DependencySpec, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest};
-
-fn workspace_repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("valkyrie.v")
-}
 
 fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
     match spec {
@@ -136,9 +127,37 @@ fn parses_sdk_vendor_metadata() {
 }
 
 #[test]
-fn parses_actual_legion_tools_manifest_with_explicit_module_dependencies() {
-    let manifest_path = workspace_repo_root().join("projects").join("legion.tools").join("legion.von");
-    let source = fs::read_to_string(&manifest_path).unwrap();
+fn parses_legion_tools_like_manifest_with_explicit_module_dependencies() {
+    let source = r#"
+    {
+        name: "legion.tools",
+        version: "workspace",
+        description: "Legion 构造工具",
+        auto_link: {
+            core: true,
+            std: false
+        },
+        dependencies: {
+            "nyar": { version: "workspace" },
+            "std": { version: "workspace" },
+            "std.data.text.von": { version: "workspace" }
+        },
+        build: [
+            {
+                target: "clr"
+            },
+            {
+                target: "jvm"
+            },
+            {
+                target: "wasm"
+            },
+            {
+                target: "nyar"
+            }
+        ]
+    }
+    "#;
     let manifest = ProjectManifest::parse(&source).unwrap();
 
     assert_eq!(manifest.name, "legion.tools");
@@ -156,15 +175,33 @@ fn parses_actual_legion_tools_manifest_with_explicit_module_dependencies() {
 }
 
 #[test]
-fn parses_actual_workspace_members_for_module_system_bootstrap() {
-    let manifest_path = workspace_repo_root().join("legions.von");
-    let source = fs::read_to_string(&manifest_path).unwrap();
+fn parses_actual_workspace_members_after_examples_are_narrowed() {
+    let source = r#"
+    {
+        name: "valkyrie-super-workspace",
+        members: [
+            "examples/demo.wechat.game",
+            "examples/demo.unity.game",
+            "projects/nyar",
+            "projects/std",
+            "projects/legion.tools"
+        ],
+        workspace: {
+            version: "0.1.0",
+            auto_link: {
+                core: false,
+                std: false
+            }
+        }
+    }
+    "#;
     let manifest = WorkspaceManifest::parse(&source).unwrap();
 
     assert!(manifest.members.contains(&"projects/legion.tools".to_string()));
     assert!(manifest.members.contains(&"projects/nyar".to_string()));
     assert!(manifest.members.contains(&"projects/std".to_string()));
-    assert!(manifest.members.contains(&"examples/test.module_system".to_string()));
+    assert!(manifest.members.contains(&"examples/demo.unity.game".to_string()));
+    assert!(!manifest.members.contains(&"examples/test.module_system".to_string()));
     assert!(!manifest.workspace.auto_link.core);
     assert!(!manifest.workspace.auto_link.std);
 }

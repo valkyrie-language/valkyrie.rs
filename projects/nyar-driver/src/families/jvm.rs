@@ -1,6 +1,9 @@
 use jvm_backend::{internal_name_to_binary_name, JvmBinaryBackend};
 use miette::Result;
-use nyar::{backends::TargetCodeGenBackend, BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane};
+use nyar::{
+    backends::TargetCodeGenBackend, BackendInputKind, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement, TargetFamily,
+    TargetLane,
+};
 
 use super::BundledFamilyCompiler;
 use crate::{DriverBackendInput, DriverCompileReport, DriverCompileRequest, DriverRunContract};
@@ -12,6 +15,8 @@ pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) ->
     requirement.lane == TargetLane::Jvm
         && requirement.input_kind == BackendInputKind::JvmClassFile
         && requirement.target.family == TargetFamily::Jvm
+        && requirement.host_boundary == HostProjectionBoundary::Jvm
+        && requirement.reference_management == ReferenceManagement::HostGc
 }
 
 impl BundledFamilyCompiler for JvmFamilyCompiler {

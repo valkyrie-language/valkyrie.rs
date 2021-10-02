@@ -514,6 +514,21 @@ fn display_type(ty: &ValkyrieType) -> String {
             display_type(&function.return_type)
         ),
         ValkyrieType::Tuple(items) => format!("({})", items.iter().map(display_type).collect::<Vec<_>>().join(", ")),
+        ValkyrieType::Row(row) => format!(
+            "{{ {} }}",
+            row.methods
+                .iter()
+                .map(|method| {
+                    format!(
+                        "{}({}) -> {}",
+                        method.name,
+                        method.params.iter().map(display_type).collect::<Vec<_>>().join(", "),
+                        display_type(&method.return_type)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         ValkyrieType::Array(item) => format!("[{}]", display_type(item)),
         ValkyrieType::TypeLambda(lambda) => format!(
             "type lambda({}) -> {}",

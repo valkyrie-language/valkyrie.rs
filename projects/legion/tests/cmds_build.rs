@@ -93,7 +93,7 @@ micro main() -> i64 {
 
     assert_eq!(status, ExitCode::SUCCESS);
     let run_contract = fs::read_to_string(output_dir.join("run-contract.txt")).unwrap();
-    assert!(run_contract.contains("logical_entry: \"main\""));
+    assert!(run_contract.contains("logical_entry: \"Main\""));
 }
 
 #[test]
@@ -101,10 +101,8 @@ fn builds_clr_project_with_tuple_pattern_let_and_loop_in() {
     let fixture = create_smoke_project_with_source(
         "legion-build-pattern",
         r#"micro main() -> i64 {
-    let pair = ((1, 2), 3);
-    let ((x, _), y) = pair;
-    let pairs = [((4, 5), 6)];
-    loop ((a, _), b) in pairs {
+    let ((x, _), y) = ((1, 2), 3);
+    loop ((a, _), b) in [((4, 5), 6)] {
         return x + y + a + b;
     }
     return 0;

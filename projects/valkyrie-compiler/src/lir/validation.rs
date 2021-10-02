@@ -296,6 +296,11 @@ fn validate_runtime_continuations(function: &LirFunction) -> Result<(), ParseErr
     }
     let mut carriers = BTreeSet::new();
     for (index, (runtime_continuation, continuation)) in function.runtime_continuations.iter().zip(function.continuations.iter()).enumerate() {
+        let expected_frame_state_id = function
+            .suspend_points
+            .iter()
+            .find(|suspend_point| suspend_point.continuation_index == Some(index))
+            .map(|suspend_point| suspend_point.state_id);
         if runtime_continuation.carrier.is_empty() {
             return Err(ParseError::invalid(format!(
                 "控制流调度校验失败：`LIR` 函数 `{}` 的第 {} 个 runtime continuation 缺少 carrier 名称",
@@ -316,6 +321,7 @@ fn validate_runtime_continuations(function: &LirFunction) -> Result<(), ParseErr
             || runtime_continuation.resume_parameter != continuation.resume_parameter
             || runtime_continuation.resume_parameter_type != continuation.resume_parameter_type
             || runtime_continuation.handler_exit != continuation.handler_exit
+            || runtime_continuation.frame_state_id != expected_frame_state_id
         {
             return Err(ParseError::invalid(format!(
                 "控制流调度校验失败：`LIR` 函数 `{}` 的第 {} 个 runtime continuation 与 continuation 元数据不一致",
@@ -607,6 +613,21 @@ fn display_type(ty: &ValkyrieType) -> String {
             display_type(&function.return_type)
         ),
         ValkyrieType::Tuple(items) => format!("({})", items.iter().map(display_type).collect::<Vec<_>>().join(", ")),
+        ValkyrieType::Row(row) => format!(
+            "{{ {} }}",
+            row.methods
+                .iter()
+                .map(|method| {
+                    format!(
+                        "{}({}) -> {}",
+                        method.name,
+                        method.params.iter().map(display_type).collect::<Vec<_>>().join(", "),
+                        display_type(&method.return_type)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         ValkyrieType::Array(item) => format!("[{}]", display_type(item)),
         ValkyrieType::TypeLambda(lambda) => format!(
             "type lambda({}) -> {}",

@@ -1,6 +1,7 @@
 #![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 
-pub mod wasi;
+/// 统一运行时家族门面与运行模板描述。
+pub mod runtime;
 
-pub use wasi::WasiRuntime;
+pub use runtime::{PreparedRuntimeCommand, RuntimeContract, RuntimeFamily, RuntimeTemplate};

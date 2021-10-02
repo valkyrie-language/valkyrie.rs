@@ -15,6 +15,8 @@ pub struct ObjectAlgebraicDimension {
     pub exported_operations: Vec<QualifiedName>,
     /// 激活该维度所需的能力标签。
     pub required_capabilities: Vec<CapabilityTag>,
+    /// 当前维度内操作共同呈现出的引用对象管理提示。
+    pub reference_management_hint: Option<ReferenceManagement>,
 }
 
 /// `Object Algebraic` 程序边界。
@@ -139,7 +141,7 @@ pub enum FutamuraProjectionFamily {
     /// `futa_native`
     Native,
     /// `futa_vm`
-    Vm,
+    NyarVm,
 }
 
 impl FutamuraProjectionFamily {
@@ -150,9 +152,35 @@ impl FutamuraProjectionFamily {
             Self::Jvm => "futa_jvm",
             Self::Wasm => "futa_wasm",
             Self::Native => "futa_native",
-            Self::Vm => "futa_vm",
+            Self::NyarVm => "futa_vm",
         }
     }
+}
+
+/// 引用语义对象的管理策略。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ReferenceManagement {
+    /// 交给精准式托管 `GC` 管理。
+    HostGc,
+    /// 交给 `Perceus RC` 管理。
+    PerceusRc,
+}
+
+/// 目标宿主边界。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum HostProjectionBoundary {
+    /// `.NET` 宿主边界。
+    Clr,
+    /// `JVM` 宿主边界。
+    Jvm,
+    /// `WASM + JS glue` 宿主边界。
+    WasmJsGlue,
+    /// `WASI component model` 宿主边界。
+    WasiComponent,
+    /// 原生宿主边界。
+    Native,
+    /// `NyarVM` 宿主边界。
+    Vm,
 }
 
 /// `Futamura projection` 选择策略。
@@ -160,6 +188,10 @@ impl FutamuraProjectionFamily {
 pub struct ProjectionPolicy {
     /// 目标投影家族。
     pub family: FutamuraProjectionFamily,
+    /// 宿主边界。
+    pub host_boundary: HostProjectionBoundary,
+    /// 引用对象管理策略。
+    pub reference_management: ReferenceManagement,
     /// 是否优先缩小产物体积。
     pub prefer_small_artifacts: bool,
     /// 是否保留显式 effect 边界。
@@ -171,6 +203,10 @@ pub struct ProjectionPolicy {
 pub struct ProjectionPlan {
     /// 选中的目标家族。
     pub family: FutamuraProjectionFamily,
+    /// 选中的宿主边界。
+    pub host_boundary: HostProjectionBoundary,
+    /// 选中的引用对象管理策略。
+    pub reference_management: ReferenceManagement,
     /// 投影后仍需要保留的能力。
     pub preserved_capabilities: Vec<CapabilityTag>,
 }
@@ -237,7 +273,12 @@ impl OptimizationSession {
         OptimizationResult {
             program: request.program,
             egraph: EGraphSnapshot { equivalence_class_count: applied_rules.len().max(1), operation_count, saturated: true },
-            projection: ProjectionPlan { family: request.projection_policy.family, preserved_capabilities },
+            projection: ProjectionPlan {
+                family: request.projection_policy.family,
+                host_boundary: request.projection_policy.host_boundary,
+                reference_management: request.projection_policy.reference_management,
+                preserved_capabilities,
+            },
             applied_rules,
         }
     }

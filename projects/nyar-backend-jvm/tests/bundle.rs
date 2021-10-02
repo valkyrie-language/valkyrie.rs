@@ -4,9 +4,9 @@ use nyar::{
     backends::{CompilationOptions, TargetCodeGenBackend},
     BinaryArch, BinaryFlavor, BinaryTarget, TargetFamily,
 };
-use nyar_jvm_backend::{
+use nyar_backend_jvm::{
     internal_name_to_binary_name, JvmBinaryBackend, JvmBinaryBackendInput, JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor,
-    JvmMethodRef, JvmMethodSignature, JvmTypeDescriptor,
+    JvmMethodSignature, JvmTypeDescriptor,
 };
 use tempfile::tempdir;
 
@@ -53,7 +53,7 @@ fn creates_java_launcher_for_zero_arg_main() {
     let launcher =
         decoded.methods.iter().find(|method| method.name == "main" && method.descriptor == launcher_descriptor).expect("缺少 Java 启动入口");
     assert_eq!(launcher.access_flags, ACC_PUBLIC | ACC_STATIC);
-    assert!(launcher.code.is_some(), "启动入口应保留代码体");
+    assert_eq!(decoded.methods.len(), 2, "应同时保留原零参入口和生成的 Java 启动入口");
 }
 
 #[test]

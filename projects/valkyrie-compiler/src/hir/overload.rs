@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::hir::type_relation::{ParameterMatchResult, TypeRelationContext};
 use valkyrie_types::{
     hir::{
         HirBlock, HirCallableDomain, HirExpr, HirExprKind, HirExtractorPattern, HirFunction, HirIdentifier, HirMatchArm, HirModule, HirPattern,
@@ -119,26 +120,27 @@ fn rank(match_kind: &OverloadMatchKind) -> (u8, usize) {
 
 pub fn resolve_hir_calls(module: &mut HirModule) {
     let candidates = collect_module_candidates(module);
+    let type_relations = TypeRelationContext::from_module(module);
 
     for function in &mut module.functions {
-        resolve_function_calls(function, &candidates);
+        resolve_function_calls(function, &candidates, &type_relations);
     }
     for item in &mut module.structs {
         for method in &mut item.methods {
-            resolve_function_calls(method, &candidates);
+            resolve_function_calls(method, &candidates, &type_relations);
         }
     }
     for item in &mut module.traits {
         for method in &mut item.methods {
-            resolve_function_calls(method, &candidates);
+            resolve_function_calls(method, &candidates, &type_relations);
         }
         for method in &mut item.default_methods {
-            resolve_function_calls(method, &candidates);
+            resolve_function_calls(method, &candidates, &type_relations);
         }
     }
     for item in &mut module.impls {
         for method in &mut item.methods {
-            resolve_function_calls(method, &candidates);
+            resolve_function_calls(method, &candidates, &type_relations);
         }
     }
 }
@@ -229,43 +231,58 @@ fn classify_callable_domain(name: &Identifier) -> OverloadDomain {
     }
 }
 
-fn resolve_function_calls(function: &mut HirFunction, candidates: &[OverloadCandidate]) {
+fn resolve_function_calls(function: &mut HirFunction, candidates: &[OverloadCandidate], type_relations: &TypeRelationContext) {
     let mut locals = function.params.iter().map(|param| (param.name.name.to_string(), param.ty.clone())).collect::<BTreeMap<_, _>>();
-    resolve_block_calls(&mut function.body, candidates, &mut locals);
+    resolve_block_calls(&mut function.body, candidates, type_relations, &mut locals);
 }
 
-fn resolve_block_calls(block: &mut HirBlock, candidates: &[OverloadCandidate], locals: &mut BTreeMap<String, ValkyrieType>) {
+fn resolve_block_calls(
+    block: &mut HirBlock,
+    candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
+    locals: &mut BTreeMap<String, ValkyrieType>,
+) {
     for statement in &mut block.statements {
-        resolve_statement_calls(statement, candidates, locals);
+        resolve_statement_calls(statement, candidates, type_relations, locals);
     }
     if let Some(expr) = &mut block.expr {
-        resolve_expr_calls(expr, candidates, locals);
+        resolve_expr_calls(expr, candidates, type_relations, locals);
     }
 }
 
-fn resolve_statement_calls(statement: &mut HirStatement, candidates: &[OverloadCandidate], locals: &mut BTreeMap<String, ValkyrieType>) {
+fn resolve_statement_calls(
+    statement: &mut HirStatement,
+    candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
+    locals: &mut BTreeMap<String, ValkyrieType>,
+) {
     match &mut statement.kind {
         HirStatementKind::Let { pattern, initializer, ty, .. } => {
             if let Some(initializer) = initializer {
-                resolve_expr_calls(initializer, candidates, locals);
+                resolve_expr_calls(initializer, candidates, type_relations, locals);
             }
             let binding_type = ty.clone().or_else(|| initializer.as_ref().and_then(|expr| infer_expr_type(expr, locals)));
             if let Some(binding_type) = binding_type {
                 bind_pattern_type(pattern, &binding_type, locals);
             }
         }
-        HirStatementKind::Expr(expr) => resolve_expr_calls(expr, candidates, locals),
+        HirStatementKind::Expr(expr) => resolve_expr_calls(expr, candidates, type_relations, locals),
     }
 }
 
-fn resolve_expr_calls(expr: &mut HirExpr, candidates: &[OverloadCandidate], locals: &mut BTreeMap<String, ValkyrieType>) {
+fn resolve_expr_calls(
+    expr: &mut HirExpr,
+    candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
+    locals: &mut BTreeMap<String, ValkyrieType>,
+) {
     match &mut expr.kind {
         HirExprKind::Call { callee, args, resolved } => {
-            resolve_expr_calls(callee, candidates, locals);
+            resolve_expr_calls(callee, candidates, type_relations, locals);
             for arg in args.iter_mut() {
-                resolve_expr_calls(arg, candidates, locals);
+                resolve_expr_calls(arg, candidates, type_relations, locals);
             }
-            *resolved = try_resolve_call(callee, args, candidates, locals);
+            *resolved = try_resolve_call(callee, args, candidates, type_relations, locals);
         }
         HirExprKind::GenericApply { callee, .. }
         | HirExprKind::FieldInit { value: callee, .. }
@@ -276,72 +293,72 @@ fn resolve_expr_calls(expr: &mut HirExpr, candidates: &[OverloadCandidate], loca
         | HirExprKind::Raise(callee)
         | HirExprKind::Resume(callee)
         | HirExprKind::Assign { value: callee, .. }
-        | HirExprKind::FieldAccess { object: callee, .. } => resolve_expr_calls(callee, candidates, locals),
+        | HirExprKind::FieldAccess { object: callee, .. } => resolve_expr_calls(callee, candidates, type_relations, locals),
         HirExprKind::StoreField { object, value, .. } => {
-            resolve_expr_calls(object, candidates, locals);
-            resolve_expr_calls(value, candidates, locals);
+            resolve_expr_calls(object, candidates, type_relations, locals);
+            resolve_expr_calls(value, candidates, type_relations, locals);
         }
-        HirExprKind::ArrayNew { length, .. } => resolve_expr_calls(length, candidates, locals),
+        HirExprKind::ArrayNew { length, .. } => resolve_expr_calls(length, candidates, type_relations, locals),
         HirExprKind::ArrayLiteral { items: args } => {
             for arg in args {
-                resolve_expr_calls(arg, candidates, locals);
+                resolve_expr_calls(arg, candidates, type_relations, locals);
             }
         }
         HirExprKind::Construct { name, args, resolved } => {
             for arg in args.iter_mut() {
-                resolve_expr_calls(arg, candidates, locals);
+                resolve_expr_calls(arg, candidates, type_relations, locals);
             }
-            *resolved = try_resolve_constructor(name, args, candidates, locals);
+            *resolved = try_resolve_constructor(name, args, candidates, type_relations, locals);
         }
-        HirExprKind::Block(block) => resolve_block_calls(block, candidates, locals),
+        HirExprKind::Block(block) => resolve_block_calls(block, candidates, type_relations, locals),
         HirExprKind::Lambda { params, body, .. } => {
             let mut lambda_locals = locals.clone();
             for param in params {
                 lambda_locals.insert(param.name.name.to_string(), param.ty.clone());
             }
-            resolve_block_calls(body, candidates, &mut lambda_locals);
+            resolve_block_calls(body, candidates, type_relations, &mut lambda_locals);
         }
         HirExprKind::AnonymousClass { fields, methods, .. } => {
             for (_, value) in fields {
-                resolve_expr_calls(value, candidates, locals);
+                resolve_expr_calls(value, candidates, type_relations, locals);
             }
             for method in methods {
-                resolve_function_calls(method, candidates);
+                resolve_function_calls(method, candidates, type_relations);
             }
         }
         HirExprKind::If { condition, then_branch, else_branch } => {
-            resolve_expr_calls(condition, candidates, locals);
+            resolve_expr_calls(condition, candidates, type_relations, locals);
             let mut then_locals = locals.clone();
-            resolve_block_calls(then_branch, candidates, &mut then_locals);
+            resolve_block_calls(then_branch, candidates, type_relations, &mut then_locals);
             if let Some(else_branch) = else_branch {
                 let mut else_locals = locals.clone();
-                resolve_block_calls(else_branch, candidates, &mut else_locals);
+                resolve_block_calls(else_branch, candidates, type_relations, &mut else_locals);
             }
         }
         HirExprKind::Match { scrutinee, arms } | HirExprKind::Case { scrutinee, arms } => {
-            resolve_expr_calls(scrutinee, candidates, locals);
+            resolve_expr_calls(scrutinee, candidates, type_relations, locals);
             let scrutinee_type = infer_expr_type(scrutinee, locals);
             for arm in arms {
-                resolve_arm_calls(arm, candidates, locals, scrutinee_type.as_ref());
+                resolve_arm_calls(arm, candidates, type_relations, locals, scrutinee_type.as_ref());
             }
         }
         HirExprKind::Loop { iterator, condition, body, .. } => {
             if let Some(iterator) = iterator {
-                resolve_expr_calls(iterator, candidates, locals);
+                resolve_expr_calls(iterator, candidates, type_relations, locals);
             }
             if let Some(condition) = condition {
-                resolve_expr_calls(condition, candidates, locals);
+                resolve_expr_calls(condition, candidates, type_relations, locals);
             }
             let mut body_locals = locals.clone();
-            resolve_block_calls(body, candidates, &mut body_locals);
+            resolve_block_calls(body, candidates, type_relations, &mut body_locals);
         }
         HirExprKind::Return(Some(value)) | HirExprKind::Break { expr: Some(value), .. } | HirExprKind::Yield(Some(value)) => {
-            resolve_expr_calls(value, candidates, locals);
+            resolve_expr_calls(value, candidates, type_relations, locals);
         }
         HirExprKind::Catch { expr, arms } => {
-            resolve_expr_calls(expr, candidates, locals);
+            resolve_expr_calls(expr, candidates, type_relations, locals);
             for arm in arms {
-                resolve_arm_calls(arm, candidates, locals, None);
+                resolve_arm_calls(arm, candidates, type_relations, locals, None);
             }
         }
         HirExprKind::Literal(_)
@@ -360,49 +377,76 @@ fn resolve_expr_calls(expr: &mut HirExpr, candidates: &[OverloadCandidate], loca
 fn resolve_arm_calls(
     arm: &mut HirMatchArm,
     candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
     locals: &BTreeMap<String, ValkyrieType>,
     scrutinee_type: Option<&ValkyrieType>,
 ) {
     let mut arm_locals = locals.clone();
-    resolve_pattern_calls(&mut arm.pattern, candidates, scrutinee_type);
+    resolve_pattern_calls(&mut arm.pattern, candidates, type_relations, scrutinee_type);
     if let Some(scrutinee_type) = scrutinee_type {
         bind_pattern_type(&arm.pattern, scrutinee_type, &mut arm_locals);
     }
     if let Some(guard) = &mut arm.guard {
-        resolve_expr_calls(guard, candidates, &mut arm_locals);
+        resolve_expr_calls(guard, candidates, type_relations, &mut arm_locals);
     }
-    resolve_expr_calls(&mut arm.body, candidates, &mut arm_locals);
+    resolve_expr_calls(&mut arm.body, candidates, type_relations, &mut arm_locals);
 }
 
-fn resolve_pattern_calls(pattern: &mut HirPattern, candidates: &[OverloadCandidate], scrutinee_type: Option<&ValkyrieType>) {
+fn resolve_pattern_calls(
+    pattern: &mut HirPattern,
+    candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
+    scrutinee_type: Option<&ValkyrieType>,
+) {
     match pattern {
-        HirPattern::Extractor(HirExtractorPattern::Constructor { fields, canonical_callee, resolved, .. }) => {
-            for field in fields.iter_mut() {
-                resolve_pattern_calls(field, candidates, None);
+        HirPattern::Name(name) => {
+            if name.parts().len() == 1 {
+                let first_part = name.parts().first().expect("single-segment name should have first part");
+                if first_part.as_str().chars().next().is_some_and(|c| c.is_lowercase()) {
+                    unreachable!(
+                        "单段小写名字模式 `{}` 应由解析器处理为 Variable，不应出现在 Name 中",
+                        name.parts().iter().map(|p| p.as_str()).collect::<Vec<_>>().join("::")
+                    );
+                }
             }
             if let Some(actual_type) = scrutinee_type {
-                *resolved = try_resolve_pattern_extractor(canonical_callee, actual_type, candidates);
+                if should_resolve_name_pattern_as_type(name, actual_type) {
+                    *pattern = HirPattern::Type(name.clone());
+                }
+            }
+        }
+        HirPattern::Extractor(HirExtractorPattern::Constructor { fields, canonical_callee, resolved, .. }) => {
+            for field in fields.iter_mut() {
+                resolve_pattern_calls(field, candidates, type_relations, None);
+            }
+            if let Some(actual_type) = scrutinee_type {
+                *resolved = try_resolve_pattern_extractor(canonical_callee, actual_type, candidates, type_relations);
             }
         }
         HirPattern::Extractor(HirExtractorPattern::Array { prefix, suffix, canonical_callee, resolved, .. }) => {
             for item in prefix.iter_mut() {
-                resolve_pattern_calls(item, candidates, None);
+                resolve_pattern_calls(item, candidates, type_relations, None);
             }
             for item in suffix.iter_mut() {
-                resolve_pattern_calls(item, candidates, None);
+                resolve_pattern_calls(item, candidates, type_relations, None);
             }
             if let Some(actual_type) = scrutinee_type {
-                *resolved = try_resolve_pattern_extractor(canonical_callee, actual_type, candidates);
+                *resolved = try_resolve_pattern_extractor(canonical_callee, actual_type, candidates, type_relations);
             }
         }
-        HirPattern::Tuple(items) | HirPattern::Or(items) => {
+        HirPattern::Tuple(items) => {
             for item in items.iter_mut() {
-                resolve_pattern_calls(item, candidates, None);
+                resolve_pattern_calls(item, candidates, type_relations, None);
+            }
+        }
+        HirPattern::Or(items) => {
+            for item in items.iter_mut() {
+                resolve_pattern_calls(item, candidates, type_relations, scrutinee_type);
             }
         }
         HirPattern::Object { fields, .. } => {
             for (_, item) in fields.iter_mut() {
-                resolve_pattern_calls(item, candidates, None);
+                resolve_pattern_calls(item, candidates, type_relations, None);
             }
         }
         _ => {}
@@ -413,25 +457,16 @@ fn try_resolve_call(
     callee: &HirExpr,
     args: &[HirExpr],
     candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
     locals: &BTreeMap<String, ValkyrieType>,
 ) -> Option<HirResolvedCall> {
     let callee_name = extract_callable_name(callee)?;
-    let free_function_candidate_count = candidates
-        .iter()
-        .filter(|candidate| candidate.domain == OverloadDomain::Function)
-        .filter(|candidate| candidate.owner.is_none())
-        .filter(|candidate| candidate.symbol.parts().last().is_some_and(|name| name == &callee_name))
-        .filter(|candidate| !matches!(candidate.signature.params.first(), Some(ValkyrieType::r#SelfType)))
-        .count();
-    if free_function_candidate_count > 1 {
-        return None;
-    }
     let actual_types = args.iter().map(|arg| infer_expr_type(arg, locals)).collect::<Option<Vec<_>>>()?;
     let filtered = candidates
         .iter()
         .filter(|candidate| candidate.symbol.parts().last().is_some_and(|name| name == &callee_name))
         .filter_map(|candidate| {
-            let match_kind = compute_call_match_kind(&actual_types, &candidate.signature.params)?;
+            let match_kind = compute_call_match_kind(type_relations, &actual_types, &candidate.signature.params)?;
             Some(OverloadCandidate::new(
                 candidate.symbol.clone(),
                 candidate.domain.clone(),
@@ -458,6 +493,7 @@ fn try_resolve_constructor(
     name: &Identifier,
     args: &[HirExpr],
     candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
     locals: &BTreeMap<String, ValkyrieType>,
 ) -> Option<HirResolvedCall> {
     let actual_types = args.iter().map(|arg| infer_expr_type(arg, locals)).collect::<Option<Vec<_>>>()?;
@@ -466,7 +502,7 @@ fn try_resolve_constructor(
         .filter(|candidate| candidate.domain == OverloadDomain::Constructor)
         .filter(|candidate| candidate.symbol.parts().last().is_some_and(|candidate_name| candidate_name == name))
         .filter_map(|candidate| {
-            let match_kind = compute_call_match_kind(&actual_types, &candidate.signature.params)?;
+            let match_kind = compute_call_match_kind(type_relations, &actual_types, &candidate.signature.params)?;
             Some(OverloadCandidate::new(
                 candidate.symbol.clone(),
                 candidate.domain.clone(),
@@ -484,6 +520,7 @@ fn try_resolve_pattern_extractor(
     canonical_callee: &NamePath,
     actual_type: &ValkyrieType,
     candidates: &[OverloadCandidate],
+    type_relations: &TypeRelationContext,
 ) -> Option<HirResolvedCall> {
     let filtered = candidates
         .iter()
@@ -493,7 +530,7 @@ fn try_resolve_pattern_extractor(
         .filter(|candidate| candidate.symbol.parts().last() == canonical_callee.parts().last())
         .filter_map(|candidate| {
             let param_type = candidate.signature.params.first()?;
-            let match_kind = compute_call_match_kind(std::slice::from_ref(actual_type), std::slice::from_ref(param_type))?;
+            let match_kind = compute_call_match_kind(type_relations, std::slice::from_ref(actual_type), std::slice::from_ref(param_type))?;
             Some(OverloadCandidate::new(
                 candidate.symbol.clone(),
                 OverloadDomain::Extractor,
@@ -516,35 +553,54 @@ fn extract_callable_name(callee: &HirExpr) -> Option<Identifier> {
     }
 }
 
-fn compute_call_match_kind(actual_types: &[ValkyrieType], expected_types: &[ValkyrieType]) -> Option<OverloadMatchKind> {
+fn compute_call_match_kind(
+    type_relations: &TypeRelationContext,
+    actual_types: &[ValkyrieType],
+    expected_types: &[ValkyrieType],
+) -> Option<OverloadMatchKind> {
     if actual_types.len() != expected_types.len() {
         return None;
     }
-    let mut exact = true;
+
+    let mut saw_trait = false;
+    let mut saw_row = false;
+    let mut subtype_distance = 0usize;
+
     for (actual, expected) in actual_types.iter().zip(expected_types) {
-        if actual != expected {
-            exact = false;
-            if !loosely_matches(actual, expected) {
+        match type_relations.match_parameter(actual, expected) {
+            ParameterMatchResult::NominalExact => {}
+            ParameterMatchResult::NominalSubtype { distance } => subtype_distance += distance,
+            ParameterMatchResult::Trait { .. } => saw_trait = true,
+            ParameterMatchResult::Row => saw_row = true,
+            ParameterMatchResult::NoMatch { .. } => {
                 return None;
             }
         }
     }
-    if exact {
-        Some(OverloadMatchKind::NominalExact)
+
+    if saw_row {
+        Some(OverloadMatchKind::Row)
+    }
+    else if saw_trait {
+        Some(OverloadMatchKind::Trait)
+    }
+    else if subtype_distance > 0 {
+        Some(OverloadMatchKind::NominalSubtype { distance: subtype_distance })
     }
     else {
-        Some(OverloadMatchKind::NominalSubtype { distance: 1 })
+        Some(OverloadMatchKind::NominalExact)
     }
 }
 
-fn loosely_matches(actual: &ValkyrieType, expected: &ValkyrieType) -> bool {
-    match (actual, expected) {
-        (_, ValkyrieType::r#SelfType) => true,
-        (ValkyrieType::Array(actual), ValkyrieType::Array(expected)) => loosely_matches(actual, expected),
-        (ValkyrieType::Tuple(actual), ValkyrieType::Tuple(expected)) if actual.len() == expected.len() => {
-            actual.iter().zip(expected).all(|(actual, expected)| loosely_matches(actual, expected))
-        }
-        _ => actual == expected || matches!(actual, ValkyrieType::AutoType) || matches!(expected, ValkyrieType::AutoType),
+fn should_resolve_name_pattern_as_type(name: &NamePath, actual_type: &ValkyrieType) -> bool {
+    if name.parts().len() != 1 {
+        return false;
+    }
+
+    match actual_type {
+        ValkyrieType::Named(actual_name) => name.parts().last().is_some_and(|expected| expected == actual_name),
+        ValkyrieType::Apply(base, _) => should_resolve_name_pattern_as_type(name, base),
+        _ => false,
     }
 }
 

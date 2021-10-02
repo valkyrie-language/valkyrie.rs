@@ -3,14 +3,9 @@ name = "valkyrie-interpreter"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Valkyrie WASI runtime host backed by wasmtime"
+description = "Valkyrie runtime facade and host adapters"
 license.workspace = true
 repository = "https://github.com/valkyrie-language/valkyrie.rs"
 
 [dependencies]
-wasmtime = { workspace = true }
 miette = { workspace = true }
-
-[[bin]]
-name = "valkyrie-wasi-host"
-path = "src/bin/wasi_host.rs"

@@ -11,6 +11,7 @@ use crate::abstractions::{
     BinaryArch, BinaryFlavor, BinaryTarget, ByteOrder, CanonicalAbi, CanonicalArch, CanonicalSpecification, CanonicalTarget,
     CanonicalTargetParseError, CanonicalVendor, TargetFamily,
 };
+use nyar_optimizer::{HostProjectionBoundary, ReferenceManagement};
 
 /// 编译目标模式。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -440,10 +441,14 @@ pub struct TargetProfile {
     pub backend_family: TargetBackendFamily,
     /// 宿主类型。
     pub host_kind: TargetHostKind,
+    /// 宿主边界。
+    pub host_boundary: HostProjectionBoundary,
     /// 宿主风味。
     pub host_flavor: String,
     /// 实际 ABI。
     pub abi: CanonicalAbi,
+    /// 引用对象管理策略。
+    pub reference_management: ReferenceManagement,
     /// 能力标签。
     pub capability_tags: Vec<String>,
     /// 入口策略。
@@ -497,8 +502,10 @@ impl CanonicalTarget {
             target_mode: target_mode.unwrap_or_default(),
             backend_family: self.derive_backend_family(),
             host_kind: self.derive_host_kind(abi),
+            host_boundary: self.derive_host_boundary(abi),
             host_flavor: self.derive_host_flavor(abi).to_string(),
             abi,
+            reference_management: self.derive_reference_management(),
             capability_tags: self.derive_capability_tags(),
             entry_policy: self.derive_entry_policy(abi),
             artifact_policy: self.derive_artifact_policy(abi),
@@ -569,28 +576,61 @@ impl CanonicalTarget {
         }
     }
 
+    fn derive_host_boundary(self, abi: CanonicalAbi) -> HostProjectionBoundary {
+        match self.arch {
+            CanonicalArch::NyarVm => return HostProjectionBoundary::Vm,
+            CanonicalArch::Clr => return HostProjectionBoundary::Clr,
+            CanonicalArch::Jvm => return HostProjectionBoundary::Jvm,
+            _ => {}
+        }
+        match self.vendor {
+            CanonicalVendor::Node | CanonicalVendor::Deno | CanonicalVendor::Bun => return HostProjectionBoundary::WasmJsGlue,
+            _ => {}
+        }
+        match self.specification {
+            CanonicalSpecification::Browser => HostProjectionBoundary::WasmJsGlue,
+            CanonicalSpecification::Wasi => HostProjectionBoundary::WasiComponent,
+            CanonicalSpecification::Windows
+            | CanonicalSpecification::Linux
+            | CanonicalSpecification::MacOs
+            | CanonicalSpecification::Android
+            | CanonicalSpecification::Ios => HostProjectionBoundary::Native,
+            CanonicalSpecification::Unknown if abi == CanonicalAbi::Wasi => HostProjectionBoundary::WasiComponent,
+            _ => HostProjectionBoundary::Native,
+        }
+    }
+
+    fn derive_reference_management(self) -> ReferenceManagement {
+        match self.derive_backend_family() {
+            TargetBackendFamily::Native | TargetBackendFamily::Gpu => ReferenceManagement::PerceusRc,
+            _ => ReferenceManagement::HostGc,
+        }
+    }
+
     fn derive_capability_tags(self) -> Vec<String> {
         let values: &[&str] = match self.arch {
-            CanonicalArch::NyarVm => &["vm", "module-loader"],
-            CanonicalArch::Clr => &["managed", "reflection", "filesystem"],
+            CanonicalArch::NyarVm => &["vm", "module-loader", "precise-gc"],
+            CanonicalArch::Clr => &["managed", "reflection", "filesystem", "precise-gc"],
             CanonicalArch::Jvm => {
                 if self.specification == CanonicalSpecification::Android {
-                    &["managed", "android-lifecycle", "asset-loader"]
+                    &["managed", "android-lifecycle", "asset-loader", "precise-gc"]
                 }
                 else {
-                    &["managed", "reflection", "filesystem"]
+                    &["managed", "reflection", "filesystem", "precise-gc"]
                 }
             }
             _ => match self.vendor {
-                CanonicalVendor::Node | CanonicalVendor::Deno | CanonicalVendor::Bun => &["javascript", "esmodule", "filesystem", "timers"],
+                CanonicalVendor::Node | CanonicalVendor::Deno | CanonicalVendor::Bun => {
+                    &["javascript", "esmodule", "filesystem", "timers", "precise-gc"]
+                }
                 _ => match self.specification {
-                    CanonicalSpecification::Browser => &["javascript", "dom", "canvas", "fetch", "esmodule"],
-                    CanonicalSpecification::Wasi => &["wasi", "filesystem", "cli", "component-model"],
+                    CanonicalSpecification::Browser => &["javascript", "dom", "canvas", "fetch", "esmodule", "precise-gc"],
+                    CanonicalSpecification::Wasi => &["wasi", "filesystem", "cli", "component-model", "precise-gc"],
                     CanonicalSpecification::Windows | CanonicalSpecification::Linux | CanonicalSpecification::MacOs => {
-                        &["native", "filesystem", "process"]
+                        &["native", "filesystem", "process", "perceus-rc"]
                     }
-                    CanonicalSpecification::Android => &["native", "mobile-lifecycle", "asset-loader"],
-                    CanonicalSpecification::Ios => &["native", "mobile-lifecycle", "bundle-resource"],
+                    CanonicalSpecification::Android => &["native", "mobile-lifecycle", "asset-loader", "perceus-rc"],
+                    CanonicalSpecification::Ios => &["native", "mobile-lifecycle", "bundle-resource", "perceus-rc"],
                     CanonicalSpecification::Unknown => &[],
                 },
             },

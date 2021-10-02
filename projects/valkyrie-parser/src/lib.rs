@@ -11,10 +11,10 @@ pub mod parser;
 
 pub use ast::{
     Annotations, AttributeArgument, AttributeDeclaration, AttributeItem, AttributeList, BinaryOperator, ClassDeclaration, DeclarationBody,
-    DeclarationStatement, FunctionDeclaration, FunctionParameter, GenericParameterDeclaration, ImplyAssociatedConstBinding,
+    FunctionDeclaration, FunctionParameter, FunctionStatement, GenericParameterDeclaration, ImplyAssociatedConstBinding,
     ImplyAssociatedTypeBinding, ImplyDeclaration, InheritanceItem, LetStatement, LiteralExpression, NamePath, NamespaceDeclaration, ObjectBody,
-    ObjectFieldDeclaration, ObjectMethodDeclaration, PatternExpression, Statement, StringLiteral, StringSegment, SubscriptKind, TermExpression,
-    TraitAssociatedConstDeclaration, TraitAssociatedTypeDeclaration, TraitDeclaration, TypeExpression, TypePath, UnaryOperator,
-    UniteDeclaration, UniteVariantDeclaration, UsingStatement, ValkyrieRoot, WhereConstraintDeclaration,
+    ObjectFieldDeclaration, ObjectMethodDeclaration, PatternExpression, RootStatement, RowMethodTypeExpression, StringLiteral, StringSegment,
+    SubscriptKind, TermExpression, TraitAssociatedConstDeclaration, TraitAssociatedTypeDeclaration, TraitDeclaration, TypeExpression, TypePath,
+    UnaryOperator, UniteDeclaration, UniteVariantDeclaration, UsingStatement, ValkyrieRoot, WhereConstraintDeclaration,
 };
 pub use parser::{AstParser, ParseError};

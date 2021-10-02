@@ -1,8 +1,8 @@
 use jvm_backend::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodSignature, JvmTypeDescriptor};
-use nyar::{backends::CompilationOptions, BinaryArch, BinaryFlavor, BinaryTarget, RunnerFamily, TargetFamily};
+use nyar::{backends::CompilationOptions, BinaryArch, BinaryFlavor, BinaryTarget, HostProjectionBoundary, RunnerFamily, TargetFamily};
 use nyar_driver::{compile_with_bundled_backends, DriverBackendInput, DriverCompileRequest};
 use tempfile::tempdir;
-use wasi_backend::{WasmBinaryModule, WasmHostSkeleton};
+use wasi_backend::WasmBinaryModule;
 
 fn compilation_options(target: BinaryTarget, artifact_name: &str) -> CompilationOptions {
     CompilationOptions { target, artifact_name: artifact_name.to_string(), emit_debug_symbols: false, optimize: false }
@@ -19,10 +19,15 @@ fn demo_jvm_input(output_dir: &std::path::Path) -> DriverBackendInput {
     DriverBackendInput::Jvm(jvm_backend::JvmBinaryBackendInput { class_file, output_dir: output_dir.to_path_buf(), emit_class_file: true })
 }
 
-fn demo_wasm_input(output_dir: &std::path::Path, host: WasmHostSkeleton) -> DriverBackendInput {
+fn demo_wasm_input(output_dir: &std::path::Path, host_boundary: HostProjectionBoundary) -> DriverBackendInput {
     let mut module = WasmBinaryModule::new();
     module.push_custom_section("demo.module", b"demo".to_vec());
-    DriverBackendInput::Wasm(wasi_backend::WasmBinaryBackendInput { module, output_dir: output_dir.to_path_buf(), host, imports: Vec::new() })
+    DriverBackendInput::Wasm(wasi_backend::WasmBinaryBackendInput {
+        module,
+        output_dir: output_dir.to_path_buf(),
+        host_boundary,
+        imports: Vec::new(),
+    })
 }
 
 #[test]
@@ -51,7 +56,7 @@ fn creates_jvm_run_contract_via_bundled_compiler() {
 fn creates_node_and_wasi_run_contracts_via_bundled_compiler() {
     let output_dir = tempdir().expect("temp dir");
     let node_options = compilation_options(BinaryTarget::new(TargetFamily::Wasm, BinaryArch::Any, BinaryFlavor::Native), "demo_node");
-    let node_input = demo_wasm_input(output_dir.path(), WasmHostSkeleton::Node);
+    let node_input = demo_wasm_input(output_dir.path(), HostProjectionBoundary::WasmJsGlue);
     let node_report = compile_with_bundled_backends(DriverCompileRequest {
         artifact_name: "demo_node",
         requirement: node_input.requirement(node_options.target.clone()),
@@ -67,7 +72,7 @@ fn creates_node_and_wasi_run_contracts_via_bundled_compiler() {
     assert_eq!(node_contract.invocation, "node");
 
     let wasi_options = compilation_options(BinaryTarget::new(TargetFamily::Wasm, BinaryArch::Any, BinaryFlavor::Native), "demo_wasi");
-    let wasi_input = demo_wasm_input(output_dir.path(), WasmHostSkeleton::Wasi);
+    let wasi_input = demo_wasm_input(output_dir.path(), HostProjectionBoundary::WasiComponent);
     let wasi_report = compile_with_bundled_backends(DriverCompileRequest {
         artifact_name: "demo_wasi",
         requirement: wasi_input.requirement(wasi_options.target.clone()),

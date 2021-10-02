@@ -13,7 +13,6 @@ pub use valkyrie_compiler::{
     ArtifactPolicy, CanonicalAbi, CanonicalArch, CanonicalSpecification, CanonicalTarget, CanonicalTargetParseError, CanonicalVendor,
     EntryPolicy, PublishFormat, RunnerFamily, RunnerSelector, TargetBackendFamily, TargetHostKind, TargetMode, TargetProfile, WrapStrategy,
 };
-pub use valkyrie_interpreter::WasiRuntime;
 pub use von_parser::{
     from_str as parse_von, from_value as parse_von_value, to_string as write_von, to_string_pretty as write_von_pretty, VonError,
     VonParseError, VonParser, VonValue,

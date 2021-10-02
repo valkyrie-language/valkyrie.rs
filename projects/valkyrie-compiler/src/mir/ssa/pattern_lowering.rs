@@ -46,9 +46,10 @@ impl MirBuilder {
     }
 
     pub(super) fn bind_pattern_from_expr(&mut self, pattern: &HirPattern, expr: &HirExpr, ty: Option<ValkyrieType>) {
+        let resolved_expr = self.resolve_static_expr(expr).unwrap_or_else(|| expr.clone());
         match pattern {
             HirPattern::Tuple(items) => {
-                if let Some(tuple_items) = tuple_literal_items(expr) {
+                if let Some(tuple_items) = tuple_literal_items(&resolved_expr) {
                     for (item_pattern, item_expr) in items.iter().zip(tuple_items.iter()) {
                         self.bind_pattern_from_expr(item_pattern, item_expr, None);
                     }
@@ -56,13 +57,13 @@ impl MirBuilder {
                 }
             }
             HirPattern::Wildcard => {
-                let _ = self.lower_expr_to_operand(expr);
+                let _ = self.lower_expr_to_operand(&resolved_expr);
                 return;
             }
             _ => {}
         }
 
-        let operand = self.lower_expr_to_operand_with_hint(expr, ty.as_ref());
+        let operand = self.lower_expr_to_operand_with_hint(&resolved_expr, ty.as_ref());
         self.bind_pattern_from_operand(pattern, operand, ty);
     }
 
@@ -79,6 +80,7 @@ impl MirBuilder {
     ) {
         match pattern {
             HirPattern::Wildcard => {}
+            HirPattern::Else | HirPattern::Literal(_) | HirPattern::Range { .. } | HirPattern::Name(_) | HirPattern::Type(_) => {}
             HirPattern::Variable(identifier) => {
                 let name = identifier.name.to_string();
                 let value = self.next_value(MirValueOrigin::LetBinding { name: name.clone() });
@@ -140,7 +142,7 @@ impl MirBuilder {
             }
             HirPattern::Tuple(items) => self.lower_tuple_pattern_match_operand(items, value),
             HirPattern::Extractor(extractor) => self.lower_extractor_pattern_match_operand(extractor, value),
-            HirPattern::Name(name) => self.lower_fallback_pattern_match(HirPattern::Name(name.clone()), value),
+            HirPattern::Name(name) => self.lower_name_pattern_match_operand(name, value),
             HirPattern::Type(name) => self.lower_type_pattern_match_operand(name, value),
             HirPattern::TypedBind { ty, .. } => self.lower_type_pattern_match_operand(ty, value),
             HirPattern::Object { name, fields, .. } => self.lower_object_pattern_match_operand(name, fields, value),
@@ -171,6 +173,15 @@ impl MirBuilder {
         };
 
         MirOperand::Constant(MirConstant::Bool(self.type_pattern_matches(&actual_type, name)))
+    }
+
+    pub(super) fn lower_name_pattern_match_operand(&mut self, name: &NamePath, value: MirOperand) -> MirOperand {
+        let Some(actual_type) = infer_builder_operand_type(&value, &self.value_types)
+        else {
+            return self.lower_fallback_pattern_match(HirPattern::Name(name.clone()), value);
+        };
+
+        MirOperand::Constant(MirConstant::Bool(plain_type_pattern_matches(&actual_type, name)))
     }
 
     pub(super) fn lower_tuple_pattern_match_operand(&mut self, items: &[HirPattern], value: MirOperand) -> MirOperand {

@@ -70,7 +70,7 @@
 - `Handler Control`：`resume` 之后当前已补成显式 `Unreachable` 后继块，不再把 arm 末尾错误回流到 `catch_exit` merge；这一步同时修掉了调度器新护栏暴露出来的“`resume` 后仍把 `unit` 合并进 handler exit” 的真实主链 bug。
 - `Pattern Control`：`case / match` 的 parser/AST 当前已补上 `literal`、`variable`、`wildcard`、`or-pattern` 这组源级形状；parser 不再吞掉 `A | B` 后半段，`HIR` lowering 也已把它们稳定落进既有 `HirPattern::Literal / Variable / Wildcard / Or / Type` 主链，guard 统一改走 `pattern.guard()` 读取。
 - `Pattern Control`：本轮继续补上 `tuple pattern`；`case ((x, y), z)`、`case (_, 0)` 这类元组模式当前已能在 parser/AST 中稳定表达，并进一步 lower 到 `HirPattern::Tuple`，不再在 `match` 源级入口直接报“不支持 tuple pattern”。
-- `Pattern Control`：新增独立 `cargo test -p valkyrie-parser --test match_patterns -- --nocapture` 与 `cargo test -p valkyrie-compiler --test match_patterns -- --nocapture` 回归，同时修正 `return match ...` 在当前 `HIR` 中实际落在 `Return` 语句而不是 `body.expr` 的断言偏差；`cargo test -p valkyrie-compiler --test main compiler_facade_lowers_literal_variable_and_or_match_patterns_into_hir -- --nocapture` 当前也已重新通过。
+- `Pattern Control`：新增独立 `cargo test -p valkyrie-parser --test match_patterns -- --nocapture` 与 `cargo test -p valkyrie-compiler --test match_patterns -- --nocapture` 回归，同时修正 `return match ...` 在当前 `HIR` 中实际落在 `ReturnStatement` 语句而不是 `body.expr` 的断言偏差；`cargo test -p valkyrie-compiler --test main compiler_facade_lowers_literal_variable_and_or_match_patterns_into_hir -- --nocapture` 当前也已重新通过。
 - `Pattern Control`：源码层 pattern 现按四类重新收口：`case X()` 与 `case []` 走 extractor 语义，必须依赖显式声明且可重载的 extractor；`case X {}` 与 `case {}` 走原始字段或 getter 模式；字面量模式与 `A | B` 这类模式表达式各自独立。`Some((x, y))`、`[]` 这类形状后续不得再被当作原始字段模式直接 lower。
 - `Pattern Control`：`match / case arm` 的 pattern 绑定当前也已正式接进 `HIR` 校验作用域；guard 与 body 会在各自 arm 的局部作用域下读取 pattern 绑定，`match` 结果类型推断也会在 arm 作用域里看 body，不再把 arm body 统一当成“无绑定裸表达式”。
 - `Region / Pattern Control`：`fallthrough` 当前也已补上“上一 arm pattern 绑定不继承到下一 arm”的显式 `HIR` 护栏；若前一 arm 通过 `fallthrough` 落到后一 arm，而后一 arm 的 guard/body 非法引用了前一 arm 独有的 pattern 绑定，`HIR` 会在进入 `MIR` 前直接拒绝这类绑定泄漏。
@@ -268,7 +268,7 @@ trait Effectful {
 - `Continue { label }`
 - `Return(expr)`
 - `Case { label, scrutinee, arms }`
-- `Fallthrough`
+- `FallthroughStatement`
 - `Yield(expr)`
 - `YieldFrom(expr)`
 - `Await(expr)`
@@ -318,7 +318,7 @@ trait Effectful {
 这里的重点是：
 
 - `break`、`continue`、`fallthrough` 不是单独 terminator 种类，而是 `Jump(...)` 到不同 region 目标
-- `yield`、`.await` 不应该再伪装成普通 `Call`
+- `yield`、`.await` 不应该再伪装成普通 `TermCallExpression`
 - effect 控制流要显式暴露 `resume_target`
 
 ### 为什么必须做 block parameter SSA
@@ -341,7 +341,7 @@ trait Effectful {
 - `break` lowering 为 `Jump(exit, break_args)`
 - `break expr` 要求目标 exit block 有明确参数位
 - `fallthrough` lowering 为 `Jump(next_case_arm, case_args)`
-- `return expr` lowering 为函数级 `Return`
+- `return expr` lowering 为函数级 `ReturnStatement`
 
 ### Effect Control lowering
 
@@ -378,7 +378,7 @@ trait Effectful {
 ### catch / resume
 
 - `resume value` 只允许出现在某个 `catch` arm 内
-- `value` 的类型必须等于被恢复 effect 的 `Resume`
+- `value` 的类型必须等于被恢复 effect 的 `ResumeStatement`
 
 ## backend 边界
 

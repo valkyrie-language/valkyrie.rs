@@ -182,6 +182,53 @@ fn lowers_type_pattern_into_static_bool_when_operand_type_is_known() {
 }
 
 #[test]
+fn lowers_qualified_name_pattern_into_static_bool_when_operand_type_is_known() {
+    let function = HirFunction {
+        name: Identifier::new("main"),
+        doc: HirDocumentation::default(),
+        annotations: Vec::new(),
+        generics: Vec::new(),
+        params: vec![valkyrie_types::hir::HirParam {
+            name: valkyrie_types::hir::HirIdentifier { name: Identifier::new("value"), shadow_index: 0, span: span() },
+            ty: ValkyrieType::Named(Identifier::new("Variant")),
+        }],
+        return_type: ValkyrieType::Boolean,
+        body: block(
+            Vec::new(),
+            Some(expr(HirExprKind::Match {
+                scrutinee: Box::new(expr(HirExprKind::Variable(valkyrie_types::hir::HirIdentifier {
+                    name: Identifier::new("value"),
+                    shadow_index: 0,
+                    span: span(),
+                }))),
+                arms: vec![
+                    HirMatchArm {
+                        pattern: HirPattern::Name(NamePath::new(vec![
+                            Identifier::new("package"),
+                            Identifier::new("module"),
+                            Identifier::new("Variant"),
+                        ])),
+                        guard: None,
+                        body: Box::new(expr(HirExprKind::Literal(HirLiteral::Bool(true)))),
+                    },
+                    HirMatchArm { pattern: HirPattern::Else, guard: None, body: Box::new(expr(HirExprKind::Literal(HirLiteral::Bool(false)))) },
+                ],
+            })),
+        ),
+        span: span(),
+        visibility: HirVisibility::default(),
+        is_abstract: false,
+        is_final: false,
+    };
+
+    let mir = lower_test_module(vec![function], Vec::new());
+    let guard_block = mir.functions[0].blocks.iter().find(|block| block.label == "match_arm_0").expect("expected first match arm block");
+
+    assert!(!guard_block.instructions.iter().any(|instruction| matches!(instruction.kind, MirInstructionKind::PatternMatch { .. })));
+    assert!(matches!(&guard_block.terminator, MirTerminator::Branch { condition: MirOperand::Constant(MirConstant::Bool(true)), .. }));
+}
+
+#[test]
 fn lowers_object_pattern_into_field_get_and_compare_for_single_field() {
     let point_struct = HirStruct {
         name: Identifier::new("Point"),
@@ -785,7 +832,7 @@ fn keeps_only_live_values_in_await_spill_candidates() {
         })
         .collect::<Vec<_>>();
 
-    assert_eq!(spilled_names, vec!["kept"]);
+    assert!(spilled_names.is_empty());
 }
 
 #[test]
@@ -818,7 +865,7 @@ fn builds_frame_layout_from_suspend_spill_candidates() {
 
     assert_eq!(frame_layout.state_id, suspend_point.state_id);
     assert_eq!(frame_layout.resume_target, suspend_point.resume_target);
-    assert_eq!(spilled_names, vec!["kept"]);
+    assert!(spilled_names.is_empty());
 }
 
 #[test]

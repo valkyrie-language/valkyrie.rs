@@ -1,7 +1,7 @@
 #![doc = include_str!("readme.md")]
 
 use std::{
-    fs,
+    env, fs,
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
 };
@@ -210,26 +210,21 @@ fn resolve_seed(seed_path: &Option<PathBuf>, _project_dir: &Path) -> Result<Path
     Ok(strip_verbatim_prefix(&current_exe))
 }
 
-/// 查找 `WASI` 宿主二进制（`valkyrie-wasi-host`）。
+/// 查找本机 `wasmtime` CLI。
 ///
-/// `WASI` 目标不生成 `.mjs` 启动壳，而是通过 `wasmtime` 宿主运行 `WASM` 模块。
-/// 宿主二进制与 `legion.exe` 位于同一目录（`target/debug` 或 `target/release`）。
-fn find_wasi_host() -> Result<PathBuf> {
-    let current_exe = std::env::current_exe().into_diagnostic().map_err(|error| error.wrap_err("获取当前可执行文件路径失败"))?;
-    let dir = current_exe.parent().ok_or_else(|| miette!("无法获取当前 exe 目录"))?;
-
-    let exe_name = if cfg!(windows) { "valkyrie-wasi-host.exe" } else { "valkyrie-wasi-host" };
-    let host = dir.join(exe_name);
-
-    if !host.exists() {
-        return Err(miette!(
-            r#"未找到 WASI 宿主二进制: {path}
-请先构建: cargo build -p valkyrie-interpreter --bin valkyrie-wasi-host"#,
-            path = host.display()
-        ));
+/// `WASI` 目标不生成 `.mjs` 启动壳，而是直接通过本机 `wasmtime` 运行 `WASM` 模块。
+fn find_wasmtime_cli() -> Result<PathBuf> {
+    let path = env::var_os("PATH").ok_or_else(|| miette!("未设置 PATH，无法查找本机 `wasmtime`"))?;
+    let extensions = executable_extensions();
+    for dir in env::split_paths(&path) {
+        for candidate in candidate_command_paths(&dir, "wasmtime", &extensions) {
+            if candidate.is_file() {
+                return Ok(strip_verbatim_prefix(&candidate));
+            }
+        }
     }
 
-    Ok(strip_verbatim_prefix(&host))
+    Err(miette!("未在 PATH 中找到本机 `wasmtime`，请先安装并确保可直接执行"))
 }
 
 /// 移除 Windows extended-length path 前缀 `\\?\`。
@@ -248,7 +243,8 @@ fn strip_verbatim_prefix(path: &Path) -> PathBuf {
 /// 对于原生 seed（`legion.exe`）：直接运行 `seed build <project_dir> --target <target> --output <output_dir>`。
 /// 对于 WASM seed（`.wasm` 文件）：
 ///   - `wasm` 目标：通过 `node <seed>.mjs <source_file> <output>` 运行微编译器
-///   - `wasi` 目标：通过 `valkyrie-wasi-host <seed>.wasm <source_file> <output>` 运行微编译器
+///   - `wasi` 目标：当前只保留“直接运行本机 `wasmtime` 验证产物”的路径，
+///     旧 `wasi_host` 源文件驱动自举链已移除，因此不再支持 `wasm seed -> 再编译`
 ///   微编译器读取源文件内容，产生一个依赖于源文件内容的 WASM 输出文件。
 ///   这是 WASM/WASI 自举的"编译"等价物。
 fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_name: &str, target: &str, source_file: &Path) -> Result<()> {
@@ -276,14 +272,13 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
         // 对于 V2 阶段，输出文件名为 v2_output.wasm；对于 V1 阶段，由调用方处理。
         let output_file =
             if stage_name == "v2" { normalized_output_dir.join("v2_output.wasm") } else { normalized_output_dir.join("v1_output.wasm") };
-
         let mut cmd = if is_wasi_target {
-            // WASI 目标：通过 valkyrie-wasi-host 运行微编译器。
-            // 诚实自举：v1 实际读取源文件内容，输出依赖于源文件内容。
-            let wasi_host = find_wasi_host()?;
-            let mut cmd = Command::new(&wasi_host);
-            cmd.arg(&normalized_seed).arg(source_file).arg(&output_file);
-            cmd
+            return Err(miette!(
+                r#"{stage_name} 当前不支持 `WASI` wasm seed 自举
+旧 `valkyrie-wasi-host` 源文件驱动链已移除；
+现在只保留本机 `wasmtime` 直接运行产物的验证路径。"#,
+                stage_name = stage_name
+            ));
         }
         else {
             // WASM 目标：通过 node 运行 .mjs 启动壳。
@@ -398,8 +393,7 @@ stderr: {stderr}"#,
 /// 对于 `CLR` 目标，直接执行 `.exe` 并检查退出码。
 /// 对于 `WASM` 目标，通过 `node <artifact>.mjs <source_file> <output>` 运行，
 ///   微编译器读取源文件内容，产生输出文件用于后续比对。
-/// 对于 `WASI` 目标，通过 `valkyrie-wasi-host <artifact>.wasm <source_file> <output>` 运行，
-///   `wasmtime` 宿主提供自定义导入函数，微编译器读取源文件内容产生输出文件。
+/// 对于 `WASI` 目标，通过本机 `wasmtime <artifact>.wasm` 运行。
 fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path: Option<&Path>, source_file: &Path) -> Result<()> {
     if !artifact_path.exists() {
         return Err(miette!("产物文件不存在: {}", artifact_path.display()));
@@ -410,22 +404,18 @@ fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path:
     // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasi`，用 `contains("wasi")` 检测。
     // 注意：必须先检查 `wasi` 再检查 `wasm`，因为 `WASI` 字符串也包含 `wasm`。
     if target.contains("wasi") {
-        // WASI 目标：通过 valkyrie-wasi-host 运行 WASM 模块。
-        let wasi_host = find_wasi_host()?;
+        // WASI 目标：直接通过本机 wasmtime 运行 wasm 模块。
+        let wasmtime = find_wasmtime_cli()?;
 
         if !source_file.exists() {
             return Err(miette!("源文件不存在: {}", source_file.display()));
         }
 
-        let mut cmd = Command::new(&wasi_host);
-        cmd.arg(&normalized_artifact).arg(source_file);
-
-        if let Some(output) = output_path {
-            cmd.arg(output);
-        }
+        let mut cmd = Command::new(&wasmtime);
+        cmd.arg(&normalized_artifact);
 
         println!("verify: executing {:?}", cmd);
-        let output = cmd.output().into_diagnostic().map_err(|error| error.wrap_err("执行 WASI 宿主失败"))?;
+        let output = cmd.output().into_diagnostic().map_err(|error| error.wrap_err("执行本机 wasmtime 失败"))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -436,13 +426,6 @@ stderr: {}"#,
                 stdout.trim(),
                 stderr.trim()
             ));
-        }
-
-        if let Some(output) = output_path {
-            if !output.exists() {
-                return Err(miette!("WASI 运行成功但未产出输出文件: {}", output.display()));
-            }
-            println!("  WASI 输出: {} ({} 字节)", output.display(), fs::metadata(output).map(|m| m.len()).unwrap_or(0));
         }
 
         return Ok(());
@@ -511,6 +494,32 @@ fn run_cli_program(program: &str, args: &[&str]) -> Result<ExitStatus> {
         Command::new(program).args(args).output().into_diagnostic().map_err(|error| error.wrap_err(format!("无法执行 {}", program)))?;
 
     Ok(output.status)
+}
+
+fn candidate_command_paths(dir: &Path, command: &str, extensions: &[String]) -> Vec<PathBuf> {
+    let base = dir.join(command);
+    if Path::new(command).extension().is_some() {
+        return vec![base];
+    }
+
+    let mut candidates = Vec::with_capacity(1 + extensions.len());
+    candidates.push(base.clone());
+    for ext in extensions {
+        candidates.push(dir.join(format!("{command}{ext}")));
+    }
+    candidates
+}
+
+fn executable_extensions() -> Vec<String> {
+    if cfg!(windows) {
+        env::var("PATHEXT")
+            .ok()
+            .map(|value| value.split(';').filter(|item| !item.is_empty()).map(|item| item.to_ascii_lowercase()).collect())
+            .unwrap_or_else(|| vec![".exe".to_string(), ".cmd".to_string(), ".bat".to_string(), ".com".to_string()])
+    }
+    else {
+        Vec::new()
+    }
 }
 
 /// 比对两个产物文件的字节一致性。

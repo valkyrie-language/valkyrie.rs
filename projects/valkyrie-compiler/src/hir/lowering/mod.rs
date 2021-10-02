@@ -9,10 +9,10 @@ use crate::{
 use ordered_float::OrderedFloat;
 use valkyrie_parser::{
     ast::{PatternExpression, SubscriptKind},
-    AstParser, AttributeItem, BinaryOperator, ClassDeclaration, DeclarationBody, DeclarationStatement, FunctionDeclaration, FunctionParameter,
+    AstParser, AttributeItem, BinaryOperator, ClassDeclaration, DeclarationBody, FunctionDeclaration, FunctionParameter, FunctionStatement,
     GenericParameterDeclaration, ImplyAssociatedConstBinding, ImplyAssociatedTypeBinding, ImplyDeclaration, InheritanceItem, LetStatement,
-    LiteralExpression, NamePath as AstNamePath, NamespaceDeclaration, ObjectFieldDeclaration, ObjectMethodDeclaration, ParseError, Statement,
-    StringLiteral as AstStringLiteral, StringSegment as AstStringSegment, TermExpression, TraitAssociatedConstDeclaration,
+    LiteralExpression, NamePath as AstNamePath, NamespaceDeclaration, ObjectFieldDeclaration, ObjectMethodDeclaration, ParseError,
+    RootStatement, StringLiteral as AstStringLiteral, StringSegment as AstStringSegment, TermExpression, TraitAssociatedConstDeclaration,
     TraitAssociatedTypeDeclaration, TraitDeclaration, TypeExpression, UnaryOperator, UniteDeclaration, UniteVariantDeclaration, UsingStatement,
     ValkyrieRoot,
 };
@@ -105,7 +105,7 @@ impl AstToHir {
             .statements
             .iter()
             .find_map(|statement| match statement {
-                DeclarationStatement::Namespace(NamespaceDeclaration { name, .. }) => Some(lower_name_path(name)),
+                RootStatement::Namespace(NamespaceDeclaration { name, .. }) => Some(lower_name_path(name)),
                 _ => None,
             })
             .unwrap_or_else(default_module_name);
@@ -114,7 +114,7 @@ impl AstToHir {
             .statements
             .iter()
             .filter_map(|statement| match statement {
-                DeclarationStatement::Using(UsingStatement { path, .. }) => Some(lower_name_path(path)),
+                RootStatement::Using(UsingStatement { path, .. }) => Some(lower_name_path(path)),
                 _ => None,
             })
             .collect();
@@ -123,10 +123,10 @@ impl AstToHir {
             .statements
             .iter()
             .filter_map(|statement| match statement {
-                DeclarationStatement::Function(function) => Some(self.lower_function(function)),
-                DeclarationStatement::Namespace(namespace) => namespace.body.as_ref().and_then(|body| {
+                RootStatement::Function(function) => Some(self.lower_function(function)),
+                RootStatement::Namespace(namespace) => namespace.body.as_ref().and_then(|body| {
                     body.statements.iter().find_map(|stmt| match stmt {
-                        Statement::Function { function, .. } => Some(self.lower_function(function)),
+                        FunctionStatement::Function { function, .. } => Some(self.lower_function(function)),
                         _ => None,
                     })
                 }),
@@ -139,13 +139,13 @@ impl AstToHir {
             .iter()
             .scan(Vec::<Identifier>::new(), |current_namespace, statement| {
                 // `namespace foo;`（body=None）更新当前命名空间上下文。
-                if let DeclarationStatement::Namespace(NamespaceDeclaration { name, body: None, .. }) = statement {
+                if let RootStatement::Namespace(NamespaceDeclaration { name, body: None, .. }) = statement {
                     *current_namespace = name.parts.iter().map(|p| Identifier::new(p.as_str())).collect();
                 }
                 Some((current_namespace.clone(), statement))
             })
             .filter_map(|(namespace, statement)| match statement {
-                DeclarationStatement::Class(class_decl) => Some(self.lower_class(class_decl, &namespace)),
+                RootStatement::Class(class_decl) => Some(self.lower_class(class_decl, &namespace)),
                 _ => None,
             })
             .collect();
@@ -154,7 +154,7 @@ impl AstToHir {
             .statements
             .iter()
             .filter_map(|statement| match statement {
-                DeclarationStatement::Trait(trait_decl) => Some(self.lower_trait(trait_decl)),
+                RootStatement::Trait(trait_decl) => Some(self.lower_trait(trait_decl)),
                 _ => None,
             })
             .collect();
@@ -163,7 +163,7 @@ impl AstToHir {
             .statements
             .iter()
             .filter_map(|statement| match statement {
-                DeclarationStatement::Unite(unite_decl) => Some(self.lower_unite(unite_decl)),
+                RootStatement::Unite(unite_decl) => Some(self.lower_unite(unite_decl)),
                 _ => None,
             })
             .collect();
@@ -172,7 +172,7 @@ impl AstToHir {
             .statements
             .iter()
             .filter_map(|statement| match statement {
-                DeclarationStatement::Imply(imply_decl) => Some(self.lower_imply(imply_decl)),
+                RootStatement::Imply(imply_decl) => Some(self.lower_imply(imply_decl)),
                 _ => None,
             })
             .collect();

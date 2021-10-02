@@ -144,7 +144,7 @@ fn satisfy_named_trait_with_traits(
             .map(|method| {
                 RowMethodSignature::new(
                     method.name.as_str(),
-                    method.params.iter().map(|param| param.ty.clone()).collect(),
+                    callable_surface_params(method.params.iter().map(|param| param.ty.clone()).collect()),
                     method.return_type.clone(),
                 )
             })
@@ -349,6 +349,13 @@ fn collect_structural_method_bindings(candidate: &HirStruct, trait_def: &HirTrai
     }
 
     bindings
+}
+
+fn callable_surface_params(mut params: Vec<HirType>) -> Vec<HirType> {
+    if matches!(params.first(), Some(HirType::SelfType)) {
+        params.remove(0);
+    }
+    params
 }
 
 fn resolve_explicit_method_binding(

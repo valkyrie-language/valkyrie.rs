@@ -11,7 +11,7 @@ use nyar::{
 };
 use wasi_backend::WasmBinaryModule;
 
-use crate::lir::{LirModule, LirTargetLane};
+use crate::lir::{LirModule, LirTargetLane, LirTerminator};
 
 /// `WASM` lane 的 `LIR -> WasmBinaryModule` 承接器。
 pub struct WasmLirLoweringLane {
@@ -57,13 +57,14 @@ impl TargetLoweringLane for WasmLirLoweringLane {
         }
 
         let artifact_name = partition.name.clone();
-        let input = lower_lir_to_wasm_module(&partition);
+        let input = lower_lir_to_wasm_module(&partition)?;
         Ok(LaneLoweringResult { input, artifact_name })
     }
 }
 
 /// 将 `LIR` 模块降低为最小 `WASM` 模块骨架。
-pub fn lower_lir_to_wasm_module(lir: &LirModule) -> WasmBinaryModule {
+pub fn lower_lir_to_wasm_module(lir: &LirModule) -> Result<WasmBinaryModule> {
+    ensure_no_effect_runtime_terminators(lir, "WASM")?;
     let mut module = WasmBinaryModule::new();
     module.push_custom_section("nyar.module", lir.name.as_bytes().to_vec());
     module.push_custom_section("nyar.lane", b"wasm".to_vec());
@@ -71,5 +72,21 @@ pub fn lower_lir_to_wasm_module(lir: &LirModule) -> WasmBinaryModule {
         "nyar.functions",
         lir.functions.iter().flat_map(|function| function.symbol.bytes().chain(std::iter::once(b'\n'))).collect(),
     );
-    module
+    Ok(module)
+}
+
+fn ensure_no_effect_runtime_terminators(lir: &LirModule, backend_name: &str) -> Result<()> {
+    for function in &lir.functions {
+        for block in &function.blocks {
+            if let LirTerminator::PerformEffect { effect, .. } = &block.terminator {
+                return Err(miette!(
+                    "{backend_name} backend 暂未支持 `{:?}` effect/runtime lowering（函数 `{}`，块 `{}`）",
+                    effect,
+                    function.symbol,
+                    block.label
+                ));
+            }
+        }
+    }
+    Ok(())
 }

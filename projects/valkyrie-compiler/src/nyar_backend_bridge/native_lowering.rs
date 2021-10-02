@@ -8,7 +8,10 @@ use nyar::{
 };
 use nyar_binary_format::{CoffHeader, CoffMachine, CoffObject, CoffSection, CoffSymbol};
 
-use crate::lir::{LirModule, LirTargetLane};
+use crate::{
+    lir::{LirModule, LirTargetLane, LirTerminator},
+    symbols::{is_main_symbol, mangle_emitted_symbol},
+};
 
 /// `Native` lane 的骨架 lowering。
 pub struct NativeLirLoweringLane {
@@ -61,6 +64,7 @@ impl TargetLoweringLane for NativeLirLoweringLane {
 
 /// 将 `LIR` 模块降低为最小 `COFF` 目标文件骨架。
 pub fn lower_lir_to_native_assembly(lir: &LirModule) -> Result<CoffObject> {
+    ensure_no_effect_runtime_terminators(lir, "Native")?;
     let machine = CoffMachine::from_arch(BinaryArch::X64);
     let return_stub = match machine {
         CoffMachine::I386 | CoffMachine::Amd64 => &[0xC3][..],
@@ -75,7 +79,8 @@ pub fn lower_lir_to_native_assembly(lir: &LirModule) -> Result<CoffObject> {
     for function in &lir.functions {
         let offset = u32::try_from(text.len()).map_err(|_| miette!("`.text` 节过大，无法编码为 `COFF`"))?;
         text.extend_from_slice(return_stub);
-        symbols.push(CoffSymbol { name: function.symbol.clone(), section_index: 1, value: offset, storage_class: 2 });
+        let emitted_name = if is_main_symbol(&function.symbol) { "main".to_string() } else { mangle_emitted_symbol(&function.symbol) };
+        symbols.push(CoffSymbol { name: emitted_name, section_index: 1, value: offset, storage_class: 2 });
     }
 
     Ok(CoffObject {
@@ -90,4 +95,20 @@ pub fn lower_lir_to_native_assembly(lir: &LirModule) -> Result<CoffObject> {
         sections: vec![CoffSection { name: ".text".to_string(), data: text, relocations: Vec::new(), characteristics: 0x6000_0020 }],
         symbols,
     })
+}
+
+fn ensure_no_effect_runtime_terminators(lir: &LirModule, backend_name: &str) -> Result<()> {
+    for function in &lir.functions {
+        for block in &function.blocks {
+            if let LirTerminator::PerformEffect { effect, .. } = &block.terminator {
+                return Err(miette!(
+                    "{backend_name} backend 暂未支持 `{:?}` effect/runtime lowering（函数 `{}`，块 `{}`）",
+                    effect,
+                    function.symbol,
+                    block.label
+                ));
+            }
+        }
+    }
+    Ok(())
 }

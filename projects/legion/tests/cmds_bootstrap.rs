@@ -2,7 +2,7 @@ mod support;
 
 use legion::cmds::bootstrap::{run, BootstrapArgs, BootstrapStage};
 use std::{panic::AssertUnwindSafe, path::PathBuf};
-use support::create_smoke_project;
+use support::create_smoke_project_with_manifest;
 use valkyrie_compiler::CanonicalTarget;
 
 #[test]
@@ -13,7 +13,48 @@ fn bootstrap_stops_at_v2_when_v1_artifact_is_not_yet_a_self_hosting_seed() {
         return;
     }
 
-    let fixture = create_smoke_project("legion-bootstrap");
+    let fixture = create_smoke_project_with_manifest(
+        "legion-bootstrap",
+        r#"{
+    name: "test_clr_bootstrap",
+    version: "0.1.0",
+    dependencies: {
+        "std": false,
+        "core": false
+    },
+    build: [
+        {
+            target: "clr"
+        }
+    ]
+}
+"#,
+        r#"[clr("mscorlib", "System.Console", "WriteLine")]
+micro console_write_line(message: utf16): unit;
+
+[clr("mscorlib", "System.Environment", "GetCommandLineArgs")]
+micro get_args(): [utf16];
+
+[main]
+micro main(args: [utf16]): i32 {
+    let i: i32 = 0;
+    var has_build: bool = false;
+    while i < args.len() {
+        if args[i] == "build" {
+            has_build = true;
+        }
+        i = i + 1;
+    }
+    if has_build {
+        console_write_line("bootstrap build phase");
+        return 0;
+    }
+    else {
+        return 0;
+    }
+}
+"#,
+    );
     let seed_path = PathBuf::from(env!("CARGO_BIN_EXE_legion"));
     let args = BootstrapArgs {
         project_dir: fixture.project_dir.clone(),

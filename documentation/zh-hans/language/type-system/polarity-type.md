@@ -1,6 +1,6 @@
 # 型变与极性 (Variance & Polarity)
 
-在代数子类型 (Algebraic Subtyping) 理论中，型变 (Variance) 并非孤立的规则，而是**类型极性 (Type Polarity)** 的直接体现。理解极性不仅能帮助我们掌握协变与逆变，还能揭示类型系统中“极点类型”的本质。
+在代数子类型 (Algebraic Subtyping) 理论中，型变 (Variance) 不是孤立规则，而是**类型极性 (Type Polarity)** 的直接体现。极性用于说明协变、逆变与极点类型之间的关系。
 
 ## 类型极性 (Type Polarity)
 
@@ -36,16 +36,46 @@
 
 ---
 
-## 结构化子类型 (Structural Subtyping)
+## 名义子类型与匿名约束
 
-对于记录（Record）类型，如果 `A` 包含 `B` 的所有字段，则 `A` 是 `B` 的子类型。这在底层由 [行类型与多态](./row-types.md) 机制支撑。
+在当前的 Valkyrie 设计里，子类型关系不能一概而论。
+
+- `class` / `sealed class` / `unite` 走名义边界。
+- 匿名 row 走方法约束检查。
+- 具名 `trait` 走协议满足与 witness。
+
+为了避免把这些关系混写，本页采用下列记号：
+
+- `A <: B` 表示名义子类型关系。
+- `A ⊨ T` 表示具名 `trait` 满足关系。
+- `M(A) ⊒ R` 表示匿名 row 覆盖关系。
+
+因此，不能把“字段更多”或“方法长得像”直接等同于一般意义上的子类型。
+
+```valkyrie
+class Animal {}
+class Dog(Animal) {}
+
+# Dog <: Animal
+let animal: Animal = Dog()
+```
+
+而下面这种关系并不自动成立：
+
 ```valkyrie
 type Point2D = { x: f64, y: f64 }
 type Point3D = { x: f64, y: f64, z: f64 }
 
-# Point3D <: Point2D
-let p2: Point2D = Point3D { x: 1, y: 2, z: 3 }
+# Point3D 不因为字段更多就自动成为 Point2D
 ```
+
+如果需要表达“当前具备这些方法即可”，应转到 [行类型与多态](./row-types.md) 讨论匿名 row，而不是把它视为通用记录结构子类型。
+
+这意味着：
+
+- `A <: B` 只能用于文档明确承认的名义层级。
+- `A ⊨ T` 不得简化为 `A <: T`。
+- `M(A) ⊒ R` 不得简化为 `A <: R`。
 
 ---
 
@@ -55,6 +85,8 @@ Valkyrie 区分了基于子类型关系的隐式转换和显式转换。
 
 ### 1. 向上转型 (Upcasting)
 从子类型到父类型的转换（如从 `Dog` 到 `Animal`，或从 `i32` 到 `any`）通常是隐式的，因为它是类型安全的。
+
+这里的“向上转型”只针对文档认可的 `A <: B` 关系；它不适用于匿名 row 覆盖，也不等价于具名 `trait` witness 构造。
 
 ### 2. 显式转换 (Casting)
 使用 `@cast` 或特定方法进行显式转换，常用于存在信息丢失风险的场景（如浮点数转整数）。
@@ -118,7 +150,7 @@ trait Consumer⟨-T⟩ {
 
 ---
 
-## 总结
+## 结论
 
 - **协变 (+)** 是向上的、生产性的极性。
 - **逆变 (-)** 是向下的、消耗性的极性。

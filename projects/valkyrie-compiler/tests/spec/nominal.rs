@@ -213,11 +213,13 @@ fn nominal_module_view_resolves_unite_variants_as_real_named_types() {
 
 #[test]
 fn nominal_module_view_reads_real_hir_module_objects_from_compiler() {
-    let compiler = ValkyrieCompiler::new(SourceID(31));
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 31 });
     let module = compiler
-        .compile_source(r#"class Animal {}
+        .compile_source(
+            r#"class Animal {}
 class Dog(Animal) {}
-"#)
+"#,
+        )
         .unwrap();
     let view = NominalModuleView::from_module(&module);
 
@@ -226,15 +228,17 @@ class Dog(Animal) {}
 
 #[test]
 fn nominal_module_view_reads_real_unite_family_from_compiler() {
-    let compiler = ValkyrieCompiler::new(SourceID(33));
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 33 });
     let module = compiler
-        .compile_source(r#"unite Option {
+        .compile_source(
+            r#"unite Option {
     Some {
         value: i64,
     }
     None
 }
-"#)
+"#,
+        )
         .unwrap();
     let view = NominalModuleView::from_module(&module);
 
@@ -297,7 +301,7 @@ fn option_unite() -> HirEnum {
             fields: vec![HirField {
                 name: Identifier::new("value"),
                 doc: HirDocumentation::default(),
-                ty: ValkyrieType::Integer32,
+                ty: int32(),
                 visibility: HirVisibility::public(),
                 is_readonly: false,
             }],
@@ -415,4 +419,8 @@ fn gadt_unite() -> HirEnum {
         },
     ];
     enum_def
+}
+
+fn int32() -> ValkyrieType {
+    ValkyrieType::Integer32 { signed: true }
 }

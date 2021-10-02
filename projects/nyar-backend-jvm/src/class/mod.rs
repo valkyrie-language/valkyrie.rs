@@ -352,6 +352,8 @@ pub enum JvmInstruction {
     AConstNull,
     IConst(i32),
     LConst0,
+    LConst1,
+    LdcLong(i64),
     FConst0,
     DConst0,
     DConst1,
@@ -706,6 +708,7 @@ pub struct ConstantPoolBuilder {
     class_entries: BTreeMap<String, u16>,
     string_entries: BTreeMap<String, u16>,
     integer_entries: BTreeMap<i32, u16>,
+    long_entries: BTreeMap<i64, u16>,
     double_entries: BTreeMap<u64, u16>,
     name_and_type_entries: BTreeMap<(String, String), u16>,
     methodref_entries: BTreeMap<(String, String, String), u16>,
@@ -753,6 +756,15 @@ impl ConstantPoolBuilder {
         }
         let index = self.push(BuilderEntry::Integer(value as u32));
         self.integer_entries.insert(value, index);
+        index
+    }
+
+    fn long(&mut self, value: i64) -> u16 {
+        if let Some(index) = self.long_entries.get(&value) {
+            return *index;
+        }
+        let index = self.push_wide(BuilderEntry::Long(value as u64));
+        self.long_entries.insert(value, index);
         index
     }
 
@@ -841,6 +853,10 @@ impl ConstantPoolBuilder {
                     writer.write_u8(3);
                     writer.write_u32(*value);
                 }
+                BuilderEntry::Long(value) => {
+                    writer.write_u8(5);
+                    writer.write_u64(*value);
+                }
                 BuilderEntry::Double(value) => {
                     writer.write_u8(6);
                     writer.write_u64(*value);
@@ -872,6 +888,7 @@ enum BuilderEntry {
     Class(u16),
     String(u16),
     Integer(u32),
+    Long(u64),
     Double(u64),
     NameAndType { name_index: u16, descriptor_index: u16 },
     Methodref { class_index: u16, name_and_type_index: u16 },
@@ -970,6 +987,7 @@ fn instruction_size(instruction: &JvmInstruction) -> usize {
         JvmInstruction::ALoad0
         | JvmInstruction::AConstNull
         | JvmInstruction::LConst0
+        | JvmInstruction::LConst1
         | JvmInstruction::FConst0
         | JvmInstruction::DConst0
         | JvmInstruction::DConst1
@@ -1034,7 +1052,7 @@ fn instruction_size(instruction: &JvmInstruction) -> usize {
                 2
             }
         }
-        JvmInstruction::LdcDouble(_) => 3,
+        JvmInstruction::LdcLong(_) | JvmInstruction::LdcDouble(_) => 3,
         JvmInstruction::LdcString(_) => 3,
         JvmInstruction::IConst(value) => match *value {
             -1..=5 => 1,
@@ -1087,9 +1105,15 @@ fn encode_instruction(
         JvmInstruction::AConstNull => bytes.push(0x01),
         JvmInstruction::IConst(value) => encode_iconst(*value, pool, bytes)?,
         JvmInstruction::LConst0 => bytes.push(0x09),
+        JvmInstruction::LConst1 => bytes.push(0x0A),
         JvmInstruction::FConst0 => bytes.push(0x0B),
         JvmInstruction::DConst0 => bytes.push(0x0E),
         JvmInstruction::DConst1 => bytes.push(0x0F),
+        JvmInstruction::LdcLong(value) => {
+            bytes.push(0x14);
+            let long_ref = pool.long(*value);
+            bytes.extend_from_slice(&long_ref.to_be_bytes());
+        }
         JvmInstruction::LdcDouble(value) => {
             bytes.push(0x14);
             let double_ref = pool.double(f64::from_bits(*value));

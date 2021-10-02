@@ -8,6 +8,7 @@ impl MirBuilder {
         resume_target: MirBlockRef,
         payload: Option<&MirOperand>,
         resume_parameter_count: usize,
+        continuation_index: Option<usize>,
     ) {
         let payload_type = payload.and_then(|operand| infer_builder_operand_type(operand, &self.value_types));
         let spill_candidates: Vec<MirValueRef> = self
@@ -29,6 +30,7 @@ impl MirBuilder {
             resume_parameter_count,
             payload_type,
             spill_candidates,
+            continuation_index,
         });
     }
 
@@ -45,7 +47,8 @@ impl MirBuilder {
         let resume_value = self.ensure_block_parameter(resume_block, label, resume_parameter_type);
         self.current_block = current_block;
         self.current_label = current_label.clone();
-        self.record_suspend_point(effect, current_block, resume_block, payload.as_ref(), 1);
+        let continuation_index = self.resume_stack.last().map(|ctx| ctx.continuation);
+        self.record_suspend_point(effect, current_block, resume_block, payload.as_ref(), 1, continuation_index);
         self.terminate(MirTerminator::PerformEffect { effect, payload, resume_target: resume_block });
         self.flush_block(&current_label);
         self.current_block = resume_block;
@@ -61,7 +64,8 @@ impl MirBuilder {
         let resume_block = self.new_block(label);
         self.current_block = current_block;
         self.current_label = current_label.clone();
-        self.record_suspend_point(effect, current_block, resume_block, payload.as_ref(), 0);
+        let continuation_index = self.resume_stack.last().map(|ctx| ctx.continuation);
+        self.record_suspend_point(effect, current_block, resume_block, payload.as_ref(), 0, continuation_index);
         self.terminate(MirTerminator::PerformEffect { effect, payload, resume_target: resume_block });
         self.flush_block(&current_label);
         self.current_block = resume_block;

@@ -1,4 +1,4 @@
-use nyar_wasi_backend::WitPackage;
+use nyar_backend_wasi::WitPackage;
 
 #[test]
 fn parses_wit_package_with_interfaces() {

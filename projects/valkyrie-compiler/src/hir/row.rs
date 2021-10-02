@@ -126,7 +126,7 @@ impl RowCandidate {
             .filter(|method| method.visibility.is_public())
             .map(|method| RowMethodSignature {
                 name: method.name.clone(),
-                params: method.params.iter().map(|param| param.ty.clone()).collect(),
+                params: callable_surface_params(method.params.iter().map(|param| param.ty.clone()).collect()),
                 return_type: method.return_type.clone(),
             })
             .collect();
@@ -150,14 +150,14 @@ impl RowCandidate {
             if let Some(getter) = property.getter.as_ref() {
                 methods.push(RowMethodSignature {
                     name: getter.name.clone(),
-                    params: getter.params.iter().map(|param| param.ty.clone()).collect(),
+                    params: callable_surface_params(getter.params.iter().map(|param| param.ty.clone()).collect()),
                     return_type: getter.return_type.clone(),
                 });
             }
             if let Some(setter) = property.setter.as_ref() {
                 methods.push(RowMethodSignature {
                     name: setter.name.clone(),
-                    params: setter.params.iter().map(|param| param.ty.clone()).collect(),
+                    params: callable_surface_params(setter.params.iter().map(|param| param.ty.clone()).collect()),
                     return_type: setter.return_type.clone(),
                 });
             }
@@ -192,6 +192,13 @@ fn synthetic_setter_signature(property: &HirProperty) -> RowMethodSignature {
         params: vec![property.ty.clone()],
         return_type: ValkyrieType::Unit,
     }
+}
+
+fn callable_surface_params(mut params: Vec<ValkyrieType>) -> Vec<ValkyrieType> {
+    if matches!(params.first(), Some(ValkyrieType::SelfType)) {
+        params.remove(0);
+    }
+    params
 }
 
 impl From<&str> for RowRequirementItem {

@@ -2,18 +2,22 @@
 
 use nyar::{
     ArtifactPartitionPlan, CanonicalTarget, CapabilityTag, EntryContract, ExportContract, FunctionAnalysis, FutamuraProjectionFamily,
-    Identifier, ImportContract, NamePath, ObjectAlgebraicDimension, ObjectAlgebraicProgram, PlanningInput, ProgramFacts, ProjectionPolicy,
-    QualifiedName, RewritePhase, RewriteRule, RewriteTheory, RuntimeRequirement, TargetBackendFamily,
+    HostProjectionBoundary, Identifier, ImportContract, NamePath, ObjectAlgebraicDimension, ObjectAlgebraicProgram, PlanningInput,
+    ProgramFacts, ProjectionPolicy, QualifiedName, ReferenceManagement, RewritePhase, RewriteRule, RewriteTheory, RuntimeRequirement,
+    TargetBackendFamily, TargetHostKind,
 };
 use valkyrie_types::{
     hir::{AccessLevel, HirFunction, HirModule},
     Identifier as ValkyrieIdentifier, NamePath as ValkyrieNamePath,
 };
 
+use crate::type_checker::{AssignmentSemantics, CopySemanticsValidator, ParameterSemantics, ReturnSemantics};
+
 /// Builds frontend-neutral `ProgramFacts` from a lowered `HIR` module.
 pub fn hir_module_to_program_facts(module: &HirModule) -> ProgramFacts {
     let module_name = lower_qualified_name(&module.name);
     let entry = select_entry_contract(module, &module_name);
+    let validator = build_copy_semantics_validator(module);
     let imports = module
         .imports
         .iter()
@@ -40,6 +44,7 @@ pub fn hir_module_to_program_facts(module: &HirModule) -> ProgramFacts {
             is_external: function.is_abstract,
             can_suspend: has_annotation(function, "await") || has_annotation(function, "block"),
             uses_host_interop: has_host_interop_annotation(function),
+            reference_management_hint: infer_function_reference_management(function, &validator),
         })
         .collect();
     let mut capabilities = Vec::new();
@@ -52,7 +57,17 @@ pub fn hir_module_to_program_facts(module: &HirModule) -> ProgramFacts {
         capabilities.push(CapabilityTag::new("suspend"));
         runtime_requirements.push(RuntimeRequirement { key: "suspend".to_string(), value: "required".to_string() });
     }
-    ProgramFacts { module_name, entry, imports, exports, functions, capabilities, runtime_requirements }
+    let reference_management = infer_module_reference_management(module, &functions, &validator);
+    if let Some(reference_management) = reference_management {
+        runtime_requirements.push(RuntimeRequirement {
+            key: "reference-management".to_string(),
+            value: match reference_management {
+                ReferenceManagement::HostGc => "host-gc".to_string(),
+                ReferenceManagement::PerceusRc => "perceus-rc".to_string(),
+            },
+        });
+    }
+    ProgramFacts { module_name, entry, imports, exports, functions, capabilities, reference_management, runtime_requirements }
 }
 
 /// Compatibility shim for older bridge call sites.
@@ -63,11 +78,13 @@ pub fn hir_module_to_analysis_artifact(module: &HirModule) -> ProgramFacts {
 /// Builds a minimal `Object Algebraic` program boundary from `HIR`.
 pub fn hir_module_to_object_algebraic_program(module: &HirModule) -> ObjectAlgebraicProgram {
     let module_name = lower_qualified_name(&module.name);
+    let validator = build_copy_semantics_validator(module);
     let functions = module.functions.iter().map(|function| function_symbol(module_name.clone(), function)).collect::<Vec<_>>();
     let mut dimensions = vec![ObjectAlgebraicDimension {
         name: Identifier::new("functions"),
         exported_operations: functions.clone(),
         required_capabilities: Vec::new(),
+        reference_management_hint: infer_dimension_reference_management(module.functions.iter(), &validator),
     }];
 
     let host_operations = module
@@ -81,6 +98,10 @@ pub fn hir_module_to_object_algebraic_program(module: &HirModule) -> ObjectAlgeb
             name: Identifier::new("host-interop"),
             exported_operations: host_operations,
             required_capabilities: vec![CapabilityTag::new("host-interop")],
+            reference_management_hint: infer_dimension_reference_management(
+                module.functions.iter().filter(|function| has_host_interop_annotation(function)),
+                &validator,
+            ),
         });
     }
 
@@ -95,6 +116,10 @@ pub fn hir_module_to_object_algebraic_program(module: &HirModule) -> ObjectAlgeb
             name: Identifier::new("suspend"),
             exported_operations: suspend_operations,
             required_capabilities: vec![CapabilityTag::new("suspend")],
+            reference_management_hint: infer_dimension_reference_management(
+                module.functions.iter().filter(|function| has_annotation(function, "await") || has_annotation(function, "block")),
+                &validator,
+            ),
         });
     }
 
@@ -150,6 +175,49 @@ fn has_annotation(function: &HirFunction, expected: &str) -> bool {
     function.annotations.iter().any(|attribute| attribute.name.parts().last().is_some_and(|part| part.as_str() == expected))
 }
 
+fn build_copy_semantics_validator(module: &HirModule) -> CopySemanticsValidator {
+    let mut validator = CopySemanticsValidator::new();
+    for item in &module.structs {
+        validator.register_value_type(item);
+    }
+    validator
+}
+
+fn infer_module_reference_management(
+    module: &HirModule,
+    functions: &[FunctionAnalysis],
+    validator: &CopySemanticsValidator,
+) -> Option<ReferenceManagement> {
+    module_uses_reference_semantics(module, functions, validator).then_some(ReferenceManagement::HostGc)
+}
+
+fn module_uses_reference_semantics(module: &HirModule, functions: &[FunctionAnalysis], validator: &CopySemanticsValidator) -> bool {
+    module.structs.iter().any(|item| {
+        !item.is_value_type
+            || item.fields.iter().any(|field| matches!(validator.validate_assignment(&field.ty), AssignmentSemantics::Reference))
+            || item.methods.iter().any(|method| infer_function_reference_management(method, validator).is_some())
+    }) || functions.iter().any(|function| function.reference_management_hint.is_some())
+}
+
+fn infer_dimension_reference_management<'a>(
+    functions: impl IntoIterator<Item = &'a HirFunction>,
+    validator: &CopySemanticsValidator,
+) -> Option<ReferenceManagement> {
+    functions
+        .into_iter()
+        .any(|function| infer_function_reference_management(function, validator).is_some())
+        .then_some(ReferenceManagement::HostGc)
+}
+
+fn infer_function_reference_management(function: &HirFunction, validator: &CopySemanticsValidator) -> Option<ReferenceManagement> {
+    function_uses_reference_semantics(function, validator).then_some(ReferenceManagement::HostGc)
+}
+
+fn function_uses_reference_semantics(function: &HirFunction, validator: &CopySemanticsValidator) -> bool {
+    function.params.iter().any(|param| matches!(validator.validate_parameter_passing(&param.ty), ParameterSemantics::Reference))
+        || matches!(validator.validate_return(&function.return_type), ReturnSemantics::Reference)
+}
+
 fn default_rewrite_theory(program_facts: &ProgramFacts) -> RewriteTheory {
     let mut theory = RewriteTheory::default();
     theory.register(RewriteRule {
@@ -176,21 +244,35 @@ fn default_rewrite_theory(program_facts: &ProgramFacts) -> RewriteTheory {
             name: Identifier::new("pre-projection.suspend-boundary"),
             phase: RewritePhase::PreProjection,
             required_capabilities: vec![CapabilityTag::new("suspend")],
-            allowed_projection_families: vec![FutamuraProjectionFamily::Clr, FutamuraProjectionFamily::Wasm, FutamuraProjectionFamily::Vm],
+            allowed_projection_families: vec![FutamuraProjectionFamily::Clr, FutamuraProjectionFamily::Wasm, FutamuraProjectionFamily::NyarVm],
         });
     }
     theory
 }
 
 fn default_projection_policy(target: CanonicalTarget) -> ProjectionPolicy {
-    let backend_family = target.to_profile(None).backend_family;
+    let target_profile = target.to_profile(None);
+    let backend_family = target_profile.backend_family;
     ProjectionPolicy {
         family: match backend_family {
             TargetBackendFamily::Clr => FutamuraProjectionFamily::Clr,
             TargetBackendFamily::Jvm => FutamuraProjectionFamily::Jvm,
             TargetBackendFamily::Wasm => FutamuraProjectionFamily::Wasm,
             TargetBackendFamily::Native => FutamuraProjectionFamily::Native,
-            _ => FutamuraProjectionFamily::Vm,
+            _ => FutamuraProjectionFamily::NyarVm,
+        },
+        host_boundary: match target_profile.host_kind {
+            TargetHostKind::DotNet => HostProjectionBoundary::Clr,
+            TargetHostKind::Jvm => HostProjectionBoundary::Jvm,
+            TargetHostKind::Wasi => HostProjectionBoundary::WasiComponent,
+            TargetHostKind::Browser | TargetHostKind::JavaScript => HostProjectionBoundary::WasmJsGlue,
+            TargetHostKind::Native => HostProjectionBoundary::Native,
+            TargetHostKind::NyarVm => HostProjectionBoundary::Vm,
+            TargetHostKind::Gpu | TargetHostKind::Unknown => target_profile.host_boundary,
+        },
+        reference_management: match backend_family {
+            TargetBackendFamily::Native | TargetBackendFamily::Gpu => ReferenceManagement::PerceusRc,
+            _ => ReferenceManagement::HostGc,
         },
         prefer_small_artifacts: matches!(backend_family, TargetBackendFamily::Wasm | TargetBackendFamily::Native),
         preserve_effect_boundaries: !matches!(backend_family, TargetBackendFamily::Native),

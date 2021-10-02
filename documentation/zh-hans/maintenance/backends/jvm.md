@@ -33,7 +33,7 @@ Valkyrie 类型映射到 JVM 描述符：
     - 对于 `i64/f32/f64`：使用 `lcmp/fcmpl/dcmpl` 指令，随后配合 `if<cond>` 指令生成布尔值。
     - 对于对象类型（class, unite, string）：使用 `if_acmp<cond>` 实现引用相等性比较。
 - **位运算与逻辑运算**：
-    - `And`, `OrPatternExpression`, `Xor` 映射到 `iand/land`, `ior/lor`, `ixor/lxor`。
+    - `And`, `PatternOrExpression`, `Xor` 映射到 `iand/land`, `ior/lor`, `ixor/lxor`。
     - `Shl`, `Shr` 映射到 `ishl/lshl`, `ishr/lshr`。
 - **一元运算**：
     - `Neg` 映射到 `ineg/lneg/fneg/dneg`。
@@ -46,7 +46,7 @@ Valkyrie 类型映射到 JVM 描述符：
     - 类/Unity 方法：`ClassName$MethodName`。
     - Trait 方法：`TraitName$MethodName`。
     - Impl 方法：`[TraitName$]TargetName_MethodName`。
-- 方法调用（`Call`）目前使用 `invokestatic`。后端会自动从 `UIR` 或 `CfgProgram` 中检索被调用者的签名以生成正确的描述符。
+- 方法调用（`TermCallExpression`）目前使用 `invokestatic`。后端会自动从 `UIR` 或 `CfgProgram` 中检索被调用者的签名以生成正确的描述符。
 - 对于动态调用或函数指针，后端利用 `java/lang/invoke/MethodHandle` 的 `invoke` 方法实现。
 
 ### 泛型支持

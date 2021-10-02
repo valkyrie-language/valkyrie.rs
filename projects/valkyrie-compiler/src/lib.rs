@@ -10,6 +10,7 @@ pub mod mir;
 pub mod module;
 pub mod nyar_backend_bridge;
 pub mod nyar_bridge;
+mod symbols;
 pub mod type_checker;
 /// Typing helpers such as linearization and semantic inheritance analysis.
 pub mod typing;
@@ -27,13 +28,14 @@ pub use mir::{
 };
 pub use nyar::{
     self, ArtifactKind, ArtifactPartitionPlan, ArtifactPolicy, ArtifactSet, CanonicalAbi, CanonicalArch, CanonicalSpecification,
-    CanonicalTarget, CanonicalTargetParseError, CanonicalVendor, CompilationOptions, EntryPolicy, PlanningInput, ProgramFacts, PublishFormat,
-    RunnerFamily, RunnerSelector, TargetBackendFamily, TargetHostKind, TargetMode, TargetProfile, WrapStrategy,
+    CanonicalTarget, CanonicalTargetParseError, CanonicalVendor, CompilationOptions, EntryPolicy, HostProjectionBoundary, PlanningInput,
+    ProgramFacts, PublishFormat, ReferenceManagement, RunnerFamily, RunnerSelector, TargetBackendFamily, TargetHostKind, TargetMode,
+    TargetProfile, WrapStrategy,
 };
 pub use nyar_backend_bridge::{
     collect_wasm_imports, lower_lir_to_jvm_class, lower_lir_to_msil, lower_lir_to_native_assembly, lower_lir_to_wasm_module,
-    lower_to_driver_input, resolve_wasm_import, write_clr_msil_sidecar, ClrLirLoweringLane, JvmLirLoweringLane, NativeLirLoweringLane,
-    WasmImport, WasmLirLoweringLane,
+    lower_to_driver_input, lower_to_driver_input_for_partition, resolve_wasm_import, write_clr_msil_sidecar, ClrLirLoweringLane,
+    JvmLirLoweringLane, NativeLirLoweringLane, WasmImport, WasmLirLoweringLane,
 };
 pub use nyar_bridge::{
     hir_module_to_analysis_artifact, hir_module_to_artifact_plan, hir_module_to_object_algebraic_program, hir_module_to_program_facts,

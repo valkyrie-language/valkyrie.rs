@@ -209,6 +209,8 @@ impl<'a> Lexer<'a> {
             '~' => self.push_token(TokenKind::Tilde, start, start + 1),
             '^' => self.push_token(TokenKind::Caret, start, start + 1),
             '@' => self.push_token(TokenKind::At, start, start + 1),
+            '◇' => self.push_token(TokenKind::HollowDiamond, start, start + ch.len_utf8()),
+            '◆' => self.push_token(TokenKind::SolidDiamond, start, start + ch.len_utf8()),
             '!' => {
                 if self.starts_with("!=") {
                     self.push_token(TokenKind::NotEq, start, start + 2);

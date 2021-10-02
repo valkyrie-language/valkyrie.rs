@@ -28,6 +28,9 @@ impl MirBuilder {
         self.bindings = pre_if_bindings.clone();
         for statement in &then_branch.statements {
             self.lower_statement(statement);
+            if self.terminator.is_some() {
+                break;
+            }
         }
         if let Some(tail) = &then_branch.expr {
             let _ = self.lower_expr_to_operand(tail);
@@ -44,6 +47,9 @@ impl MirBuilder {
         if let Some(else_body) = else_branch {
             for statement in &else_body.statements {
                 self.lower_statement(statement);
+                if self.terminator.is_some() {
+                    break;
+                }
             }
             if let Some(tail) = &else_body.expr {
                 let _ = self.lower_expr_to_operand(tail);
@@ -151,6 +157,9 @@ impl MirBuilder {
 
         for statement in &body.statements {
             self.lower_statement(statement);
+            if self.terminator.is_some() {
+                break;
+            }
         }
         if let Some(tail) = &body.expr {
             let _ = self.lower_expr_to_operand(tail);
@@ -284,15 +293,9 @@ impl MirBuilder {
                 Vec::new()
             };
             self.terminate(MirTerminator::Jump { target: exit, arguments });
-            let label = self.current_label.clone();
-            self.flush_block(&label);
-            self.new_block("after_break");
         }
         else {
             self.terminate(MirTerminator::Unreachable);
-            let current_label = self.current_label.clone();
-            self.flush_block(&current_label);
-            self.new_block("after_invalid_break");
         }
         MirOperand::Constant(MirConstant::Unit)
     }
@@ -303,15 +306,9 @@ impl MirBuilder {
             let LoopContext { header, carried_values, .. } = loop_context;
             let arguments: Vec<MirOperand> = carried_values.iter().filter_map(|name| self.bindings.get(name).cloned()).collect();
             self.terminate(MirTerminator::Jump { target: header, arguments });
-            let label = self.current_label.clone();
-            self.flush_block(&label);
-            self.new_block("after_continue");
         }
         else {
             self.terminate(MirTerminator::Unreachable);
-            let current_label = self.current_label.clone();
-            self.flush_block(&current_label);
-            self.new_block("after_invalid_continue");
         }
         MirOperand::Constant(MirConstant::Unit)
     }

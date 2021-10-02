@@ -4,7 +4,7 @@ members = [
     "projects/nyar",
     "projects/nyar-analyzer",
     "projects/nyar-optimizer",
-    "projects/nyar-binary-format",
+    "projects/std-data",
     "projects/nyar-driver",
     "projects/nyar-types",
     "projects/legion",
@@ -34,7 +34,7 @@ repository = "https://github.com/valkyrie-language/valkyrie.rs"
 nyar = { path = "projects/nyar" }
 nyar-analyzer = { path = "projects/nyar-analyzer" }
 nyar-optimizer = { path = "projects/nyar-optimizer" }
-nyar-binary-format = { path = "projects/nyar-binary-format" }
+nyar-binary-format = { path = "projects/std-data" }
 nyar-driver = { path = "projects/nyar-driver" }
 nyar-types = { path = "projects/nyar-types" }
 von-parser = { path = "projects/von-parser" }
@@ -54,7 +54,6 @@ serde_json = "1.0.150"
 url = "2.5.8"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 tempfile = "3.27.0"
-wasmtime = "46.0.1"
 
 [profile.release]
 lto = true

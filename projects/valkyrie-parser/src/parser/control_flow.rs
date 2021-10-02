@@ -1,11 +1,94 @@
 use crate::{
-    ast::{DeclarationBody, IfStatement, LetStatement, LoopStatement, PatternExpression, Statement, TermExpression, TuplePattern},
+    ast::{
+        BreakStatement, ContinueStatement, DeclarationBody, FallthroughStatement, FunctionStatement, IfStatement, LetStatement,
+        LoopInStatement, LoopStatement, PatternExpression, ResumeStatement, ReturnStatement, TermExpression, TuplePattern, WhileStatement,
+        YieldFromStatement, YieldStatement,
+    },
     lexer::{Keyword, TokenKind},
 };
+use valkyrie_types::Identifier;
 
 use super::{expression_requires_statement, span, ParseError, Parser};
 
 impl<'a> Parser<'a> {
+    pub(super) fn parse_return_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Return)?.span.start;
+        let value = if self.is_expression_terminator() { None } else { Some(Box::new(self.parse_value_expression_bp(0)?)) };
+        let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
+        Ok(FunctionStatement::Return(ReturnStatement { value: value.map(|value| *value), span: span(start, end) }))
+    }
+
+    pub(super) fn parse_break_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Break)?.span.start;
+        let label = if self.check_symbol(TokenKind::Apostrophe) { Some(Identifier::new(&self.parse_label_name()?)) } else { None };
+        let value = if self.is_expression_terminator() { None } else { Some(Box::new(self.parse_value_expression_bp(0)?)) };
+        let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
+        Ok(FunctionStatement::Break(BreakStatement { label, value: value.map(|value| *value), span: span(start, end) }))
+    }
+
+    pub(super) fn parse_continue_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Continue)?.span.start;
+        let label = if self.check_symbol(TokenKind::Apostrophe) { Some(Identifier::new(&self.parse_label_name()?)) } else { None };
+        let end = self.previous().span.end;
+        Ok(FunctionStatement::Continue(ContinueStatement { label, span: span(start, end) }))
+    }
+
+    pub(super) fn parse_yield_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Yield)?.span.start;
+        if self.match_identifier_text_eq("from") {
+            let value = self.parse_value_expression_bp(0)?;
+            let end = value.span().end;
+            return Ok(FunctionStatement::YieldFrom(YieldFromStatement { value, span: span(start, end) }));
+        }
+
+        let value = if self.is_expression_terminator() { None } else { Some(self.parse_value_expression_bp(0)?) };
+        let end = value.as_ref().map_or(self.previous().span.end, |expr| expr.span().end);
+        Ok(FunctionStatement::Yield(YieldStatement { value, span: span(start, end) }))
+    }
+
+    pub(super) fn parse_resume_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let start = self.expect_token_keyword(Keyword::Resume)?.span.start;
+        let value = self.parse_value_expression_bp(0)?;
+        let end = value.span().end;
+        Ok(FunctionStatement::Resume(ResumeStatement { value: Some(value), span: span(start, end) }))
+    }
+
+    pub(super) fn is_expression_terminator(&self) -> bool {
+        matches!(self.current().kind, TokenKind::Semicolon | TokenKind::RBrace | TokenKind::Comma | TokenKind::RParen | TokenKind::RBracket)
+            || matches!(
+                self.current().kind,
+                TokenKind::Keyword(
+                    Keyword::Case
+                        | Keyword::Else
+                        | Keyword::Let
+                        | Keyword::Mut
+                        | Keyword::Return
+                        | Keyword::Break
+                        | Keyword::Continue
+                        | Keyword::Yield
+                        | Keyword::Resume
+                        | Keyword::Fallthrough
+                )
+            )
+    }
+
+    pub(super) fn parse_control_flow_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        match self.current().kind {
+            TokenKind::Keyword(Keyword::Return) => self.parse_return_statement(),
+            TokenKind::Keyword(Keyword::Break) => self.parse_break_statement(),
+            TokenKind::Keyword(Keyword::Continue) => self.parse_continue_statement(),
+            TokenKind::Keyword(Keyword::Yield) => self.parse_yield_statement(),
+            TokenKind::Keyword(Keyword::Resume) => self.parse_resume_statement(),
+            TokenKind::Keyword(Keyword::Fallthrough) => self.parse_fallthrough_statement(),
+            _ => Err(self.error_here("expected control flow statement")),
+        }
+    }
+
+    pub(super) fn parse_fallthrough_statement(&mut self) -> Result<FunctionStatement, ParseError> {
+        let span = self.expect_token_keyword(Keyword::Fallthrough)?.span;
+        Ok(FunctionStatement::Fallthrough(FallthroughStatement { span }))
+    }
+
     /// 解析 `if condition { then } else { else }` 表达式。
     ///
     /// `else` 分支可选；当存在时既可以是块体，也可以是嵌套的 `if` 表达式。
@@ -48,18 +131,25 @@ impl<'a> Parser<'a> {
         self.parse_loop_expression_after_keyword(start, None)
     }
 
-    pub(super) fn parse_loop_expression_after_keyword(&mut self, start: usize, label: Option<String>) -> Result<TermExpression, ParseError> {
+    pub(super) fn parse_loop_expression_after_keyword(
+        &mut self,
+        start: usize,
+        label: Option<Identifier>,
+    ) -> Result<TermExpression, ParseError> {
         if self.check_symbol(TokenKind::LBrace) {
             let body = self.parse_block_body()?;
             let end = body.span.end;
-            return Ok(TermExpression::Loop(Box::new(LoopStatement {
-                label,
-                pattern: None,
-                iterator: None,
-                condition: None,
-                body,
-                span: span(start, end),
-            })));
+            if let Some(label) = label {
+                return Ok(TermExpression::LoopIn(Box::new(LoopInStatement {
+                    label: Some(label),
+                    pattern: None,
+                    iterator: None,
+                    condition: None,
+                    body,
+                    span: span(start, end),
+                })));
+            }
+            return Ok(TermExpression::Loop(Box::new(LoopStatement { body, span: span(start, end) })));
         }
 
         let checkpoint = self.index;
@@ -72,7 +162,7 @@ impl<'a> Parser<'a> {
                     self.suppress_struct_constructor = false;
                     let body = self.parse_block_body()?;
                     let end = body.span.end;
-                    return Ok(TermExpression::Loop(Box::new(LoopStatement {
+                    return Ok(TermExpression::LoopIn(Box::new(LoopInStatement {
                         label,
                         pattern: Some(pattern),
                         iterator,
@@ -96,19 +186,23 @@ impl<'a> Parser<'a> {
         self.parse_while_expression_after_keyword(start, None)
     }
 
-    pub(super) fn parse_while_expression_after_keyword(&mut self, start: usize, label: Option<String>) -> Result<TermExpression, ParseError> {
+    pub(super) fn parse_while_expression_after_keyword(
+        &mut self,
+        start: usize,
+        label: Option<Identifier>,
+    ) -> Result<TermExpression, ParseError> {
         // 抑制结构体构造 postfix，避免误吞 while 块体。
         self.suppress_struct_constructor = true;
         let condition = Some(self.parse_expression_bp(0)?);
         self.suppress_struct_constructor = false;
         let body = self.parse_block_body()?;
         let end = body.span.end;
-        Ok(TermExpression::Loop(Box::new(LoopStatement { label, pattern: None, iterator: None, condition, body, span: span(start, end) })))
+        Ok(TermExpression::While(Box::new(WhileStatement { label, condition, body, span: span(start, end) })))
     }
 
     pub(super) fn parse_labeled_loop_expression(&mut self) -> Result<TermExpression, ParseError> {
         let start = self.current().span.start;
-        let label = self.parse_label_name()?;
+        let label = Identifier::new(&self.parse_label_name()?);
         self.expect_symbol(TokenKind::Colon)?;
         if self.check_token_keyword(Keyword::Loop) {
             self.expect_token_keyword(Keyword::Loop)?;
@@ -173,22 +267,32 @@ impl<'a> Parser<'a> {
                 statements.push(self.parse_let_statement()?);
                 continue;
             }
+            if matches!(
+                self.current().kind,
+                TokenKind::Keyword(
+                    Keyword::Return | Keyword::Break | Keyword::Continue | Keyword::Yield | Keyword::Resume | Keyword::Fallthrough
+                )
+            ) {
+                statements.push(self.parse_control_flow_statement()?);
+                self.match_symbol(TokenKind::Semicolon);
+                continue;
+            }
 
             let expr = self.parse_expression_bp(0)?;
             if self.match_symbol(TokenKind::Semicolon) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
+                statements.push(FunctionStatement::Term { span: expr.span().clone(), expression: expr });
                 continue;
             }
 
             // `if`/`loop`/`match` 等控制流表达式可作为语句使用，不需要分号终止。
             if matches!(expr, TermExpression::If(_) | TermExpression::Loop(_) | TermExpression::Match { .. }) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
+                statements.push(FunctionStatement::Term { span: expr.span().clone(), expression: expr });
                 continue;
             }
 
             // 换行隐式终止：当下一个 token 是新语句起始关键字时，当前表达式作为语句结束。
             if self.is_statement_start() {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
+                statements.push(FunctionStatement::Term { span: expr.span().clone(), expression: expr });
                 continue;
             }
 
@@ -197,7 +301,7 @@ impl<'a> Parser<'a> {
             }
 
             if expression_requires_statement(&expr) {
-                statements.push(Statement::Expr { span: expr.span().clone(), expression: expr });
+                statements.push(FunctionStatement::Term { span: expr.span().clone(), expression: expr });
             }
             else {
                 tail_expression = Some(expr);
@@ -209,7 +313,7 @@ impl<'a> Parser<'a> {
         Ok(DeclarationBody { statements, tail_expression, span: span(open.span.end, close.span.start) })
     }
 
-    pub(super) fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
+    pub(super) fn parse_let_statement(&mut self) -> Result<FunctionStatement, ParseError> {
         let start = self.current().span.start;
         let saw_let = self.match_token_keyword(Keyword::Let);
         let is_mutable = self.match_token_keyword(Keyword::Mut);
@@ -225,6 +329,7 @@ impl<'a> Parser<'a> {
             return Err(self.error_here("expected ';' or statement boundary after let binding"));
         }
 
-        Ok(Statement::Let { statement: LetStatement { is_mutable, pattern, ty, initializer }, span: span(start, self.previous().span.end) })
+        let end = self.previous().span.end;
+        Ok(FunctionStatement::Let(LetStatement { is_mutable, pattern, ty, initializer, span: span(start, end) }))
     }
 }

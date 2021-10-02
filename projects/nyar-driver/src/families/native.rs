@@ -1,6 +1,9 @@
 use miette::Result;
 use native_backend::NativeBinaryBackend;
-use nyar::{backends::TargetCodeGenBackend, BackendInputKind, PartitionBackendRequirement, TargetFamily, TargetLane};
+use nyar::{
+    backends::TargetCodeGenBackend, BackendInputKind, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement, TargetFamily,
+    TargetLane,
+};
 
 use super::BundledFamilyCompiler;
 use crate::{DriverBackendInput, DriverCompileReport, DriverCompileRequest};
@@ -11,6 +14,8 @@ pub(super) fn supports_requirement(requirement: &PartitionBackendRequirement) ->
     requirement.lane == TargetLane::Native
         && requirement.input_kind == BackendInputKind::CoffObject
         && requirement.target.family == TargetFamily::Native
+        && requirement.host_boundary == HostProjectionBoundary::Native
+        && requirement.reference_management == ReferenceManagement::PerceusRc
 }
 
 impl BundledFamilyCompiler for NativeFamilyCompiler {

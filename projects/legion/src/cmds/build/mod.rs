@@ -14,7 +14,10 @@ use miette::{miette, IntoDiagnostic, NamedSource, Report, Result, WrapErr};
 use nyar_driver::{compile_with_bundled_backends, DriverCompileRequest, DriverRunContract};
 use serde::Serialize;
 use valkyrie_compiler::{
-    lir::LirTargetLane, ArtifactKind, ArtifactSet, CanonicalTarget, CompilationOptions, LirLowerer, TargetBackendFamily, ValkyrieCompiler,
+    lir::LirTargetLane,
+    nyar::{ArtifactPartition, TargetLane},
+    ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalTarget, CompilationOptions, HostProjectionBoundary, LirLowerer, RunnerFamily,
+    TargetBackendFamily, ValkyrieCompiler,
 };
 use valkyrie_parser::AstParser;
 
@@ -79,42 +82,26 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     let hir_module = compiler.lower_root(&parser_root).map_err(|error| attach_source_to_report(error, &combined_source))?;
     let target_profile = plan.project.build_target.target.to_profile(None);
     let lir_module = LirLowerer::lower_module_for_lane(&hir_module, lir_lane_for_backend(target_profile.backend_family));
+    let artifact_plan = valkyrie_compiler::hir_module_to_artifact_plan(&hir_module, plan.project.build_target.target.clone());
 
     println!("lir functions: {}", lir_module.functions.len());
+    println!("partitions: {}", artifact_plan.partitions.len());
     // 调试：打印名为 length 的函数信息
     for func in &lir_module.functions {
         if func.symbol == "length" {
             eprintln!("[DEBUG LIR] found function 'length': return_type={:?}, param_types={:?}", func.return_type, func.param_types);
         }
     }
-    let options = CompilationOptions {
-        target: plan.project.build_target.target.into(),
-        artifact_name: plan.project.name.clone(),
-        emit_debug_symbols: false,
-        optimize: false,
-    };
-
-    let driver_input = valkyrie_compiler::lower_to_driver_input(
+    let report = compile_partitions(
+        &artifact_plan,
         &hir_module,
-        lir_module,
-        target_profile.backend_family,
+        &lir_module,
+        &plan.output_dir,
+        &plan.project.name,
+        plan.project.build_target.msil,
         target_profile.runner_family(),
-        plan.output_dir.clone(),
+        target_profile.artifact_policy.generate_runtime_config,
     )?;
-
-    if plan.project.build_target.msil {
-        let _ = valkyrie_compiler::write_clr_msil_sidecar(&plan.output_dir, &plan.project.name, &driver_input);
-    }
-
-    let requirement = driver_input.requirement(options.target.clone());
-    let report = compile_with_bundled_backends(DriverCompileRequest {
-        artifact_name: &plan.project.name,
-        requirement,
-        input: driver_input,
-        runner_family: target_profile.runner_family(),
-        generate_runtime_config: target_profile.artifact_policy.generate_runtime_config,
-        options: &options,
-    })?;
 
     println!("backend status: compiled");
     println!("host kind: {:?}", target_profile.host_kind);
@@ -138,6 +125,126 @@ fn lir_lane_for_backend(backend_family: TargetBackendFamily) -> LirTargetLane {
         TargetBackendFamily::Native => LirTargetLane::Native,
         _ => LirTargetLane::Clr,
     }
+}
+
+fn compile_partitions(
+    artifact_plan: &ArtifactPartitionPlan,
+    hir_module: &valkyrie_compiler::HirModule,
+    lir_module: &valkyrie_compiler::LirModule,
+    output_dir: &Path,
+    project_name: &str,
+    emit_msil_sidecar: bool,
+    default_runner_family: RunnerFamily,
+    generate_runtime_config: bool,
+) -> Result<nyar_driver::DriverCompileReport> {
+    let primary_partition_name = select_primary_partition_name(artifact_plan);
+    let partition_count = artifact_plan.partitions.len();
+    let mut reports = Vec::new();
+
+    for (partition_index, partition) in artifact_plan.partitions.iter().enumerate() {
+        let artifact_name = partition_artifact_name(project_name, partition, partition_count);
+        let options = CompilationOptions {
+            target: partition.binary_target.clone(),
+            artifact_name: artifact_name.clone(),
+            emit_debug_symbols: false,
+            optimize: false,
+        };
+        let driver_input = valkyrie_compiler::lower_to_driver_input_for_partition(
+            hir_module,
+            lir_module.clone(),
+            backend_family_for_partition(partition),
+            partition.host_boundary,
+            output_dir.to_path_buf(),
+            &partition.exported_operations,
+        )?;
+
+        if emit_msil_sidecar {
+            let _ = valkyrie_compiler::write_clr_msil_sidecar(output_dir, &artifact_name, &driver_input);
+        }
+
+        let requirement =
+            artifact_plan.backend_requirement(partition_index).ok_or_else(|| miette!("分区 `{}` 缺少后端需求", partition.name))?;
+        let report = compile_with_bundled_backends(DriverCompileRequest {
+            artifact_name: &artifact_name,
+            requirement,
+            input: driver_input,
+            runner_family: runner_family_for_partition(partition, default_runner_family),
+            generate_runtime_config,
+            options: &options,
+        })?;
+        reports.push((partition.name.clone(), report));
+    }
+
+    Ok(merge_partition_reports(reports, primary_partition_name.as_deref()))
+}
+
+fn backend_family_for_partition(partition: &ArtifactPartition) -> TargetBackendFamily {
+    match partition.lane {
+        TargetLane::Clr => TargetBackendFamily::Clr,
+        TargetLane::Jvm => TargetBackendFamily::Jvm,
+        TargetLane::Wasm => TargetBackendFamily::Wasm,
+        TargetLane::Native => TargetBackendFamily::Native,
+        TargetLane::Vm => TargetBackendFamily::NyarVm,
+    }
+}
+
+fn runner_family_for_partition(partition: &ArtifactPartition, fallback: RunnerFamily) -> RunnerFamily {
+    match partition.host_boundary {
+        HostProjectionBoundary::WasmJsGlue => RunnerFamily::Node,
+        HostProjectionBoundary::WasiComponent => RunnerFamily::Wasi,
+        _ => fallback,
+    }
+}
+
+fn select_primary_partition_name(plan: &ArtifactPartitionPlan) -> Option<String> {
+    plan.partitions
+        .iter()
+        .find(|partition| partition.name.ends_with("::functions"))
+        .map(|partition| partition.name.clone())
+        .or_else(|| plan.partitions.first().map(|partition| partition.name.clone()))
+}
+
+fn partition_artifact_name(base_name: &str, partition: &ArtifactPartition, partition_count: usize) -> String {
+    if partition_count <= 1 {
+        return base_name.to_string();
+    }
+
+    let suffix = partition
+        .name
+        .rsplit("::")
+        .next()
+        .unwrap_or(partition.name.as_str())
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            }
+            else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    format!("{base_name}__{suffix}")
+}
+
+fn merge_partition_reports(
+    reports: Vec<(String, nyar_driver::DriverCompileReport)>,
+    primary_partition_name: Option<&str>,
+) -> nyar_driver::DriverCompileReport {
+    let mut merged = nyar_driver::DriverCompileReport::default();
+    for (partition_name, report) in reports {
+        merged.artifacts.artifacts.extend(report.artifacts.artifacts);
+        if merged.entry_symbol.is_none() {
+            merged.entry_symbol = report.entry_symbol.clone();
+        }
+        if primary_partition_name == Some(partition_name.as_str()) && report.run_contract.is_some() {
+            merged.run_contract = report.run_contract.clone();
+        }
+        else if merged.run_contract.is_none() {
+            merged.run_contract = report.run_contract.clone();
+        }
+    }
+    merged
 }
 
 pub(super) fn load_combined_source(source_files: &[PathBuf]) -> Result<String> {
@@ -167,7 +274,7 @@ pub(super) fn print_artifacts(output_dir: &Path, artifacts: &ArtifactSet) {
             ArtifactKind::Executable => &["exe", "wasm"],
             ArtifactKind::DynamicLibrary => &["dll"],
             ArtifactKind::Object => &["obj"],
-            ArtifactKind::AssemblyListing => &["mjs", "msil"],
+            ArtifactKind::AssemblyListing => &["mjs", "msil", "wit"],
         };
 
         for extension in candidates {
@@ -367,4 +474,58 @@ fn select_branch(content: &str, arch: &str) -> String {
     }
 
     String::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nyar_driver::DriverCompileReport;
+    use valkyrie_compiler::nyar::{BinaryArch, BinaryFlavor, BinaryTarget, TargetFamily};
+
+    fn demo_partition(name: &str) -> ArtifactPartition {
+        ArtifactPartition {
+            name: name.to_string(),
+            exported_operations: Vec::new(),
+            lane: TargetLane::Wasm,
+            binary_target: BinaryTarget::new(TargetFamily::Wasm, BinaryArch::Any, BinaryFlavor::Native),
+            input_kind: None,
+            host_boundary: HostProjectionBoundary::WasmJsGlue,
+            reference_management: valkyrie_compiler::ReferenceManagement::HostGc,
+            capabilities: Vec::new(),
+            runtime_requirements: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn partition_artifact_name_adds_dimension_suffix_for_multi_partition_plan() {
+        let partition = demo_partition("demo::host-interop");
+        assert_eq!(partition_artifact_name("demo", &partition, 3), "demo__host-interop");
+        assert_eq!(partition_artifact_name("demo", &partition, 1), "demo");
+    }
+
+    #[test]
+    fn merge_partition_reports_prefers_primary_partition_run_contract() {
+        let mut primary = DriverCompileReport::default();
+        primary.run_contract = Some(DriverRunContract {
+            logical_entry: "main".to_string(),
+            physical_entry: "demo__functions.mjs".to_string(),
+            invocation: "node".to_string(),
+            validate: "node demo__functions.mjs".to_string(),
+        });
+
+        let mut secondary = DriverCompileReport::default();
+        secondary.run_contract = Some(DriverRunContract {
+            logical_entry: "_start".to_string(),
+            physical_entry: "demo__host-interop.wasm".to_string(),
+            invocation: "wasmtime".to_string(),
+            validate: "wasmtime demo__host-interop.wasm".to_string(),
+        });
+
+        let merged = merge_partition_reports(
+            vec![("demo::host-interop".to_string(), secondary), ("demo::functions".to_string(), primary)],
+            Some("demo::functions"),
+        );
+
+        assert_eq!(merged.run_contract.expect("run contract").physical_entry, "demo__functions.mjs");
+    }
 }

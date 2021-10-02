@@ -1,4 +1,4 @@
-use nyar_clr_backend::{
+use nyar_backend_clr::{
     MsilAssembly, MsilInstruction, MsilMethodBody, MsilMethodRef, MsilMethodSignature, MsilModule, MsilOpcode, MsilTextWriter, MsilType,
 };
 

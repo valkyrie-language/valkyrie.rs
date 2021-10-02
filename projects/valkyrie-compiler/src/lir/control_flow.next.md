@@ -122,7 +122,7 @@ lane 不可以改变：
 
 当前 `LIR` 已经有：
 
-- `Return`
+- `ReturnStatement`
 - `Jump`
 - `Branch`
 - `Call { dispatch, witness, effect }`

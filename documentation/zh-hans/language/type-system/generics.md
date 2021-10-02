@@ -1,6 +1,16 @@
 # 泛型编程 (Generic Programming)
 
-泛型允许你编写可以处理多种类型的代码，而无需为每种类型重复编写逻辑。Valkyrie 的泛型系统结合了静态参数化与强大的约束机制。
+泛型用于编写可作用于多种类型的代码，而无需为每种类型重复定义逻辑。Valkyrie 的泛型系统结合静态参数化与约束机制。
+
+## 形式化约定
+
+本页把泛型抽象定义为参数化类型或参数化函数。
+
+- `F⟨T⟩` 表示类型构造器 `F` 在参数 `T` 上的实例化。
+- `micro f⟨T⟩(...)` 表示对类型参数 `T` 全称量化的函数。
+- `T: TraitA + TraitB` 表示 `T` 必须同时满足多个具名协议约束。
+
+除非文档另行说明，本页中的约束默认都是具名 `trait` 约束，而不是匿名 row。
 
 ## 泛型参数
 
@@ -40,6 +50,12 @@ structure Map⟨K, V, S = DefaultHasher⟩ {
 
 你可以通过 Trait 约束泛型参数必须具备的行为。
 
+这里的约束默认指向**具名 `trait` 协议**，而不是匿名 row。
+
+- `T: Display` 表示 `T` 满足具名协议 `Display`。
+- 如果你只想表达“当前具备一组方法即可”，更适合直接使用匿名 row 参数。
+- 一旦约束涉及 `associated type`、默认实现或协议 identity，就应放在具名 `trait` 这一层解释。
+
 ### 1. 内联约束
 ```valkyrie
 micro print_item⟨T: Display⟩(item: T) {
@@ -48,7 +64,7 @@ micro print_item⟨T: Display⟩(item: T) {
 ```
 
 ### 2. Where 子句
-对于复杂的约束，建议使用 `where` 子句以保持代码整洁。
+对于复杂约束，可以使用 `where` 子句。
 ```valkyrie
 micro process_data⟨T, U⟩(t: T, u: U) 
 where
@@ -90,7 +106,7 @@ Valkyrie 的类型系统区分了两种主要的量化形式：
 
 ---
 
-## 进阶应用：虚幻类型 (Phantom Types)
+## 应用：虚幻类型 (Phantom Types)
 
 虚幻类型是指在定义中使用了泛型参数，但该参数并未在结构体的字段中实际使用的模式。它常用于在编译时追踪对象的状态。
 

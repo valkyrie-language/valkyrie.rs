@@ -2,12 +2,25 @@
 
 Valkyrie 的类型系统建立在代数数据类型 (ADT) 的坚实基础上。通过**积类型**与**和类型**的组合，你可以构建出精确映射业务逻辑的领域模型。
 
+## 形式化约定
+
+本页把 ADT 视为两类具名类型构造：
+
+- 积类型：把多个组成部分组合成一个值。
+- 和类型：把多个互斥分支组合成一个具名声明家族。
+
+在当前设计里：
+
+- `structure`、`class`、`sealed class` 都属于具名声明。
+- `unite` 也属于具名声明，并形成一个封闭的 variant family。
+- ADT 的成员资格按声明身份解释，而不是按结构兼容解释。
+
 ## 积类型 (Product Types)
 
 积类型之所以被称为“积”，是因为该类型可能的取值空间是其所有成员取值空间的**笛卡尔积**。在 Valkyrie 中，积类型体现为数据的组合。
 
 ### 1. 结构体与记录 (Structure & Class)
-最常见的积类型，将多个命名字段组合在一起。
+积类型由多个命名字段组合而成。
 
 ```valkyrie
 structure Point {
@@ -24,18 +37,36 @@ structure Point {
 let color: (u8, u8, u8) = (255, 0, 0)
 ```
 
+### 3. 具名对象类型
+
+除了 `structure` 之外，`class` 与 `sealed class` 也属于具名类型声明。
+
+- `class` 表达对象类型与继承层级。
+- `sealed class` 表达封闭的具名类族。
+- 它们都依赖声明身份，而不是“长得像什么字段/方法”。
+
+形式化地说，若 `A` 与 `B` 是具名对象类型，则只有当声明层级显式给出继承或成员关系时，文档才认为存在对应的名义包含关系。
+
+这也是 Valkyrie 阅读顺序从具名类型开始的原因：先把“类型本体”和“声明家族”看清，再去看匿名约束、协议系统和更高阶的类型计算。
+
 ---
 
 ## 和类型 (Sum Types)
 
 和类型之所以被称为“和”，是因为该类型可能的取值空间是其所有分支取值空间的**逻辑加和**。在 Valkyrie 中，和类型体现为状态的互斥选择。
 
-在当前语义里，`unite` 应理解为 union 的一种具名定义方式。更准确的说法是：
+在当前语义里，`unite` 应解释为 union 的具名定义方式。其语义约束如下：
 
 - `unite` 表示一组互斥分支组成的和类型
 - `unite` 的默认表示是抽象类
 - `[tag(XXXKind)]` 是可选优化，用于要求显式的 tagged union
 - 对特定形态，编译器还可以进一步做利基优化
+
+这里最关键的形式化边界是：
+
+- `unite` 的分支集合必须来自同一条 `unite` 声明。
+- 一个值不得因为“结构上像某个 variant”就自动成为该 `unite` 的成员。
+- 穷尽性检查必须只针对已声明 variant family 进行。
 
 ### 1. 联合类型 (`unite`)
 Valkyrie 使用 `unite` 定义命名的和类型。它的默认表示是抽象类；`[tag(XXXKind)]` 是可选优化，用于声明 tagged union；语言不会自动生成 tag。
@@ -50,7 +81,7 @@ unite LoadingState {
 ```
 `LoadingState` 的状态空间 = `Idle` + `f32` + `utf8` + `ErrorCode`。
 
-也可以把它理解为：
+其语义可分解为：
 
 - `LoadingState` 是一个具名 union
 - `Idle / Loading / Success / Failure` 是它的分支
@@ -73,9 +104,9 @@ unite TaggedDirection { North, South, East, West }
 
 ---
 
-## 模式匹配：ADT 的天然伙伴
+## ADT 与模式匹配
 
-和类型的强大之处在于编译器可以确保你处理了每一种可能的情况。
+和类型允许编译器对分支穷尽性进行检查。
 
 ```valkyrie
 micro process(state: LoadingState) {
@@ -123,13 +154,19 @@ Valkyrie 编译器对 ADT 进行极致优化：
 - 后端再决定是保留抽象类表示，还是优化为 tagged union、利基布局或其他表示
 - 不能反过来因为某种物理布局而改写 `unite` 的类型语义
 
+因此，本页采用如下原则：
+
+- 表示选择属于 lowering 问题。
+- 成员资格、分支穷尽性和模式匹配语义属于前端类型问题。
+- lowering 不得反向定义前端语义。
+
 ---
 
 ## 广义代数数据类型 (GADT)
 
 广义代数数据类型（Generalized Algebraic Data Types）允许在定义 `unite` 分支时，显式指定该分支构造出的具体类型。这打破了传统 ADT 中“所有分支必须具有相同类型参数”的限制。
 
-### 痛点：类型信息的丢失
+### 问题陈述：类型信息丢失
 在普通 ADT 中，即使你构造了一个 `Literal(1.0)`，它的类型也只是宽泛的 `Expr⟨T⟩`。当你编写解释器时，你不得不再次通过模式匹配或类型转换来确定 `T` 到底是什么。
 
 ### Valkyrie 的解决方案：构造器签名
@@ -163,7 +200,7 @@ micro eval⟨T⟩(expr: Expr⟨T⟩) -> T {
 
 ---
 
-## 进阶应用：Final Tagless 范式
+## 应用：Final Tagless 范式
 
 相比于传统的递归 ADT，Final Tagless 是一种更高级的抽象模式。它通过 Trait 来定义 DSL 的语义，从而在不需要中间数据结构的情况下实现高度可扩展的操作逻辑。
 
@@ -204,7 +241,7 @@ micro program⟨F, E: Expr⟨F⟩⟩(e: E) -> F {
 
 ## ADT、trait 与 row 的分工
 
-在 Valkyrie 中，这几类抽象最好不要混着理解：
+在 Valkyrie 中，这几类抽象应严格区分：
 
 - `unite`：表达和类型与互斥分支
 - 具名 `trait`：表达协议与 witness
@@ -220,7 +257,7 @@ micro program⟨F, E: Expr⟨F⟩⟩(e: E) -> F {
 
 ---
 
-## 进阶应用：纽扣类型 (Newtype)
+## 应用：纽扣类型 (Newtype)
 
 通过为现有类型创建包装，可以在不增加运行时开销的情况下提升代码安全性，防止混淆逻辑意义不同的同类数据。
 
@@ -243,7 +280,7 @@ micro main() {
 
 ---
 
-**上一页**: [类型系统 (Index)](./index.md) | **下一页**: [指针与引用](./pointer-type.md)
+**上一页**: [类型系统 (Index)](./index.md) | **下一页**: [联合类型 (Unite Types)](./union.md)
 
 - 在 [交集与并集](intersection-union.md) 中了解如何使用匿名和类型与交集类型。
-- 探索 [关联类型](associated-types.md) 如何为 ADT 提供灵活的类型映射。
+- [关联类型](associated-types.md) 说明 ADT 与具名 `trait` 之间的类型映射关系。

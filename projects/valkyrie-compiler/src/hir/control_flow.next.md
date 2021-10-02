@@ -72,7 +72,7 @@
 这些语义依赖：
 
 - effect 类型
-- `Resume` 类型
+- `ResumeStatement` 类型
 - 挂起上下文
 - 阻塞上下文
 - handler 安装范围
@@ -86,7 +86,7 @@
 - `Continue { label }`
 - `Return(expr)`
 - `Case { label, scrutinee, arms }`
-- `Fallthrough`
+- `FallthroughStatement`
 - `Yield(expr)`
 - `YieldFrom(expr)`
 - `Await(expr)`
@@ -140,9 +140,9 @@ trait Effectful {
 - `.await` 对应的 effect 与 `Resume = T`
 - `.awake` 对应的 effect 与 `Resume = void`
 - `.block` 对应的 effect 与 `Resume = T`
-- `resume value` 的值类型与当前 effect `Resume` 对齐
+- `resume value` 的值类型与当前 effect `ResumeStatement` 对齐
 
-`HIR` 不需要决定 frame 布局，但必须先把 `Resume` 类型收口。
+`HIR` 不需要决定 frame 布局，但必须先把 `ResumeStatement` 类型收口。
 
 其中需要显式区分三层能力边界：
 
@@ -181,7 +181,7 @@ trait Effectful {
 ### yield
 
 - `yield expr` 在 `HIR` 仍然是独立节点
-- 它不是普通 `Call`
+- 它不是普通 `TermCallExpression`
 - 它也不是立即展开成某个 runtime helper
 
 ### yield from
@@ -213,7 +213,7 @@ trait Effectful {
 
 - label 目标
 - region 结果类型
-- effect 的 `Resume` 类型
+- effect 的 `ResumeStatement` 类型
 - 是否允许挂起
 - 是否允许阻塞
 

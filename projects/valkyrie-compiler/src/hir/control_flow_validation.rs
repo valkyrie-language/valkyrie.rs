@@ -1,8 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use valkyrie_parser::ParseError;
-use valkyrie_types::hir::{
-    HirBlock, HirExpr, HirExprKind, HirFunction, HirLiteral, HirMatchArm, HirModule, HirPattern, HirStatement, HirStatementKind, ValkyrieType,
+use valkyrie_types::{
+    hir::{
+        HirBlock, HirExpr, HirExprKind, HirFunction, HirLiteral, HirMatchArm, HirModule, HirPattern, HirStatement, HirStatementKind,
+        ValkyrieType,
+    },
+    NamePath,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -15,6 +19,7 @@ struct HirValidationState {
     allow_blocking: bool,
     allow_yield: bool,
     loop_stack: Vec<LoopValidationContext>,
+    self_type_stack: Vec<ValkyrieType>,
     return_type_stack: Vec<ValkyrieType>,
     local_scopes: Vec<BTreeMap<String, ValkyrieType>>,
 }
@@ -31,6 +36,46 @@ pub fn validate_control_flow_module(module: &HirModule) -> Result<(), ParseError
         let mut state = HirValidationState::default();
         validate_hir_function(function, &mut state)?;
     }
+    for struct_def in &module.structs {
+        for method in &struct_def.methods {
+            let mut state = HirValidationState::default();
+            push_self_type(&mut state, ValkyrieType::Named(struct_def.name.clone()));
+            validate_hir_function(method, &mut state)?;
+            pop_self_type(&mut state);
+        }
+        for property in &struct_def.properties {
+            if let Some(getter) = &property.getter {
+                let mut state = HirValidationState::default();
+                push_self_type(&mut state, ValkyrieType::Named(struct_def.name.clone()));
+                validate_hir_function(getter, &mut state)?;
+                pop_self_type(&mut state);
+            }
+            if let Some(setter) = &property.setter {
+                let mut state = HirValidationState::default();
+                push_self_type(&mut state, ValkyrieType::Named(struct_def.name.clone()));
+                validate_hir_function(setter, &mut state)?;
+                pop_self_type(&mut state);
+            }
+        }
+    }
+    for trait_def in &module.traits {
+        for method in &trait_def.methods {
+            let mut state = HirValidationState::default();
+            validate_hir_function(method, &mut state)?;
+        }
+        for method in &trait_def.default_methods {
+            let mut state = HirValidationState::default();
+            validate_hir_function(method, &mut state)?;
+        }
+    }
+    for impl_block in &module.impls {
+        for method in &impl_block.methods {
+            let mut state = HirValidationState::default();
+            push_self_type(&mut state, impl_block.target.clone());
+            validate_hir_function(method, &mut state)?;
+            pop_self_type(&mut state);
+        }
+    }
     Ok(())
 }
 
@@ -39,10 +84,10 @@ fn validate_hir_function(function: &HirFunction, state: &mut HirValidationState)
     let saved_allow_yield = state.allow_yield;
     state.allow_blocking = true;
     state.allow_yield = true;
-    push_return_type(state, function.return_type.clone());
+    push_return_type(state, resolve_contextual_type(&function.return_type, state));
     push_local_scope(state);
     for param in &function.params {
-        bind_local_type(state, param.name.name.as_str(), param.ty.clone());
+        bind_local_type(state, param.name.name.as_str(), resolve_contextual_type(&param.ty, state));
     }
     for statement in &function.body.statements {
         validate_hir_statement(statement, state)?;
@@ -63,6 +108,7 @@ fn validate_hir_statement(statement: &HirStatement, state: &mut HirValidationSta
             if let Some(initializer) = initializer {
                 validate_hir_expr(initializer, state, true)?;
             }
+            validate_pattern_semantics(pattern)?;
             let inferred_type = ty.clone().or_else(|| initializer.as_ref().and_then(|value| infer_static_expr_type(value, state)));
             if let Some(inferred_type) = inferred_type {
                 bind_pattern_type(state, pattern, &inferred_type);
@@ -193,6 +239,7 @@ fn validate_hir_expr(expr: &HirExpr, state: &mut HirValidationState, value_conte
             let scrutinee_type = infer_static_expr_type(scrutinee, state);
             for arm in arms {
                 push_local_scope(state);
+                validate_pattern_semantics(&arm.pattern)?;
                 if let Some(scrutinee_type) = &scrutinee_type {
                     bind_pattern_type(state, &arm.pattern, scrutinee_type);
                 }
@@ -217,6 +264,7 @@ fn validate_hir_expr(expr: &HirExpr, state: &mut HirValidationState, value_conte
                     )));
                 }
                 push_local_scope(state);
+                validate_pattern_semantics(&arm.pattern)?;
                 if let Some(scrutinee_type) = &scrutinee_type {
                     bind_pattern_type(state, &arm.pattern, scrutinee_type);
                 }
@@ -369,6 +417,47 @@ fn infer_static_expr_type(expr: &HirExpr, state: &HirValidationState) -> Option<
     }
 }
 
+fn resolve_contextual_type(ty: &ValkyrieType, state: &HirValidationState) -> ValkyrieType {
+    match ty {
+        ValkyrieType::SelfType => current_self_type(state).cloned().unwrap_or(ValkyrieType::SelfType),
+        ValkyrieType::Apply(base, arguments) => ValkyrieType::Apply(
+            Box::new(resolve_contextual_type(base, state)),
+            arguments.iter().map(|arg| resolve_contextual_type(arg, state)).collect(),
+        ),
+        ValkyrieType::Function(function) => ValkyrieType::Function(Box::new(valkyrie_types::hir::FunctionType {
+            params: function.params.iter().map(|param| resolve_contextual_type(param, state)).collect(),
+            return_type: resolve_contextual_type(&function.return_type, state),
+        })),
+        ValkyrieType::Tuple(items) => ValkyrieType::Tuple(items.iter().map(|item| resolve_contextual_type(item, state)).collect()),
+        ValkyrieType::Row(row) => ValkyrieType::Row(valkyrie_types::hir::RowType {
+            methods: row
+                .methods
+                .iter()
+                .map(|method| valkyrie_types::hir::RowMethodType {
+                    name: method.name.clone(),
+                    params: method.params.iter().map(|param| resolve_contextual_type(param, state)).collect(),
+                    return_type: resolve_contextual_type(&method.return_type, state),
+                })
+                .collect(),
+        }),
+        ValkyrieType::Array(item) => ValkyrieType::Array(Box::new(resolve_contextual_type(item, state))),
+        ValkyrieType::TypeLambda(lambda) => ValkyrieType::TypeLambda(Box::new(valkyrie_types::hir::TypeLambda {
+            params: lambda.params.clone(),
+            body: resolve_contextual_type(&lambda.body, state),
+        })),
+        ValkyrieType::TraitObject(object) => ValkyrieType::TraitObject(valkyrie_types::hir::TraitObject {
+            trait_path: object.trait_path.clone(),
+            type_arguments: object.type_arguments.iter().map(|arg| resolve_contextual_type(arg, state)).collect(),
+        }),
+        ValkyrieType::Associated(associated) => ValkyrieType::Associated(Box::new(valkyrie_types::hir::AssociatedType {
+            base: resolve_contextual_type(&associated.base, state),
+            name: associated.name.clone(),
+            type_arguments: associated.type_arguments.iter().map(|arg| resolve_contextual_type(arg, state)).collect(),
+        })),
+        other => other.clone(),
+    }
+}
+
 fn infer_static_block_type(block: &HirBlock, state: &HirValidationState) -> Option<ValkyrieType> {
     if let Some(expr) = &block.expr {
         infer_static_expr_type(expr, state)
@@ -501,6 +590,18 @@ fn current_return_type(state: &HirValidationState) -> Option<&ValkyrieType> {
     state.return_type_stack.last()
 }
 
+fn push_self_type(state: &mut HirValidationState, ty: ValkyrieType) {
+    state.self_type_stack.push(ty);
+}
+
+fn pop_self_type(state: &mut HirValidationState) {
+    let _ = state.self_type_stack.pop();
+}
+
+fn current_self_type(state: &HirValidationState) -> Option<&ValkyrieType> {
+    state.self_type_stack.last()
+}
+
 fn bind_local_type(state: &mut HirValidationState, name: &str, ty: ValkyrieType) {
     if let Some(scope) = state.local_scopes.last_mut() {
         scope.insert(name.to_string(), ty);
@@ -509,6 +610,55 @@ fn bind_local_type(state: &mut HirValidationState, name: &str, ty: ValkyrieType)
 
 fn bind_pattern_type(state: &mut HirValidationState, pattern: &HirPattern, ty: &ValkyrieType) {
     bind_pattern_type_with_hint(state, pattern, Some(ty));
+}
+
+fn validate_pattern_semantics(pattern: &HirPattern) -> Result<(), ParseError> {
+    match pattern {
+        HirPattern::Name(name) => {
+            if is_ambiguous_bare_name_pattern(name) {
+                return Err(ParseError::invalid(format!(
+                    "控制流调度校验失败：当前禁止会与变量绑定歧义的单段小写裸名字模式 `{}`；`Variant` 和 `foo::bar::value` 这类不歧义的 variant 形式仍然允许",
+                    render_pattern_name(name)
+                )));
+            }
+        }
+        HirPattern::Tuple(items) | HirPattern::Or(items) => {
+            for item in items {
+                validate_pattern_semantics(item)?;
+            }
+        }
+        HirPattern::Extractor(extractor) => match extractor {
+            valkyrie_types::hir::HirExtractorPattern::Array { prefix, suffix, .. } => {
+                for item in prefix {
+                    validate_pattern_semantics(item)?;
+                }
+                for item in suffix {
+                    validate_pattern_semantics(item)?;
+                }
+            }
+            valkyrie_types::hir::HirExtractorPattern::Constructor { fields, .. } => {
+                for field in fields {
+                    validate_pattern_semantics(field)?;
+                }
+            }
+        },
+        HirPattern::Object { fields, .. } => {
+            for (_, field_pattern) in fields {
+                validate_pattern_semantics(field_pattern)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn is_ambiguous_bare_name_pattern(name: &NamePath) -> bool {
+    name.parts().len() == 1
+        && name.parts().first().and_then(|identifier| identifier.as_str().chars().next()).is_some_and(|ch| ch.is_lowercase())
+}
+
+fn render_pattern_name(name: &NamePath) -> String {
+    name.parts().iter().map(|part| part.as_str()).collect::<Vec<_>>().join("::")
 }
 
 fn bind_pattern_type_with_hint(state: &mut HirValidationState, pattern: &HirPattern, ty: Option<&ValkyrieType>) {
@@ -908,6 +1058,21 @@ fn display_type(ty: &ValkyrieType) -> String {
             display_type(&function.return_type)
         ),
         ValkyrieType::Tuple(items) => format!("({})", items.iter().map(display_type).collect::<Vec<_>>().join(", ")),
+        ValkyrieType::Row(row) => format!(
+            "{{ {} }}",
+            row.methods
+                .iter()
+                .map(|method| {
+                    format!(
+                        "{}({}) -> {}",
+                        method.name,
+                        method.params.iter().map(display_type).collect::<Vec<_>>().join(", "),
+                        display_type(&method.return_type)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         ValkyrieType::Array(item) => format!("[{}]", display_type(item)),
         ValkyrieType::TypeLambda(lambda) => format!(
             "type lambda({}) -> {}",

@@ -29,7 +29,7 @@ Valkyrie 的函数参数默认采用**只读引用 (ref)** 传递，这极大地
 
 ## 解引用操作 (Dereferencing)
 
-Valkyrie 进一步简化了引用的使用，根据类型自动处理解引用：
+Valkyrie 对引用使用作了进一步归约，根据类型自动处理解引用：
 
 ### 自动解引用 (Automatic Dereferencing)
 
@@ -99,7 +99,7 @@ micro update(mut var: Variable) {
 | **可变指针** | `T*` | `*mut T` | `◆T` |
 | **解引用** | `*ptr` | `*ptr` | `ptr.◇` / `ptr.◆` |
 
-### 核心差异
+### 差异
 
 1. **后缀链式调用**：`ptr.◇.field` 比 `(*ptr).field` 更加符合现代链式编程习惯。
 2. **权限对称性**：当你看到 `p.◆ = val` 时，你不仅知道是在解引用，还知道这是一个具有“实心/可变”权限的操作。
@@ -116,5 +116,5 @@ let buffer: ◆u8? = None
 
 ---
 
-**上一页**: [代数数据类型 (ADT)](./algebraic-data-types.md) | **下一页**: [泛型编程](./generics.md)
+**上一页**: [联合类型 (Unite Types)](./union.md) | **下一页**: [泛型编程](./generics.md)
 

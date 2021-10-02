@@ -228,6 +228,20 @@ pub struct TraitObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct RowMethodType {
+    pub name: Identifier,
+    pub params: Vec<ValkyrieType>,
+    pub return_type: ValkyrieType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct RowType {
+    pub methods: Vec<RowMethodType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FunctionType {
     pub params: Vec<ValkyrieType>,
     pub return_type: ValkyrieType,
@@ -278,6 +292,7 @@ pub enum ValkyrieType {
     Generic(GenericType),
     Function(Box<FunctionType>),
     Tuple(Vec<ValkyrieType>),
+    Row(RowType),
     /// `[T]` 或者 `[T; N]`
     Array(Box<ValkyrieType>),
     /// `micro(T) -> U`

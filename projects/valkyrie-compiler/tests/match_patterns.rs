@@ -262,3 +262,128 @@ fn lowers_range_array_rest_and_typed_bind_patterns_into_hir() {
     ));
     assert!(arms[2].guard.is_some());
 }
+
+#[test]
+fn lowers_qualified_and_bare_name_patterns_without_confusing_variable_binding() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 2978 });
+    let hir = compiler
+        .compile_source(
+            r#"micro main(value: Payload) -> bool {
+    return match value {
+        case package::module::Unite::Variant:
+            true
+        case Variant:
+            false
+        case var:
+            false
+    };
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[0].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Match { arms, .. } = &expression.kind
+    else {
+        panic!("expected match expression");
+    };
+
+    assert!(matches!(
+        &arms[0].pattern,
+        HirPattern::Name(path)
+            if path.parts().iter().map(|part| part.as_str()).eq(["package", "module", "Unite", "Variant"].into_iter())
+    ));
+    assert!(matches!(
+        &arms[1].pattern,
+        HirPattern::Name(path) if path.parts().iter().map(|part| part.as_str()).eq(["Variant"].into_iter())
+    ));
+    assert!(matches!(
+        &arms[2].pattern,
+        HirPattern::Variable(identifier) if identifier.name.as_str() == "var"
+    ));
+}
+
+#[test]
+fn resolves_single_segment_name_pattern_into_type_when_scrutinee_type_matches() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 2979 });
+    let hir = compiler
+        .compile_source(
+            r#"micro main(value: Payload) -> bool {
+    return match value {
+        case Payload:
+            true
+        case Variant:
+            false
+        else:
+            false
+    };
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[0].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Match { arms, .. } = &expression.kind
+    else {
+        panic!("expected match expression");
+    };
+
+    assert!(matches!(
+        &arms[0].pattern,
+        HirPattern::Type(path) if path.parts().iter().map(|part| part.as_str()).eq(["Payload"].into_iter())
+    ));
+    assert!(matches!(
+        &arms[1].pattern,
+        HirPattern::Name(path) if path.parts().iter().map(|part| part.as_str()).eq(["Variant"].into_iter())
+    ));
+}
+
+#[test]
+fn accepts_qualified_lowercase_name_patterns_at_hir_validation() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 2980 });
+    let hir = compiler
+        .compile_source(
+            r#"micro main(value: Payload) -> bool {
+    return match value {
+        case package::module::value:
+            true
+        else:
+            false
+    };
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[0].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Match { arms, .. } = &expression.kind
+    else {
+        panic!("expected match expression");
+    };
+
+    assert!(matches!(
+        &arms[0].pattern,
+        HirPattern::Name(path) if path.parts().iter().map(|part| part.as_str()).eq(["package", "module", "value"].into_iter())
+    ));
+}

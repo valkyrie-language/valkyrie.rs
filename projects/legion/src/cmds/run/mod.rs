@@ -10,7 +10,7 @@ use clap::Args;
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use valkyrie_compiler::{CanonicalTarget, RunnerFamily};
-use valkyrie_interpreter::WasiRuntime;
+use valkyrie_interpreter::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 
 use crate::{
     manifest::RunnerBinding,
@@ -129,8 +129,7 @@ fn plan_run_command(
         return Err(miette!("artifact does not exist: {}", artifact.display()));
     }
 
-    let mut runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides)?;
-    apply_run_contract_to_runner(&mut runner, runner_target, &artifact, run_contract.as_ref());
+    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, run_contract.as_ref())?;
     let placeholders = build_placeholders(output_dir, &artifact, runner_target, run_contract.as_ref())?;
     let command = expand_placeholders(&runner.command, &placeholders);
     let args = expand_runner_args(&runner.args, &placeholders);
@@ -138,60 +137,17 @@ fn plan_run_command(
     Ok(RunCommand { target: runner_target, artifact, command, args })
 }
 
-fn apply_run_contract_to_runner(
-    runner: &mut RunnerTemplate,
-    runner_target: RunnerFamily,
-    _artifact: &Path,
-    run_contract: Option<&RunContract>,
-) {
-    match runner_target {
-        RunnerFamily::Clr if uses_default_clr_runner(runner) => {
-            runner.command = "dotnet".to_string();
-            runner.args = vec!["exec".to_string(), "{artifact}".to_string()];
-        }
-        RunnerFamily::Jvm if uses_default_jvm_runner(runner) => {
-            if run_contract.is_some() {
-                runner.command = "java".to_string();
-                runner.args = vec!["-jar".to_string(), "{artifact}".to_string()];
-            }
-        }
-        RunnerFamily::Wasi if uses_default_wasi_runner(runner) => {
-            runner.command = WasiRuntime::LAUNCHER.to_string();
-            runner.args = match run_contract {
-                Some(contract) if !contract.logical_entry.is_empty() && !contract.logical_entry.eq_ignore_ascii_case("_start") => {
-                    vec!["--invoke".to_string(), "{entry}".to_string(), "{artifact}".to_string()]
-                }
-                _ => vec!["{artifact}".to_string()],
-            };
-        }
-        _ => {}
-    }
-}
-
-fn uses_default_clr_runner(runner: &RunnerTemplate) -> bool {
-    runner.target == RunnerFamily::Clr && runner.command == "dotnet" && runner.args == ["exec".to_string(), "{artifact}".to_string()]
-}
-
-fn uses_default_jvm_runner(runner: &RunnerTemplate) -> bool {
-    runner.target == RunnerFamily::Jvm
-        && runner.command == "java"
-        && runner.args == ["-cp".to_string(), "{classpath}".to_string(), "{entry}".to_string()]
-}
-
-fn uses_default_wasi_runner(runner: &RunnerTemplate) -> bool {
-    runner.target == RunnerFamily::Wasi
-        && runner.command == "wasmtime"
-        && runner.args == ["--invoke".to_string(), "main".to_string(), "{artifact}".to_string()]
-}
-
 fn resolve_runner(
     workspace: &LegionWorkspace,
     canonical_target: &CanonicalTarget,
     runner_target: RunnerFamily,
     cli_runner_overrides: &[String],
+    run_contract: Option<&RunContract>,
 ) -> Result<RunnerTemplate> {
+    let default_template = default_runner_template(runner_target, run_contract);
+
     if let Some(command) = parse_runner_overrides(cli_runner_overrides)?.remove(&runner_target) {
-        let mut template = default_runner(runner_target);
+        let mut template = default_template.clone();
         template.command = command;
         return Ok(template);
     }
@@ -205,13 +161,13 @@ fn resolve_runner(
 
     if let Ok(command) = std::env::var(format!("LEGION_RUNNER_{}", runner_target.as_str().to_ascii_uppercase())) {
         if !command.trim().is_empty() {
-            let mut template = default_runner(runner_target);
+            let mut template = default_template.clone();
             template.command = command;
             return Ok(template);
         }
     }
 
-    Ok(default_runner(runner_target))
+    Ok(default_template)
 }
 
 fn parse_runner_overrides(values: &[String]) -> Result<BTreeMap<RunnerFamily, String>> {
@@ -231,30 +187,30 @@ fn runner_binding_matches(binding: &RunnerBinding, runner_target: RunnerFamily, 
     binding.target.matches(runner_target, canonical_target)
 }
 
-fn default_runner(target: RunnerFamily) -> RunnerTemplate {
-    match target {
-        RunnerFamily::Clr => RunnerTemplate {
-            target: RunnerFamily::Clr,
-            command: "dotnet".to_string(),
-            args: vec!["exec".to_string(), "{artifact}".to_string()],
-        },
-        RunnerFamily::Jvm => RunnerTemplate {
-            target: RunnerFamily::Jvm,
-            command: "java".to_string(),
-            args: vec!["-cp".to_string(), "{classpath}".to_string(), "{entry}".to_string()],
-        },
-        RunnerFamily::Node => RunnerTemplate { target: RunnerFamily::Node, command: "node".to_string(), args: vec!["{artifact}".to_string()] },
-        RunnerFamily::Windows => RunnerTemplate { target: RunnerFamily::Windows, command: "{artifact}".to_string(), args: Vec::new() },
-        RunnerFamily::Wasi => RunnerTemplate {
-            target: RunnerFamily::Wasi,
-            command: WasiRuntime::LAUNCHER.to_string(),
-            args: vec!["--invoke".to_string(), "main".to_string(), "{artifact}".to_string()],
-        },
-    }
+fn default_runner_template(target: RunnerFamily, run_contract: Option<&RunContract>) -> RunnerTemplate {
+    let template = runtime_family_for(target).default_template(interpreter_runtime_contract(run_contract));
+    RunnerTemplate { target, command: template.command, args: template.args }
 }
 
 fn runner_target_for(canonical_target: &CanonicalTarget) -> RunnerFamily {
     canonical_target.to_profile(None).runner_family()
+}
+
+fn runtime_family_for(target: RunnerFamily) -> InterpreterRuntimeFamily {
+    match target {
+        RunnerFamily::Clr => InterpreterRuntimeFamily::Clr,
+        RunnerFamily::Jvm => InterpreterRuntimeFamily::Jvm,
+        RunnerFamily::Node => InterpreterRuntimeFamily::Node,
+        RunnerFamily::Windows => InterpreterRuntimeFamily::Windows,
+        RunnerFamily::Wasi => InterpreterRuntimeFamily::Wasi,
+    }
+}
+
+fn interpreter_runtime_contract(run_contract: Option<&RunContract>) -> Option<InterpreterRuntimeContract<'_>> {
+    run_contract.map(|contract| InterpreterRuntimeContract {
+        logical_entry: (!contract.logical_entry.is_empty()).then_some(contract.logical_entry.as_str()),
+        physical_entry: (!contract.physical_entry.is_empty()).then_some(contract.physical_entry.as_str()),
+    })
 }
 
 fn build_placeholders(

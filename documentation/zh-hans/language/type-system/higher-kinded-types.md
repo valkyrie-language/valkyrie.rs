@@ -1,6 +1,6 @@
 # 高阶类型 (Higher-Kinded Types)
 
-高阶类型（HKT）是 Valkyrie 类型系统的高级特性，允许对类型构造器进行抽象，实现更强大的泛型编程模式。
+高阶类型（HKT）允许对类型构造器进行抽象，以表达更高阶的泛型模式。
 
 ## 基本概念
 
@@ -55,6 +55,12 @@ imply []: Functor {
 }
 ```
 
+这里出现的 `Functor`、`Monad` 仍然是**具名 `trait`**。
+
+- HKT 扩展的是具名协议的表达能力。
+- 它不是在把匿名 row 扩展成另一套高阶协议系统。
+- 如果抽象需要 identity、默认实现、关联类型或实例选择，仍应优先按具名 `trait` 解释。
+
 ---
 
 ## 单子模式 (Monad Pattern)
@@ -106,7 +112,7 @@ imply⟨E⟩ Result⟨_, E⟩: Monad {
 
 ---
 
-## 进阶应用：透镜 (Lens)
+## 应用：透镜 (Lens)
 
 透镜是一种函数式引用，它解决了在嵌套且不可变的数据结构中进行深层访问和更新的问题。
 
@@ -120,7 +126,7 @@ structure Lens⟨S, A⟩ {
 ```
 
 ### 2. 组合 Lens
-Lens 的强大之处在于它们可以组合：
+Lens 可以组合：
 ```valkyrie
 micro compose⟨S, A, B⟩(l1: Lens⟨S, A⟩, l2: Lens⟨A, B⟩) -> Lens⟨S, B⟩ {
     Lens {

@@ -8,7 +8,8 @@ use jvm_backend::JvmBinaryBackendInput;
 use miette::Result;
 use native_backend::NativeBinaryBackendInput;
 use nyar::{
-    backends::CompilationOptions, packaging::ArtifactSet, BackendInputKind, BinaryTarget, PartitionBackendRequirement, RunnerFamily, TargetLane,
+    backends::CompilationOptions, packaging::ArtifactSet, BackendInputKind, BinaryTarget, HostProjectionBoundary, PartitionBackendRequirement,
+    ReferenceManagement, RunnerFamily, TargetLane,
 };
 use wasi_backend::WasmBinaryBackendInput;
 
@@ -29,10 +30,34 @@ impl DriverBackendInput {
     /// 根据当前输入与目标，生成驱动层使用的后端需求。
     pub fn requirement(&self, target: BinaryTarget) -> PartitionBackendRequirement {
         match self {
-            Self::Clr(_) => PartitionBackendRequirement { lane: TargetLane::Clr, input_kind: BackendInputKind::MsilText, target },
-            Self::Jvm(_) => PartitionBackendRequirement { lane: TargetLane::Jvm, input_kind: BackendInputKind::JvmClassFile, target },
-            Self::Wasm(_) => PartitionBackendRequirement { lane: TargetLane::Wasm, input_kind: BackendInputKind::WasmModule, target },
-            Self::Native(_) => PartitionBackendRequirement { lane: TargetLane::Native, input_kind: BackendInputKind::CoffObject, target },
+            Self::Clr(_) => PartitionBackendRequirement {
+                lane: TargetLane::Clr,
+                input_kind: BackendInputKind::MsilText,
+                target,
+                host_boundary: HostProjectionBoundary::Clr,
+                reference_management: ReferenceManagement::HostGc,
+            },
+            Self::Jvm(_) => PartitionBackendRequirement {
+                lane: TargetLane::Jvm,
+                input_kind: BackendInputKind::JvmClassFile,
+                target,
+                host_boundary: HostProjectionBoundary::Jvm,
+                reference_management: ReferenceManagement::HostGc,
+            },
+            Self::Wasm(input) => PartitionBackendRequirement {
+                lane: TargetLane::Wasm,
+                input_kind: BackendInputKind::WasmModule,
+                target,
+                host_boundary: input.host_boundary,
+                reference_management: ReferenceManagement::HostGc,
+            },
+            Self::Native(_) => PartitionBackendRequirement {
+                lane: TargetLane::Native,
+                input_kind: BackendInputKind::CoffObject,
+                target,
+                host_boundary: HostProjectionBoundary::Native,
+                reference_management: ReferenceManagement::PerceusRc,
+            },
         }
     }
 }

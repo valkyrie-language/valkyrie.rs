@@ -107,6 +107,10 @@ pub enum TokenKind {
     Shr,
     /// `@`，编译器指令前缀。
     At,
+    /// `◇`
+    HollowDiamond,
+    /// `◆`
+    SolidDiamond,
     /// 文件结束。
     Eof,
 }
@@ -136,6 +140,10 @@ pub enum Keyword {
     Const,
     /// `mut`
     Mut,
+    /// `ref`
+    Ref,
+    /// `own`
+    Own,
     /// `where`
     Where,
     /// `in`
@@ -178,6 +186,10 @@ pub enum Keyword {
     Let,
     /// `lazy`
     Lazy,
+    /// `unsafe`
+    Unsafe,
+    /// `null`
+    Null,
 }
 
 impl Keyword {
@@ -195,6 +207,8 @@ impl Keyword {
             "type" => Self::Type,
             "const" => Self::Const,
             "mut" => Self::Mut,
+            "ref" => Self::Ref,
+            "own" => Self::Own,
             "where" => Self::Where,
             "in" => Self::In,
             "as" => Self::As,
@@ -216,6 +230,8 @@ impl Keyword {
             "fallthrough" => Self::Fallthrough,
             "let" => Self::Let,
             "lazy" => Self::Lazy,
+            "unsafe" => Self::Unsafe,
+            "null" => Self::Null,
             _ => return None,
         })
     }
@@ -234,6 +250,8 @@ impl Keyword {
             Self::Type => "type",
             Self::Const => "const",
             Self::Mut => "mut",
+            Self::Ref => "ref",
+            Self::Own => "own",
             Self::Where => "where",
             Self::In => "in",
             Self::As => "as",
@@ -255,6 +273,8 @@ impl Keyword {
             Self::Fallthrough => "fallthrough",
             Self::Let => "let",
             Self::Lazy => "lazy",
+            Self::Unsafe => "unsafe",
+            Self::Null => "null",
         }
     }
 }

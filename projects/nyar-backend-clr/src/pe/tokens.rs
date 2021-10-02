@@ -230,18 +230,21 @@ fn resolve_method_ref_token(
         Some(owner) => owner == module_name || local_type_names.contains(owner),
     };
     if is_local {
-        // 本地方法：先尝试限定名 `TypeName.method_name`，再尝试裸 `method_name`。
+        // 本地方法：类型方法和显式模块 owner 必须使用限定名，全局方法仅在 owner 为空时允许裸名。
         let normalized_name = method_ref.name.trim_start_matches('.');
         let mut lookup_keys = Vec::new();
-        if let Some(owner) = method_ref.owner.as_deref() {
-            if local_type_names.contains(owner) {
+        match method_ref.owner.as_deref() {
+            Some(owner) if owner == module_name || local_type_names.contains(owner) => {
                 lookup_keys.push(format!("{}.{}", owner, method_ref.name));
                 lookup_keys.push(format!("{}.{}", owner, normalized_name));
             }
-        }
-        lookup_keys.push(method_ref.name.clone());
-        if normalized_name != method_ref.name {
-            lookup_keys.push(normalized_name.to_string());
+            None => {
+                lookup_keys.push(method_ref.name.clone());
+                if normalized_name != method_ref.name {
+                    lookup_keys.push(normalized_name.to_string());
+                }
+            }
+            _ => {}
         }
         for key in lookup_keys {
             if let Some(token) = local_method_tokens.get(&key) {

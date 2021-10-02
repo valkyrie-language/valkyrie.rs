@@ -275,3 +275,201 @@ micro main(value: Point) -> bool {
     assert_eq!(resolved.symbol.to_string(), "extractor");
     assert_eq!(resolved.return_type, ValkyrieType::Tuple(vec![ValkyrieType::Boolean, ValkyrieType::Boolean]));
 }
+
+#[test]
+fn resolves_anonymous_row_parameter_call_into_hir_metadata() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 4107 });
+    let hir = compiler
+        .compile_source(
+            r#"
+class Clock {
+    micro now() -> i64 {
+        return 1;
+    }
+}
+
+micro read_now(value: { now() -> i64 }) -> i64 {
+    return value.now();
+}
+
+micro main(value: Clock) -> i64 {
+    return read_now(value);
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[1].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Call { resolved: Some(resolved), .. } = &expression.kind
+    else {
+        panic!("expected resolved row call");
+    };
+
+    assert_eq!(resolved.domain, HirCallableDomain::Function);
+    assert_eq!(resolved.symbol.to_string(), "read_now");
+    assert_eq!(resolved.return_type, ValkyrieType::Integer64 { signed: true });
+}
+
+#[test]
+fn resolves_named_trait_parameter_over_row_in_hir_metadata() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 4108 });
+    let hir = compiler
+        .compile_source(
+            r#"
+trait Writer {
+    micro write(text: utf8);
+}
+
+class Console {
+    micro write(text: utf8) {}
+}
+
+micro select(value: Writer) -> bool {
+    return true;
+}
+
+micro select(value: { write(utf8) -> unit }) -> i64 {
+    return 0;
+}
+
+micro main(value: Console) -> bool {
+    return select(value);
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[2].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Call { resolved: Some(resolved), .. } = &expression.kind
+    else {
+        panic!("expected resolved trait call");
+    };
+
+    assert_eq!(resolved.domain, HirCallableDomain::Function);
+    assert_eq!(resolved.symbol.to_string(), "select");
+    assert_eq!(resolved.return_type, ValkyrieType::Boolean);
+}
+
+#[test]
+fn resolves_nominal_subtype_parameter_over_trait_and_row_in_hir_metadata() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 4109 });
+    let hir = compiler
+        .compile_source(
+            r#"
+trait Writer {
+    micro write(text: utf8);
+}
+
+class Animal {}
+
+class ServiceDog(Animal) {
+    micro write(text: utf8) {}
+}
+
+micro choose(value: Animal) -> i64 {
+    return 1;
+}
+
+micro choose(value: Writer) -> bool {
+    return true;
+}
+
+micro choose(value: { write(utf8) -> unit }) -> utf8 {
+    return "row";
+}
+
+micro main(value: ServiceDog) -> i64 {
+    return choose(value);
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[3].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Call { resolved: Some(resolved), .. } = &expression.kind
+    else {
+        panic!("expected resolved nominal-subtype call");
+    };
+
+    assert_eq!(resolved.domain, HirCallableDomain::Function);
+    assert_eq!(resolved.symbol.to_string(), "choose");
+    assert_eq!(resolved.return_type, ValkyrieType::Integer64 { signed: true });
+}
+
+#[test]
+fn resolves_nominal_exact_parameter_over_subtype_trait_and_row_in_hir_metadata() {
+    let compiler = ValkyrieCompiler::new(SourceID { version_id: 4110 });
+    let hir = compiler
+        .compile_source(
+            r#"
+trait Writer {
+    micro write(text: utf8);
+}
+
+class Animal {}
+
+class Dog(Animal) {
+    micro write(text: utf8) {}
+}
+
+micro choose(value: Dog) -> bool {
+    return true;
+}
+
+micro choose(value: Animal) -> i64 {
+    return 1;
+}
+
+micro choose(value: Writer) -> utf8 {
+    return "trait";
+}
+
+micro choose(value: { write(utf8) -> unit }) -> [i64] {
+    return [1];
+}
+
+micro main(value: Dog) -> bool {
+    return choose(value);
+}
+"#,
+        )
+        .unwrap();
+
+    let HirStatementKind::Expr(statement) = &hir.functions[4].body.statements[0].kind
+    else {
+        panic!("expected return statement");
+    };
+    let HirExprKind::Return(Some(expression)) = &statement.kind
+    else {
+        panic!("expected return expression");
+    };
+    let HirExprKind::Call { resolved: Some(resolved), .. } = &expression.kind
+    else {
+        panic!("expected resolved nominal-exact call");
+    };
+
+    assert_eq!(resolved.domain, HirCallableDomain::Function);
+    assert_eq!(resolved.symbol.to_string(), "choose");
+    assert_eq!(resolved.return_type, ValkyrieType::Boolean);
+}

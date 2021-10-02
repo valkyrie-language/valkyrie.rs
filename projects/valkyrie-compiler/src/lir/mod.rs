@@ -10,6 +10,7 @@ use crate::{
         MirBlock, MirBlockRef, MirBuiltinCall, MirConstant, MirDispatchKind, MirEffectKind, MirFunction, MirInstruction, MirInstructionKind,
         MirLowerer, MirModule, MirOperand, MirTerminator, MirValueRef,
     },
+    symbols::stable_hir_function_symbol,
     validation::ControlFlowScheduler,
 };
 use valkyrie_parser::ParseError;
@@ -156,6 +157,8 @@ pub struct LirSuspendPoint {
     pub payload_type: Option<HirType>,
     /// 后续 frame / spill lowering 可直接使用的候选 SSA 值。
     pub spill_candidates: Vec<MirValueRef>,
+    /// 若挂起点位于 handler arm 内，关联的 continuation 索引。
+    pub continuation_index: Option<usize>,
 }
 
 /// 低层 frame layout 计划。
@@ -193,6 +196,8 @@ pub struct LirRuntimeFrame {
     pub resume_target: MirBlockRef,
     /// frame 中需要承载的槽位字段。
     pub slots: Vec<LirRuntimeSlot>,
+    /// 若该 frame 关联 continuation，存储对应的 continuation 索引。
+    pub continuation_index: Option<usize>,
 }
 
 /// runtime frame 中的单个字段。
@@ -225,6 +230,8 @@ pub struct LirRuntimeContinuation {
     pub resume_parameter_type: Option<HirType>,
     /// handler 正常结束时汇入的 exit block。
     pub handler_exit: MirBlockRef,
+    /// 若当前 continuation 已关联到显式 frame，则记录对应的状态编号。
+    pub frame_state_id: Option<u32>,
 }
 
 /// Single low-level operation with optional result.
@@ -441,11 +448,62 @@ impl LirLowerer {
     }
 }
 
-fn collect_return_types(module: &HirModule) -> BTreeMap<&str, HirType> {
-    module.functions.iter().map(|function| (function.name.as_str(), function.return_type.clone())).collect()
+fn collect_return_types(module: &HirModule) -> BTreeMap<String, HirType> {
+    module.functions.iter().map(|function| (stable_hir_function_symbol(&module.name, function), function.return_type.clone())).collect()
 }
 
-fn lower_mir_module(module: &MirModule, return_types: &BTreeMap<&str, HirType>, lane: LirTargetLane) -> LirModule {
+fn erase_backend_opaque_type(ty: &mut HirType) {
+    match ty {
+        HirType::Named(name) if name.as_str() == "ExitCode" => {
+            *ty = HirType::Integer32 { signed: true };
+        }
+        HirType::Apply(base, arguments) => {
+            erase_backend_opaque_type(base);
+            for argument in arguments {
+                erase_backend_opaque_type(argument);
+            }
+        }
+        HirType::Function(function) => {
+            for parameter in &mut function.params {
+                erase_backend_opaque_type(parameter);
+            }
+            erase_backend_opaque_type(&mut function.return_type);
+        }
+        HirType::Tuple(items) => {
+            for item in items {
+                erase_backend_opaque_type(item);
+            }
+        }
+        HirType::Row(row) => {
+            for method in &mut row.methods {
+                for parameter in &mut method.params {
+                    erase_backend_opaque_type(parameter);
+                }
+                erase_backend_opaque_type(&mut method.return_type);
+            }
+        }
+        HirType::Array(inner) => {
+            erase_backend_opaque_type(inner);
+        }
+        HirType::TypeLambda(type_lambda) => {
+            erase_backend_opaque_type(&mut type_lambda.body);
+        }
+        HirType::TraitObject(trait_object) => {
+            for argument in &mut trait_object.type_arguments {
+                erase_backend_opaque_type(argument);
+            }
+        }
+        HirType::Associated(associated) => {
+            erase_backend_opaque_type(&mut associated.base);
+            for argument in &mut associated.type_arguments {
+                erase_backend_opaque_type(argument);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn lower_mir_module(module: &MirModule, return_types: &BTreeMap<String, HirType>, lane: LirTargetLane) -> LirModule {
     LirModule {
         name: module.name.clone(),
         lane,
@@ -454,9 +512,10 @@ fn lower_mir_module(module: &MirModule, return_types: &BTreeMap<&str, HirType>, 
     }
 }
 
-fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirType>, lane: LirTargetLane) -> LirFunction {
-    let return_type = return_types.get(function.symbol.as_str()).cloned().unwrap_or(HirType::Unit);
-    let suspend_points = function
+fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<String, HirType>, lane: LirTargetLane) -> LirFunction {
+    let mut return_type = return_types.get(function.symbol.as_str()).cloned().unwrap_or(HirType::Unit);
+    erase_backend_opaque_type(&mut return_type);
+    let suspend_points: Vec<LirSuspendPoint> = function
         .suspend_points
         .iter()
         .map(|suspend_point| LirSuspendPoint {
@@ -467,6 +526,7 @@ fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirT
             resume_parameter_count: suspend_point.resume_parameter_count,
             payload_type: suspend_point.payload_type.clone(),
             spill_candidates: suspend_point.spill_candidates.clone(),
+            continuation_index: suspend_point.continuation_index,
         })
         .collect();
     let frame_layouts: Vec<_> = function
@@ -479,7 +539,13 @@ fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirT
             slots: layout
                 .slots
                 .iter()
-                .map(|slot| LirFrameSlot { slot_index: slot.slot_index, value: slot.value, value_type: slot.value_type.clone() })
+                .map(|slot| {
+                    let mut value_type = slot.value_type.clone();
+                    if let Some(value_type) = &mut value_type {
+                        erase_backend_opaque_type(value_type);
+                    }
+                    LirFrameSlot { slot_index: slot.slot_index, value: slot.value, value_type }
+                })
                 .collect(),
         })
         .collect();
@@ -490,7 +556,10 @@ fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirT
             dispatch_block: continuation.dispatch_block,
             resume_target: continuation.resume_target,
             resume_parameter: continuation.resume_parameter,
-            resume_parameter_type: continuation.resume_parameter_type.clone(),
+            resume_parameter_type: continuation.resume_parameter_type.clone().map(|mut ty| {
+                erase_backend_opaque_type(&mut ty);
+                ty
+            }),
             handler_exit: continuation.handler_exit,
         })
         .collect();
@@ -518,13 +587,21 @@ fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirT
                 .collect(),
         })
         .collect();
-    let runtime_frames = lower_runtime_frames(function.symbol.as_str(), lane, &frame_layouts);
-    let runtime_continuations = lower_runtime_continuations(function.symbol.as_str(), lane, &continuations);
+    let runtime_frames = lower_runtime_frames(function.symbol.as_str(), lane, &frame_layouts, &suspend_points);
+    let runtime_continuations = lower_runtime_continuations(function.symbol.as_str(), lane, &continuations, &suspend_points);
+    let mut param_types = function.param_types.clone();
+    for parameter in &mut param_types {
+        erase_backend_opaque_type(parameter);
+    }
+    let mut value_types = function.value_types.clone();
+    for value_type in value_types.values_mut() {
+        erase_backend_opaque_type(value_type);
+    }
     LirFunction {
         symbol: function.symbol.clone(),
-        param_types: function.param_types.clone(),
+        param_types,
         return_type,
-        value_types: function.value_types.clone(),
+        value_types,
         suspend_points,
         frame_layouts,
         continuations,
@@ -536,41 +613,62 @@ fn lower_mir_function(function: &MirFunction, return_types: &BTreeMap<&str, HirT
     }
 }
 
-fn lower_runtime_frames(function_symbol: &str, lane: LirTargetLane, frame_layouts: &[LirFrameLayout]) -> Vec<LirRuntimeFrame> {
+fn lower_runtime_frames(
+    function_symbol: &str,
+    lane: LirTargetLane,
+    frame_layouts: &[LirFrameLayout],
+    suspend_points: &[LirSuspendPoint],
+) -> Vec<LirRuntimeFrame> {
     let lane_prefix = runtime_lane_prefix(lane);
     frame_layouts
         .iter()
-        .map(|layout| LirRuntimeFrame {
-            carrier: format!("{function_symbol}${lane_prefix}_state_{}_frame", layout.state_id),
-            state_id: layout.state_id,
-            resume_target: layout.resume_target,
-            slots: layout
-                .slots
-                .iter()
-                .map(|slot| LirRuntimeSlot {
-                    field_name: format!("slot_{}", slot.slot_index),
-                    slot_index: slot.slot_index,
-                    value: slot.value,
-                    value_type: slot.value_type.clone(),
-                })
-                .collect(),
+        .map(|layout| {
+            let continuation_index = suspend_points.iter().find(|sp| sp.state_id == layout.state_id).and_then(|sp| sp.continuation_index);
+            LirRuntimeFrame {
+                carrier: format!("{function_symbol}${lane_prefix}_state_{}_frame", layout.state_id),
+                state_id: layout.state_id,
+                resume_target: layout.resume_target,
+                slots: layout
+                    .slots
+                    .iter()
+                    .map(|slot| LirRuntimeSlot {
+                        field_name: format!("slot_{}", slot.slot_index),
+                        slot_index: slot.slot_index,
+                        value: slot.value,
+                        value_type: slot.value_type.clone(),
+                    })
+                    .collect(),
+                continuation_index,
+            }
         })
         .collect()
 }
 
-fn lower_runtime_continuations(function_symbol: &str, lane: LirTargetLane, continuations: &[LirContinuation]) -> Vec<LirRuntimeContinuation> {
+fn lower_runtime_continuations(
+    function_symbol: &str,
+    lane: LirTargetLane,
+    continuations: &[LirContinuation],
+    suspend_points: &[LirSuspendPoint],
+) -> Vec<LirRuntimeContinuation> {
     let lane_prefix = runtime_lane_prefix(lane);
     continuations
         .iter()
         .enumerate()
-        .map(|(index, continuation)| LirRuntimeContinuation {
-            carrier: format!("{function_symbol}${lane_prefix}_continuation_{index}"),
-            dispatch_block: continuation.dispatch_block,
-            resume_target: continuation.resume_target,
-            resume_parameter: continuation.resume_parameter,
-            resume_parameter_field: "resume_value".to_string(),
-            resume_parameter_type: continuation.resume_parameter_type.clone(),
-            handler_exit: continuation.handler_exit,
+        .map(|(index, continuation)| {
+            let frame_state_id = suspend_points
+                .iter()
+                .find(|suspend_point| suspend_point.continuation_index == Some(index))
+                .map(|suspend_point| suspend_point.state_id);
+            LirRuntimeContinuation {
+                carrier: format!("{function_symbol}${lane_prefix}_continuation_{index}"),
+                dispatch_block: continuation.dispatch_block,
+                resume_target: continuation.resume_target,
+                resume_parameter: continuation.resume_parameter,
+                resume_parameter_field: "resume_value".to_string(),
+                resume_parameter_type: continuation.resume_parameter_type.clone(),
+                handler_exit: continuation.handler_exit,
+                frame_state_id,
+            }
         })
         .collect()
 }
