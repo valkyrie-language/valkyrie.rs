@@ -1,0 +1,26 @@
+targets:
+- jvm-openjdk-unknown-managed
+expect:
+  jvm-openjdk-unknown-managed:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main.functions
+      physical_entry: main.jar
+      invocation: java
+      validate: java -jar main.jar
+    per_artifact:
+      main.jar:
+        run_success: true
+        exit_code: 0
+        stdout:
+        - hello from jvm
+        stderr: []
+    artifacts:
+    - main.class
+    - main.jar
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []

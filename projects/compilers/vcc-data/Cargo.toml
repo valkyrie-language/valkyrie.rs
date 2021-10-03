@@ -1,0 +1,22 @@
+[package]
+name = "vcc-data"
+version.workspace = true
+edition.workspace = true
+
+authors.workspace = true
+license.workspace = true
+
+
+[features]
+default = []
+serde = ["nyar-types/serde"]
+
+[dependencies]
+miette = { workspace = true }
+nyar = { workspace = true }
+nyar-types = { workspace = true }
+serde = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+nyar-language = { workspace = true, features = ["serde"] }

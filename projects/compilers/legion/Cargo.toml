@@ -1,0 +1,35 @@
+[package]
+name = "legion"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+clap = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+base64 = { workspace = true }
+emitter = { workspace = true }
+nyar-package-manager = { workspace = true }
+nyar-workspace = { workspace = true }
+vcc-data = { workspace = true, features = ["serde"] }
+nyar-language = { workspace = true, features = ["serde"] }
+nyar-analyzer = { workspace = true }
+nyar-runner = { workspace = true }
+nyar = { workspace = true }
+zip = { workspace = true }
+sha2 = { workspace = true }
+pulldown-cmark = { workspace = true }
+asgard = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+nyar = { workspace = true }
+zip = { workspace = true }
+
+[[example]]
+name = "dump_sources"
+path = "examples/dump_sources/main.rs"
+

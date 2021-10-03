@@ -1,0 +1,38 @@
+targets:
+- wasm32-node-unknown-wasm
+expect:
+  wasm32-node-unknown-wasm:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main
+      physical_entry: alpha_entry__main_alpha_entry.mjs
+      invocation: node
+      validate: node alpha_entry__main_alpha_entry.mjs
+    - logical_entry: main
+      physical_entry: beta_entry__main_beta_entry.mjs
+      invocation: node
+      validate: node beta_entry__main_beta_entry.mjs
+    per_artifact:
+      alpha_entry__main_alpha_entry.mjs:
+        run_success: true
+        exit_code: 0
+        stdout:
+        - hello from alpha
+        stderr: []
+      beta_entry__main_beta_entry.mjs:
+        run_success: true
+        exit_code: 0
+        stdout:
+        - hello from beta
+        stderr: []
+    artifacts:
+    - alpha_entry__main_alpha_entry.mjs
+    - alpha_entry__main_alpha_entry.wasm
+    - beta_entry__main_beta_entry.mjs
+    - beta_entry__main_beta_entry.wasm
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []

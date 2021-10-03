@@ -1,0 +1,26 @@
+targets:
+- wasm32-node-unknown-wasm
+expect:
+  wasm32-node-unknown-wasm:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main
+      physical_entry: main.mjs
+      invocation: node
+      validate: node main.mjs
+    per_artifact:
+      main.mjs:
+        run_success: true
+        exit_code: 0
+        stdout:
+        - hello from node
+        stderr: []
+    artifacts:
+    - main.mjs
+    - main.wasm
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []
