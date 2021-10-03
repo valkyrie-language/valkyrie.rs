@@ -1,0 +1,61 @@
+# @valkyrie-language/vcc-win32-x64
+
+**Valkyrie Compiler Collect (VCC)** — Windows x64 native Node-API artifact for Legion and Asgard hosts.
+
+## Overview
+
+This optional platform package contains the `vcc_napi.dll` cdylib built from `projects/vcc-napi`. It is pulled in
+automatically when you install [`@valkyrie-language/legion`](../legion) or [`@valkyrie-language/asgard`](../asgard) on
+Windows x64.
+
+You normally do **not** install this package directly.
+
+## Platform
+
+| Field | Value   |
+|-------|---------|
+| OS    | `win32` |
+| CPU   | `x64`   |
+
+npm skips this package on other platforms.
+
+## Artifact
+
+| File           | Description                   |
+|----------------|-------------------------------|
+| `vcc_napi.dll` | Node-API native host (cdylib) |
+
+## Install
+
+Installed transitively as an optional dependency:
+
+```bash
+npm install @valkyrie-language/legion
+```
+
+## Build (maintainers)
+
+From the monorepo root:
+
+```bash
+pnpm build:napi
+# or: node scripts/build.mjs napi
+```
+
+## Related packages
+
+| Package                               | Role                |
+|---------------------------------------|---------------------|
+| `@valkyrie-language/vcc-linux-x64`    | Linux x64 collect   |
+| `@valkyrie-language/vcc-darwin-x64`   | macOS x64 collect   |
+| `@valkyrie-language/vcc-darwin-arm64` | macOS arm64 collect |
+| `@valkyrie-language/vcc`              | Shared host runner  |
+
+## License
+
+[MIT](https://opensource.org/licenses/MIT)
+
+## Links
+
+- [Repository](https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/vcc-win32-x64)
+- [Issues](https://github.com/valkyrie-language/valkyrie.rs/issues)

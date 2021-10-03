@@ -1,0 +1,44 @@
+{
+    "name": "@valkyrie-language/vcc-unknown-wasm32",
+    "version": "0.0.1",
+    "description": "Valkyrie Compiler Collect (VCC) â€?wasm32-unknown-wasm Legion host artifacts.",
+    "type": "module",
+    "license": "MPL-2.0",
+    "exports": {
+        "./legion.mjs": "./legion.mjs",
+        "./legion.wasm": "./legion.wasm",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "legion.mjs",
+        "legion.wasm",
+        "run-contracts.txt",
+        "provenance.json",
+        "SHA256SUMS",
+        "README.md",
+        "LICENSE.md"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "vcc",
+        "legion",
+        "wasm",
+        "wasm-gc",
+        "compiler"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/vcc-unknown-wasm32"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/vcc-unknown-wasm32#readme",
+    "publishConfig": {
+        "access": "public"
+    }
+}

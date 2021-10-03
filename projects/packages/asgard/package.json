@@ -1,0 +1,54 @@
+{
+    "name": "@valkyrie-language/asgard",
+    "version": "0.0.1",
+    "description": "Asgard â€?cross-platform GUI app framework CLI (assembled from VCC platform collects).",
+    "type": "module",
+    "license": "MPL-2.0",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "bin": {
+        "asgard": "bin/asgard.js"
+    },
+    "files": [
+        "bin",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node --test tests/**/*.test.ts"
+    },
+    "dependencies": {
+        "@valkyrie-language/vcc": "workspace:*",
+        "@valkyrie-language/vcc-wasm32-wasi": "workspace:*"
+    },
+    "optionalDependencies": {
+        "@valkyrie-language/vcc-win32-x64": "workspace:*",
+        "@valkyrie-language/vcc-linux-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-arm64": "workspace:*"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "asgard",
+        "gui",
+        "vcc",
+        "cli"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/asgard"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/asgard#readme",
+    "publishConfig": {
+        "access": "public"
+    }
+}

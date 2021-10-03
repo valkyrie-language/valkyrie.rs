@@ -1,0 +1,46 @@
+{
+    "name": "@valkyrie-language/vcc",
+    "version": "0.0.1",
+    "description": "Valkyrie Compiler Collect â€?shared host runner for assembled Legion / Asgard CLIs.",
+    "type": "module",
+    "license": "MPL-2.0",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./testing": "./src/testing.ts"
+    },
+    "files": [
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node --test tests/**/*.test.ts"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "vcc",
+        "compiler",
+        "legion",
+        "asgard",
+        "host-runner"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/vcc"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/vcc#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "devDependencies": {
+        "@valkyrie-language/vcc-unknown-wasm32": "workspace:*",
+        "@valkyrie-language/vcc-wasm32-wasi": "workspace:*"
+    }
+}

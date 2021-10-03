@@ -1,0 +1,39 @@
+{
+    "name": "@valkyrie-language/vcc-linux-x64",
+    "version": "0.0.1",
+    "description": "VCC native collect â€?Linux x64 Node-API host (libvcc_napi.so).",
+    "license": "MIT",
+    "os": [
+        "linux"
+    ],
+    "cpu": [
+        "x64"
+    ],
+    "files": [
+        "libvcc_napi.so",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "vcc",
+        "native",
+        "node-api",
+        "linux",
+        "x64"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/vcc-linux-x64"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/vcc-linux-x64#readme",
+    "publishConfig": {
+        "access": "public"
+    }
+}

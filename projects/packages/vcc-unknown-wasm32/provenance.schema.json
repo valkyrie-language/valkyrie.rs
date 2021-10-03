@@ -1,0 +1,45 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://valkyrie-language.dev/schemas/vcc-unknown-wasm32-provenance.schema.json",
+    "title": "VCC unknown-wasm32 provenance",
+    "type": "object",
+    "required": ["package", "version", "target", "rust_commit", "artifacts"],
+    "properties": {
+        "package": { "const": "@valkyrie-language/vcc-unknown-wasm32" },
+        "version": { "type": "string" },
+        "target": { "const": "wasm32-node-unknown-wasm" },
+        "rust_repo": { "type": "string" },
+        "rust_commit": { "type": "string", "minLength": 7 },
+        "valkyrie_v_commit": { "type": ["string", "null"] },
+        "source_project": { "type": "string" },
+        "source_closure": {
+            "type": "object",
+            "properties": {
+                "digest": { "type": "string" },
+                "file_count": { "type": "integer" }
+            }
+        },
+        "toolchain": {
+            "type": "object",
+            "properties": {
+                "rustc": { "type": "string" },
+                "cargo": { "type": "string" },
+                "node": { "type": "string" }
+            }
+        },
+        "build": {
+            "type": "object",
+            "properties": {
+                "from": { "type": "string" },
+                "locked": { "type": "boolean" },
+                "assembled_at": { "type": "string" },
+                "fixture": { "type": "boolean" }
+            }
+        },
+        "artifacts": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+        }
+    },
+    "additionalProperties": true
+}

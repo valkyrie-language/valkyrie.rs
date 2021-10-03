@@ -1,0 +1,39 @@
+{
+    "name": "@valkyrie-language/vcc-darwin-x64",
+    "version": "0.0.1",
+    "description": "VCC native collect â€?macOS x64 Node-API host (libvcc_napi.dylib).",
+    "license": "MIT",
+    "os": [
+        "darwin"
+    ],
+    "cpu": [
+        "x64"
+    ],
+    "files": [
+        "libvcc_napi.dylib",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "vcc",
+        "native",
+        "node-api",
+        "darwin",
+        "x64"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/vcc-darwin-x64"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/vcc-darwin-x64#readme",
+    "publishConfig": {
+        "access": "public"
+    }
+}

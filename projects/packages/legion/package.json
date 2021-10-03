@@ -1,0 +1,56 @@
+{
+    "name": "@valkyrie-language/legion",
+    "version": "0.0.1",
+    "description": "Legion â€?Valkyrie compiler & workspace CLI (assembled from VCC platform collects).",
+    "type": "module",
+    "license": "MPL-2.0",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "bin": {
+        "legion": "bin/legion.js"
+    },
+    "files": [
+        "bin",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node --test tests/**/*.test.ts tests/**/*.integration.test.ts",
+        "test:integration": "node --test tests/**/*.integration.test.ts"
+    },
+    "dependencies": {
+        "@valkyrie-language/vcc": "workspace:*",
+        "@valkyrie-language/vcc-unknown-wasm32": "workspace:*"
+    },
+    "optionalDependencies": {
+        "@valkyrie-language/vcc-win32-x64": "workspace:*",
+        "@valkyrie-language/vcc-linux-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-arm64": "workspace:*"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "valkyrie",
+        "legion",
+        "compiler",
+        "vcc",
+        "cli",
+        "wasm-gc"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+        "directory": "projects/packages/legion"
+    },
+    "bugs": {
+        "url": "https://github.com/valkyrie-language/valkyrie.rs/issues"
+    },
+    "homepage": "https://github.com/valkyrie-language/valkyrie.rs/tree/main/projects/packages/legion#readme",
+    "publishConfig": {
+        "access": "public"
+    }
+}

@@ -1,62 +1,66 @@
 [workspace]
 resolver = "2"
 members = [
-    "projects/nyar",
-    "projects/nyar-analyzer",
-    "projects/nyar-optimizer",
-    "projects/std-data",
-    "projects/nyar-driver",
-    "projects/nyar-types",
-    "projects/legion",
-    "projects/von-parser",
-    "projects/valkyrie-types",
-    "projects/valkyrie-parser",
-    "projects/valkyrie-compiler",
-    "projects/nyar-backend-clr",
-    "projects/nyar-backend-jvm",
-    "projects/nyar-backend-wasi",
-    "projects/nyar-backend-native",
-    "projects/valkyrie-interpreter",
+    "projects/compilers/legion",
+    "projects/compilers/vcc-data",
+    "projects/compilers/vcc-napi",
+    "projects/compilers/vcc-wasm",
+    "projects/compilers/asgard",
 ]
 default-members = [
-    "projects/legion",
-    "projects/valkyrie-compiler",
+    "projects/compilers/legion",
+    "projects/compilers/vcc-napi",
 ]
 
 [workspace.package]
-version = "0.1.0"
-edition = "2021"
+version = "0.0.1"
+edition = "2024"
 authors = ["Nyar Team"]
 license = "MIT"
 repository = "https://github.com/valkyrie-language/valkyrie.rs"
 
 [workspace.dependencies]
-nyar = { path = "projects/nyar" }
-nyar-analyzer = { path = "projects/nyar-analyzer" }
-nyar-optimizer = { path = "projects/nyar-optimizer" }
-nyar-binary-format = { path = "projects/std-data" }
-nyar-driver = { path = "projects/nyar-driver" }
-nyar-types = { path = "projects/nyar-types" }
-von-parser = { path = "projects/von-parser" }
-valkyrie-types = { path = "projects/valkyrie-types" }
-valkyrie-parser = { path = "projects/valkyrie-parser" }
-valkyrie-compiler = { path = "projects/valkyrie-compiler" }
-valkyrie-interpreter = { path = "projects/valkyrie-interpreter" }
-clr-backend = { package = "nyar-backend-clr", path = "projects/nyar-backend-clr" }
-jvm-backend = { package = "nyar-backend-jvm", path = "projects/nyar-backend-jvm" }
-wasi-backend = { package = "nyar-backend-wasi", path = "projects/nyar-backend-wasi" }
-native-backend = { package = "nyar-backend-native", path = "projects/nyar-backend-native" }
+vcc-data = { path = "projects/compilers/vcc-data" }
+asgard = { path = "projects/compilers/asgard" }
+
+# Compiler / VM stack lives in nyar-vm.rs. CI resolves these from git `dev`.
+# Local sibling checkout: copy `cargo/config.example.toml` to `.cargo/config.toml`.
+nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-language = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-optimizer = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev", package = "nyar-emitter" }
+
 miette = "7.6.0"
 ordered-float = "5.3.0"
 clap = { version = "4.6.1", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = "1.0.150"
+toml_edit = "0.22.27"
+serde_yaml = "0.9.34"
+sha1 = "0.10.6"
+sha2 = "0.10.9"
 url = "2.5.8"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 tempfile = "3.27.0"
+pulldown-cmark = "0.13.0"
+syntect = "5.2.0"
+katex-rs = "0.2.4"
+reqwest = { version = "0.12.28", default-features = false, features = ["blocking", "json", "rustls-tls", "system-proxy"] }
+flate2 = "1.1.2"
+tar = "0.4.44"
+base64 = "0.22.1"
+ed25519-dalek = "2.1.1"
+thiserror = "2.0.17"
 
 [profile.release]
-lto = true
+lto = false
 opt-level = "s"
 
 [profile.dev]
