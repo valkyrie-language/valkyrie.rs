@@ -1,3 +1,0 @@
-name: writeonly_property
-description: Test write-only properties (setter without getter)
-version: 1.0.0
