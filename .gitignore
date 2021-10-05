@@ -1,41 +1,28 @@
+# OS
+
+
 # IDE
-.vscode
-.idea
-*.iml
-time-travel.*
+.idea/
 
 # Rust
+.cargo/
 target/
-Cargo.lock
-Untitled.ipynb
-.ipynb_checkpoints/
 
 
 # Node
 node_modules/
-cache/
-package-lock.json
-*.wasm
 dist/
-pkg/
-lib/
 
-# Coverage
-lcov.info
-coverage/
-*.profraw
-htmlcov/
+# Valkyrie
+.cache/
 
-# Antlr
-.antlr/
-.tmp/
-*.jar
+# npm Trusted Publisher local cache / secrets
+.env.npm-trust.local
+.npm-trust-cache.json
 
-
-*.txt
-*.log
-
-# Binary
-*.exe
-*.wasm
-*.wasi
+# Assembled wasm collect (generated locally or in CI)
+projects/packages/vcc-unknown-wasm32/legion.mjs
+projects/packages/vcc-unknown-wasm32/legion.wasm
+projects/packages/vcc-unknown-wasm32/provenance.json
+projects/packages/vcc-unknown-wasm32/run-contracts.txt
+projects/packages/vcc-unknown-wasm32/SHA256SUMS

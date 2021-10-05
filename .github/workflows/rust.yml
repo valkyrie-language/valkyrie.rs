@@ -15,6 +15,12 @@ jobs:
     steps:
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
+      - name: Checkout valkyrie.v
+        uses: actions/checkout@v5
+        with:
+          repository: valkyrie-language/valkyrie.v
+          ref: dev
+          path: valkyrie.v
       - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -25,15 +31,56 @@ jobs:
           github_token: ${{ github.token }}
       - name: Verify Wasmtime
         run: wasmtime --version
-      - name: Build
-        run: cargo build --release
-      - name: Tests
-        run: cargo test --release
-  coverage:
+      - name: Build vcc-napi (cdylib)
+        run: cargo build --release -p vcc-napi
+      - name: Build workspace crates
+        run: cargo build --release -p legion -p vcc-data -p vcc-wasm -p asgard
+      - name: Tests (legion)
+        run: cargo test --release -p legion --test artifact_formats
+
+  wasm-package:
+    name: Wasm npm collect (assemble + pack)
     runs-on: ubuntu-latest
     steps:
+      - run: git config --global core.autocrlf false
+      - name: Checkout valkyrie.rs
+        uses: actions/checkout@v5
+      - name: Checkout valkyrie.v
+        uses: actions/checkout@v5
+        with:
+          repository: valkyrie-language/valkyrie.v
+          ref: dev
+          path: valkyrie.v
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          github_token: ${{ github.token }}
+      - name: Build vcc-napi cdylib
+        run: cargo build -p vcc-napi --release
+      - name: Node entry contract tests
+        run: cargo test -p legion --test bootstrap_node_entry --release
+      - name: Assemble vcc-unknown-wasm32
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build.mjs capability --valkyrie-v valkyrie.v
+          test -f projects/packages/vcc-unknown-wasm32/legion.wasm
+          grep -q '"fixture": false' projects/packages/vcc-unknown-wasm32/provenance.json
+          ! grep -qi smoke-out projects/packages/vcc-unknown-wasm32/provenance.json
+          npm pack ./projects/packages/legion
+
+  coverage:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
       - uses: actions/checkout@v5
-      - name: Install Rust
+      - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
@@ -41,8 +88,6 @@ jobs:
         uses: bytecodealliance/actions/wasmtime/setup@v1
         with:
           github_token: ${{ github.token }}
-      - name: Verify Wasmtime
-        run: wasmtime --version
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage

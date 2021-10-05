@@ -2,9 +2,35 @@
 charset = utf-8
 end_of_line = lf
 
-[*.vk]
+[*.v]
 indent_style = space
 indent_size = 4
+max_line_length = 80
+insert_final_newline = true
+
+[*.valkyrie]
+indent_style = space
+indent_size = 4
+max_line_length = 80
+insert_final_newline = true
+
+[*.vx]
+indent_style = space
+indent_size = 4
+max_line_length = 80
+insert_final_newline = true
+
+[*.von]
+indent_style = space
+indent_size = 4
+max_line_length = 80
+insert_final_newline = true
+
+[*.awsl]
+indent_style = space
+indent_size = 4
+max_line_length = 80
+insert_final_newline = true
 
 [*.toml]
 indent_style = space
