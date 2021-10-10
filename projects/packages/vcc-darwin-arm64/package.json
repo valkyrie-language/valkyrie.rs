@@ -1,7 +1,7 @@
 {
     "name": "@valkyrie-language/vcc-darwin-arm64",
     "version": "0.0.1",
-    "description": "VCC native collect â€?macOS arm64 Node-API host (libvcc_napi.dylib).",
+    "description": "VCC native N-API addon for @valkyrie-language/vcc (darwin-arm64)",
     "license": "MIT",
     "os": [
         "darwin"
@@ -9,8 +9,9 @@
     "cpu": [
         "arm64"
     ],
+    "main": "vcc.darwin-arm64.node",
     "files": [
-        "libvcc_napi.dylib",
+        "vcc.darwin-arm64.node",
         "README.md"
     ],
     "engines": {

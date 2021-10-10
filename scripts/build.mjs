@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAssemble } from "./lib/assemble.mjs";
@@ -17,14 +17,16 @@ import { runAssemble } from "./lib/assemble.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGES_ROOT = join(ROOT, "projects", "packages");
 
-/** @typedef {{ triple: string, packageDir: string, tool: "cargo" | "zigbuild" }} NativeTarget */
+/** @typedef {{ triple: string, npmTriple: string, packageDir: string, tool: "cargo" | "zigbuild" }} NativeTarget */
 /** @typedef {{ triple: string, packageDir: string, libName: string, destName: string }} WasmTarget */
 
+const NATIVE_STEM = "vcc_napi";
+
 const NATIVE_TARGETS = [
-    { triple: "x86_64-pc-windows-msvc", packageDir: "vcc-win32-x64", tool: "cargo" },
-    { triple: "x86_64-unknown-linux-musl", packageDir: "vcc-linux-x64", tool: "zigbuild" },
-    { triple: "x86_64-apple-darwin", packageDir: "vcc-darwin-x64", tool: "zigbuild" },
-    { triple: "aarch64-apple-darwin", packageDir: "vcc-darwin-arm64", tool: "zigbuild" },
+    { triple: "x86_64-pc-windows-msvc", npmTriple: "win32-x64-msvc", packageDir: "vcc-win32-x64", tool: "cargo" },
+    { triple: "x86_64-unknown-linux-musl", npmTriple: "linux-x64-musl", packageDir: "vcc-linux-x64", tool: "zigbuild" },
+    { triple: "x86_64-apple-darwin", npmTriple: "darwin-x64", packageDir: "vcc-darwin-x64", tool: "zigbuild" },
+    { triple: "aarch64-apple-darwin", npmTriple: "darwin-arm64", packageDir: "vcc-darwin-arm64", tool: "zigbuild" },
 ];
 
 const WASM_TARGETS = [
@@ -177,20 +179,61 @@ function cargoBuildTarget(triple, release, tool, crate) {
 }
 
 /**
+ * @param {string} npmTriple
+ */
+function nativeNodeBinaryName(npmTriple) {
+    return `vcc.${npmTriple}.node`;
+}
+
+/**
  * @param {string} triple
  * @param {boolean} release
- * @param {string} libName
  */
-function nativeLibCandidates(triple, release, libName) {
+function nativeArtifactCandidates(triple, release) {
     const profile = release ? "release" : "debug";
-    const dir = join(ROOT, "target", triple, profile);
+    const dirs = [join(ROOT, "target", triple, profile), join(ROOT, "target", profile)];
+    const names = [];
     if (triple.includes("windows")) {
-        return [join(dir, `${libName}.dll`)];
+        names.push(`${NATIVE_STEM}.dll`, `${NATIVE_STEM}.node`);
+    } else if (triple.includes("apple")) {
+        names.push(`lib${NATIVE_STEM}.dylib`, `${NATIVE_STEM}.dylib`, `${NATIVE_STEM}.node`);
+    } else {
+        names.push(`lib${NATIVE_STEM}.so`, `${NATIVE_STEM}.so`, `${NATIVE_STEM}.node`);
     }
-    if (triple.includes("apple")) {
-        return [join(dir, `lib${libName}.dylib`)];
+    const candidates = [];
+    for (const dir of dirs) {
+        for (const name of names) {
+            candidates.push(join(dir, name));
+        }
+        const deps = join(dir, "deps");
+        if (!existsSync(deps)) continue;
+        for (const name of readdirSync(deps)) {
+            const base = name.replace(/^lib/, "");
+            if (
+                (name === NATIVE_STEM ||
+                    name.startsWith(`${NATIVE_STEM}.`) ||
+                    base.startsWith(`${NATIVE_STEM}.`) ||
+                    name.startsWith(`lib${NATIVE_STEM}.`)) &&
+                (name.endsWith(".dll") || name.endsWith(".so") || name.endsWith(".dylib") || name.endsWith(".node"))
+            ) {
+                candidates.push(join(deps, name));
+            }
+        }
     }
-    return [join(dir, `lib${libName}.so`), join(dir, `${libName}.so`)];
+    return candidates;
+}
+
+/**
+ * @param {NativeTarget} target
+ */
+function syncPlatformPackageJson(target) {
+    const binaryName = nativeNodeBinaryName(target.npmTriple);
+    const pkgPath = join(PACKAGES_ROOT, target.packageDir, "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+    pkg.main = binaryName;
+    pkg.files = [binaryName, "README.md"];
+    pkg.description = `VCC native N-API addon for @valkyrie-language/vcc (${target.npmTriple})`;
+    writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 4)}\n`);
 }
 
 /**
@@ -226,36 +269,36 @@ function copyArtifact(src, dest) {
 }
 
 /**
- * @param {string} triple
- * @param {string} libName
- */
-function nativeCollectDestName(triple, libName) {
-    if (triple.includes("windows")) {
-        return `${libName}.dll`;
-    }
-    if (triple.includes("apple")) {
-        return `lib${libName}.dylib`;
-    }
-    return `lib${libName}.so`;
-}
-
-/**
+ * @param {NativeTarget} target
  * @param {{ all: boolean, debug: boolean }} opts
  */
 function buildNapi(opts) {
     const release = !opts.debug;
     const targets = selectNativeTargets(NATIVE_TARGETS, opts.all);
-    console.log(`build:napi → vcc-napi cdylib (${release ? "release" : "debug"}, ${targets.length} target(s))`);
+    console.log(`build:napi → vcc-napi (${release ? "release" : "debug"}, ${targets.length} target(s))`);
 
     for (const target of targets) {
-        console.log(`\n→ ${target.triple} → projects/packages/${target.packageDir}`);
+        const binaryName = nativeNodeBinaryName(target.npmTriple);
+        console.log(`\n→ ${target.triple} → projects/packages/${target.packageDir}/${binaryName}`);
         cargoBuildTarget(target.triple, release, target.tool, "vcc-napi");
 
-        const src = resolveArtifact(nativeLibCandidates(target.triple, release, "vcc_napi"));
-        const destName = nativeCollectDestName(target.triple, "vcc_napi");
-        const dest = join(PACKAGES_ROOT, target.packageDir, destName);
+        const src = resolveArtifact(nativeArtifactCandidates(target.triple, release));
+        const pkgRoot = join(PACKAGES_ROOT, target.packageDir);
+        mkdirSync(pkgRoot, { recursive: true });
+        syncPlatformPackageJson(target);
+        const dest = join(pkgRoot, binaryName);
         copyArtifact(src, dest);
-        console.log(`  copied ${destName}`);
+        for (const legacy of ["vcc.node", "vcc_napi.dll", "libvcc_napi.so", "libvcc_napi.dylib"]) {
+            const stale = join(pkgRoot, legacy);
+            if (existsSync(stale)) {
+                try {
+                    unlinkSync(stale);
+                } catch {
+                    /* ignore */
+                }
+            }
+        }
+        console.log(`  copied ${binaryName}`);
     }
 }
 

@@ -1,7 +1,7 @@
 {
     "name": "@valkyrie-language/vcc-linux-x64",
     "version": "0.0.1",
-    "description": "VCC native collect â€?Linux x64 Node-API host (libvcc_napi.so).",
+    "description": "VCC native N-API addon for @valkyrie-language/vcc (linux-x64-musl)",
     "license": "MIT",
     "os": [
         "linux"
@@ -9,8 +9,9 @@
     "cpu": [
         "x64"
     ],
+    "main": "vcc.linux-x64-musl.node",
     "files": [
-        "libvcc_napi.so",
+        "vcc.linux-x64-musl.node",
         "README.md"
     ],
     "engines": {

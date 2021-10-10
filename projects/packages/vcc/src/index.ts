@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
@@ -13,7 +13,31 @@ export const NATIVE_PACKAGES = [
     "@valkyrie-language/vcc-darwin-x64",
 ] as const;
 
-const NATIVE_LIB_NAMES = ["vcc_napi.dll", "libvcc_napi.so", "libvcc_napi.dylib"] as const;
+/** platform 包 short → npm triple（与 `scripts/build.mjs` / `@vmz/vmz-*` 对齐）。 */
+export const NATIVE_PACKAGE_TRIPLES: Readonly<Record<(typeof NATIVE_PACKAGES)[number], string>> = {
+    "@valkyrie-language/vcc-win32-x64": "win32-x64-msvc",
+    "@valkyrie-language/vcc-linux-x64": "linux-x64-musl",
+    "@valkyrie-language/vcc-darwin-x64": "darwin-x64",
+    "@valkyrie-language/vcc-darwin-arm64": "darwin-arm64",
+};
+
+const LEGACY_NATIVE_LIB_NAMES = ["vcc_napi.dll", "libvcc_napi.so", "libvcc_napi.dylib", "vcc.node"] as const;
+
+/** 当前进程的 npm triple（用于 `vcc.${triple}.node` 文件名）。 */
+export function resolveNativeNpmTriple(platform = process.platform, arch = process.arch): string {
+    if (platform === "win32" && arch === "x64") return "win32-x64-msvc";
+    if (platform === "win32" && arch === "arm64") return "win32-arm64-msvc";
+    if (platform === "darwin" && arch === "arm64") return "darwin-arm64";
+    if (platform === "darwin" && arch === "x64") return "darwin-x64";
+    if (platform === "linux" && arch === "x64") return "linux-x64-musl";
+    if (platform === "linux" && arch === "arm64") return "linux-arm64-musl";
+    return `${platform}-${arch}`;
+}
+
+/** platform-named N-API 二进制文件名。 */
+export function nativeCollectBinaryName(npmTriple: string): string {
+    return `vcc.${npmTriple}.node`;
+}
 
 /** 组装 CLI 宿主配置：native cdylib + wasm collect 入口。 */
 export type VccHostConfig = {
@@ -43,17 +67,24 @@ export type VccHostRunner = {
 };
 
 /**
- * 定位已安装的 VCC native cdylib；未安装或未构建时返回 `null`。
+ * 定位已安装的 VCC native `.node` collect；未安装或未构建时返回 `null`。
  *
  * @param nativePackages
  */
 export function locateNativeCollect(nativePackages: readonly string[] = NATIVE_PACKAGES): string | null {
+    const hostTriple = resolveNativeNpmTriple();
     for (const name of nativePackages) {
         try {
             const entry = require.resolve(join(name, "package.json"));
             const pkgDir = dirname(entry);
-            for (const file of NATIVE_LIB_NAMES) {
-                const candidate = join(pkgDir, file);
+            const pkg = JSON.parse(readFileSync(entry, "utf8")) as { main?: string };
+            const candidates = [
+                typeof pkg.main === "string" ? join(pkgDir, pkg.main) : null,
+                join(pkgDir, nativeCollectBinaryName(NATIVE_PACKAGE_TRIPLES[name as (typeof NATIVE_PACKAGES)[number]] ?? hostTriple)),
+                join(pkgDir, nativeCollectBinaryName(hostTriple)),
+                ...LEGACY_NATIVE_LIB_NAMES.map((file) => join(pkgDir, file)),
+            ].filter((value): value is string => Boolean(value));
+            for (const candidate of candidates) {
                 if (existsSync(candidate)) {
                     return candidate;
                 }
@@ -95,7 +126,7 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
         if (locate() === null) {
             return null;
         }
-        // TODO: `#[napi]` 导出落地后在此加载 cdylib 并 dispatch 到对应 Rust CLI。
+        // TODO: `#[napi]` 导出落地后在此 `require()` platform `.node` 并 dispatch 到对应 Rust CLI。
         return null;
     }
 

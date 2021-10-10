@@ -4,7 +4,7 @@
 
 ## Overview
 
-This optional platform package contains the `libvcc_napi.so` cdylib built from `projects/vcc-napi`. It is pulled in
+This optional platform package contains the `vcc.linux-x64-musl.node` N-API addon built from `projects/compilers/vcc-napi`. It is pulled in
 automatically when you install [`@valkyrie-language/legion`](../legion) or [`@valkyrie-language/asgard`](../asgard) on
 Linux x64.
 
@@ -23,7 +23,7 @@ npm skips this package on other platforms.
 
 | File             | Description                   |
 |------------------|-------------------------------|
-| `libvcc_napi.so` | Node-API native host (cdylib) |
+| `vcc.linux-x64-musl.node` | Node-API native host (platform-named `.node`) |
 
 ## Install
 

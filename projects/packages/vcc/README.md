@@ -38,7 +38,7 @@ const host = createHostRunner({
 host.runCli(process.argv.slice(2));
 
 // Inspect routing
-host.locateNativeCollect(); // path to vcc_napi.* or null
+host.locateNativeCollect(); // path to vcc.<platform>.node or null
 host.resolveWasmMjs();      // absolute path to legion.mjs in the wasm collect
 ```
 
@@ -47,7 +47,7 @@ host.resolveWasmMjs();      // absolute path to legion.mjs in the wasm collect
 | Export                           | Description                                                    |
 |----------------------------------|----------------------------------------------------------------|
 | `NATIVE_PACKAGES`                | Optional native collect package names (Windows, Linux, macOS). |
-| `locateNativeCollect(packages?)` | Find an installed `vcc_napi` cdylib, or `null`.                |
+| `locateNativeCollect(packages?)` | Find an installed platform `.node` addon, or `null`.                |
 | `resolveWasmMjs(collect, entry)` | Resolve the Wasm host script path inside a collect package.    |
 | `createHostRunner(config)`       | Bind wasm collect settings and return `runCli` helpers.        |
 

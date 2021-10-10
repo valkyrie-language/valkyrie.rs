@@ -14,7 +14,7 @@ test("NATIVE_PACKAGES 覆盖四个 optional collect", () => {
 
 test("locateNativeCollect 不抛错（无 collect 时为 null）", () => {
     const path = locateNativeCollect();
-    assert.ok(path === null || path.includes("vcc_napi"));
+    assert.ok(path === null || path.endsWith(".node") || path.includes("vcc_napi"));
 });
 
 test("resolveWasmMjs 解析 legion wasm collect", () => {

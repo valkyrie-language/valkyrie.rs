@@ -1,7 +1,7 @@
 {
     "name": "@valkyrie-language/vcc-win32-x64",
     "version": "0.0.1",
-    "description": "VCC native collect â€?Windows x64 Node-API host (vcc_napi.dll).",
+    "description": "VCC native N-API addon for @valkyrie-language/vcc (win32-x64-msvc)",
     "license": "MIT",
     "os": [
         "win32"
@@ -9,8 +9,9 @@
     "cpu": [
         "x64"
     ],
+    "main": "vcc.win32-x64-msvc.node",
     "files": [
-        "vcc_napi.dll",
+        "vcc.win32-x64-msvc.node",
         "README.md"
     ],
     "engines": {
