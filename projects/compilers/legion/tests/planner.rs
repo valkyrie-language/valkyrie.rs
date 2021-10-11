@@ -1781,3 +1781,51 @@ micro write(message: utf8): unit {
     assert!(rendered.contains("demo.missing"));
     assert!(rendered.contains("sdk.write"));
 }
+
+#[test]
+fn resolves_path_dependency_outside_workspace() {
+    let temp_dir = Builder::new().prefix("legion-path-dep").tempdir().unwrap();
+    let root = temp_dir.path();
+    let app_dir = root.join("app");
+    let std_dir = root.join("stdlib");
+    fs::create_dir_all(app_dir.join("source")).unwrap();
+    fs::create_dir_all(std_dir.join("source")).unwrap();
+    fs::write(
+        app_dir.join("legion.von"),
+        r#"{
+    name: "app",
+    dependencies: {
+        "std": {
+            source: "path",
+            path: "../stdlib"
+        }
+    },
+    build: [
+        { target: "node" }
+    ]
+}
+"#,
+    )
+    .unwrap();
+    fs::write(
+        std_dir.join("legion.von"),
+        r#"{
+    name: "std",
+    build: [
+        { target: "node" }
+    ]
+}
+"#,
+    )
+    .unwrap();
+    fs::write(std_dir.join("source").join("lib.v"), "namespace std.lib;\n").unwrap();
+    fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
+
+    let workspace = LegionWorkspace::discover_for_project(&app_dir).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("node").unwrap(), output_dir: None })
+        .unwrap();
+
+    assert!(plan.project.dependencies.iter().any(|dep| dep.name == "std"));
+    assert!(plan.project.source_files.iter().any(|path| path.ends_with("stdlib/source/lib.v")));
+}

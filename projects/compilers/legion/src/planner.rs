@@ -1,8 +1,10 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
+    ffi::OsStr,
     fmt::{Display, Formatter},
     fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use miette::{Diagnostic, Severity};
@@ -100,6 +102,11 @@ pub enum PlannerError {
     ForcedWorkspaceDependencyMissing { project: String, dependency: String },
     RegistryDependencyMissingVersion { project: String, dependency: String },
     RegistryDependencyInstallFailed { project: String, dependency: String, version: String, registry: String, reason: String },
+    PathDependencyMissingPath { project: String, dependency: String },
+    PathDependencyMissingManifest { project: String, dependency: String, manifest_dir: PathBuf },
+    GitDependencyMissingUrl { project: String, dependency: String },
+    GitDependencyMissingManifest { project: String, dependency: String, git_url: String, git_ref: String, manifest_dir: PathBuf },
+    GitDependencyCheckoutFailed { project: String, dependency: String, git_url: String, reason: String },
     UnknownHostProviderContract { provider: String, contract: String, source_file: PathBuf, line: usize },
     ConflictingHostProviders { contract: String, providers: Vec<String> },
 }
@@ -130,6 +137,35 @@ impl Display for PlannerError {
                     project, dependency, registry, version, reason
                 )
             }
+            Self::PathDependencyMissingPath { project, dependency } => {
+                write!(f, "project '{}' dependency '{}' uses source=path but no path is provided", project, dependency)
+            }
+            Self::PathDependencyMissingManifest { project, dependency, manifest_dir } => {
+                write!(
+                    f,
+                    "project '{}' dependency '{}' path does not contain `legion.von` at {}",
+                    project,
+                    dependency,
+                    manifest_dir.display()
+                )
+            }
+            Self::GitDependencyMissingUrl { project, dependency } => {
+                write!(f, "project '{}' dependency '{}' uses source=git but no git url is provided", project, dependency)
+            }
+            Self::GitDependencyMissingManifest { project, dependency, git_url, git_ref, manifest_dir } => {
+                write!(
+                    f,
+                    "project '{}' dependency '{}' git checkout `{}`@{} has no `legion.von` at {}",
+                    project,
+                    dependency,
+                    git_url,
+                    git_ref,
+                    manifest_dir.display()
+                )
+            }
+            Self::GitDependencyCheckoutFailed { project, dependency, git_url, reason } => {
+                write!(f, "project '{}' dependency '{}' failed to checkout git `{}`: {}", project, dependency, git_url, reason)
+            }
             Self::UnknownHostProviderContract { provider, contract, source_file, line } => {
                 write!(f, "host provider '{}' references unknown host contract '{}' at {}:{}", provider, contract, source_file.display(), line)
             }
@@ -154,6 +190,11 @@ impl Diagnostic for PlannerError {
             PlannerError::ForcedWorkspaceDependencyMissing { .. } => "legion::planner::forced_workspace_dependency_missing",
             PlannerError::RegistryDependencyMissingVersion { .. } => "legion::planner::registry_dependency_missing_version",
             PlannerError::RegistryDependencyInstallFailed { .. } => "legion::planner::registry_dependency_install_failed",
+            PlannerError::PathDependencyMissingPath { .. } => "legion::planner::path_dependency_missing_path",
+            PlannerError::PathDependencyMissingManifest { .. } => "legion::planner::path_dependency_missing_manifest",
+            PlannerError::GitDependencyMissingUrl { .. } => "legion::planner::git_dependency_missing_url",
+            PlannerError::GitDependencyMissingManifest { .. } => "legion::planner::git_dependency_missing_manifest",
+            PlannerError::GitDependencyCheckoutFailed { .. } => "legion::planner::git_dependency_checkout_failed",
             PlannerError::UnknownHostProviderContract { .. } => "legion::planner::unknown_host_provider_contract",
             PlannerError::ConflictingHostProviders { .. } => "legion::planner::conflicting_host_providers",
         }))
@@ -178,6 +219,11 @@ impl Diagnostic for PlannerError {
             PlannerError::RegistryDependencyInstallFailed { .. } => {
                 "请检查 registry 名称、网络连接、包名与版本是否可用，必要时先执行 `legion install` 验证"
             }
+            PlannerError::PathDependencyMissingPath { .. } => "请为 path 依赖提供相对或绝对 `path` 字段",
+            PlannerError::PathDependencyMissingManifest { .. } => "请确认 path 指向包含 `legion.von` 的 Valkyrie 包目录",
+            PlannerError::GitDependencyMissingUrl { .. } => "请为 git 依赖提供 `git` 仓库 URL",
+            PlannerError::GitDependencyMissingManifest { .. } => "请确认 git 仓库内 `path` 子目录包含 `legion.von`",
+            PlannerError::GitDependencyCheckoutFailed { .. } => "请确认本机已安装 git 且仓库 URL / ref 可访问",
             PlannerError::UnknownHostProviderContract { .. } => {
                 "请确认 `[host_provider(...)]` 指向的 contract 标识与可见源码中的 `[host_contract]` 完全一致"
             }
@@ -254,7 +300,7 @@ impl LegionWorkspace {
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target })?;
 
-        let dependencies = self.collect_dependencies(manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target)?;
         let output_dir = request.output_dir.clone().unwrap_or_else(|| default_dist_output_dir(&project_dir, &request.target));
 
         // 收集源码闭包：包含项目自身及其所有依赖（含传递依赖）的源文件。
@@ -318,7 +364,7 @@ impl LegionWorkspace {
             .unwrap_or_else(|| BuildTargetSpec { target: request.target.clone(), ..BuildTargetSpec::default() });
         build_target.target = request.target.clone();
 
-        let dependencies = self.collect_dependencies(&manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, &manifest, &build_target)?;
         let output_dir =
             request.output_dir.clone().unwrap_or_else(|| project_dir.join(".cache").join("test").join(request.target.as_canonical_str()));
 
@@ -399,20 +445,17 @@ impl LegionWorkspace {
         for dep_name in dep_names {
             let local_manifest_dir = self.projects_by_name.get(&dep_name).cloned();
             let dependency_spec = manifest.dependencies.get(&dep_name);
-            let source_preference = dependency_spec.map(DependencySpec::source_preference).unwrap_or(DependencySourcePreference::Auto);
-            let version_hint = dependency_spec.and_then(DependencySpec::version_hint);
-            let registry_hint = dependency_spec.and_then(DependencySpec::registry_hint).unwrap_or("npm");
             let allow_missing_when_auto = implicit_names.contains(&dep_name);
             match resolve_dependency_source(
-                source_preference,
+                self,
+                project_dir,
+                dependency_spec,
                 local_manifest_dir,
-                version_hint,
-                registry_hint,
                 allow_missing_when_auto,
                 &manifest.name,
                 &dep_name,
             )? {
-                ResolvedDependencySource::Workspace(dep_dir) => {
+                ResolvedDependencySource::Local(dep_dir) => {
                     if let Some(dep_manifest) = self.project_manifest(&dep_dir) {
                         if !manifest_supports_build_context(dep_manifest, &build_target.target, &build_target.publish) {
                             continue;
@@ -468,7 +511,7 @@ impl LegionWorkspace {
         if !visited.insert(manifest_dir.clone()) {
             return Ok(());
         }
-        let dependencies = self.collect_dependencies(manifest, build_target)?;
+        let dependencies = self.collect_dependencies(project_dir, manifest, build_target)?;
         for dependency in &dependencies {
             let dependency_manifest = self
                 .load_project_manifest_from_dir(&dependency.manifest_dir)
@@ -495,7 +538,7 @@ impl LegionWorkspace {
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target.clone() })?;
 
-        let dependencies = self.collect_dependencies(manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target)?;
         let output_dir = request.output_dir.clone().unwrap_or_else(|| default_dist_output_dir(&project_dir, &request.target));
 
         let mut visited = BTreeSet::new();
@@ -521,7 +564,12 @@ impl LegionWorkspace {
         })
     }
 
-    fn collect_dependencies(&self, manifest: &ProjectManifest, build_target: &BuildTargetSpec) -> Result<Vec<PlannedDependency>, PlannerError> {
+    fn collect_dependencies(
+        &self,
+        project_manifest_dir: &Path,
+        manifest: &ProjectManifest,
+        build_target: &BuildTargetSpec,
+    ) -> Result<Vec<PlannedDependency>, PlannerError> {
         let mut planned = Vec::new();
         let mut names = BTreeSet::new();
         let mut declared_specs = BTreeMap::new();
@@ -546,21 +594,18 @@ impl LegionWorkspace {
         for dependency_name in names {
             let local_manifest_dir = self.projects_by_name.get(&dependency_name).cloned();
             let dependency_spec = declared_specs.get(&dependency_name);
-            let source_preference = dependency_spec.map(DependencySpec::source_preference).unwrap_or(DependencySourcePreference::Auto);
-            let version_hint = dependency_spec.and_then(DependencySpec::version_hint);
-            let registry_hint = dependency_spec.and_then(DependencySpec::registry_hint).unwrap_or("npm");
             let allow_missing_when_auto = implicit_names.contains(&dependency_name);
 
             let manifest_dir = match resolve_dependency_source(
-                source_preference,
+                self,
+                project_manifest_dir,
+                dependency_spec,
                 local_manifest_dir,
-                version_hint,
-                registry_hint,
                 allow_missing_when_auto,
                 &manifest.name,
                 &dependency_name,
             )? {
-                ResolvedDependencySource::Workspace(manifest_dir) => manifest_dir,
+                ResolvedDependencySource::Local(manifest_dir) => manifest_dir,
                 ResolvedDependencySource::Registry { version, registry } => {
                     self.install_registry_dependency(self.root_dir.as_path(), &dependency_name, &version, &registry, &manifest.name)?
                 }
@@ -633,22 +678,49 @@ impl LegionWorkspace {
 }
 
 enum ResolvedDependencySource {
-    Workspace(PathBuf),
+    Local(PathBuf),
     Registry { version: String, registry: String },
     MissingImplicit,
 }
 
 fn resolve_dependency_source(
-    source_preference: DependencySourcePreference,
+    workspace: &LegionWorkspace,
+    project_manifest_dir: &Path,
+    dependency_spec: Option<&DependencySpec>,
     local_manifest_dir: Option<PathBuf>,
-    version_hint: Option<&str>,
-    registry_hint: &str,
     allow_missing_when_auto: bool,
     project_name: &str,
     dependency_name: &str,
 ) -> Result<ResolvedDependencySource, PlannerError> {
+    let source_preference = dependency_spec.map(DependencySpec::source_preference).unwrap_or(DependencySourcePreference::Auto);
+    let version_hint = dependency_spec.and_then(DependencySpec::version_hint);
+    let registry_hint = dependency_spec.and_then(DependencySpec::registry_hint).unwrap_or("npm");
+
     match source_preference {
-        DependencySourcePreference::Workspace => local_manifest_dir.map(ResolvedDependencySource::Workspace).ok_or_else(|| {
+        DependencySourcePreference::Path => {
+            let raw_path = dependency_spec
+                .and_then(DependencySpec::path_hint)
+                .ok_or_else(|| PlannerError::PathDependencyMissingPath { project: project_name.to_string(), dependency: dependency_name.to_string() })?;
+            let manifest_dir = resolve_local_dependency_path(project_manifest_dir, raw_path);
+            if !manifest_dir.join("legion.von").is_file() {
+                return Err(PlannerError::PathDependencyMissingManifest {
+                    project: project_name.to_string(),
+                    dependency: dependency_name.to_string(),
+                    manifest_dir,
+                });
+            }
+            Ok(ResolvedDependencySource::Local(manifest_dir))
+        }
+        DependencySourcePreference::Git => {
+            let git_url = dependency_spec
+                .and_then(DependencySpec::git_url)
+                .ok_or_else(|| PlannerError::GitDependencyMissingUrl { project: project_name.to_string(), dependency: dependency_name.to_string() })?;
+            let git_ref = dependency_spec.and_then(DependencySpec::git_ref_hint);
+            let subpath = dependency_spec.and_then(DependencySpec::path_hint);
+            let manifest_dir = workspace.ensure_git_dependency(git_url, git_ref, subpath, project_name, dependency_name)?;
+            Ok(ResolvedDependencySource::Local(manifest_dir))
+        }
+        DependencySourcePreference::Workspace => local_manifest_dir.map(ResolvedDependencySource::Local).ok_or_else(|| {
             PlannerError::ForcedWorkspaceDependencyMissing { project: project_name.to_string(), dependency: dependency_name.to_string() }
         }),
         DependencySourcePreference::Registry => {
@@ -663,7 +735,47 @@ fn resolve_dependency_source(
         }
         DependencySourcePreference::Auto => {
             if let Some(local_manifest_dir) = local_manifest_dir {
-                return Ok(ResolvedDependencySource::Workspace(local_manifest_dir));
+                return Ok(ResolvedDependencySource::Local(local_manifest_dir));
+            }
+            if let Some(spec) = dependency_spec {
+                if spec.git_url().is_some() {
+                    return resolve_dependency_source(
+                        workspace,
+                        project_manifest_dir,
+                        Some(&DependencySpec::Detailed {
+                            version: spec.version_hint().map(str::to_string),
+                            path: spec.path_hint().map(str::to_string),
+                            abi: None,
+                            source: Some("git".to_string()),
+                            registry: None,
+                            git: spec.git_url().map(str::to_string),
+                            git_ref: spec.git_ref_hint().map(str::to_string),
+                        }),
+                        local_manifest_dir,
+                        allow_missing_when_auto,
+                        project_name,
+                        dependency_name,
+                    );
+                }
+                if spec.path_hint().is_some() {
+                    return resolve_dependency_source(
+                        workspace,
+                        project_manifest_dir,
+                        Some(&DependencySpec::Detailed {
+                            version: None,
+                            path: spec.path_hint().map(str::to_string),
+                            abi: None,
+                            source: Some("path".to_string()),
+                            registry: None,
+                            git: None,
+                            git_ref: None,
+                        }),
+                        local_manifest_dir,
+                        allow_missing_when_auto,
+                        project_name,
+                        dependency_name,
+                    );
+                }
             }
             if let Some(version) = version_hint {
                 return Ok(ResolvedDependencySource::Registry { version: version.to_string(), registry: registry_hint.to_string() });
@@ -673,6 +785,118 @@ fn resolve_dependency_source(
             }
             Err(PlannerError::MissingDependency { project: project_name.to_string(), dependency: dependency_name.to_string() })
         }
+    }
+}
+
+fn resolve_local_dependency_path(project_manifest_dir: &Path, raw_path: &str) -> PathBuf {
+    let candidate = Path::new(raw_path);
+    if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        project_manifest_dir.join(candidate)
+    }
+}
+
+impl LegionWorkspace {
+    fn git_vendor_root(&self, git_url: &str, git_ref: &str) -> PathBuf {
+        let slug = git_cache_slug(git_url, git_ref);
+        self.root_dir.join("vendors").join("git").join(slug)
+    }
+
+    fn ensure_git_dependency(
+        &self,
+        git_url: &str,
+        git_ref: Option<&str>,
+        subpath: Option<&str>,
+        project_name: &str,
+        dependency_name: &str,
+    ) -> Result<PathBuf, PlannerError> {
+        let git_ref = git_ref.unwrap_or("main");
+        let vendor_root = self.git_vendor_root(git_url, git_ref);
+        let manifest_dir = match subpath {
+            Some(path) => vendor_root.join(path),
+            None => vendor_root.clone(),
+        };
+
+        if manifest_dir.join("legion.von").is_file() {
+            return Ok(manifest_dir);
+        }
+
+        if !vendor_root.join(".git").is_dir() {
+            if vendor_root.exists() {
+                fs::remove_dir_all(&vendor_root)?;
+            }
+            if let Some(parent) = vendor_root.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            run_git(
+                project_name,
+                dependency_name,
+                git_url,
+                Command::new("git").args(["clone", "--depth", "1", "--branch", git_ref, git_url]).arg(&vendor_root),
+            )?;
+        } else {
+            run_git(
+                project_name,
+                dependency_name,
+                git_url,
+                Command::new("git").current_dir(&vendor_root).args(["fetch", "origin", git_ref, "--depth", "1"]),
+            )?;
+            run_git(
+                project_name,
+                dependency_name,
+                git_url,
+                Command::new("git").current_dir(&vendor_root).args(["checkout", "FETCH_HEAD"]),
+            )?;
+        }
+
+        if !manifest_dir.join("legion.von").is_file() {
+            return Err(PlannerError::GitDependencyMissingManifest {
+                project: project_name.to_string(),
+                dependency: dependency_name.to_string(),
+                git_url: git_url.to_string(),
+                git_ref: git_ref.to_string(),
+                manifest_dir,
+            });
+        }
+
+        Ok(manifest_dir)
+    }
+}
+
+fn git_cache_slug(git_url: &str, git_ref: &str) -> String {
+    let mut slug = String::new();
+    for ch in git_url.chars().chain(git_ref.chars()) {
+        slug.push(if ch.is_ascii_alphanumeric() { ch } else { '_' });
+    }
+    if slug.len() > 96 {
+        slug.truncate(96);
+    }
+    if slug.is_empty() {
+        slug.push('x');
+    }
+    slug
+}
+
+fn run_git(project: &str, dependency: &str, git_url: &str, command: &mut Command) -> Result<(), PlannerError> {
+    let output = command.output().map_err(PlannerError::Io)?;
+    if output.status.success() {
+        return Ok(());
+    }
+    Err(PlannerError::GitDependencyCheckoutFailed {
+        project: project.to_string(),
+        dependency: dependency.to_string(),
+        git_url: git_url.to_string(),
+        reason: format_git_failure(command.get_program(), &output.stderr),
+    })
+}
+
+fn format_git_failure(program: &OsStr, stderr: &[u8]) -> String {
+    let text = String::from_utf8_lossy(stderr).trim();
+    if text.is_empty() {
+        format!("`{}` exited with failure", program.to_string_lossy())
+    } else {
+        text.to_string()
     }
 }
 

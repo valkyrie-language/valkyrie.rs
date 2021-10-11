@@ -20,7 +20,15 @@ pub struct AutoLinkConfig {
 pub enum DependencySpec {
     Disabled,
     Workspace,
-    Detailed { version: Option<String>, path: Option<String>, abi: Option<String>, source: Option<String>, registry: Option<String> },
+    Detailed {
+        version: Option<String>,
+        path: Option<String>,
+        abi: Option<String>,
+        source: Option<String>,
+        registry: Option<String>,
+        git: Option<String>,
+        git_ref: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +36,8 @@ pub enum DependencySourcePreference {
     Auto,
     Workspace,
     Registry,
+    Path,
+    Git,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -241,11 +251,17 @@ impl DependencySpec {
         match self {
             Self::Disabled => DependencySourcePreference::Auto,
             Self::Workspace => DependencySourcePreference::Workspace,
-            Self::Detailed { source, .. } => match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
-                Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
-                Some(value) if value == "registry" => DependencySourcePreference::Registry,
-                _ => DependencySourcePreference::Auto,
-            },
+            Self::Detailed { source, path, git, .. } => {
+                match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
+                    Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
+                    Some(value) if value == "registry" => DependencySourcePreference::Registry,
+                    Some(value) if value == "path" => DependencySourcePreference::Path,
+                    Some(value) if value == "git" => DependencySourcePreference::Git,
+                    _ if git.is_some() => DependencySourcePreference::Git,
+                    _ if path.is_some() => DependencySourcePreference::Path,
+                    _ => DependencySourcePreference::Auto,
+                }
+            }
         }
     }
 
@@ -263,6 +279,27 @@ impl DependencySpec {
             _ => None,
         }
     }
+
+    pub fn path_hint(&self) -> Option<&str> {
+        match self {
+            Self::Detailed { path: Some(path), .. } => Some(path.as_str()),
+            _ => None,
+        }
+    }
+
+    pub fn git_url(&self) -> Option<&str> {
+        match self {
+            Self::Detailed { git: Some(git), .. } => Some(git.as_str()),
+            _ => None,
+        }
+    }
+
+    pub fn git_ref_hint(&self) -> Option<&str> {
+        match self {
+            Self::Detailed { git_ref: Some(git_ref), .. } => Some(git_ref.as_str()),
+            _ => None,
+        }
+    }
 }
 
 impl Serialize for DependencySpec {
@@ -273,17 +310,24 @@ impl Serialize for DependencySpec {
         match self {
             Self::Disabled => false.serialize(serializer),
             Self::Workspace => true.serialize(serializer),
-            Self::Detailed { version, path, abi, source, registry }
-                if path.is_none() && abi.is_none() && source.is_none() && registry.is_none() =>
+            Self::Detailed { version, path, abi, source, registry, git, git_ref }
+                if path.is_none()
+                    && abi.is_none()
+                    && source.is_none()
+                    && registry.is_none()
+                    && git.is_none()
+                    && git_ref.is_none() =>
             {
                 version.serialize(serializer)
             }
-            Self::Detailed { version, path, abi, source, registry } => DetailedDependencySpec {
+            Self::Detailed { version, path, abi, source, registry, git, git_ref } => DetailedDependencySpec {
                 version: version.clone(),
                 path: path.clone(),
                 abi: abi.clone(),
                 source: source.clone(),
                 registry: registry.clone(),
+                git: git.clone(),
+                git_ref: git_ref.clone(),
             }
             .serialize(serializer),
         }
@@ -299,10 +343,26 @@ impl<'de> Deserialize<'de> for DependencySpec {
             DependencySpecDef::Bool(false) => Ok(Self::Disabled),
             DependencySpecDef::Bool(true) => Ok(Self::Workspace),
             DependencySpecDef::String(version) => {
-                Ok(Self::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None })
+                Ok(Self::Detailed {
+                    version: Some(version),
+                    path: None,
+                    abi: None,
+                    source: None,
+                    registry: None,
+                    git: None,
+                    git_ref: None,
+                })
             }
             DependencySpecDef::Detailed(value) => {
-                Ok(Self::Detailed { version: value.version, path: value.path, abi: value.abi, source: value.source, registry: value.registry })
+                Ok(Self::Detailed {
+                    version: value.version,
+                    path: value.path,
+                    abi: value.abi,
+                    source: value.source,
+                    registry: value.registry,
+                    git: value.git,
+                    git_ref: value.git_ref,
+                })
             }
         }
     }
@@ -320,6 +380,10 @@ struct DetailedDependencySpec {
     source: Option<String>,
     #[serde(default)]
     registry: Option<String>,
+    #[serde(default)]
+    git: Option<String>,
+    #[serde(default, rename = "ref")]
+    git_ref: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
