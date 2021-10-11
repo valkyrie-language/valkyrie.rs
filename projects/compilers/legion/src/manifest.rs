@@ -40,6 +40,20 @@ pub enum DependencySourcePreference {
     Git,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct LocalLegionConfig {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub dependencies: BTreeMap<String, DependencySpec>,
+}
+
+impl LocalLegionConfig {
+    pub fn parse(source: &str) -> Result<Self, ManifestError> {
+        from_str(source).map_err(ManifestError::from)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildTargetSpec {
     #[serde(default = "default_canonical_target")]

@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     ffi::OsStr,
     fmt::{Display, Formatter},
@@ -12,7 +13,8 @@ use nyar_language::CanonicalTarget;
 use nyar_package_manager::PackageManager as PackageLegion;
 use serde::{Deserialize, Serialize};
 
-use crate::manifest::{BuildTargetSpec, DependencySourcePreference, DependencySpec, ManifestError, ProjectManifest, WorkspaceManifest};
+use crate::manifest::{BuildTargetSpec, DependencySourcePreference, DependencySpec, LocalLegionConfig, ManifestError, ProjectManifest, WorkspaceManifest};
+use crate::LOCAL_LEGION_CONFIG;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildRequest {
@@ -446,10 +448,14 @@ impl LegionWorkspace {
             let local_manifest_dir = self.projects_by_name.get(&dep_name).cloned();
             let dependency_spec = manifest.dependencies.get(&dep_name);
             let allow_missing_when_auto = implicit_names.contains(&dep_name);
+            let overrides = merged_local_dependency_overrides(project_dir);
+            let (effective_spec, path_base) =
+                effective_dependency_spec(&dep_name, dependency_spec, &overrides, project_dir);
             match resolve_dependency_source(
                 self,
                 project_dir,
-                dependency_spec,
+                &path_base,
+                effective_spec.as_deref(),
                 local_manifest_dir,
                 allow_missing_when_auto,
                 &manifest.name,
@@ -595,11 +601,15 @@ impl LegionWorkspace {
             let local_manifest_dir = self.projects_by_name.get(&dependency_name).cloned();
             let dependency_spec = declared_specs.get(&dependency_name);
             let allow_missing_when_auto = implicit_names.contains(&dependency_name);
+            let overrides = merged_local_dependency_overrides(project_manifest_dir);
+            let (effective_spec, path_base) =
+                effective_dependency_spec(&dependency_name, dependency_spec, &overrides, project_manifest_dir);
 
             let manifest_dir = match resolve_dependency_source(
                 self,
                 project_manifest_dir,
-                dependency_spec,
+                &path_base,
+                effective_spec.as_deref(),
                 local_manifest_dir,
                 allow_missing_when_auto,
                 &manifest.name,
@@ -677,6 +687,76 @@ impl LegionWorkspace {
     }
 }
 
+/// 合并本地 `.config/legion/legions.von` 依赖覆盖（越靠近项目的配置优先级越高）。
+fn merged_local_dependency_overrides(project_dir: &Path) -> BTreeMap<String, (PathBuf, DependencySpec)> {
+    let mut merged = BTreeMap::new();
+
+    if let Some((anchor, config)) = load_local_legion_config(user_local_config_path()) {
+        for (name, spec) in config.dependencies {
+            merged.insert(name, (anchor.clone(), spec));
+        }
+    }
+
+    let mut chain = Vec::new();
+    let mut current = Some(canonicalize_lossy(project_dir));
+    while let Some(dir) = current {
+        let config_path = dir.join(LOCAL_LEGION_CONFIG);
+        if config_path.is_file() {
+            if let Ok(source) = fs::read_to_string(&config_path) {
+                if let Ok(config) = LocalLegionConfig::parse(&source) {
+                    chain.push((local_config_anchor(&config_path), config.dependencies));
+                }
+            }
+        }
+        current = dir.parent().map(Path::to_path_buf);
+    }
+
+    for (anchor, deps) in chain.into_iter().rev() {
+        for (name, spec) in deps {
+            merged.insert(name, (anchor.clone(), spec));
+        }
+    }
+
+    merged
+}
+
+fn effective_dependency_spec<'a>(
+    dependency_name: &str,
+    declared: Option<&'a DependencySpec>,
+    overrides: &BTreeMap<String, (PathBuf, DependencySpec)>,
+    project_manifest_dir: &Path,
+) -> (Option<Cow<'a, DependencySpec>>, PathBuf) {
+    if let Some((anchor, spec)) = overrides.get(dependency_name) {
+        return (Some(Cow::Owned(spec.clone())), anchor.clone());
+    }
+    (declared.map(Cow::Borrowed), project_manifest_dir.to_path_buf())
+}
+
+fn user_local_config_path() -> Option<PathBuf> {
+    let home = std::env::var("USERPROFILE")
+        .ok()
+        .or_else(|| std::env::var("HOME").ok())
+        .map(PathBuf::from)?;
+    let path = home.join(".config").join("legion").join("legions.von");
+    path.is_file().then_some(path)
+}
+
+fn local_config_anchor(config_path: &Path) -> PathBuf {
+    config_path
+        .parent()
+        .and_then(|legion| legion.parent())
+        .and_then(|config| config.parent())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| config_path.to_path_buf())
+}
+
+fn load_local_legion_config(config_path: Option<PathBuf>) -> Option<(PathBuf, LocalLegionConfig)> {
+    let config_path = config_path?;
+    let source = fs::read_to_string(&config_path).ok()?;
+    let config = LocalLegionConfig::parse(&source).ok()?;
+    Some((local_config_anchor(&config_path), config))
+}
+
 enum ResolvedDependencySource {
     Local(PathBuf),
     Registry { version: String, registry: String },
@@ -686,6 +766,7 @@ enum ResolvedDependencySource {
 fn resolve_dependency_source(
     workspace: &LegionWorkspace,
     project_manifest_dir: &Path,
+    path_base: &Path,
     dependency_spec: Option<&DependencySpec>,
     local_manifest_dir: Option<PathBuf>,
     allow_missing_when_auto: bool,
@@ -701,7 +782,7 @@ fn resolve_dependency_source(
             let raw_path = dependency_spec
                 .and_then(DependencySpec::path_hint)
                 .ok_or_else(|| PlannerError::PathDependencyMissingPath { project: project_name.to_string(), dependency: dependency_name.to_string() })?;
-            let manifest_dir = resolve_local_dependency_path(project_manifest_dir, raw_path);
+            let manifest_dir = resolve_local_dependency_path(path_base, raw_path);
             if !manifest_dir.join("legion.von").is_file() {
                 return Err(PlannerError::PathDependencyMissingManifest {
                     project: project_name.to_string(),
@@ -742,6 +823,7 @@ fn resolve_dependency_source(
                     return resolve_dependency_source(
                         workspace,
                         project_manifest_dir,
+                        path_base,
                         Some(&DependencySpec::Detailed {
                             version: spec.version_hint().map(str::to_string),
                             path: spec.path_hint().map(str::to_string),
@@ -761,6 +843,7 @@ fn resolve_dependency_source(
                     return resolve_dependency_source(
                         workspace,
                         project_manifest_dir,
+                        path_base,
                         Some(&DependencySpec::Detailed {
                             version: None,
                             path: spec.path_hint().map(str::to_string),
@@ -778,6 +861,11 @@ fn resolve_dependency_source(
                 }
             }
             if let Some(version) = version_hint {
+                if version == "workspace" {
+                    return local_manifest_dir.map(ResolvedDependencySource::Local).ok_or_else(|| {
+                        PlannerError::ForcedWorkspaceDependencyMissing { project: project_name.to_string(), dependency: dependency_name.to_string() }
+                    });
+                }
                 return Ok(ResolvedDependencySource::Registry { version: version.to_string(), registry: registry_hint.to_string() });
             }
             if allow_missing_when_auto {
@@ -892,7 +980,8 @@ fn run_git(project: &str, dependency: &str, git_url: &str, command: &mut Command
 }
 
 fn format_git_failure(program: &OsStr, stderr: &[u8]) -> String {
-    let text = String::from_utf8_lossy(stderr).trim();
+    let stderr_text = String::from_utf8_lossy(stderr);
+    let text = stderr_text.trim();
     if text.is_empty() {
         format!("`{}` exited with failure", program.to_string_lossy())
     } else {
@@ -1113,6 +1202,9 @@ fn normalize_path_for_lookup(path: &Path) -> String {
 }
 
 fn manifest_supports_build_context(manifest: &ProjectManifest, target: &CanonicalTarget, requested_publish: &[String]) -> bool {
+    if !manifest.build.is_empty() && !manifest.build.iter().any(|item| item.target == *target) {
+        return false;
+    }
     let Some(sdk_vendor) = &manifest.sdk_vendor
     else {
         return true;

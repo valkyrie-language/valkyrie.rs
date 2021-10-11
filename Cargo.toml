@@ -68,3 +68,8 @@ incremental = false
 
 [profile.test]
 incremental = false
+
+# nyar-vm git deps pull `vcc-data` from this repo. Patch to the workspace crate so CI
+# and local builds always compile the tree checkout, not a stale lockfile git revision.
+[patch."https://github.com/valkyrie-language/valkyrie.rs"]
+vcc-data = { path = "projects/compilers/vcc-data" }

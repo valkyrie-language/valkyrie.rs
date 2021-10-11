@@ -29,6 +29,10 @@ tempfile = { workspace = true }
 nyar = { workspace = true }
 zip = { workspace = true }
 
+[[bin]]
+name = "legion"
+path = "src/main.rs"
+
 [[example]]
 name = "dump_sources"
 path = "examples/dump_sources/main.rs"

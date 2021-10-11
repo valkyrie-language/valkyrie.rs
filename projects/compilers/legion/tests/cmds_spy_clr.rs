@@ -77,6 +77,7 @@ fn build_clr_spy_opts(input: &str, method: Option<&str>, list: bool, json: bool)
             hex: false,
             types: false,
             gc_audit: false,
+            glue_audit: false,
         }),
     }
 }

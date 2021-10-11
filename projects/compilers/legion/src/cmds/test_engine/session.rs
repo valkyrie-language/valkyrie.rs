@@ -215,10 +215,9 @@ pub fn run_tests_for_project(
             print!("    {} ... ", tf.name);
 
             let outcome = match &session {
-                Some(Ok(session)) if target.eq_ignore_ascii_case("legion") => run_legion_compile_gate_test(session, &tf.name),
-                Some(Ok(session)) => run_external_test_in_session(workspace, session, &tf.name, cli_runners, verbose),
-                Some(Err(error)) => RunOutcome { success: false, is_compile_error: true, error: Some(error.clone()) },
-                None => RunOutcome { success: false, is_compile_error: true, error: Some("无测试会话".into()) },
+                Ok(session) if target.eq_ignore_ascii_case("legion") => run_legion_compile_gate_test(session, &tf.name),
+                Ok(session) => run_external_test_in_session(workspace, session, &tf.name, cli_runners, verbose),
+                Err(error) => RunOutcome { success: false, is_compile_error: true, error: Some(error.clone()) },
             };
 
             if outcome.success {

@@ -80,7 +80,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "vcc-data 0.0.1",
+ "vcc-data",
  "zip",
 ]
 
@@ -927,7 +927,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
- "vcc-data 0.0.1",
+ "vcc-data",
  "zip",
 ]
 
@@ -1073,7 +1073,7 @@ dependencies = [
  "nyar-types",
  "serde",
  "serde_json",
- "vcc-data 0.0.1 (git+https://github.com/valkyrie-language/valkyrie.rs?branch=dev)",
+ "vcc-data",
  "zip",
 ]
 
@@ -1092,7 +1092,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syntect",
- "vcc-data 0.0.1 (git+https://github.com/valkyrie-language/valkyrie.rs?branch=dev)",
+ "vcc-data",
 ]
 
 [[package]]
@@ -1120,7 +1120,7 @@ dependencies = [
  "sha2",
  "tar",
  "thiserror",
- "vcc-data 0.0.1 (git+https://github.com/valkyrie-language/valkyrie.rs?branch=dev)",
+ "vcc-data",
 ]
 
 [[package]]
@@ -1167,7 +1167,7 @@ source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa1
 dependencies = [
  "sha2",
  "thiserror",
- "vcc-data 0.0.1 (git+https://github.com/valkyrie-language/valkyrie.rs?branch=dev)",
+ "vcc-data",
 ]
 
 [[package]]
@@ -2269,18 +2269,6 @@ dependencies = [
  "miette",
  "nyar",
  "nyar-language",
- "nyar-types",
- "serde",
- "zip",
-]
-
-[[package]]
-name = "vcc-data"
-version = "0.0.1"
-source = "git+https://github.com/valkyrie-language/valkyrie.rs?branch=dev#ad1fd065e2d849e21ba51e0e332dc83adfa5373a"
-dependencies = [
- "miette",
- "nyar",
  "nyar-types",
  "serde",
  "zip",

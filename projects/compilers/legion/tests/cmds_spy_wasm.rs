@@ -227,6 +227,7 @@ fn build_wasm_spy_opts(input: &str, func: Option<&str>, offset: Option<i64>, jso
             hex,
             types: false,
             gc_audit: false,
+            glue_audit: false,
         }),
     }
 }
@@ -343,6 +344,7 @@ fn spy_wasm_types_mode_dumps_type_section() {
             hex: false,
             types: true,
             gc_audit: false,
+            glue_audit: false,
         }),
     };
     let result = run_spy(&opts);
@@ -366,6 +368,7 @@ fn spy_wasm_types_mode_json_output() {
             hex: false,
             types: true,
             gc_audit: false,
+            glue_audit: false,
         }),
     };
     let result = run_spy(&opts);

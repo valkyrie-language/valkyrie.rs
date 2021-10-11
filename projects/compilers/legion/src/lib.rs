@@ -15,8 +15,8 @@ pub use cmds::{
     spy::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, run as run_spy},
 };
 pub use manifest::{
-    AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, ProjectManifest, PublishTargetSpec, RunnerBinding, WorkspaceDefaults,
-    WorkspaceManifest,
+    AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectManifest, PublishTargetSpec, RunnerBinding,
+    WorkspaceDefaults, WorkspaceManifest,
 };
 
 /// On-disk layout for Legion projects (`legion.von` / `legions.von` / `legion-lock.von` / `~/.valkyrie`).
@@ -30,6 +30,9 @@ pub const LEGION_PROJECT_LAYOUT: nyar_package_manager::ProjectLayout = nyar_pack
     token_env_vars: &["VALKYRIE_TOKEN", "LEGION_TOKEN"],
     entry_aliases: bootstrap_entry_aliases,
 };
+
+/// 本地依赖覆盖配置（类似 Rust `.cargo/config.toml`），默认位于 `.config/legion/legions.von`。
+pub const LOCAL_LEGION_CONFIG: &str = ".config/legion/legions.von";
 
 /// Node bootstrap / npm publish: `legion.mjs` is canonical.
 ///

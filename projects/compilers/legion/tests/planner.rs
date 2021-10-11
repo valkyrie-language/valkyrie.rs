@@ -1829,3 +1829,68 @@ fn resolves_path_dependency_outside_workspace() {
     assert!(plan.project.dependencies.iter().any(|dep| dep.name == "std"));
     assert!(plan.project.source_files.iter().any(|path| path.ends_with("stdlib/source/lib.v")));
 }
+
+#[test]
+fn local_config_overrides_git_dependency_with_path() {
+    let temp_dir = Builder::new().prefix("legion-local-config").tempdir().unwrap();
+    let root = temp_dir.path();
+    let app_dir = root.join("app");
+    let std_dir = root.join("stdlib");
+    fs::create_dir_all(app_dir.join("source")).unwrap();
+    fs::create_dir_all(app_dir.join(".config/legion")).unwrap();
+    fs::create_dir_all(std_dir.join("source")).unwrap();
+    fs::write(
+        app_dir.join("legion.von"),
+        r#"{
+    name: "app",
+    dependencies: {
+        "std": {
+            source: "git",
+            git: "https://example.com/valkyrie.v.git",
+            ref: "main",
+            path: "projects/std"
+        }
+    },
+    build: [
+        { target: "node" }
+    ]
+}
+"#,
+    )
+    .unwrap();
+    fs::write(
+        app_dir.join(".config/legion/legions.von"),
+        r#"{
+    name: "local-overrides",
+    dependencies: {
+        "std": {
+            source: "path",
+            path: "../../stdlib"
+        }
+    }
+}
+"#,
+    )
+    .unwrap();
+    fs::write(
+        std_dir.join("legion.von"),
+        r#"{
+    name: "std",
+    build: [
+        { target: "node" }
+    ]
+}
+"#,
+    )
+    .unwrap();
+    fs::write(std_dir.join("source").join("lib.v"), "namespace std.lib;\n").unwrap();
+    fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
+
+    let workspace = LegionWorkspace::discover_for_project(&app_dir).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("node").unwrap(), output_dir: None })
+        .unwrap();
+
+    assert!(plan.project.dependencies.iter().any(|dep| dep.name == "std"));
+    assert!(plan.project.source_files.iter().any(|path| path.ends_with("stdlib/source/lib.v")));
+}
