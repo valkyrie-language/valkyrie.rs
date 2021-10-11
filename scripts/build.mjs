@@ -79,20 +79,25 @@ function findToolsProject(valkyrieV) {
     return null;
 }
 
+function bootstrapFixtureProject() {
+    return join(ROOT, "projects", "compilers", "legion", "tests", "fixtures", "bootstrap_node", "entry_contract_canonical");
+}
+
 function cmdCapability(argv) {
-    const valkyrieV = resolve(ROOT, takeFlag(argv, "--valkyrie-v") ?? "valkyrie.v");
-    if (!existsSync(valkyrieV)) fail(`--valkyrie-v not found: ${valkyrieV}`);
-    const tools = findToolsProject(valkyrieV);
-    if (!tools) fail(`legion.tools project not found under ${valkyrieV}`);
+    const valkyrieVRaw = takeFlag(argv, "--valkyrie-v") ?? "valkyrie.v";
+    const valkyrieV = resolve(ROOT, valkyrieVRaw);
+    const sourceProject = bootstrapFixtureProject();
+    if (!existsSync(join(sourceProject, "legion.von"))) {
+        fail(`bootstrap fixture missing legion.von: ${sourceProject}`);
+    }
 
     const outRoot = join(ROOT, "dist", "legion-node-capability");
     mkdirSync(outRoot, { recursive: true });
-    console.log("build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (library build::run, no native bin)");
+    console.log("build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (bootstrap fixture, no native bin)");
     run(
         "cargo",
-        ["test", "-p", "legion", "--release", "assemble_vcc_unknown_wasm32_capability", "--", "--exact", "--nocapture"],
+        ["test", "-p", "legion", "--test", "assemble_vcc_unknown_wasm32", "--release", "assemble_vcc_unknown_wasm32_capability", "--", "--exact", "--nocapture"],
         {
-            VALKYRIE_V: valkyrieV,
             LEGION_CAPABILITY_OUT: outRoot,
         },
     );
@@ -104,8 +109,8 @@ function cmdCapability(argv) {
         "--from",
         artifactDir,
         "--source-project",
-        tools,
-        ...(gitRev(valkyrieV) ? ["--v-commit", gitRev(valkyrieV)] : []),
+        sourceProject,
+        ...(existsSync(valkyrieV) && gitRev(valkyrieV) ? ["--v-commit", gitRev(valkyrieV)] : []),
     ]);
 }
 

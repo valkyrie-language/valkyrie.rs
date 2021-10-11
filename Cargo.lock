@@ -1042,7 +1042,7 @@ dependencies = [
 [[package]]
 name = "nyar"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "miette",
  "nyar-analyzer",
@@ -1056,7 +1056,7 @@ dependencies = [
 [[package]]
 name = "nyar-analyzer"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "nyar-optimizer",
  "nyar-types",
@@ -1066,7 +1066,7 @@ dependencies = [
 [[package]]
 name = "nyar-emitter"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "miette",
  "nyar",
@@ -1080,7 +1080,7 @@ dependencies = [
 [[package]]
 name = "nyar-language"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "katex-rs",
  "miette",
@@ -1098,7 +1098,7 @@ dependencies = [
 [[package]]
 name = "nyar-optimizer"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "nyar-types",
  "serde",
@@ -1107,7 +1107,7 @@ dependencies = [
 [[package]]
 name = "nyar-package-manager"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "base64",
  "flate2",
@@ -1126,7 +1126,7 @@ dependencies = [
 [[package]]
 name = "nyar-package-registry"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "base64",
  "ed25519-dalek",
@@ -1144,7 +1144,7 @@ dependencies = [
 [[package]]
 name = "nyar-runner"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "miette",
 ]
@@ -1152,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "nyar-types"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "ordered-float",
  "serde",
@@ -1163,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "nyar-workspace"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#931b7b5b93b642fa110bf92dc89a624ea17323a1"
+source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#d1f4b1560ee81d396c7714b0b18042c7cffa6a85"
 dependencies = [
  "sha2",
  "thiserror",
