@@ -79,7 +79,14 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
+      - name: Checkout valkyrie.v
+        uses: actions/checkout@v5
+        with:
+          repository: valkyrie-language/valkyrie.v
+          ref: dev
+          path: valkyrie.v
       - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
