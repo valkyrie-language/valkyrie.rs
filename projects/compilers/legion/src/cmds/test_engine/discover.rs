@@ -121,14 +121,27 @@ pub fn extract_function_name(line: &str) -> Option<String> {
     if name.is_empty() { None } else { Some(name.to_string()) }
 }
 
-/// 扫描项目 `test/` 目录（含 `compile_only/` 子目录，供发现与 cov）。
+/// 扫描项目 `test/` 目录；单脚本工程则扫描项目根 `.v`。
 pub fn discover_project_tests(project_dir: &Path) -> Vec<DiscoveredFunction> {
     let mut files = Vec::new();
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         let _ = collect_all_test_v_files(&test_dir, &mut files);
+    } else if !project_dir.join("source").exists() {
+        let _ = collect_root_script_v_files(project_dir, &mut files);
     }
     discover_test_functions(&files)
+}
+
+fn collect_root_script_v_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "v") {
+            files.push(path);
+        }
+    }
+    Ok(())
 }
 
 fn collect_all_test_v_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
@@ -176,5 +189,27 @@ micro fib_30() -> unit {
     fn extract_name_from_micro_line() {
         assert_eq!(extract_function_name("micro add_two() -> unit").as_deref(), Some("add_two"));
         assert_eq!(extract_function_name("tests easy_if()").as_deref(), Some("easy_if"));
+    }
+
+    #[test]
+    fn discovers_single_script_project_root() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("solution.v"),
+            r#"
+[test]
+micro root_test() -> unit {
+}
+
+[benchmark]
+micro root_bench() -> unit {
+}
+"#,
+        )
+        .unwrap();
+
+        let functions = discover_project_tests(dir.path());
+        assert!(functions.iter().any(|f| f.name == "root_test" && f.is_test));
+        assert!(functions.iter().any(|f| f.name == "root_bench" && f.is_benchmark));
     }
 }
