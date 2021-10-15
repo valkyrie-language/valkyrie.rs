@@ -1,13 +1,14 @@
-//! Parse every legion.emitter `.v` via sibling checkout layout:
+//! Parse every nyar.emitter `.v` via sibling checkout layout:
 //!   <workspace>/valkyrie.rs/projects/vcc-data
-//!   <workspace>/valkyrie.v/projects/legion._/projects/legion.emitter/source
+//!   <workspace>/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
 //! Never hardcode machine-local absolute paths.
 use std::{fs, path::PathBuf};
-use vcc_data::text::valkyrie::parser::Parser;
+use vcc_data::text::valkyrie::AstParser;
+use vcc_data::text::valkyrie::parser::ParseError;
 
 #[test]
 fn parse_nyar_emitter_sources() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("valkyrie.v/projects/legion._/projects/legion.emitter/source");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("valkyrie.v/projects/nyar._/projects/nyar.emitter/source");
     let root = root.canonicalize().unwrap_or(root);
     assert!(root.is_dir(), "missing sibling emitter sources at {} (expect workspace layout valkyrie.rs + valkyrie.v)", root.display());
 
@@ -31,13 +32,13 @@ fn parse_nyar_emitter_sources() {
     for path in &files {
         let source = fs::read_to_string(path).unwrap();
         let display = path.strip_prefix(&root).unwrap_or(path);
-        match Parser::parse_root(&source) {
+        match AstParser::parse_root(&source) {
             Ok(_) => println!("OK {}", display.display()),
             Err(err) => {
                 failures += 1;
                 println!("ERR {}", display.display());
                 println!("  {err}");
-                if let Some(span) = err.span() {
+                if let ParseError::Invalid { span: Some(span), .. } = &err {
                     let start = span.start.min(source.len());
                     let end = span.end.min(source.len()).max(start);
                     let before = source[..start].rfind('\n').map(|i| i + 1).unwrap_or(0);
