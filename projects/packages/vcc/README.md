@@ -42,6 +42,49 @@ host.locateNativeCollect(); // path to vcc.<platform>.node or null
 host.resolveWasmMjs();      // absolute path to legion.mjs in the wasm collect
 ```
 
+### Benchmark (`@valkyrie-language/vcc/benchmark`)
+
+对比参考实现（TypeScript 等同算法）与 `legion bench -t node`（V 编译为 Wasm + Wasm 运行）：
+
+```js
+import {benchmarkSync, createBenchmarkRunner, WASM_NODE_BENCH_TARGET} from "@valkyrie-language/vcc/benchmark";
+
+const runner = createBenchmarkRunner({
+    valkyrieRsRoot: "E:/victory 胜利女神/valkyrie.rs",
+});
+
+// TS 侧：benchmarkSync 包裹参考函数
+const reference = benchmarkSync(() => solveInTypeScript(), {iterations: 2000});
+
+// V 侧：legion bench -t node → compileMs + runtimeMs（Wasm 入口执行 [benchmark]）
+const legion = runner.benchProject("./projects/problems/two-sum/solvers/valkyrie/two_sum", {
+    runs: 3,
+    target: WASM_NODE_BENCH_TARGET,
+});
+const comparison = runner.compareReference(reference.medianMs, legion);
+```
+
+| Export | Description |
+|--------|-------------|
+| `median` / `benchmarkSync` | 参考实现 median 毫秒采样 |
+| `parseLegionBenchTable` / `aggregateLegionBenchRows` | 解析 `legion bench` stdout |
+| `createBenchmarkRunner` | native / wasm Legion 路由 + `benchProject` + `compareReference` |
+| `runBenchmarkEntry` / `runBenchmarkSuite` | catalog 批量对比（参考实现 + Legion） |
+
+批量跑题集（如 leetcode / project-euler）：
+
+```js
+import {createBenchmarkRunner, runBenchmarkSuite} from "@valkyrie-language/vcc/benchmark";
+
+const runner = createBenchmarkRunner({valkyrieRsRoot: process.env.VALKYRIE_RS_ROOT});
+const report = runBenchmarkSuite(runner, catalog.map((p) => ({
+    id: p.id,
+    title: p.title,
+    projectDir: p.path,
+    measureReference: () => benchPython(p),
+})), {runs: 3, target: "node"});
+```
+
 ### Exports
 
 | Export                           | Description                                                    |
