@@ -8,6 +8,7 @@ use std::{
 use clap::Args;
 use miette::{Result, miette};
 
+use crate::cmds::project_input::resolve_project_path;
 use crate::{
     cmds::{
         report::{TestResultEntry, finish_standalone_report, render_test_report},
@@ -41,7 +42,7 @@ pub struct TestArgs {
 
 /// 执行 `legion test`。
 pub fn run(args: &TestArgs) -> Result<ExitCode> {
-    let project_dir = resolve_project_dir(&args.project_dir)?;
+    let project_dir = resolve_project_path(&args.project_dir)?;
     let targets = resolve_test_targets(args.target.as_deref());
     let workspace = LegionWorkspace::discover_for_project(&project_dir)?;
 
@@ -57,8 +58,16 @@ pub fn run(args: &TestArgs) -> Result<ExitCode> {
     println!();
     println!("测试报告：{passed} 通过, {failed} 失败, {skipped} 跳过");
 
-    let report_dir = project_dir.join("dist").join("legion-test");
-    let project_name = project_dir.file_name().and_then(|n| n.to_str()).unwrap_or("project");
+    let report_dir = if args.project_dir.extension().and_then(|e| e.to_str()) == Some("v") {
+        args.project_dir.parent().unwrap_or(&args.project_dir).join("dist").join("legion-test")
+    } else {
+        project_dir.join("dist").join("legion-test")
+    };
+    let project_name = project_dir
+        .file_stem()
+        .or_else(|| project_dir.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("project");
     render_test_report(&report_dir, project_name, &results)?;
     println!("HTML 测试报告已生成：{}", report_dir.join("index.html").display());
     finish_standalone_report(&report_dir, args.standalone)?;
@@ -105,14 +114,6 @@ fn run_workspace_tests(
 
     let _ = workspace_dir;
     (total_passed, total_failed, total_skipped, all_results)
-}
-
-fn resolve_project_dir(project_dir: &Path) -> Result<PathBuf> {
-    let canonical = project_dir.canonicalize().unwrap_or_else(|_| project_dir.to_path_buf());
-    if canonical.join("legion.von").is_file() || canonical.join("legions.von").is_file() || canonical.join("test").is_dir() {
-        return Ok(canonical);
-    }
-    Err(miette!("找不到项目 '{}'", project_dir.display()))
 }
 
 fn is_workspace_root(project_dir: &Path, workspace: &LegionWorkspace) -> bool {

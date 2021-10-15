@@ -91,6 +91,8 @@ pub struct LegionWorkspace {
     pub workspace_manifest: Option<WorkspaceManifest>,
     projects: BTreeMap<PathBuf, ProjectManifest>,
     projects_by_name: BTreeMap<String, PathBuf>,
+    /// `legion build solution.v` — 内嵌清单的单脚本模式。
+    pub single_script: Option<crate::script::SingleScriptContext>,
 }
 
 #[derive(Debug)]
@@ -111,6 +113,7 @@ pub enum PlannerError {
     GitDependencyCheckoutFailed { project: String, dependency: String, git_url: String, reason: String },
     UnknownHostProviderContract { provider: String, contract: String, source_file: PathBuf, line: usize },
     ConflictingHostProviders { contract: String, providers: Vec<String> },
+    Script(crate::script::ScriptError),
 }
 
 impl Display for PlannerError {
@@ -174,6 +177,7 @@ impl Display for PlannerError {
             Self::ConflictingHostProviders { contract, providers } => {
                 write!(f, "host contract '{}' has multiple visible providers: {}", contract, providers.join(", "))
             }
+            Self::Script(error) => Display::fmt(error, f),
         }
     }
 }
@@ -199,6 +203,7 @@ impl Diagnostic for PlannerError {
             PlannerError::GitDependencyCheckoutFailed { .. } => "legion::planner::git_dependency_checkout_failed",
             PlannerError::UnknownHostProviderContract { .. } => "legion::planner::unknown_host_provider_contract",
             PlannerError::ConflictingHostProviders { .. } => "legion::planner::conflicting_host_providers",
+            PlannerError::Script(_) => "legion::script",
         }))
     }
 
@@ -232,12 +237,14 @@ impl Diagnostic for PlannerError {
             PlannerError::ConflictingHostProviders { .. } => {
                 "请收窄有效依赖闭包，或移除重复的 provider，保证每个 `host_contract` 最多只有一个可见实现"
             }
+            PlannerError::Script(_) => "请在 `.v` 单脚本头部使用 `# ```legion` 内嵌清单，或改用 sidecar `legion.von`",
         }))
     }
 
     fn diagnostic_source(&self) -> Option<&dyn Diagnostic> {
         match self {
             PlannerError::Manifest(error) => Some(error),
+            PlannerError::Script(error) => Some(error),
             _ => None,
         }
     }
@@ -255,6 +262,12 @@ impl From<ManifestError> for PlannerError {
     }
 }
 
+impl From<crate::script::ScriptError> for PlannerError {
+    fn from(value: crate::script::ScriptError) -> Self {
+        Self::Script(value)
+    }
+}
+
 impl LegionWorkspace {
     pub fn discover(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
@@ -266,7 +279,23 @@ impl LegionWorkspace {
         let mut projects_by_name = BTreeMap::new();
         register_workspace_members(&workspace_root, &workspace_manifest, &mut projects, &mut projects_by_name)?;
 
-        Ok(Self { root_dir: workspace_root, workspace_manifest: Some(workspace_manifest), projects, projects_by_name })
+        Ok(Self { root_dir: workspace_root, workspace_manifest: Some(workspace_manifest), projects, projects_by_name, single_script: None })
+    }
+
+    fn workspace_from_single_script(ctx: crate::script::SingleScriptContext) -> Result<Self, PlannerError> {
+        let project_dir = ctx.project_dir.clone();
+        let mut projects = BTreeMap::new();
+        let canonical = canonicalize_lossy(&project_dir);
+        projects.insert(canonical.clone(), ctx.manifest.clone());
+        let mut projects_by_name = BTreeMap::new();
+        projects_by_name.insert(ctx.manifest.name.clone(), canonical);
+        Ok(Self {
+            root_dir: project_dir,
+            workspace_manifest: None,
+            projects,
+            projects_by_name,
+            single_script: Some(ctx),
+        })
     }
 
     pub fn discover_for_project(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
@@ -275,9 +304,28 @@ impl LegionWorkspace {
             return Self::discover(workspace_root);
         }
 
+        if crate::script::is_script_path(start) {
+            if let Some(ctx) = crate::script::try_load_single_script(start).map_err(PlannerError::Script)? {
+                return Self::workspace_from_single_script(ctx);
+            }
+        }
+
         let project_dir = resolve_project_root(start).ok_or_else(|| PlannerError::MissingProjectManifest(search_start_dir(start)))?;
 
-        Ok(Self { root_dir: project_dir, workspace_manifest: None, projects: BTreeMap::new(), projects_by_name: BTreeMap::new() })
+        let sidecar = project_dir.join("solution.v");
+        if sidecar.is_file() {
+            if let Some(ctx) = crate::script::try_load_single_script(&sidecar).map_err(PlannerError::Script)? {
+                return Self::workspace_from_single_script(ctx);
+            }
+        }
+
+        Ok(Self {
+            root_dir: project_dir.clone(),
+            workspace_manifest: None,
+            projects: BTreeMap::new(),
+            projects_by_name: BTreeMap::new(),
+            single_script: None,
+        })
     }
 
     pub fn project_manifest(&self, project_dir: &Path) -> Option<&ProjectManifest> {
@@ -297,6 +345,10 @@ impl LegionWorkspace {
     }
 
     pub fn build_plan(&self, request: &BuildRequest) -> Result<BuildPlan, PlannerError> {
+        if let Some(ctx) = &self.single_script {
+            return self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request);
+        }
+
         let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
         let manifest = self.project_manifest(&project_dir).ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?;
         let build_target = select_build_target(manifest, &request.target)
@@ -318,7 +370,12 @@ impl LegionWorkspace {
             project: PlannedProject {
                 name: manifest.name.clone(),
                 manifest_dir: project_dir.clone(),
-                manifest_path: project_dir.join("legion.von"),
+                manifest_path: self
+                    .single_script
+                    .as_ref()
+                    .filter(|ctx| same_path(&ctx.project_dir, &project_dir))
+                    .map(|ctx| ctx.script_path.clone())
+                    .unwrap_or_else(|| project_dir.join("legion.von")),
                 source_files,
                 semantic_source_groups,
                 host_contracts: host_inventory.contracts,
@@ -331,6 +388,13 @@ impl LegionWorkspace {
     }
 
     pub fn build_plan_with_local_fallback(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
+        if let Some(ctx) = &self.single_script {
+            return Ok((
+                self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request)?,
+                ProjectResolutionMode::Script,
+            ));
+        }
+
         let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
         if let Some(manifest) = self.project_manifest(&project_dir) {
             return Ok((self.build_plan_for_manifest(project_dir, manifest, request)?, ProjectResolutionMode::Workspace));
@@ -348,18 +412,21 @@ impl LegionWorkspace {
 
     /// 构造测试/基准编译计划：始终允许指定 target，并合并 `source/` + `test/` 源文件。
     pub fn build_test_plan(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
-        let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
-        let (manifest, mode) = if let Some(manifest) = self.project_manifest(&project_dir) {
-            (manifest.clone(), ProjectResolutionMode::Workspace)
-        }
-        else {
-            let manifest_path = project_dir.join("legion.von");
-            if !manifest_path.exists() {
-                return Err(PlannerError::MissingProjectManifest(project_dir));
+        let (project_dir, manifest, mode) = if let Some(ctx) = &self.single_script {
+            (ctx.project_dir.clone(), ctx.manifest.clone(), ProjectResolutionMode::Script)
+        } else {
+            let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
+            if let Some(manifest) = self.project_manifest(&project_dir) {
+                (project_dir, manifest.clone(), ProjectResolutionMode::Workspace)
+            } else {
+                let manifest_path = project_dir.join("legion.von");
+                if !manifest_path.exists() {
+                    return Err(PlannerError::MissingProjectManifest(project_dir));
+                }
+                let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
+                let mode = if self.workspace_manifest.is_some() { ProjectResolutionMode::Package } else { ProjectResolutionMode::Script };
+                (project_dir, manifest, mode)
             }
-            let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
-            let mode = if self.workspace_manifest.is_some() { ProjectResolutionMode::Package } else { ProjectResolutionMode::Script };
-            (manifest, mode)
         };
 
         let mut build_target = select_build_target(&manifest, &request.target)
@@ -387,7 +454,11 @@ impl LegionWorkspace {
                 project: PlannedProject {
                     name: manifest.name.clone(),
                     manifest_dir: project_dir.clone(),
-                    manifest_path: project_dir.join("legion.von"),
+                    manifest_path: self
+                        .single_script
+                        .as_ref()
+                        .map(|ctx| ctx.script_path.clone())
+                        .unwrap_or_else(|| project_dir.join("legion.von")),
                     source_files,
                     semantic_source_groups,
                     host_contracts: host_inventory.contracts,
@@ -419,6 +490,12 @@ impl LegionWorkspace {
             return Ok(Vec::new());
         }
         visited.insert(canonical_dir.clone());
+
+        if let Some(ctx) = &self.single_script {
+            if same_path(project_dir, &ctx.project_dir) {
+                return Ok(vec![ctx.script_path.clone()]);
+            }
+        }
 
         // 收集当前项目自身的源文件，并应用该项目针对当前 target 的 exclude_*。
         let mut all_files = collect_source_files(&canonical_dir)?;
@@ -558,7 +635,12 @@ impl LegionWorkspace {
             project: PlannedProject {
                 name: manifest.name.clone(),
                 manifest_dir: project_dir.clone(),
-                manifest_path: project_dir.join("legion.von"),
+                manifest_path: self
+                    .single_script
+                    .as_ref()
+                    .filter(|ctx| same_path(&ctx.project_dir, &project_dir))
+                    .map(|ctx| ctx.script_path.clone())
+                    .unwrap_or_else(|| project_dir.join("legion.von")),
                 source_files,
                 semantic_source_groups,
                 host_contracts: host_inventory.contracts,
@@ -1006,9 +1088,28 @@ fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError
     let source_dir = project_dir.join("source");
     if source_dir.exists() {
         collect_v_files(&source_dir, &mut files)?;
+    } else {
+        collect_project_root_v_files(project_dir, &mut files)?;
     }
     files.sort();
     Ok(files)
+}
+
+/// 单脚本工程：项目根目录下的 `.v`（无 `source/` / `test/` 目录时使用）。
+pub fn collect_project_root_v_files(project_dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), PlannerError> {
+    for entry in fs::read_dir(project_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "v") {
+            files.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// 项目是否采用单脚本布局（根目录 `.v`，无 `source/`）。
+pub fn project_uses_single_script_layout(project_dir: &Path) -> bool {
+    !project_dir.join("source").exists()
 }
 
 /// Apply `build[].exclude_directories` / `exclude_files` relative to `project_dir`.
@@ -1054,12 +1155,14 @@ pub fn collect_test_build_sources(project_dir: &Path) -> Result<Vec<PathBuf>, Pl
     Ok(files)
 }
 
-/// 仅收集项目 `test/` 下的 `.v` 文件。
+/// 仅收集项目 `test/` 下的 `.v` 文件；单脚本工程则返回根目录 `.v`。
 pub fn collect_test_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let mut files = Vec::new();
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files(&test_dir, &mut files)?;
+    } else if project_uses_single_script_layout(project_dir) {
+        collect_project_root_v_files(project_dir, &mut files)?;
     }
     files.sort();
     Ok(files)

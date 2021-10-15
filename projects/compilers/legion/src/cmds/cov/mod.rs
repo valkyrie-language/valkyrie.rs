@@ -12,8 +12,12 @@ use miette::{IntoDiagnostic, Result, WrapErr, miette};
 use serde_json::json;
 
 use crate::{
-    cmds::report::{CoverageFeatureEntry, CoverageReport, atomic_write_all_text, finish_standalone_report, render_coverage_report},
+    cmds::{
+        project_input::resolve_project_path,
+        report::{CoverageFeatureEntry, CoverageReport, atomic_write_all_text, finish_standalone_report, render_coverage_report},
+    },
     planner::{LegionWorkspace, collect_project_v_files},
+    script,
 };
 
 /// 已知语法特性（标识 → 显示名）。
@@ -61,11 +65,16 @@ pub struct CovArgs {
 
 /// 执行 `legion cov` / `legion coverage`。
 pub fn run(args: &CovArgs) -> Result<ExitCode> {
-    let project_dir = resolve_project_dir(&args.project_dir)?;
-    let workspace = LegionWorkspace::discover_for_project(&project_dir).ok();
+    let project_input = resolve_project_path(&args.project_dir)?;
+    let workspace = LegionWorkspace::discover_for_project(&project_input).ok();
+    let scan_root = if script::is_script_path(&project_input) {
+        project_input.parent().map(Path::to_path_buf).unwrap_or_else(|| project_input.clone())
+    } else {
+        project_input.clone()
+    };
 
     let (workspace_dir, members) = if let Some(workspace) = &workspace {
-        if workspace.workspace_manifest.is_some() && same_path(&project_dir, &workspace.root_dir) {
+        if workspace.workspace_manifest.is_some() && same_path(&scan_root, &workspace.root_dir) {
             let members = workspace.member_manifest_dirs();
             if members.is_empty() {
                 return Err(miette!("legions.von 中无 members"));
@@ -73,11 +82,11 @@ pub fn run(args: &CovArgs) -> Result<ExitCode> {
             (workspace.root_dir.clone(), members)
         }
         else {
-            (project_dir.clone(), vec![project_dir.clone()])
+            (scan_root.clone(), vec![scan_root.clone()])
         }
     }
     else {
-        (project_dir.clone(), vec![project_dir.clone()])
+        (scan_root.clone(), vec![scan_root.clone()])
     };
 
     run_coverage_for_members(&workspace_dir, &members, args.verbose, args.standalone)
@@ -285,14 +294,6 @@ fn build_coverage_json(report: &CoverageReport) -> String {
         "features": features,
     }))
     .unwrap_or_else(|_| "{}".into())
-}
-
-fn resolve_project_dir(project_dir: &Path) -> Result<PathBuf> {
-    let canonical = project_dir.canonicalize().unwrap_or_else(|_| project_dir.to_path_buf());
-    if canonical.join("legion.von").is_file() || canonical.join("legions.von").is_file() || canonical.join("source").is_dir() {
-        return Ok(canonical);
-    }
-    Err(miette!("找不到项目 '{}'", project_dir.display()))
 }
 
 fn same_path(left: &Path, right: &Path) -> bool {

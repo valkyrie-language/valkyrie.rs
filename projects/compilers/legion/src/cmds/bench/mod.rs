@@ -10,6 +10,7 @@ use miette::{Result, miette};
 
 use crate::{
     cmds::{
+        project_input::resolve_project_path,
         report::{BenchReport, BenchResultRow, finish_standalone_report, render_bench_report},
         test_engine::{bench_project, resolve_test_targets},
     },
@@ -38,7 +39,7 @@ pub struct BenchArgs {
 
 /// 执行 `legion bench`。
 pub fn run(args: &BenchArgs) -> Result<ExitCode> {
-    let project_dir = resolve_project_dir(&args.project_dir)?;
+    let project_dir = resolve_project_path(&args.project_dir)?;
     let targets = resolve_test_targets(args.target.as_deref());
     let workspace = LegionWorkspace::discover_for_project(&project_dir)?;
 
@@ -54,7 +55,11 @@ pub fn run(args: &BenchArgs) -> Result<ExitCode> {
     print_bench_report(&results, args.runs);
 
     let report = BenchReport { runs: args.runs, rows: results };
-    let report_dir = project_dir.join("dist").join("legion-benchmark");
+    let report_dir = if args.project_dir.extension().and_then(|e| e.to_str()) == Some("v") {
+        args.project_dir.parent().unwrap_or(&args.project_dir).join("dist").join("legion-benchmark")
+    } else {
+        project_dir.join("dist").join("legion-benchmark")
+    };
     render_bench_report(&report_dir, &report)?;
     if report_dir.join("index.html").exists() {
         println!("  HTML 报告已生成: {}", report_dir.join("index.html").display());
@@ -84,14 +89,6 @@ fn print_bench_report(results: &[BenchResultRow], runs: usize) {
         println!("{:<20} {:<14} {:<8} {:8.1}   {:8.1}", row.project, row.test, row.target, row.compile_ms, row.runtime_ms);
     }
     println!("{}", "-".repeat(72));
-}
-
-fn resolve_project_dir(project_dir: &Path) -> Result<PathBuf> {
-    let canonical = project_dir.canonicalize().unwrap_or_else(|_| project_dir.to_path_buf());
-    if canonical.join("legion.von").is_file() || canonical.join("legions.von").is_file() || canonical.join("test").is_dir() {
-        return Ok(canonical);
-    }
-    Err(miette!("找不到项目 '{}'", project_dir.display()))
 }
 
 fn is_workspace_root(project_dir: &Path, workspace: &LegionWorkspace) -> bool {

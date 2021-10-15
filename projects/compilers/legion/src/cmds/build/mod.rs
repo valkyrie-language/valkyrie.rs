@@ -33,11 +33,13 @@ use crate::{
         compute_artifact_hash, store_cached_build, try_restore_cached_build,
     },
     cmds::{
+        project_input::resolve_project_path,
         run::{ExecutionManifest, RunContract},
         source_hygiene,
     },
     manifest::ProjectManifest,
     planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
+    script,
     unity_export, write_von_indented,
 };
 
@@ -67,12 +69,13 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
         return run_workspace_members_in_parallel(args);
     }
 
-    let workspace = LegionWorkspace::discover_for_project(&args.project_dir)?;
-    if workspace.is_workspace_only_root(&args.project_dir) {
+    let project_input = resolve_project_path(&args.project_dir)?;
+    let workspace = LegionWorkspace::discover_for_project(&project_input)?;
+    if workspace.is_workspace_only_root(&project_input) {
         return run_workspace_members_in_parallel(args);
     }
 
-    let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
+    let request = BuildRequest { project_dir: project_input, target: args.target.clone(), output_dir: args.output_dir.clone() };
     let (plan, resolution_mode) = workspace.build_plan_with_local_fallback(&request)?;
 
     println!("workspace: {}", plan.workspace_root.display());
@@ -86,7 +89,7 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
         }
         ProjectResolutionMode::Script => {
             println!("mode: script");
-            println!("note: 未发现 `legions.von`，已按单文件脚本项目模式解析当前目录");
+            println!("note: 已按内嵌 `# ```legion` 的单脚本 `.v` 解析");
         }
     }
     println!("project: {}", plan.project.name);
@@ -118,9 +121,18 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     print_artifacts(&plan.output_dir, &report.artifacts);
     materialize_node_bootstrap_aliases(&plan.output_dir, &plan.project.build_target.target)?;
 
-    let manifest_source = fs::read_to_string(&plan.project.manifest_path)
-        .into_diagnostic()
-        .wrap_err_with(|| format!("读取项目清单失败：{}", plan.project.manifest_path.display()))?;
+    let manifest_source = if script::is_script_path(&plan.project.manifest_path) {
+        let script_source = fs::read_to_string(&plan.project.manifest_path)
+            .into_diagnostic()
+            .wrap_err_with(|| format!("读取单脚本失败：{}", plan.project.manifest_path.display()))?;
+        script::extract_embedded_manifest(&script_source, &plan.project.manifest_path)
+            .map_err(|error| Report::from(error))?
+            .ok_or_else(|| miette!("单脚本 `{}` 缺少内嵌 `# ```legion` 块", plan.project.manifest_path.display()))?
+    } else {
+        fs::read_to_string(&plan.project.manifest_path)
+            .into_diagnostic()
+            .wrap_err_with(|| format!("读取项目清单失败：{}", plan.project.manifest_path.display()))?
+    };
     let project_manifest = ProjectManifest::parse(&manifest_source)?;
     if let Some(plugin) = &project_manifest.build_plugin {
         unity_export::export_unity_project(&plan, &report, plugin)?;

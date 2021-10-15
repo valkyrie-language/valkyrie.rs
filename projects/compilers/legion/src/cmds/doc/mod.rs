@@ -16,7 +16,7 @@ use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde_json::json;
 
-use crate::planner::LegionWorkspace;
+use crate::{cmds::project_input::resolve_project_path, planner::LegionWorkspace, script};
 
 pub use discover::discover_sections;
 
@@ -46,22 +46,19 @@ pub fn run(args: &DocArgs) -> Result<ExitCode> {
         output_dir
     }
     else {
-        let project_dir = resolve_project_dir(&args.project_dir)?;
-        let output_dir = args.output_dir.clone().unwrap_or_else(|| project_dir.join("dist/legion-document"));
-        run_project_doc(&project_dir, &output_dir, args.verbose)?;
+        let project_input = resolve_project_path(&args.project_dir)?;
+        let scan_root = if script::is_script_path(&project_input) {
+            project_input.parent().map(Path::to_path_buf).unwrap_or_else(|| project_input.clone())
+        } else {
+            project_input.clone()
+        };
+        let output_dir = args.output_dir.clone().unwrap_or_else(|| scan_root.join("dist/legion-document"));
+        run_project_doc(&scan_root, &output_dir, args.verbose)?;
         output_dir
     };
 
     println!("文档已生成到 {}", output_dir.display());
     Ok(ExitCode::SUCCESS)
-}
-
-fn resolve_project_dir(project_dir: &Path) -> Result<PathBuf> {
-    let canonical = project_dir.canonicalize().unwrap_or_else(|_| project_dir.to_path_buf());
-    if canonical.join("legion.von").is_file() || discover::has_documentation(&canonical) {
-        return Ok(canonical);
-    }
-    Err(miette::miette!("未找到项目目录（缺少 legion.von 或 documentation/pages）：{}", canonical.display()))
 }
 
 fn run_workspace_doc(workspace: &LegionWorkspace, output_dir: &Path, verbose: bool) -> Result<()> {

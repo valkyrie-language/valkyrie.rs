@@ -12,6 +12,7 @@ pub mod fmt;
 pub mod install;
 pub mod lint;
 pub mod login;
+pub mod project_input;
 pub mod publish;
 pub mod registry;
 pub mod report;
