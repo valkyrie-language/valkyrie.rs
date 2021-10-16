@@ -265,6 +265,11 @@ impl DependencySpec {
         match self {
             Self::Disabled => DependencySourcePreference::Auto,
             Self::Workspace => DependencySourcePreference::Workspace,
+            Self::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None, git: None, git_ref: None }
+                if version == "workspace" =>
+            {
+                DependencySourcePreference::Workspace
+            }
             Self::Detailed { source, path, git, .. } => {
                 match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
                     Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
