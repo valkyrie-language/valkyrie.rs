@@ -270,7 +270,7 @@ fn find_failing_manifests() {
         }
     };
     let mut files = Vec::new();
-    collect_legion_von_files(root, &mut files);
+    collect_legion_von_files(&root, &mut files);
 
     println!("在 {} 下找到 {} 个 `legion.von` 文件", root.display(), files.len());
 
