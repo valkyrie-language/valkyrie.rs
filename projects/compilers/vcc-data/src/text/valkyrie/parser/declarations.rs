@@ -1186,11 +1186,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_attribute_argument(&mut self) -> Result<AttributeArgument, ParseError> {
-        if matches!(self.current().kind, TokenKind::Identifier) && self.nth_is_symbol(1, TokenKind::Equal) {
-            let key = self.expect_identifier_text()?.to_string();
-            self.expect_symbol(TokenKind::Equal)?;
-            let value = self.parse_expression_bp(0)?;
-            return Ok(AttributeArgument { key: Some(key), value });
+        if self.check_attribute_named_argument_start() {
+            let key = self.expect_member_name_text()?;
+            if self.match_symbol(TokenKind::Equal) || self.match_symbol(TokenKind::Colon) {
+                let value = self.parse_expression_bp(0)?;
+                return Ok(AttributeArgument { key: Some(key), value });
+            }
+            return Err(self.error_here("expected '=' or ':' after attribute argument key"));
         }
 
         let value = self.parse_expression_bp(0)?;

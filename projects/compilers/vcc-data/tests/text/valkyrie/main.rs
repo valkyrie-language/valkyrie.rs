@@ -1,3 +1,4 @@
+mod attribute_arguments;
 mod associated_type;
 mod enums_flags;
 mod fixtures;

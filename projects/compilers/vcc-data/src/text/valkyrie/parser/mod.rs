@@ -645,6 +645,15 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// 属性命名参数起始：`name = "x"` / `case: "camelCase"`（关键字键须后跟 `:` 或 `=`）。
+    fn check_attribute_named_argument_start(&self) -> bool {
+        let has_separator = self.nth_is_symbol(1, TokenKind::Equal) || self.nth_is_symbol(1, TokenKind::Colon);
+        match self.current().kind {
+            TokenKind::Identifier | TokenKind::Keyword(_) => has_separator,
+            _ => false,
+        }
+    }
+
     fn parse_label_name(&mut self) -> Result<String, ParseError> {
         self.expect_symbol(TokenKind::Apostrophe)?;
         Ok(self.expect_identifier_text()?.to_string())
