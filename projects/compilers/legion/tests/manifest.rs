@@ -10,6 +10,20 @@ fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
 }
 
 #[test]
+fn parses_project_manifest_entry_field() {
+    let source = r#"
+    {
+        name: "leetcode.two_sum",
+        entry: "solution.v",
+        build: [{ target: "node" }]
+    }
+    "#;
+
+    let manifest = ProjectManifest::parse(source).unwrap();
+    assert_eq!(manifest.entry.as_deref(), Some("solution.v"));
+}
+
+#[test]
 fn parses_project_manifest_dependencies() {
     let source = r#"
     {

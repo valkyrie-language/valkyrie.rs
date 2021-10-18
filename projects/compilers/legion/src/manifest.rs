@@ -193,6 +193,9 @@ pub struct ProjectManifest {
     pub version: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
+    /// 单脚本 / library 工程的显式入口 `.v` 路径（相对项目根）。
+    #[serde(default)]
+    pub entry: Option<String>,
     #[serde(default)]
     pub auto_link: AutoLinkConfig,
     #[serde(default)]

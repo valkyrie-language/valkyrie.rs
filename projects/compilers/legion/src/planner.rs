@@ -498,7 +498,7 @@ impl LegionWorkspace {
         }
 
         // 收集当前项目自身的源文件，并应用该项目针对当前 target 的 exclude_*。
-        let mut all_files = collect_source_files(&canonical_dir)?;
+        let mut all_files = collect_source_files(&canonical_dir, manifest.entry.as_deref())?;
         let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
         all_files = filter_excluded_sources(all_files, &canonical_dir, &local_build);
 
@@ -557,7 +557,7 @@ impl LegionWorkspace {
                         }
                     }
                     else {
-                        all_files.extend(collect_source_files(&install_dir)?);
+                        all_files.extend(collect_source_files(&install_dir, None)?);
                     }
                 }
                 ResolvedDependencySource::MissingImplicit => {}
@@ -602,7 +602,8 @@ impl LegionWorkspace {
             self.collect_semantic_source_groups_inner(&dependency.manifest_dir, &dependency_manifest, build_target, visited, groups)?;
         }
         let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
-        let source_files = filter_excluded_sources(collect_source_files(&manifest_dir)?, &manifest_dir, &local_build);
+        let source_files =
+            filter_excluded_sources(collect_source_files(&manifest_dir, manifest.entry.as_deref())?, &manifest_dir, &local_build);
         groups.push(PlannedSemanticSourceGroup {
             name: manifest.name.clone(),
             manifest_dir,
@@ -1083,13 +1084,25 @@ fn select_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> 
     manifest.build.iter().find(|item| item.target == *target).cloned()
 }
 
-fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
+fn collect_source_files(project_dir: &Path, entry: Option<&str>) -> Result<Vec<PathBuf>, PlannerError> {
+    let project_dir = path_for_local_fs(project_dir);
+    if let Some(entry) = entry {
+        let path = project_dir.join(entry);
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "v") {
+            return Ok(vec![path]);
+        }
+        return Err(PlannerError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("legion.von entry '{}' not found under {}", entry, project_dir.display()),
+        )));
+    }
+
     let mut files = Vec::new();
     let source_dir = project_dir.join("source");
     if source_dir.exists() {
         collect_v_files(&source_dir, &mut files)?;
     } else {
-        collect_project_root_v_files(project_dir, &mut files)?;
+        collect_project_root_v_files(&project_dir, &mut files)?;
     }
     files.sort();
     Ok(files)
@@ -1097,7 +1110,8 @@ fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError
 
 /// 单脚本工程：项目根目录下的 `.v`（无 `source/` / `test/` 目录时使用）。
 pub fn collect_project_root_v_files(project_dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), PlannerError> {
-    for entry in fs::read_dir(project_dir)? {
+    let project_dir = path_for_local_fs(project_dir);
+    for entry in fs::read_dir(&project_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().is_some_and(|ext| ext == "v") {
@@ -1145,7 +1159,7 @@ fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target
 
 /// 收集项目 `source/` + `test/` 下的全部 `.v` 文件（测试编译专用）。
 pub fn collect_test_build_sources(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
-    let mut files = collect_source_files(project_dir)?;
+    let mut files = collect_source_files(project_dir, None)?;
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files(&test_dir, &mut files)?;
@@ -1170,7 +1184,7 @@ pub fn collect_test_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerE
 
 /// 收集项目 `source/` 与 `test/` 中全部 `.v` 文件（覆盖率扫描，含 `compile_only/`）。
 pub fn collect_project_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
-    let mut files = collect_source_files(project_dir)?;
+    let mut files = collect_source_files(project_dir, None)?;
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files_including_compile_only(&test_dir, &mut files)?;
@@ -1196,7 +1210,8 @@ fn collect_v_files_including_compile_only(dir: &Path, files: &mut Vec<PathBuf>) 
 }
 
 fn collect_v_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), PlannerError> {
-    for entry in fs::read_dir(dir)? {
+    let dir = path_for_local_fs(dir);
+    for entry in fs::read_dir(&dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
@@ -1232,6 +1247,16 @@ fn find_workspace_root(start: &Path) -> Option<PathBuf> {
 
 fn canonicalize_lossy(path: &Path) -> PathBuf {
     fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Windows `canonicalize` 常返回 `\\?\` 扩展路径；部分 `read_dir` 调用方无法枚举，需还原为常规路径。
+fn path_for_local_fs(path: &Path) -> PathBuf {
+    let raw = path.to_string_lossy();
+    if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        path.to_path_buf()
+    }
 }
 
 fn search_start_dir(start: &Path) -> PathBuf {
