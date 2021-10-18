@@ -183,29 +183,95 @@ fn rewrite_script_decls_for_signals(script: &str, bindings: &[ScriptBinding]) ->
 fn rewrite_micro_body_for_signals(block: &str, bindings: &[ScriptBinding]) -> String {
     let mut out = String::new();
     for line in block.lines() {
-        let trimmed = line.trim();
-        let mut replaced = false;
-        for binding in bindings.iter().filter(|b| b.reactive) {
-            let prefix = format!("{} =", binding.name);
-            if trimmed.starts_with(&prefix) {
-                let rhs = trimmed[prefix.len()..].trim().trim_end_matches(';');
-                let setter = match binding.value_type {
-                    SignalValueType::I32 => format!("    sig_set_i32({}, {rhs});", binding.sig_var),
-                    SignalValueType::Utf8 => format!("    sig_set_utf8({}, {rhs});", binding.sig_var),
-                    SignalValueType::Bool => format!("    sig_set_bool({}, {rhs});", binding.sig_var),
-                };
-                out.push_str(&setter);
-                out.push('\n');
-                replaced = true;
-                break;
-            }
-        }
-        if !replaced {
-            out.push_str(line);
-            out.push('\n');
-        }
+        out.push_str(&rewrite_micro_source_line(line, bindings));
+        out.push('\n');
     }
     out
+}
+
+fn rewrite_micro_source_line(line: &str, bindings: &[ScriptBinding]) -> String {
+    if let Some(open_brace) = line.find('{') {
+        if let Some(close_brace) = line.rfind('}') {
+            if close_brace > open_brace {
+                let header = &line[..open_brace + 1];
+                let body = line[open_brace + 1..close_brace].trim();
+                let footer = &line[close_brace..];
+                if !body.is_empty() {
+                    if let Some(rewritten) = rewrite_signal_statement(body, bindings) {
+                        return format!("{header}{rewritten}{footer}");
+                    }
+                }
+            }
+        }
+    }
+    let trimmed = line.trim();
+    if let Some(rewritten) = rewrite_signal_statement(trimmed, bindings) {
+        let indent: String = line.chars().take_while(|ch| ch.is_whitespace()).collect();
+        format!("{indent}{rewritten}")
+    }
+    else {
+        substitute_reactive_reads_in_line(line, bindings)
+    }
+}
+
+fn rewrite_signal_statement(statement: &str, bindings: &[ScriptBinding]) -> Option<String> {
+    let trimmed = statement.trim().trim_end_matches(';');
+    for binding in bindings.iter().filter(|binding| binding.reactive) {
+        let prefix = format!("{} =", binding.name);
+        if trimmed.starts_with(&prefix) {
+            let rhs = trimmed[prefix.len()..].trim();
+            let rhs = substitute_reactive_reads(rhs, bindings);
+            let setter = match binding.value_type {
+                SignalValueType::I32 => format!("sig_set_i32({}, {rhs});", binding.sig_var),
+                SignalValueType::Utf8 => format!("sig_set_utf8({}, {rhs});", binding.sig_var),
+                SignalValueType::Bool => format!("sig_set_bool({}, {rhs});", binding.sig_var),
+            };
+            return Some(setter);
+        }
+    }
+    None
+}
+
+fn substitute_reactive_reads_in_line(line: &str, bindings: &[ScriptBinding]) -> String {
+    let trimmed = line.trim();
+    if trimmed.starts_with("micro ") || trimmed.starts_with("class ") || trimmed.starts_with("trait ") {
+        return line.to_string();
+    }
+    substitute_reactive_reads(line, bindings)
+}
+
+fn substitute_reactive_reads(expr: &str, bindings: &[ScriptBinding]) -> String {
+    let mut out = expr.to_string();
+    for binding in bindings.iter().filter(|binding| binding.reactive) {
+        out = replace_binding_ident(&out, &binding.name, &binding.read_expr());
+    }
+    out
+}
+
+fn replace_binding_ident(expr: &str, name: &str, replacement: &str) -> String {
+    let mut out = String::new();
+    let name_bytes = name.as_bytes();
+    let bytes = expr.as_bytes();
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if bytes[index..].starts_with(name_bytes) {
+            let before_ok = index == 0 || !is_ident_char(bytes[index - 1]);
+            let after_index = index + name_bytes.len();
+            let after_ok = after_index >= bytes.len() || !is_ident_char(bytes[after_index]);
+            if before_ok && after_ok {
+                out.push_str(replacement);
+                index = after_index;
+                continue;
+            }
+        }
+        out.push(bytes[index] as char);
+        index += 1;
+    }
+    out
+}
+
+fn is_ident_char(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
 /// 提取 script 块中的顶层 `micro` / `class` / `trait` 声明（含完整函数体）。
@@ -793,6 +859,24 @@ mod tests {
                 _ => None,
             })
             .expect("element")
+    }
+
+    #[test]
+    fn rewrites_single_line_handler_for_reactive_signals() {
+        let lowered = lower_source(
+            r#"<widget counter>
+    <Text>{count}</Text>
+    <Button @click="on_tap">+1</Button>
+</widget>
+<script>
+let mut count: i32 = 0
+micro on_tap() { count = count + 1 }
+</script>"#,
+        );
+        assert!(lowered.synthetic_v.contains("micro on_tap()"));
+        assert!(lowered.synthetic_v.contains("sig_set_i32"));
+        assert!(lowered.synthetic_v.contains("sig_get_i32"));
+        assert!(!lowered.synthetic_v.contains("count = count"));
     }
 
     #[test]

@@ -40,6 +40,7 @@ pub fn build_awsl_mp_source(components: &[LoweredComponent]) -> String {
     let mut out = String::from(MP_SIG_PRELUDE);
     out.push_str("micro awsl_key_none(): utf8 { return \"\" }\n\n");
     for component in components {
+        emit_module_level_signal_slots(&mut out, component);
         emit_mp_component_init(&mut out, component);
         if !component.synthetic_v.trim().is_empty() {
             out.push_str(&component.synthetic_v);
@@ -51,13 +52,33 @@ pub fn build_awsl_mp_source(components: &[LoweredComponent]) -> String {
     out
 }
 
+fn emit_module_level_signal_slots(out: &mut String, component: &LoweredComponent) {
+    let mut wrote = false;
+    for binding in &component.script_bindings {
+        if !binding.reactive {
+            continue;
+        }
+        writeln!(out, "{}", binding.as_v_let_line()).unwrap();
+        wrote = true;
+    }
+    if wrote {
+        writeln!(out).unwrap();
+    }
+}
+
 fn emit_mp_component_init(out: &mut String, component: &LoweredComponent) {
     let route = sanitize_route(&component.route_name);
     writeln!(out, "micro awsl_mp_init_{route}() {{").unwrap();
     for binding in &component.script_bindings {
-        if binding.reactive {
-            writeln!(out, "    {}", binding.as_v_let_line()).unwrap();
+        if !binding.reactive {
+            continue;
         }
+        let reset = match binding.value_type {
+            SignalValueType::I32 => format!("sig_set_i32({}, {});", binding.sig_var, binding.init_expr),
+            SignalValueType::Utf8 => format!("sig_set_utf8({}, {});", binding.sig_var, binding.init_expr),
+            SignalValueType::Bool => format!("sig_set_bool({}, {});", binding.sig_var, binding.init_expr),
+        };
+        writeln!(out, "    {reset}").unwrap();
     }
     writeln!(out, "}}\n").unwrap();
 }
@@ -67,6 +88,7 @@ fn build_awsl_source_with_prelude(components: &[LoweredComponent], dom_or_mobile
     out.push_str(reactive);
     out.push_str("micro awsl_key_none(): utf8 { return \"\" }\n\n");
     for component in components {
+        emit_module_level_signal_slots(&mut out, component);
         if !component.synthetic_v.trim().is_empty() {
             out.push_str(&component.synthetic_v);
             out.push('\n');
