@@ -16,7 +16,8 @@ pub use cmds::{
     spy::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, run as run_spy},
 };
 pub use manifest::{
-    AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectManifest, PublishTargetSpec, RunnerBinding,
+    AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectArtifactKind, ProjectManifest,
+    PublishTargetSpec, RunnerBinding,
     WorkspaceDefaults, WorkspaceManifest,
 };
 

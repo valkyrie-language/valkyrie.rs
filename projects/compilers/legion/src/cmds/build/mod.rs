@@ -37,7 +37,7 @@ use crate::{
         run::{ExecutionManifest, RunContract},
         source_hygiene,
     },
-    manifest::ProjectManifest,
+    manifest::{ProjectArtifactKind, ProjectManifest},
     planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
     script,
     unity_export, write_von_indented,
@@ -311,7 +311,8 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     )
     .map_err(|error| miette!(format!("前端分区规划失败: {error:?}")))?;
     eprintln!("[seed-debug] artifact-plan-ready partitions={}", artifact_plan.partitions.len());
-    let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan);
+    validate_project_artifact_contract(&build_output, &plan.project.build_target.target, plan.project.artifact_kind)?;
+    let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan, plan.project.artifact_kind);
     eprintln!("[seed-debug] driver-bundle-ready");
 
     if verbose {
@@ -356,17 +357,55 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
 struct LegionFrontendBuildAdapter {
     build_output: FrontendBuildOutput,
     artifact_plan: ArtifactPartitionPlan,
+    artifact_kind: ProjectArtifactKind,
 }
 
 impl LegionFrontendBuildAdapter {
-    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan) -> Self {
-        Self { build_output, artifact_plan }
+    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan, artifact_kind: ProjectArtifactKind) -> Self {
+        Self { build_output, artifact_plan, artifact_kind }
+    }
+}
+
+fn validate_project_artifact_contract(
+    build_output: &FrontendBuildOutput,
+    target: &CanonicalTarget,
+    artifact_kind: ProjectArtifactKind,
+) -> Result<()> {
+    if target.to_profile(None).backend_family != TargetBackendFamily::Wasm {
+        return Ok(());
+    }
+    let facts = &build_output.neutral_plan().program_facts;
+    match artifact_kind {
+        ProjectArtifactKind::Library => {
+            if facts.exports.is_empty() {
+                return Err(miette!(
+                    "`artifact: library` requires at least one `[export]` on a project function (no stub wasm)"
+                ));
+            }
+        }
+        ProjectArtifactKind::Binary => {
+            if facts.entries.is_empty() {
+                return Err(miette!("`artifact: binary` requires a `@main` entry function"));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn wasm_package_kind_for_manifest(artifact_kind: ProjectArtifactKind) -> emitter::nyar_backend_wasi::WasmPackageKind {
+    match artifact_kind {
+        ProjectArtifactKind::Library => emitter::nyar_backend_wasi::WasmPackageKind::Library,
+        ProjectArtifactKind::Binary => emitter::nyar_backend_wasi::WasmPackageKind::Binary,
     }
 }
 
 impl FrontendBuildBundle for LegionFrontendBuildAdapter {
     fn planned_partitions(&self) -> &dyn PlannedArtifactPartitionsView {
         self
+    }
+
+    fn wasm_package_kind(&self) -> emitter::nyar_backend_wasi::WasmPackageKind {
+        wasm_package_kind_for_manifest(self.artifact_kind)
     }
 
     fn submit_backend_input_for_partition(
@@ -390,6 +429,7 @@ impl FrontendBuildBundle for LegionFrontendBuildAdapter {
             self.artifact_plan.partitions.get(partition_index).map(|partition| partition.clr_suspend_strategy).unwrap_or_default(),
             VmSuspendStrategy::default(),
             &host_flavor,
+            wasm_package_kind_for_manifest(self.artifact_kind),
         );
         eprintln!("[seed-debug] partition-input-lowered index={partition_index} ok={}", result.is_ok());
         result

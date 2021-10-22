@@ -8,6 +8,17 @@ use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use vcc_data::text::von::{VonError, from_str};
 
+/// Consumer package artifact mode (`legion build` target interpretation).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ProjectArtifactKind {
+    /// CLI / command: `@main` entry, glue auto-runs `main`.
+    #[default]
+    Binary,
+    /// Importable library: `[export]` surface, glue exposes `callExport` only.
+    Library,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AutoLinkConfig {
     #[serde(default)]
@@ -196,6 +207,9 @@ pub struct ProjectManifest {
     /// 单脚本 / library 工程的显式入口 `.v` 路径（相对项目根）。
     #[serde(default)]
     pub entry: Option<String>,
+    /// `binary`（默认）或 `library`；与 `@main` / `[export]` 分别建模，不互斥于源码。
+    #[serde(default)]
+    pub artifact: ProjectArtifactKind,
     #[serde(default)]
     pub auto_link: AutoLinkConfig,
     #[serde(default)]

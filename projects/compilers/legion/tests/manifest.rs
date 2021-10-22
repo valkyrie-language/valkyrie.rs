@@ -1,4 +1,4 @@
-use legion::{CanonicalTarget, DependencySpec, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest};
+use legion::{CanonicalTarget, DependencySpec, ProjectArtifactKind, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest};
 
 fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
     match spec {
@@ -21,6 +21,21 @@ fn parses_project_manifest_entry_field() {
 
     let manifest = ProjectManifest::parse(source).unwrap();
     assert_eq!(manifest.entry.as_deref(), Some("solution.v"));
+}
+
+#[test]
+fn parses_project_manifest_artifact_library() {
+    let source = r#"
+    {
+        name: "leetcode.two_sum",
+        entry: "solution.v",
+        artifact: "library",
+        build: [{ target: "node" }]
+    }
+    "#;
+
+    let manifest = ProjectManifest::parse(source).unwrap();
+    assert_eq!(manifest.artifact, ProjectArtifactKind::Library);
 }
 
 #[test]

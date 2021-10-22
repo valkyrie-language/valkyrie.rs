@@ -68,6 +68,7 @@ pub struct PlannedProject {
     pub host_provider_candidates: Vec<PlannedHostProvider>,
     pub selected_host_providers: Vec<PlannedHostProvider>,
     pub build_target: BuildTargetSpec,
+    pub artifact_kind: crate::manifest::ProjectArtifactKind,
     pub dependencies: Vec<PlannedDependency>,
 }
 
@@ -382,6 +383,7 @@ impl LegionWorkspace {
                 host_provider_candidates: host_inventory.providers,
                 selected_host_providers: host_inventory.selected_providers,
                 build_target,
+                artifact_kind: manifest.artifact,
                 dependencies,
             },
         })
@@ -465,6 +467,7 @@ impl LegionWorkspace {
                     host_provider_candidates: host_inventory.providers,
                     selected_host_providers: host_inventory.selected_providers,
                     build_target,
+                    artifact_kind: manifest.artifact,
                     dependencies,
                 },
             },
@@ -648,6 +651,7 @@ impl LegionWorkspace {
                 host_provider_candidates: host_inventory.providers,
                 selected_host_providers: host_inventory.selected_providers,
                 build_target,
+                artifact_kind: manifest.artifact,
                 dependencies,
             },
         })

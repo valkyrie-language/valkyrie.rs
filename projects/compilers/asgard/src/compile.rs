@@ -246,6 +246,7 @@ impl FrontendBuildBundle for VoaFrontendBuildAdapter {
             self.artifact_plan.partitions.get(partition_index).map(|partition| partition.clr_suspend_strategy).unwrap_or_default(),
             nyar::VmSuspendStrategy::default(),
             &host_flavor,
+            emitter::nyar_backend_wasi::WasmPackageKind::Binary,
         )
         .map_err(|error| miette::miette!("{error}"))
     }
