@@ -1,36 +1,36 @@
-import { spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 
 /** 可选 native platform collect 包（`optionalDependencies` 路由）。 */
 export const NATIVE_PACKAGES = [
-    "@valkyrie-language/vcc-win32-x64",
-    "@valkyrie-language/vcc-linux-x64",
-    "@valkyrie-language/vcc-darwin-arm64",
-    "@valkyrie-language/vcc-darwin-x64",
+    '@valkyrie-language/vcc-win32-x64',
+    '@valkyrie-language/vcc-linux-x64',
+    '@valkyrie-language/vcc-darwin-arm64',
+    '@valkyrie-language/vcc-darwin-x64',
 ] as const;
 
 /** platform 包 short → npm triple（与 `scripts/build.mjs` / `@vmz/vmz-*` 对齐）。 */
 export const NATIVE_PACKAGE_TRIPLES: Readonly<Record<(typeof NATIVE_PACKAGES)[number], string>> = {
-    "@valkyrie-language/vcc-win32-x64": "win32-x64-msvc",
-    "@valkyrie-language/vcc-linux-x64": "linux-x64-musl",
-    "@valkyrie-language/vcc-darwin-x64": "darwin-x64",
-    "@valkyrie-language/vcc-darwin-arm64": "darwin-arm64",
+    '@valkyrie-language/vcc-win32-x64': 'win32-x64-msvc',
+    '@valkyrie-language/vcc-linux-x64': 'linux-x64-musl',
+    '@valkyrie-language/vcc-darwin-x64': 'darwin-x64',
+    '@valkyrie-language/vcc-darwin-arm64': 'darwin-arm64',
 };
 
-const LEGACY_NATIVE_LIB_NAMES = ["vcc_napi.dll", "libvcc_napi.so", "libvcc_napi.dylib", "vcc.node"] as const;
+const LEGACY_NATIVE_LIB_NAMES = ['vcc_napi.dll', 'libvcc_napi.so', 'libvcc_napi.dylib', 'vcc.node'] as const;
 
 /** 当前进程的 npm triple（用于 `vcc.${triple}.node` 文件名）。 */
 export function resolveNativeNpmTriple(platform = process.platform, arch = process.arch): string {
-    if (platform === "win32" && arch === "x64") return "win32-x64-msvc";
-    if (platform === "win32" && arch === "arm64") return "win32-arm64-msvc";
-    if (platform === "darwin" && arch === "arm64") return "darwin-arm64";
-    if (platform === "darwin" && arch === "x64") return "darwin-x64";
-    if (platform === "linux" && arch === "x64") return "linux-x64-musl";
-    if (platform === "linux" && arch === "arm64") return "linux-arm64-musl";
+    if (platform === 'win32' && arch === 'x64') return 'win32-x64-msvc';
+    if (platform === 'win32' && arch === 'arm64') return 'win32-arm64-msvc';
+    if (platform === 'darwin' && arch === 'arm64') return 'darwin-arm64';
+    if (platform === 'darwin' && arch === 'x64') return 'darwin-x64';
+    if (platform === 'linux' && arch === 'x64') return 'linux-x64-musl';
+    if (platform === 'linux' && arch === 'arm64') return 'linux-arm64-musl';
     return `${platform}-${arch}`;
 }
 
@@ -47,7 +47,7 @@ export type VccHostConfig = {
 };
 
 /** `spawnCli` 路由结果。 */
-export type VccCliRoute = "native" | "wasm";
+export type VccCliRoute = 'native' | 'wasm';
 
 /** 可测试的 CLI 子进程结果（不调用 `process.exit`）。 */
 export type VccCliSpawnResult = {
@@ -75,11 +75,11 @@ export function locateNativeCollect(nativePackages: readonly string[] = NATIVE_P
     const hostTriple = resolveNativeNpmTriple();
     for (const name of nativePackages) {
         try {
-            const entry = require.resolve(join(name, "package.json"));
+            const entry = require.resolve(join(name, 'package.json'));
             const pkgDir = dirname(entry);
-            const pkg = JSON.parse(readFileSync(entry, "utf8")) as { main?: string };
+            const pkg = JSON.parse(readFileSync(entry, 'utf8')) as { main?: string };
             const candidates = [
-                typeof pkg.main === "string" ? join(pkgDir, pkg.main) : null,
+                typeof pkg.main === 'string' ? join(pkgDir, pkg.main) : null,
                 join(pkgDir, nativeCollectBinaryName(NATIVE_PACKAGE_TRIPLES[name as (typeof NATIVE_PACKAGES)[number]] ?? hostTriple)),
                 join(pkgDir, nativeCollectBinaryName(hostTriple)),
                 ...LEGACY_NATIVE_LIB_NAMES.map((file) => join(pkgDir, file)),
@@ -103,7 +103,7 @@ export function locateNativeCollect(nativePackages: readonly string[] = NATIVE_P
  * @param wasmEntry
  */
 export function resolveWasmMjs(wasmCollect: string, wasmEntry: string): string {
-    const pkgJson = require.resolve(join(wasmCollect, "package.json"));
+    const pkgJson = require.resolve(join(wasmCollect, 'package.json'));
     return join(dirname(pkgJson), wasmEntry);
 }
 
@@ -133,15 +133,15 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
     function spawnCli(argv: string[] = []): VccCliSpawnResult {
         const native = tryNative(argv);
         if (native !== null) {
-            return { route: "native", status: native, stdout: "", stderr: "" };
+            return { route: 'native', status: native, stdout: '', stderr: '' };
         }
         const mjs = resolveWasm();
-        const result = spawnSync(process.execPath, [mjs, ...argv], { encoding: "utf8" });
+        const result = spawnSync(process.execPath, [mjs, ...argv], { encoding: 'utf8' });
         return {
-            route: "wasm",
+            route: 'wasm',
             status: result.status ?? 1,
-            stdout: String(result.stdout ?? ""),
-            stderr: String(result.stderr ?? ""),
+            stdout: String(result.stdout ?? ''),
+            stderr: String(result.stderr ?? ''),
         };
     }
 

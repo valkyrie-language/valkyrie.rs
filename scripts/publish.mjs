@@ -9,43 +9,43 @@
  * Auth: repo-root `.env.npm-trust.local` (NPM_TOTP_SECRET / NPM_TOKEN)
  */
 
-import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { ENV_PATH, loadLocalEnv, resolveNpmAuth, runNpm, totpCode } from "./lib/npm-auth.mjs";
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ENV_PATH, loadLocalEnv, resolveNpmAuth, runNpm, totpCode } from './lib/npm-auth.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PACKAGES_ROOT = path.join(ROOT, "projects", "packages");
-const CACHE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "lib", ".npm-trust-cache.json");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const PACKAGES_ROOT = path.join(ROOT, 'projects', 'packages');
+const CACHE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', '.npm-trust-cache.json');
 const MIN_WASM_BYTES = 1024;
 
 const PUBLISH_ORDER = [
-    "vcc",
-    "vcc-win32-x64",
-    "vcc-linux-x64",
-    "vcc-darwin-x64",
-    "vcc-darwin-arm64",
-    "vcc-unknown-wasm32",
-    "vcc-wasm32-wasi",
-    "legion",
-    "asgard",
+    'vcc',
+    'vcc-win32-x64',
+    'vcc-linux-x64',
+    'vcc-darwin-x64',
+    'vcc-darwin-arm64',
+    'vcc-unknown-wasm32',
+    'vcc-wasm32-wasi',
+    'legion',
+    'asgard',
 ];
 
 const TRUST_PACKAGES = PUBLISH_ORDER.map((d) => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGES_ROOT, d, "package.json"), "utf8"));
+    const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGES_ROOT, d, 'package.json'), 'utf8'));
     return pkg.name;
 });
 
 const TRUST = {
-    repo: "valkyrie-language/valkyrie.rs",
-    file: "publish-npm.yml",
-    env: "NPM_PUBLISH",
+    repo: 'valkyrie-language/valkyrie.rs',
+    file: 'publish-npm.yml',
+    env: 'NPM_PUBLISH',
 };
 
 const argv = process.argv.slice(2);
-const command = argv[0] ?? "npm";
+const command = argv[0] ?? 'npm';
 const rest = argv.slice(1);
 
 function fail(msg) {
@@ -55,14 +55,14 @@ function fail(msg) {
 
 function takeFlag(args, flag) {
     const i = args.indexOf(flag);
-    if (i >= 0 && args[i + 1] && !args[i + 1].startsWith("-")) return args[i + 1];
+    if (i >= 0 && args[i + 1] && !args[i + 1].startsWith('-')) return args[i + 1];
     const eq = args.find((a) => a.startsWith(`${flag}=`));
     if (eq) return eq.slice(flag.length + 1);
     return undefined;
 }
 
 function readJson(p) {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
 function writeJson(p, obj) {
@@ -72,7 +72,7 @@ function writeJson(p, obj) {
 function copyTree(src, dest, skipTests = true) {
     fs.mkdirSync(dest, { recursive: true });
     for (const name of fs.readdirSync(src)) {
-        if (name === "node_modules" || name === ".git" || (skipTests && name === "tests")) continue;
+        if (name === 'node_modules' || name === '.git' || (skipTests && name === 'tests')) continue;
         const from = path.join(src, name);
         const to = path.join(dest, name);
         const st = fs.statSync(from);
@@ -86,39 +86,39 @@ function copyTree(src, dest, skipTests = true) {
 
 function rewriteDeps(value, version) {
     if (Array.isArray(value)) return value.map((item) => rewriteDeps(item, version));
-    if (value && typeof value === "object") {
+    if (value && typeof value === 'object') {
         const out = {};
         for (const [key, item] of Object.entries(value)) out[key] = rewriteDeps(item, version);
         return out;
     }
-    if (typeof value === "string" && value === "workspace:*") return version;
+    if (typeof value === 'string' && value === 'workspace:*') return version;
     return value;
 }
 
 function resolveVersion(args) {
-    const fromArg = args.find((a) => a.startsWith("--version="))?.slice("--version=".length);
-    if (fromArg) return fromArg.replace(/^v/, "");
-    const vcc = readJson(path.join(PACKAGES_ROOT, "vcc", "package.json"));
-    return String(vcc.version).replace(/^v/, "");
+    const fromArg = args.find((a) => a.startsWith('--version='))?.slice('--version='.length);
+    if (fromArg) return fromArg.replace(/^v/, '');
+    const vcc = readJson(path.join(PACKAGES_ROOT, 'vcc', 'package.json'));
+    return String(vcc.version).replace(/^v/, '');
 }
 
 function distTag(version) {
-    return version === "0.0.0" ? "seed" : "latest";
+    return version === '0.0.0' ? 'seed' : 'latest';
 }
 
 function resolvePublishList(args) {
-    const only = takeFlag(args, "--only");
-    const skipRaw = takeFlag(args, "--skip");
+    const only = takeFlag(args, '--only');
+    const skipRaw = takeFlag(args, '--skip');
     const skip = new Set(
-        (skipRaw ? skipRaw.split(",") : [])
-            .concat(args.filter((a) => a.startsWith("--skip=")).map((a) => a.slice("--skip=".length)))
-            .flatMap((s) => s.split(","))
+        (skipRaw ? skipRaw.split(',') : [])
+            .concat(args.filter((a) => a.startsWith('--skip=')).map((a) => a.slice('--skip='.length)))
+            .flatMap((s) => s.split(','))
             .map((s) => s.trim())
             .filter(Boolean),
     );
     if (only) {
         const names = only
-            .split(",")
+            .split(',')
             .map((s) => s.trim())
             .filter(Boolean);
         for (const name of names) {
@@ -130,7 +130,7 @@ function resolvePublishList(args) {
 }
 
 function cmdNpm() {
-    const dryRun = rest.includes("--dry-run");
+    const dryRun = rest.includes('--dry-run');
     const auth = resolveNpmAuth(rest);
     const version = resolveVersion(rest);
     const publishList = resolvePublishList(rest);
@@ -138,36 +138,36 @@ function cmdNpm() {
     if (!dryRun && !auth.totpSecretRaw && !auth.token && !auth.currentOtp()) {
         console.warn(`publish npm: no NPM_TOTP_SECRET in ${ENV_PATH} — may EOTP`);
     } else if (!dryRun) {
-        console.log(`publish npm: totp=${auth.totpSecretRaw ? "yes" : "no"} token=${auth.token ? "yes" : "no"}`);
+        console.log(`publish npm: totp=${auth.totpSecretRaw ? 'yes' : 'no'} token=${auth.token ? 'yes' : 'no'}`);
     }
 
-    console.log(`publish npm: ${dryRun ? "dry-run" : "live"} ${publishList.length} packages @ ${version}`);
+    console.log(`publish npm: ${dryRun ? 'dry-run' : 'live'} ${publishList.length} packages @ ${version}`);
 
     let published = 0;
     let skipped = 0;
     for (const dirName of publishList) {
         const abs = path.join(PACKAGES_ROOT, dirName);
-        const raw = readJson(path.join(abs, "package.json"));
+        const raw = readJson(path.join(abs, 'package.json'));
         const name = raw.name;
-        const stage = path.join(os.tmpdir(), `valkyrie-publish-${name.replace("/", "-")}-${version}`);
+        const stage = path.join(os.tmpdir(), `valkyrie-publish-${name.replace('/', '-')}-${version}`);
         fs.rmSync(stage, { recursive: true, force: true });
         copyTree(abs, stage);
         const pkg = rewriteDeps(raw, version);
         pkg.version = version;
-        pkg.publishConfig = { ...(raw.publishConfig ?? {}), access: "public" };
+        pkg.publishConfig = { ...(raw.publishConfig ?? {}), access: 'public' };
         delete pkg.private;
         delete pkg.devDependencies;
-        writeJson(path.join(stage, "package.json"), pkg);
+        writeJson(path.join(stage, 'package.json'), pkg);
 
-        const view = runNpm(["view", `${name}@${version}`, "version"], { token: auth.token });
+        const view = runNpm(['view', `${name}@${version}`, 'version'], { token: auth.token });
         if (!dryRun && view.status === 0 && view.stdout === version) {
             console.log(` ✓ ${name}@${version} already on registry — skip`);
             skipped += 1;
             continue;
         }
 
-        const args = ["publish", "--access", "public", "--tag", distTag(version)];
-        if (dryRun) args.push("--dry-run");
+        const args = ['publish', '--access', 'public', '--tag', distTag(version)];
+        if (dryRun) args.push('--dry-run');
         const otp = auth.currentOtp();
         if (otp) args.push(`--otp=${otp}`);
         console.log(`\n=== ${name}@${version} ===`);
@@ -189,34 +189,34 @@ function cmdNpm() {
 }
 
 function assertVccAssembled(abs) {
-    for (const f of ["legion.wasm", "legion.mjs", "run-contracts.txt", "provenance.json"]) {
+    for (const f of ['legion.wasm', 'legion.mjs', 'run-contracts.txt', 'provenance.json']) {
         if (!fs.existsSync(path.join(abs, f))) fail(`missing assembled file ${f}`);
     }
-    if (fs.statSync(path.join(abs, "legion.wasm")).size < MIN_WASM_BYTES) {
-        fail("legion.wasm too small");
+    if (fs.statSync(path.join(abs, 'legion.wasm')).size < MIN_WASM_BYTES) {
+        fail('legion.wasm too small');
     }
-    const contracts = fs.readFileSync(path.join(abs, "run-contracts.txt"), "utf8");
-    if (/placeholder-minimal-wasm/i.test(contracts)) fail("run-contracts.txt is placeholder");
-    const provenance = readJson(path.join(abs, "provenance.json"));
-    if (provenance?.build?.fixture === true) fail("provenance.build.fixture is true");
-    if (/smoke-out|smoke-legion|smoke-/i.test(String(provenance?.build?.from ?? ""))) {
-        fail("provenance.build.from looks like fixture path");
+    const contracts = fs.readFileSync(path.join(abs, 'run-contracts.txt'), 'utf8');
+    if (/placeholder-minimal-wasm/i.test(contracts)) fail('run-contracts.txt is placeholder');
+    const provenance = readJson(path.join(abs, 'provenance.json'));
+    if (provenance?.build?.fixture === true) fail('provenance.build.fixture is true');
+    if (/smoke-out|smoke-legion|smoke-/i.test(String(provenance?.build?.from ?? ''))) {
+        fail('provenance.build.from looks like fixture path');
     }
 }
 
 function stagePackage(dirName, version, includeTests) {
     const abs = path.join(PACKAGES_ROOT, dirName);
-    const raw = readJson(path.join(abs, "package.json"));
+    const raw = readJson(path.join(abs, 'package.json'));
     const name = raw.name;
-    const stage = path.join(os.tmpdir(), `valkyrie-publish-${name.replace("/", "-")}-${version}`);
+    const stage = path.join(os.tmpdir(), `valkyrie-publish-${name.replace('/', '-')}-${version}`);
     fs.rmSync(stage, { recursive: true, force: true });
     copyTree(abs, stage, !includeTests);
     const pkg = rewriteDeps(raw, version);
     pkg.version = version;
-    pkg.publishConfig = { ...(raw.publishConfig ?? {}), access: "public" };
+    pkg.publishConfig = { ...(raw.publishConfig ?? {}), access: 'public' };
     delete pkg.private;
     delete pkg.devDependencies;
-    writeJson(path.join(stage, "package.json"), pkg);
+    writeJson(path.join(stage, 'package.json'), pkg);
     return { name, stage };
 }
 
@@ -225,7 +225,7 @@ function cmdCi() {
     const publishList = resolvePublishList(rest);
     const tag = distTag(version);
 
-    assertVccAssembled(path.join(ROOT, "projects/packages/vcc-unknown-wasm32"));
+    assertVccAssembled(path.join(ROOT, 'projects/packages/vcc-unknown-wasm32'));
 
     delete process.env.NODE_AUTH_TOKEN;
     delete process.env.NPM_TOKEN;
@@ -235,10 +235,10 @@ function cmdCi() {
     let published = 0;
     let skipped = 0;
     for (const dirName of publishList) {
-        const includeTests = dirName === "legion";
+        const includeTests = dirName === 'legion';
         const { name, stage } = stagePackage(dirName, version, includeTests);
 
-        const exists = runNpm(["view", `${name}@${version}`, "version"]);
+        const exists = runNpm(['view', `${name}@${version}`, 'version']);
         if (exists.status === 0 && exists.stdout === version) {
             console.log(` ✓ ${name}@${version} already on registry — skip`);
             skipped += 1;
@@ -246,7 +246,7 @@ function cmdCi() {
         }
 
         console.log(`\n=== ${name}@${version} (OIDC) ===`);
-        const r = runNpm(["publish", "--access", "public", "--tag", tag], { cwd: stage });
+        const r = runNpm(['publish', '--access', 'public', '--tag', tag], { cwd: stage });
         if (r.stdout) process.stdout.write(`${r.stdout}\n`);
         if (r.stderr) process.stderr.write(`${r.stderr}\n`);
         if (r.status !== 0) {
@@ -257,7 +257,7 @@ function cmdCi() {
                 continue;
             }
             if (/ENEEDAUTH|OIDC|trusted publisher/i.test(blob)) {
-                fail("OIDC failed — Trusted Publisher: publish-npm.yml + NPM_PUBLISH");
+                fail('OIDC failed — Trusted Publisher: publish-npm.yml + NPM_PUBLISH');
             }
             fail(`ci publish failed for ${name}@${version}`);
         }
@@ -268,10 +268,10 @@ function cmdCi() {
 
 function trustAuth() {
     const localEnv = loadLocalEnv();
-    const token = takeFlag(rest, "--token") ?? process.env.NPM_TOKEN ?? localEnv.NPM_TOKEN;
-    const otpFlag = takeFlag(rest, "--otp") ?? process.env.NPM_OTP ?? localEnv.NPM_OTP;
+    const token = takeFlag(rest, '--token') ?? process.env.NPM_TOKEN ?? localEnv.NPM_TOKEN;
+    const otpFlag = takeFlag(rest, '--otp') ?? process.env.NPM_OTP ?? localEnv.NPM_OTP;
     const totpSecretRaw =
-        takeFlag(rest, "--totp-secret") ??
+        takeFlag(rest, '--totp-secret') ??
         process.env.NPM_TOTP_SECRET ??
         localEnv.NPM_TOTP_SECRET ??
         (otpFlag && !/^\d{6}$/.test(otpFlag.trim()) ? otpFlag : undefined);
@@ -289,31 +289,31 @@ function trustAuth() {
 function trustFields(cfg) {
     const claims = cfg?.claims ?? {};
     return {
-        repo: cfg?.repository ?? claims.repository ?? claims.repo ?? "",
-        file: cfg?.file ?? claims.workflow_ref?.file ?? claims.file ?? "",
-        env: cfg?.environment ?? claims.environment ?? claims.env ?? "",
+        repo: cfg?.repository ?? claims.repository ?? claims.repo ?? '',
+        file: cfg?.file ?? claims.workflow_ref?.file ?? claims.file ?? '',
+        env: cfg?.environment ?? claims.environment ?? claims.env ?? '',
     };
 }
 
 function trustMatches(cfg) {
-    if (cfg?.raw && typeof cfg.raw === "string") {
+    if (cfg?.raw && typeof cfg.raw === 'string') {
         return cfg.raw.includes(TRUST.repo) && cfg.raw.includes(TRUST.file);
     }
     const { repo, file, env } = trustFields(cfg);
-    return repo === TRUST.repo && file === TRUST.file && (env === TRUST.env || env === "");
+    return repo === TRUST.repo && file === TRUST.file && (env === TRUST.env || env === '');
 }
 
 function classifyConfigs(configs) {
     if (configs.find((c) => trustMatches(c) && trustFields(c).env === TRUST.env)) {
-        return { matches: true, matchKind: "exact" };
+        return { matches: true, matchKind: 'exact' };
     }
-    if (configs.find(trustMatches)) return { matches: true, matchKind: "loose" };
-    if (configs.length === 0) return { matches: false, matchKind: "none" };
-    return { matches: false, matchKind: "mismatch" };
+    if (configs.find(trustMatches)) return { matches: true, matchKind: 'loose' };
+    if (configs.length === 0) return { matches: false, matchKind: 'none' };
+    return { matches: false, matchKind: 'mismatch' };
 }
 
 function listTrustLive(name, auth) {
-    const args = ["trust", "list", name, "--json"];
+    const args = ['trust', 'list', name, '--json'];
     const code = auth.currentOtp();
     if (code) args.push(`--otp=${code}`);
     const r = runNpm(args, { token: auth.token });
@@ -322,7 +322,7 @@ function listTrustLive(name, auth) {
     }
     if (r.status !== 0) return { configs: [], error: r.stderr || r.stdout };
     try {
-        const data = JSON.parse(r.stdout || "[]");
+        const data = JSON.parse(r.stdout || '[]');
         if (Array.isArray(data)) return { configs: data };
         if (Array.isArray(data?.configurations)) return { configs: data.configurations };
         if (data?.type || data?.claims) return { configs: [data] };
@@ -333,7 +333,7 @@ function listTrustLive(name, auth) {
 }
 
 function trustTargets() {
-    const only = takeFlag(rest, "--only");
+    const only = takeFlag(rest, '--only');
     if (!only) return TRUST_PACKAGES;
     if (!TRUST_PACKAGES.includes(only)) fail(`--only ${only} not in package set`);
     return [only];
@@ -342,11 +342,11 @@ function trustTargets() {
 function cmdTrustStatus() {
     const auth = trustAuth();
     const cache = fs.existsSync(CACHE_PATH) ? readJson(CACHE_PATH) : { packages: {} };
-    console.log("publish trust: status\n");
+    console.log('publish trust: status\n');
     let ok = 0;
     let bad = 0;
     for (const name of trustTargets()) {
-        const ver = runNpm(["view", name, "version"], { token: auth.token }).stdout;
+        const ver = runNpm(['view', name, 'version'], { token: auth.token }).stdout;
         if (!ver) {
             console.log(`  ? ${name}  not on registry`);
             bad += 1;
@@ -377,11 +377,11 @@ function cmdTrustStatus() {
 function cmdTrustConfigure() {
     const auth = trustAuth();
     if (!auth.hasOtp) fail(`need NPM_TOTP_SECRET in ${ENV_PATH}`);
-    const dryRun = rest.includes("--dry-run");
+    const dryRun = rest.includes('--dry-run');
     let configured = 0;
     let skipped = 0;
     for (const name of trustTargets()) {
-        if (!runNpm(["view", name, "version"], { token: auth.token }).stdout) {
+        if (!runNpm(['view', name, 'version'], { token: auth.token }).stdout) {
             console.log(`  skip ${name} (not on registry)`);
             continue;
         }
@@ -393,22 +393,22 @@ function cmdTrustConfigure() {
             skipped += 1;
             continue;
         }
-        if (entry.matchKind === "mismatch") fail(`${name}: trust mismatch — revoke manually`);
+        if (entry.matchKind === 'mismatch') fail(`${name}: trust mismatch — revoke manually`);
         const code = auth.currentOtp();
         const args = [
-            "trust",
-            "github",
+            'trust',
+            'github',
             name,
             `--file=${TRUST.file}`,
             `--repo=${TRUST.repo}`,
             `--env=${TRUST.env}`,
-            "--allow-publish",
-            "--allow-stage-publish",
-            "--yes",
+            '--allow-publish',
+            '--allow-stage-publish',
+            '--yes',
             `--otp=${code}`,
         ];
         if (dryRun) {
-            console.log(`  dry-run: npm ${args.join(" ")}`);
+            console.log(`  dry-run: npm ${args.join(' ')}`);
             continue;
         }
         console.log(`\n=== ${name} ===`);
@@ -421,16 +421,16 @@ function cmdTrustConfigure() {
 }
 
 switch (command) {
-    case "npm":
+    case 'npm':
         cmdNpm();
         break;
-    case "ci":
+    case 'ci':
         cmdCi();
         break;
-    case "trust": {
-        const sub = rest.find((a) => !a.startsWith("-")) ?? "status";
-        if (sub === "status" || sub === "check") cmdTrustStatus();
-        else if (sub === "configure" || sub === "trust") cmdTrustConfigure();
+    case 'trust': {
+        const sub = rest.find((a) => !a.startsWith('-')) ?? 'status';
+        if (sub === 'status' || sub === 'check') cmdTrustStatus();
+        else if (sub === 'configure' || sub === 'trust') cmdTrustConfigure();
         else fail(`unknown trust subcommand \`${sub}\``);
         break;
     }

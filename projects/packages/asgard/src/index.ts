@@ -1,8 +1,8 @@
-import { createHostRunner, NATIVE_PACKAGES } from "@valkyrie-language/vcc";
+import { createHostRunner, NATIVE_PACKAGES } from '@valkyrie-language/vcc';
 
 const host = createHostRunner({
-    wasmCollect: "@valkyrie-language/vcc-wasm32-wasi",
-    wasmEntry: "asgard.mjs",
+    wasmCollect: '@valkyrie-language/vcc-wasm32-wasi',
+    wasmEntry: 'asgard.mjs',
 });
 
 export const WASM_COLLECT = host.config.wasmCollect;

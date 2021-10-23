@@ -1,13 +1,13 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
-import type { VccCliSpawnResult, VccHostRunner } from "./index.ts";
-import { locateNativeCollect } from "./index.ts";
-import { resolveWasmMjs } from "./index.ts";
+import type { VccCliSpawnResult, VccHostRunner } from './index.ts';
+import { locateNativeCollect } from './index.ts';
+import { resolveWasmMjs } from './index.ts';
 
 /** Node Wasm GC 目标三元组（与 legion build --target node 对齐）。 */
-export const NODE_WASM_TARGET = "wasm32-node-unknown-wasm";
+export const NODE_WASM_TARGET = 'wasm32-node-unknown-wasm';
 
 /** 解析后的 Node 入口产物。 */
 export type NodeWasmEntry = {
@@ -20,17 +20,17 @@ export type NodeWasmEntry = {
 /** Wasm collect 是否已装配（入口脚本与同名 `.wasm` 均存在）。 */
 export function wasmCollectReady(wasmCollect: string, wasmEntry: string): boolean {
     const mjs = resolveWasmMjs(wasmCollect, wasmEntry);
-    const wasm = join(dirname(mjs), wasmEntry.replace(/\.mjs$/i, ".wasm"));
+    const wasm = join(dirname(mjs), wasmEntry.replace(/\.mjs$/i, '.wasm'));
     return existsSync(mjs) && existsSync(wasm);
 }
 
 /** 严格集成模式：`LEGION_INTEGRATION=1` 时缺少 collect 视为失败而非 skip。 */
-export function integrationRequired(envName = "LEGION_INTEGRATION"): boolean {
-    return process.env[envName] === "1";
+export function integrationRequired(envName = 'LEGION_INTEGRATION'): boolean {
+    return process.env[envName] === '1';
 }
 
 /** 在 collect 未装配时返回 skip 原因；`integrationRequired()` 时返回 `null`（应 fail）。 */
-export function skipUnlessWasmCollectReady(wasmCollect: string, wasmEntry: string, envName = "LEGION_INTEGRATION"): string | null {
+export function skipUnlessWasmCollectReady(wasmCollect: string, wasmEntry: string, envName = 'LEGION_INTEGRATION'): string | null {
     if (wasmCollectReady(wasmCollect, wasmEntry)) {
         return null;
     }
@@ -58,7 +58,7 @@ function readPhysicalEntryFromContract(contractPath: string): string | null {
     if (!existsSync(contractPath)) {
         return null;
     }
-    const text = readFileSync(contractPath, "utf8");
+    const text = readFileSync(contractPath, 'utf8');
     const match = text.match(/physical_entry\s*:\s*"([^"]+\.mjs)"/);
     return match?.[1] ?? null;
 }
@@ -68,36 +68,36 @@ function readPhysicalEntryFromContract(contractPath: string): string | null {
  * 解析 Node 构建产物目录中的 `legion.mjs` / `legion.wasm`（含 run-contracts 与 legacy 命名）。
  */
 export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
-    const canonicalMjs = join(targetDir, "legion.mjs");
-    const canonicalWasm = join(targetDir, "legion.wasm");
+    const canonicalMjs = join(targetDir, 'legion.mjs');
+    const canonicalWasm = join(targetDir, 'legion.wasm');
     if (existsSync(canonicalMjs) && existsSync(canonicalWasm)) {
         return {
             legionMjs: canonicalMjs,
             legionWasm: canonicalWasm,
-            physicalEntry: "legion.mjs",
+            physicalEntry: 'legion.mjs',
             legacy: false,
         };
     }
 
-    for (const contractName of ["run-contracts.txt", "run-contract.txt"]) {
+    for (const contractName of ['run-contracts.txt', 'run-contract.txt']) {
         const physical = readPhysicalEntryFromContract(join(targetDir, contractName));
         if (!physical) {
             continue;
         }
         const mjs = join(targetDir, physical);
-        const wasm = join(targetDir, physical.replace(/\.mjs$/i, ".wasm"));
+        const wasm = join(targetDir, physical.replace(/\.mjs$/i, '.wasm'));
         if (existsSync(mjs) && existsSync(wasm)) {
             return { legionMjs: mjs, legionWasm: wasm, physicalEntry: physical, legacy: false };
         }
     }
 
-    const legacyMjs = join(targetDir, "legion_tools.mjs");
-    const legacyWasm = join(targetDir, "legion_tools.wasm");
+    const legacyMjs = join(targetDir, 'legion_tools.mjs');
+    const legacyWasm = join(targetDir, 'legion_tools.wasm');
     if (existsSync(legacyMjs) && existsSync(legacyWasm)) {
         return {
             legionMjs: legacyMjs,
             legionWasm: legacyWasm,
-            physicalEntry: "legion_tools.mjs",
+            physicalEntry: 'legion_tools.mjs',
             legacy: true,
         };
     }
@@ -117,22 +117,22 @@ export function spawnLegionForIntegration(host: VccHostRunner, argv: string[] = 
 
 /** 通过 `bin/*.js` 启动真实用户入口（stdio 捕获）。 */
 export function spawnPackageBin(binPath: string, argv: string[] = []): VccCliSpawnResult {
-    const result = spawnSync(process.execPath, [binPath, ...argv], { encoding: "utf8" });
+    const result = spawnSync(process.execPath, [binPath, ...argv], { encoding: 'utf8' });
     return {
-        route: "wasm",
+        route: 'wasm',
         status: result.status ?? 1,
-        stdout: String(result.stdout ?? ""),
-        stderr: String(result.stderr ?? ""),
+        stdout: String(result.stdout ?? ''),
+        stderr: String(result.stderr ?? ''),
     };
 }
 
 /** 运行已构建的 Node Wasm 入口（`node legion.mjs …`）。 */
 export function spawnBuiltNodeEntry(entryMjs: string, argv: string[] = []): VccCliSpawnResult {
-    const result = spawnSync(process.execPath, [entryMjs, ...argv], { encoding: "utf8" });
+    const result = spawnSync(process.execPath, [entryMjs, ...argv], { encoding: 'utf8' });
     return {
-        route: "wasm",
+        route: 'wasm',
         status: result.status ?? 1,
-        stdout: String(result.stdout ?? ""),
-        stderr: String(result.stderr ?? ""),
+        stdout: String(result.stdout ?? ''),
+        stderr: String(result.stderr ?? ''),
     };
 }

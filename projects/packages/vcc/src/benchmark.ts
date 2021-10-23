@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
-import type { VccCliRoute, VccCliSpawnResult, VccHostRunner } from "./index.ts";
-import { createHostRunner, locateNativeCollect } from "./index.ts";
+import type { VccCliRoute, VccCliSpawnResult, VccHostRunner } from './index.ts';
+import { createHostRunner, locateNativeCollect } from './index.ts';
 
 /** `legion bench` 表格中的一行。 */
 export type LegionBenchRow = {
@@ -40,7 +40,7 @@ export type BenchmarkComparison = {
     legionCompileMs: number | null;
     legionRuntimeMs: number | null;
     runtimeRatio: number | null;
-    legionRoute: VccCliRoute | "unavailable" | null;
+    legionRoute: VccCliRoute | 'unavailable' | null;
     error: string | null;
 };
 
@@ -68,7 +68,7 @@ export type LegionBenchProjectResult = {
 
 export type VccBenchmarkRunner = {
     config: Readonly<
-        Required<Pick<VccBenchmarkConfig, "valkyrieRsRoot" | "wasmCollectDir" | "wasmEntry">> & {
+        Required<Pick<VccBenchmarkConfig, 'valkyrieRsRoot' | 'wasmCollectDir' | 'wasmEntry'>> & {
             host?: VccHostRunner;
         }
     >;
@@ -110,15 +110,15 @@ export type RunBenchmarkSuiteOptions = LegionBenchProjectOptions & {
     onProgress?: (row: BenchmarkSuiteRow) => void;
 };
 
-const DEFAULT_WASM_ENTRY = "legion.mjs";
-const DEFAULT_WASM_PACKAGE = "@valkyrie-language/vcc-unknown-wasm32";
+const DEFAULT_WASM_ENTRY = 'legion.mjs';
+const DEFAULT_WASM_PACKAGE = '@valkyrie-language/vcc-unknown-wasm32';
 
 /**
  * `legion bench --target node`：扫描源码内 `[benchmark]` 函数并计时（valkyrie 工程自测用）。
  * `compileMs` = 每次运行的编译耗时，`runtimeMs` = Wasm 入口执行 `[benchmark]` 函数耗时。
  * leetcode 等外部 harness 应使用 `legion build` + 对 `metadata.tests` 跑产物，勿依赖本 API 的 `runtimeMs`。
  */
-export const WASM_NODE_BENCH_TARGET = "node";
+export const WASM_NODE_BENCH_TARGET = 'node';
 
 /** 样本中位数（毫秒计时常用）。 */
 export function median(values: number[]): number {
@@ -169,11 +169,11 @@ export function parseLegionBenchTable(stdout: string): LegionBenchRow[] {
 }
 
 /** 聚合多行 `legion bench` 结果（默认均值）。 */
-export function aggregateLegionBenchRows(rows: LegionBenchRow[], mode: "mean" | "sum" | "max" = "mean"): LegionBenchAggregate | null {
+export function aggregateLegionBenchRows(rows: LegionBenchRow[], mode: 'mean' | 'sum' | 'max' = 'mean'): LegionBenchAggregate | null {
     if (rows.length === 0) {
         return null;
     }
-    if (mode === "sum") {
+    if (mode === 'sum') {
         return rows.reduce(
             (acc, row) => ({
                 compileMs: acc.compileMs + row.compileMs,
@@ -183,7 +183,7 @@ export function aggregateLegionBenchRows(rows: LegionBenchRow[], mode: "mean" | 
             { compileMs: 0, runtimeMs: 0, rowCount: 0 },
         );
     }
-    if (mode === "max") {
+    if (mode === 'max') {
         return rows.reduce(
             (acc, row) => ({
                 compileMs: Math.max(acc.compileMs, row.compileMs),
@@ -219,23 +219,23 @@ function defaultValkyrieRsRoot(configRoot?: string): string {
     if (process.env.VALKYRIE_RS_ROOT) {
         return process.env.VALKYRIE_RS_ROOT;
     }
-    return join(process.cwd(), "..", "valkyrie.rs");
+    return join(process.cwd(), '..', 'valkyrie.rs');
 }
 
 function wasmCollectReadyFromDir(wasmCollectDir: string, wasmEntry: string): boolean {
     const mjs = join(wasmCollectDir, wasmEntry);
-    const wasm = join(wasmCollectDir, wasmEntry.replace(/\.mjs$/i, ".wasm"));
+    const wasm = join(wasmCollectDir, wasmEntry.replace(/\.mjs$/i, '.wasm'));
     return existsSync(mjs) && existsSync(wasm);
 }
 
 function spawnWasmLegionFromDir(wasmCollectDir: string, wasmEntry: string, argv: string[]): VccCliSpawnResult {
     const mjs = join(wasmCollectDir, wasmEntry);
-    const result = spawnSync(process.execPath, [mjs, ...argv], { encoding: "utf8" });
+    const result = spawnSync(process.execPath, [mjs, ...argv], { encoding: 'utf8' });
     return {
-        route: "wasm",
+        route: 'wasm',
         status: result.status ?? 1,
-        stdout: String(result.stdout ?? ""),
-        stderr: String(result.stderr ?? ""),
+        stdout: String(result.stdout ?? ''),
+        stderr: String(result.stderr ?? ''),
     };
 }
 
@@ -246,7 +246,7 @@ function spawnWasmLegionFromDir(wasmCollectDir: string, wasmEntry: string, argv:
 export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBenchmarkRunner {
     const valkyrieRsRoot = defaultValkyrieRsRoot(config.valkyrieRsRoot);
     const wasmEntry = config.wasmEntry ?? DEFAULT_WASM_ENTRY;
-    const wasmCollectDir = config.wasmCollectDir ?? join(valkyrieRsRoot, "projects", "packages", "vcc-unknown-wasm32");
+    const wasmCollectDir = config.wasmCollectDir ?? join(valkyrieRsRoot, 'projects', 'packages', 'vcc-unknown-wasm32');
     const host = config.host;
 
     function resolveHost(): VccHostRunner {
@@ -267,16 +267,16 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
         if (ready()) {
             return null;
         }
-        return "Valkyrie runner not ready: install a @valkyrie-language/vcc-* platform package (native) or run node scripts/build.mjs capability in valkyrie.rs (wasm collect)";
+        return 'Valkyrie runner not ready: install a @valkyrie-language/vcc-* platform package (native) or run node scripts/build.mjs capability in valkyrie.rs (wasm collect)';
     }
 
     function spawnLegion(argv: string[] = []): VccCliSpawnResult {
         if (!ready()) {
             return {
-                route: "wasm",
+                route: 'wasm',
                 status: 127,
-                stdout: "",
-                stderr: skipReason() ?? "runner unavailable",
+                stdout: '',
+                stderr: skipReason() ?? 'runner unavailable',
             };
         }
         if (wasmCollectReadyFromDir(wasmCollectDir, wasmEntry)) {
@@ -288,7 +288,7 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
     function benchProject(projectDir: string, options: LegionBenchProjectOptions = {}): LegionBenchProjectResult {
         const runs = options.runs ?? 3;
         const target = options.target ?? WASM_NODE_BENCH_TARGET;
-        const outcome = spawnLegion(["bench", projectDir, "-t", target, "-n", String(runs)]);
+        const outcome = spawnLegion(['bench', projectDir, '-t', target, '-n', String(runs)]);
         const rows = parseLegionBenchTable(outcome.stdout);
         const aggregate = outcome.status === 0 ? aggregateLegionBenchRows(rows) : null;
         return { outcome, rows, aggregate };
@@ -311,16 +311,16 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
         }
         let error = legionError;
         if (legion.outcome.status !== 0) {
-            error = formatLegionCliError("legion bench", legion.outcome);
+            error = formatLegionCliError('legion bench', legion.outcome);
         } else if (!legion.aggregate) {
             const combined = `${legion.outcome.stdout}\n${legion.outcome.stderr}`;
             if (/未发现\s*\[benchmark\]/.test(combined)) {
                 error =
-                    "legion bench: no [benchmark] functions in project (legion bench only times source [benchmark] blocks, not external harness)";
+                    'legion bench: no [benchmark] functions in project (legion bench only times source [benchmark] blocks, not external harness)';
             } else if (legion.rows.length === 0) {
-                error = "legion bench: exit 0 but stdout had no parseable timing rows";
+                error = 'legion bench: exit 0 but stdout had no parseable timing rows';
             } else {
-                error = "legion bench: failed to aggregate timing rows";
+                error = 'legion bench: failed to aggregate timing rows';
             }
         }
         const legionRuntimeMs = legion.aggregate?.runtimeMs ?? null;
