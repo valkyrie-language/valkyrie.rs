@@ -23,8 +23,5 @@ pub fn resolve_project_path(input: &Path) -> Result<PathBuf> {
         return Ok(sidecar);
     }
 
-    Err(miette!(
-        "找不到项目或脚本 `{}`（需要 `legion.von`、内嵌 `# ```legion` 的 `.v`，或 `solution.v`）",
-        input.display()
-    ))
+    Err(miette!("找不到项目或脚本 `{}`（需要 `legion.von`、内嵌 `# ```legion` 的 `.v`，或 `solution.v`）", input.display()))
 }

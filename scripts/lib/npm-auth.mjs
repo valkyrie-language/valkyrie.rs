@@ -58,10 +58,7 @@ export function totpCode(secret, atMs = Date.now()) {
     const hmac = crypto.createHmac("sha1", key).update(buf).digest();
     const offset = hmac[hmac.length - 1] & 0x0f;
     const code =
-        ((hmac[offset] & 0x7f) << 24) |
-        ((hmac[offset + 1] & 0xff) << 16) |
-        ((hmac[offset + 2] & 0xff) << 8) |
-        (hmac[offset + 3] & 0xff);
+        ((hmac[offset] & 0x7f) << 24) | ((hmac[offset + 1] & 0xff) << 16) | ((hmac[offset + 2] & 0xff) << 8) | (hmac[offset + 3] & 0xff);
     return String(code % 1_000_000).padStart(6, "0");
 }
 

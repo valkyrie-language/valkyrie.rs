@@ -67,18 +67,16 @@ export type LegionBenchProjectResult = {
 };
 
 export type VccBenchmarkRunner = {
-    config: Readonly<Required<Pick<VccBenchmarkConfig, "valkyrieRsRoot" | "wasmCollectDir" | "wasmEntry">> & {
-        host?: VccHostRunner;
-    }>;
+    config: Readonly<
+        Required<Pick<VccBenchmarkConfig, "valkyrieRsRoot" | "wasmCollectDir" | "wasmEntry">> & {
+            host?: VccHostRunner;
+        }
+    >;
     ready: () => boolean;
     skipReason: () => string | null;
     spawnLegion: (argv?: string[]) => VccCliSpawnResult;
     benchProject: (projectDir: string, options?: LegionBenchProjectOptions) => LegionBenchProjectResult;
-    compareReference: (
-        referenceMs: number,
-        legion: LegionBenchProjectResult | null,
-        legionError?: string | null,
-    ) => BenchmarkComparison;
+    compareReference: (referenceMs: number, legion: LegionBenchProjectResult | null, legionError?: string | null) => BenchmarkComparison;
 };
 
 /** 批量基准条目（leetcode / project-euler 等 catalog 驱动）。 */
@@ -171,10 +169,7 @@ export function parseLegionBenchTable(stdout: string): LegionBenchRow[] {
 }
 
 /** 聚合多行 `legion bench` 结果（默认均值）。 */
-export function aggregateLegionBenchRows(
-    rows: LegionBenchRow[],
-    mode: "mean" | "sum" | "max" = "mean",
-): LegionBenchAggregate | null {
+export function aggregateLegionBenchRows(rows: LegionBenchRow[], mode: "mean" | "sum" | "max" = "mean"): LegionBenchAggregate | null {
     if (rows.length === 0) {
         return null;
     }
@@ -333,8 +328,7 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
             referenceMs,
             legionCompileMs: legion.aggregate?.compileMs ?? null,
             legionRuntimeMs,
-            runtimeRatio:
-                legionRuntimeMs !== null && legionRuntimeMs > 0 ? referenceMs / legionRuntimeMs : null,
+            runtimeRatio: legionRuntimeMs !== null && legionRuntimeMs > 0 ? referenceMs / legionRuntimeMs : null,
             legionRoute: legion.outcome.route,
             error,
         };

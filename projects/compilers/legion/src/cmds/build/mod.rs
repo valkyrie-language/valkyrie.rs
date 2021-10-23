@@ -39,8 +39,7 @@ use crate::{
     },
     manifest::{ProjectArtifactKind, ProjectManifest},
     planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
-    script,
-    unity_export, write_von_indented,
+    script, unity_export, write_von_indented,
 };
 
 /// `legion build` 的命令参数。
@@ -128,7 +127,8 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
         script::extract_embedded_manifest(&script_source, &plan.project.manifest_path)
             .map_err(|error| Report::from(error))?
             .ok_or_else(|| miette!("单脚本 `{}` 缺少内嵌 `# ```legion` 块", plan.project.manifest_path.display()))?
-    } else {
+    }
+    else {
         fs::read_to_string(&plan.project.manifest_path)
             .into_diagnostic()
             .wrap_err_with(|| format!("读取项目清单失败：{}", plan.project.manifest_path.display()))?
@@ -378,9 +378,7 @@ fn validate_project_artifact_contract(
     match artifact_kind {
         ProjectArtifactKind::Library => {
             if facts.exports.is_empty() {
-                return Err(miette!(
-                    "`artifact: library` requires at least one `[export]` on a project function (no stub wasm)"
-                ));
+                return Err(miette!("`artifact: library` requires at least one `[export]` on a project function (no stub wasm)"));
             }
         }
         ProjectArtifactKind::Binary => {

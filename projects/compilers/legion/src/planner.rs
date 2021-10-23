@@ -13,8 +13,12 @@ use nyar_language::CanonicalTarget;
 use nyar_package_manager::PackageManager as PackageLegion;
 use serde::{Deserialize, Serialize};
 
-use crate::manifest::{BuildTargetSpec, DependencySourcePreference, DependencySpec, LocalLegionConfig, ManifestError, ProjectManifest, WorkspaceManifest};
-use crate::LOCAL_LEGION_CONFIG;
+use crate::{
+    LOCAL_LEGION_CONFIG,
+    manifest::{
+        BuildTargetSpec, DependencySourcePreference, DependencySpec, LocalLegionConfig, ManifestError, ProjectManifest, WorkspaceManifest,
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildRequest {
@@ -147,13 +151,7 @@ impl Display for PlannerError {
                 write!(f, "project '{}' dependency '{}' uses source=path but no path is provided", project, dependency)
             }
             Self::PathDependencyMissingManifest { project, dependency, manifest_dir } => {
-                write!(
-                    f,
-                    "project '{}' dependency '{}' path does not contain `legion.von` at {}",
-                    project,
-                    dependency,
-                    manifest_dir.display()
-                )
+                write!(f, "project '{}' dependency '{}' path does not contain `legion.von` at {}", project, dependency, manifest_dir.display())
             }
             Self::GitDependencyMissingUrl { project, dependency } => {
                 write!(f, "project '{}' dependency '{}' uses source=git but no git url is provided", project, dependency)
@@ -290,13 +288,7 @@ impl LegionWorkspace {
         projects.insert(canonical.clone(), ctx.manifest.clone());
         let mut projects_by_name = BTreeMap::new();
         projects_by_name.insert(ctx.manifest.name.clone(), canonical);
-        Ok(Self {
-            root_dir: project_dir,
-            workspace_manifest: None,
-            projects,
-            projects_by_name,
-            single_script: Some(ctx),
-        })
+        Ok(Self { root_dir: project_dir, workspace_manifest: None, projects, projects_by_name, single_script: Some(ctx) })
     }
 
     pub fn discover_for_project(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
@@ -391,10 +383,7 @@ impl LegionWorkspace {
 
     pub fn build_plan_with_local_fallback(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
         if let Some(ctx) = &self.single_script {
-            return Ok((
-                self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request)?,
-                ProjectResolutionMode::Script,
-            ));
+            return Ok((self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request)?, ProjectResolutionMode::Script));
         }
 
         let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
@@ -416,11 +405,13 @@ impl LegionWorkspace {
     pub fn build_test_plan(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
         let (project_dir, manifest, mode) = if let Some(ctx) = &self.single_script {
             (ctx.project_dir.clone(), ctx.manifest.clone(), ProjectResolutionMode::Script)
-        } else {
+        }
+        else {
             let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
             if let Some(manifest) = self.project_manifest(&project_dir) {
                 (project_dir, manifest.clone(), ProjectResolutionMode::Workspace)
-            } else {
+            }
+            else {
                 let manifest_path = project_dir.join("legion.von");
                 if !manifest_path.exists() {
                     return Err(PlannerError::MissingProjectManifest(project_dir));
@@ -529,8 +520,7 @@ impl LegionWorkspace {
             let dependency_spec = manifest.dependencies.get(&dep_name);
             let allow_missing_when_auto = implicit_names.contains(&dep_name);
             let overrides = merged_local_dependency_overrides(project_dir);
-            let (effective_spec, path_base) =
-                effective_dependency_spec(&dep_name, dependency_spec, &overrides, project_dir);
+            let (effective_spec, path_base) = effective_dependency_spec(&dep_name, dependency_spec, &overrides, project_dir);
             match resolve_dependency_source(
                 self,
                 project_dir,
@@ -689,8 +679,7 @@ impl LegionWorkspace {
             let dependency_spec = declared_specs.get(&dependency_name);
             let allow_missing_when_auto = implicit_names.contains(&dependency_name);
             let overrides = merged_local_dependency_overrides(project_manifest_dir);
-            let (effective_spec, path_base) =
-                effective_dependency_spec(&dependency_name, dependency_spec, &overrides, project_manifest_dir);
+            let (effective_spec, path_base) = effective_dependency_spec(&dependency_name, dependency_spec, &overrides, project_manifest_dir);
 
             let manifest_dir = match resolve_dependency_source(
                 self,
@@ -820,10 +809,7 @@ fn effective_dependency_spec<'a>(
 }
 
 fn user_local_config_path() -> Option<PathBuf> {
-    let home = std::env::var("USERPROFILE")
-        .ok()
-        .or_else(|| std::env::var("HOME").ok())
-        .map(PathBuf::from)?;
+    let home = std::env::var("USERPROFILE").ok().or_else(|| std::env::var("HOME").ok()).map(PathBuf::from)?;
     let path = home.join(".config").join("legion").join("legions.von");
     path.is_file().then_some(path)
 }
@@ -866,9 +852,10 @@ fn resolve_dependency_source(
 
     match source_preference {
         DependencySourcePreference::Path => {
-            let raw_path = dependency_spec
-                .and_then(DependencySpec::path_hint)
-                .ok_or_else(|| PlannerError::PathDependencyMissingPath { project: project_name.to_string(), dependency: dependency_name.to_string() })?;
+            let raw_path = dependency_spec.and_then(DependencySpec::path_hint).ok_or_else(|| PlannerError::PathDependencyMissingPath {
+                project: project_name.to_string(),
+                dependency: dependency_name.to_string(),
+            })?;
             let manifest_dir = resolve_local_dependency_path(path_base, raw_path);
             if !manifest_dir.join("legion.von").is_file() {
                 return Err(PlannerError::PathDependencyMissingManifest {
@@ -880,9 +867,10 @@ fn resolve_dependency_source(
             Ok(ResolvedDependencySource::Local(manifest_dir))
         }
         DependencySourcePreference::Git => {
-            let git_url = dependency_spec
-                .and_then(DependencySpec::git_url)
-                .ok_or_else(|| PlannerError::GitDependencyMissingUrl { project: project_name.to_string(), dependency: dependency_name.to_string() })?;
+            let git_url = dependency_spec.and_then(DependencySpec::git_url).ok_or_else(|| PlannerError::GitDependencyMissingUrl {
+                project: project_name.to_string(),
+                dependency: dependency_name.to_string(),
+            })?;
             let git_ref = dependency_spec.and_then(DependencySpec::git_ref_hint);
             let subpath = dependency_spec.and_then(DependencySpec::path_hint);
             let manifest_dir = workspace.ensure_git_dependency(git_url, git_ref, subpath, project_name, dependency_name)?;
@@ -950,7 +938,10 @@ fn resolve_dependency_source(
             if let Some(version) = version_hint {
                 if version == "workspace" {
                     return local_manifest_dir.map(ResolvedDependencySource::Local).ok_or_else(|| {
-                        PlannerError::ForcedWorkspaceDependencyMissing { project: project_name.to_string(), dependency: dependency_name.to_string() }
+                        PlannerError::ForcedWorkspaceDependencyMissing {
+                            project: project_name.to_string(),
+                            dependency: dependency_name.to_string(),
+                        }
                     });
                 }
                 return Ok(ResolvedDependencySource::Registry { version: version.to_string(), registry: registry_hint.to_string() });
@@ -965,11 +956,7 @@ fn resolve_dependency_source(
 
 fn resolve_local_dependency_path(project_manifest_dir: &Path, raw_path: &str) -> PathBuf {
     let candidate = Path::new(raw_path);
-    if candidate.is_absolute() {
-        candidate.to_path_buf()
-    } else {
-        project_manifest_dir.join(candidate)
-    }
+    if candidate.is_absolute() { candidate.to_path_buf() } else { project_manifest_dir.join(candidate) }
 }
 
 impl LegionWorkspace {
@@ -1010,19 +997,15 @@ impl LegionWorkspace {
                 git_url,
                 Command::new("git").args(["clone", "--depth", "1", "--branch", git_ref, git_url]).arg(&vendor_root),
             )?;
-        } else {
+        }
+        else {
             run_git(
                 project_name,
                 dependency_name,
                 git_url,
                 Command::new("git").current_dir(&vendor_root).args(["fetch", "origin", git_ref, "--depth", "1"]),
             )?;
-            run_git(
-                project_name,
-                dependency_name,
-                git_url,
-                Command::new("git").current_dir(&vendor_root).args(["checkout", "FETCH_HEAD"]),
-            )?;
+            run_git(project_name, dependency_name, git_url, Command::new("git").current_dir(&vendor_root).args(["checkout", "FETCH_HEAD"]))?;
         }
 
         if !manifest_dir.join("legion.von").is_file() {
@@ -1069,11 +1052,7 @@ fn run_git(project: &str, dependency: &str, git_url: &str, command: &mut Command
 fn format_git_failure(program: &OsStr, stderr: &[u8]) -> String {
     let stderr_text = String::from_utf8_lossy(stderr);
     let text = stderr_text.trim();
-    if text.is_empty() {
-        format!("`{}` exited with failure", program.to_string_lossy())
-    } else {
-        text.to_string()
-    }
+    if text.is_empty() { format!("`{}` exited with failure", program.to_string_lossy()) } else { text.to_string() }
 }
 
 pub fn canonical_target(target: &str) -> Result<CanonicalTarget, nyar_language::CanonicalTargetParseError> {
@@ -1105,7 +1084,8 @@ fn collect_source_files(project_dir: &Path, entry: Option<&str>) -> Result<Vec<P
     let source_dir = project_dir.join("source");
     if source_dir.exists() {
         collect_v_files(&source_dir, &mut files)?;
-    } else {
+    }
+    else {
         collect_project_root_v_files(&project_dir, &mut files)?;
     }
     files.sort();
@@ -1179,7 +1159,8 @@ pub fn collect_test_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerE
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files(&test_dir, &mut files)?;
-    } else if project_uses_single_script_layout(project_dir) {
+    }
+    else if project_uses_single_script_layout(project_dir) {
         collect_project_root_v_files(project_dir, &mut files)?;
     }
     files.sort();
@@ -1256,11 +1237,7 @@ fn canonicalize_lossy(path: &Path) -> PathBuf {
 /// Windows `canonicalize` 常返回 `\\?\` 扩展路径；部分 `read_dir` 调用方无法枚举，需还原为常规路径。
 fn path_for_local_fs(path: &Path) -> PathBuf {
     let raw = path.to_string_lossy();
-    if let Some(stripped) = raw.strip_prefix(r"\\?\") {
-        PathBuf::from(stripped)
-    } else {
-        path.to_path_buf()
-    }
+    if let Some(stripped) = raw.strip_prefix(r"\\?\") { PathBuf::from(stripped) } else { path.to_path_buf() }
 }
 
 fn search_start_dir(start: &Path) -> PathBuf {

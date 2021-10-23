@@ -30,11 +30,7 @@ export function integrationRequired(envName = "LEGION_INTEGRATION"): boolean {
 }
 
 /** 在 collect 未装配时返回 skip 原因；`integrationRequired()` 时返回 `null`（应 fail）。 */
-export function skipUnlessWasmCollectReady(
-    wasmCollect: string,
-    wasmEntry: string,
-    envName = "LEGION_INTEGRATION",
-): string | null {
+export function skipUnlessWasmCollectReady(wasmCollect: string, wasmEntry: string, envName = "LEGION_INTEGRATION"): string | null {
     if (wasmCollectReady(wasmCollect, wasmEntry)) {
         return null;
     }

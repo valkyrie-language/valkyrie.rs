@@ -52,19 +52,9 @@ test("legion build minimal-node → canonical legion.mjs/wasm → runtime exit 0
 
     const outRoot = mkdtempSync(join(tmpdir(), "legion-it-build-"));
     try {
-        const build = spawnLegionForIntegration(host, [
-            "build",
-            MINIMAL_NODE_FIXTURE,
-            "--target",
-            "node",
-            "-o",
-            outRoot,
-        ]);
+        const build = spawnLegionForIntegration(host, ["build", MINIMAL_NODE_FIXTURE, "--target", "node", "-o", outRoot]);
         assert.equal(build.status, 0, formatOutcome("legion build", build));
-        assert.ok(
-            build.route === "wasm" || build.route === "native",
-            "integration build must route through VCC host",
-        );
+        assert.ok(build.route === "wasm" || build.route === "native", "integration build must route through VCC host");
 
         const artifactDir = resolveArtifactDir(outRoot, NODE_WASM_TARGET);
         assert.ok(existsSync(artifactDir), `missing artifact dir under ${outRoot}`);

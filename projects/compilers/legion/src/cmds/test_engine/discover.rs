@@ -127,7 +127,8 @@ pub fn discover_project_tests(project_dir: &Path) -> Vec<DiscoveredFunction> {
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         let _ = collect_all_test_v_files(&test_dir, &mut files);
-    } else if !project_dir.join("source").exists() {
+    }
+    else if !project_dir.join("source").exists() {
         let _ = collect_root_script_v_files(project_dir, &mut files);
     }
     discover_test_functions(&files)

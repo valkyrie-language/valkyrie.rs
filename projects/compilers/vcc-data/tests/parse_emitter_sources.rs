@@ -3,8 +3,7 @@
 //!   <workspace>/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
 //! Never hardcode machine-local absolute paths.
 use std::{fs, path::PathBuf};
-use vcc_data::text::valkyrie::AstParser;
-use vcc_data::text::valkyrie::parser::ParseError;
+use vcc_data::text::valkyrie::{AstParser, parser::ParseError};
 
 #[test]
 fn parse_nyar_emitter_sources() {

@@ -1,5 +1,5 @@
-mod attribute_arguments;
 mod associated_type;
+mod attribute_arguments;
 mod enums_flags;
 mod fixtures;
 mod param_binding;

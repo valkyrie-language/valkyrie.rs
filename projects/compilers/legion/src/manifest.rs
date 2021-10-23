@@ -287,17 +287,15 @@ impl DependencySpec {
             {
                 DependencySourcePreference::Workspace
             }
-            Self::Detailed { source, path, git, .. } => {
-                match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
-                    Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
-                    Some(value) if value == "registry" => DependencySourcePreference::Registry,
-                    Some(value) if value == "path" => DependencySourcePreference::Path,
-                    Some(value) if value == "git" => DependencySourcePreference::Git,
-                    _ if git.is_some() => DependencySourcePreference::Git,
-                    _ if path.is_some() => DependencySourcePreference::Path,
-                    _ => DependencySourcePreference::Auto,
-                }
-            }
+            Self::Detailed { source, path, git, .. } => match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
+                Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
+                Some(value) if value == "registry" => DependencySourcePreference::Registry,
+                Some(value) if value == "path" => DependencySourcePreference::Path,
+                Some(value) if value == "git" => DependencySourcePreference::Git,
+                _ if git.is_some() => DependencySourcePreference::Git,
+                _ if path.is_some() => DependencySourcePreference::Path,
+                _ => DependencySourcePreference::Auto,
+            },
         }
     }
 
@@ -347,12 +345,7 @@ impl Serialize for DependencySpec {
             Self::Disabled => false.serialize(serializer),
             Self::Workspace => true.serialize(serializer),
             Self::Detailed { version, path, abi, source, registry, git, git_ref }
-                if path.is_none()
-                    && abi.is_none()
-                    && source.is_none()
-                    && registry.is_none()
-                    && git.is_none()
-                    && git_ref.is_none() =>
+                if path.is_none() && abi.is_none() && source.is_none() && registry.is_none() && git.is_none() && git_ref.is_none() =>
             {
                 version.serialize(serializer)
             }
@@ -379,27 +372,17 @@ impl<'de> Deserialize<'de> for DependencySpec {
             DependencySpecDef::Bool(false) => Ok(Self::Disabled),
             DependencySpecDef::Bool(true) => Ok(Self::Workspace),
             DependencySpecDef::String(version) => {
-                Ok(Self::Detailed {
-                    version: Some(version),
-                    path: None,
-                    abi: None,
-                    source: None,
-                    registry: None,
-                    git: None,
-                    git_ref: None,
-                })
+                Ok(Self::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None, git: None, git_ref: None })
             }
-            DependencySpecDef::Detailed(value) => {
-                Ok(Self::Detailed {
-                    version: value.version,
-                    path: value.path,
-                    abi: value.abi,
-                    source: value.source,
-                    registry: value.registry,
-                    git: value.git,
-                    git_ref: value.git_ref,
-                })
-            }
+            DependencySpecDef::Detailed(value) => Ok(Self::Detailed {
+                version: value.version,
+                path: value.path,
+                abi: value.abi,
+                source: value.source,
+                registry: value.registry,
+                git: value.git,
+                git_ref: value.git_ref,
+            }),
         }
     }
 }

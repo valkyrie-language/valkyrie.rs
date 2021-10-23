@@ -15,6 +15,7 @@ dist/
 
 # Valkyrie
 .cache/
+valkyrie.v/
 
 # npm Trusted Publisher local cache / secrets
 .env.npm-trust.local

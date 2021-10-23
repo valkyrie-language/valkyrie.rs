@@ -69,10 +69,7 @@ function gitRev(cwd) {
 }
 
 function findToolsProject(valkyrieV) {
-    const candidates = [
-        join(valkyrieV, "projects/legion._/projects/legion.tools"),
-        join(valkyrieV, "projects/legion.tools"),
-    ];
+    const candidates = [join(valkyrieV, "projects/legion._/projects/legion.tools"), join(valkyrieV, "projects/legion.tools")];
     for (const p of candidates) {
         if (existsSync(join(p, "legion.von"))) return p;
     }
@@ -96,7 +93,18 @@ function cmdCapability(argv) {
     console.log("build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (bootstrap fixture, no native bin)");
     run(
         "cargo",
-        ["test", "-p", "legion", "--test", "assemble_vcc_unknown_wasm32", "--release", "assemble_vcc_unknown_wasm32_capability", "--", "--exact", "--nocapture"],
+        [
+            "test",
+            "-p",
+            "legion",
+            "--test",
+            "assemble_vcc_unknown_wasm32",
+            "--release",
+            "assemble_vcc_unknown_wasm32_capability",
+            "--",
+            "--exact",
+            "--nocapture",
+        ],
         {
             LEGION_CAPABILITY_OUT: outRoot,
         },

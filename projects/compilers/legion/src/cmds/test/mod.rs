@@ -8,9 +8,9 @@ use std::{
 use clap::Args;
 use miette::{Result, miette};
 
-use crate::cmds::project_input::resolve_project_path;
 use crate::{
     cmds::{
+        project_input::resolve_project_path,
         report::{TestResultEntry, finish_standalone_report, render_test_report},
         test_engine::{resolve_test_targets, run_tests_for_project},
     },
@@ -60,14 +60,11 @@ pub fn run(args: &TestArgs) -> Result<ExitCode> {
 
     let report_dir = if args.project_dir.extension().and_then(|e| e.to_str()) == Some("v") {
         args.project_dir.parent().unwrap_or(&args.project_dir).join("dist").join("legion-test")
-    } else {
+    }
+    else {
         project_dir.join("dist").join("legion-test")
     };
-    let project_name = project_dir
-        .file_stem()
-        .or_else(|| project_dir.file_name())
-        .and_then(|n| n.to_str())
-        .unwrap_or("project");
+    let project_name = project_dir.file_stem().or_else(|| project_dir.file_name()).and_then(|n| n.to_str()).unwrap_or("project");
     render_test_report(&report_dir, project_name, &results)?;
     println!("HTML 测试报告已生成：{}", report_dir.join("index.html").display());
     finish_standalone_report(&report_dir, args.standalone)?;

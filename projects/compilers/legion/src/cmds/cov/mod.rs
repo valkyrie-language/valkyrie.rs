@@ -69,7 +69,8 @@ pub fn run(args: &CovArgs) -> Result<ExitCode> {
     let workspace = LegionWorkspace::discover_for_project(&project_input).ok();
     let scan_root = if script::is_script_path(&project_input) {
         project_input.parent().map(Path::to_path_buf).unwrap_or_else(|| project_input.clone())
-    } else {
+    }
+    else {
         project_input.clone()
     };
 

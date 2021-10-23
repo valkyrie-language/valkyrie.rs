@@ -57,7 +57,8 @@ pub fn run(args: &BenchArgs) -> Result<ExitCode> {
     let report = BenchReport { runs: args.runs, rows: results };
     let report_dir = if args.project_dir.extension().and_then(|e| e.to_str()) == Some("v") {
         args.project_dir.parent().unwrap_or(&args.project_dir).join("dist").join("legion-benchmark")
-    } else {
+    }
+    else {
         project_dir.join("dist").join("legion-benchmark")
     };
     render_bench_report(&report_dir, &report)?;

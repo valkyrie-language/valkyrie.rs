@@ -417,7 +417,11 @@ micro main(): i64 {
                 &primary,
                 triple,
                 &ast_hash,
-                &SemanticCacheEntry { semantic_data: serde_json::to_vec(&stale_hir).unwrap(), ast_hash: ast_hash.clone(), canonical_triple: triple.into() },
+                &SemanticCacheEntry {
+                    semantic_data: serde_json::to_vec(&stale_hir).unwrap(),
+                    ast_hash: ast_hash.clone(),
+                    canonical_triple: triple.into(),
+                },
             )
             .unwrap();
 

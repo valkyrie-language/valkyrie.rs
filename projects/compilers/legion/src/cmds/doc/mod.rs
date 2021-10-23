@@ -49,7 +49,8 @@ pub fn run(args: &DocArgs) -> Result<ExitCode> {
         let project_input = resolve_project_path(&args.project_dir)?;
         let scan_root = if script::is_script_path(&project_input) {
             project_input.parent().map(Path::to_path_buf).unwrap_or_else(|| project_input.clone())
-        } else {
+        }
+        else {
             project_input.clone()
         };
         let output_dir = args.output_dir.clone().unwrap_or_else(|| scan_root.join("dist/legion-document"));

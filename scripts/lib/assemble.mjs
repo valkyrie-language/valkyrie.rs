@@ -11,13 +11,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const PACKAGE_DIR = join(REPO_ROOT, "projects", "packages", "vcc-unknown-wasm32");
 const MIN_WASM_BYTES = 1024;
-const FORBIDDEN_FROM_FRAGMENTS = [
-    `${sep}smoke-out`,
-    `${sep}smoke-legion`,
-    `${sep}smoke-`,
-    `${sep}generate-seed`,
-    "placeholder-minimal-wasm",
-];
+const FORBIDDEN_FROM_FRAGMENTS = [`${sep}smoke-out`, `${sep}smoke-legion`, `${sep}smoke-`, `${sep}generate-seed`, "placeholder-minimal-wasm"];
 
 function fail(message) {
     process.stderr.write(`build assemble: ${message}\n`);
@@ -55,9 +49,7 @@ function parseArgs(argv) {
             continue;
         }
         if (arg === "--help" || arg === "-h") {
-            process.stdout.write(
-                "Usage: node scripts/build.mjs assemble --from <dir> --source-project <dir> [--v-commit <sha>] [--dry-run]\n",
-            );
+            process.stdout.write("Usage: node scripts/build.mjs assemble --from <dir> --source-project <dir> [--v-commit <sha>] [--dry-run]\n");
             process.exit(0);
         }
         if (arg === "assemble") continue;

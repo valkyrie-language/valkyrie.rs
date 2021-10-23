@@ -14,8 +14,10 @@
 //! micro smoke() -> unit {}
 //! ```
 
-use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::{Display, Formatter},
+    path::{Path, PathBuf},
+};
 
 use miette::{Diagnostic, Severity, SourceSpan};
 
@@ -77,9 +79,7 @@ impl Diagnostic for ScriptError {
 
     fn help<'a>(&'a self) -> Option<Box<dyn Display + 'a>> {
         Some(Box::new(match self {
-            Self::MissingEmbeddedManifest { .. } => {
-                "在 `.v` 文件头部添加 `# ```legion` … `# ```` 注释块，内嵌 `legion.von` 正文"
-            }
+            Self::MissingEmbeddedManifest { .. } => "在 `.v` 文件头部添加 `# ```legion` … `# ```` 注释块，内嵌 `legion.von` 正文",
             Self::UnclosedFence { .. } => "请在内嵌清单末尾补上 `# ```` 闭合行",
             _ => "请确认单脚本头部内嵌清单语法正确",
         }))
@@ -87,10 +87,9 @@ impl Diagnostic for ScriptError {
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
         match self {
-            Self::UnclosedFence { span, .. } => Some(Box::new(std::iter::once(miette::LabeledSpan::new_with_span(
-                Some("此处开始".to_string()),
-                *span,
-            )))),
+            Self::UnclosedFence { span, .. } => {
+                Some(Box::new(std::iter::once(miette::LabeledSpan::new_with_span(Some("此处开始".to_string()), *span))))
+            }
             _ => None,
         }
     }
@@ -121,7 +120,8 @@ pub fn try_load_single_script(path: &Path) -> Result<Option<SingleScriptContext>
     }
 
     let content = std::fs::read_to_string(path).map_err(|source| ScriptError::io(path.to_path_buf(), source))?;
-    let Some(manifest_source) = extract_embedded_manifest(&content, path)? else {
+    let Some(manifest_source) = extract_embedded_manifest(&content, path)?
+    else {
         return Ok(None);
     };
 
@@ -163,11 +163,7 @@ pub fn extract_embedded_manifest(content: &str, path: &Path) -> Result<Option<St
 
 fn strip_leading_comment(line: &str) -> &str {
     let trimmed = line.trim_start();
-    if let Some(rest) = trimmed.strip_prefix('#') {
-        rest.strip_prefix(' ').unwrap_or(rest)
-    } else {
-        line
-    }
+    if let Some(rest) = trimmed.strip_prefix('#') { rest.strip_prefix(' ').unwrap_or(rest) } else { line }
 }
 
 #[cfg(test)]

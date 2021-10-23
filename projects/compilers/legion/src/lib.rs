@@ -17,8 +17,7 @@ pub use cmds::{
 };
 pub use manifest::{
     AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectArtifactKind, ProjectManifest,
-    PublishTargetSpec, RunnerBinding,
-    WorkspaceDefaults, WorkspaceManifest,
+    PublishTargetSpec, RunnerBinding, WorkspaceDefaults, WorkspaceManifest,
 };
 
 /// On-disk layout for Legion projects (`legion.von` / `legions.von` / `legion-lock.von` / `~/.valkyrie`).
@@ -54,7 +53,7 @@ pub use nyar_language::{
 };
 pub use planner::{
     BuildPlan, BuildRequest, LegionWorkspace, PlannedDependency, PlannedHostContract, PlannedHostProvider, PlannedProject,
-    PlannedSemanticSourceGroup, collect_project_v_files, collect_project_root_v_files, collect_test_build_sources,
-    collect_test_v_files, project_uses_single_script_layout,
+    PlannedSemanticSourceGroup, collect_project_root_v_files, collect_project_v_files, collect_test_build_sources, collect_test_v_files,
+    project_uses_single_script_layout,
 };
 pub use vcc_data::text::von::{VonError, VonParseError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};

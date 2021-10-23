@@ -1,10 +1,13 @@
-use legion::{CanonicalTarget, DependencySpec, ProjectArtifactKind, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest};
+use legion::{
+    CanonicalTarget, DependencySpec, ProjectArtifactKind, ProjectManifest, PublishFormat, RunnerFamily, RunnerSelector, WorkspaceManifest,
+};
 
 fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
     match spec {
         DependencySpec::Workspace => true,
-        DependencySpec::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None, git: None, git_ref: None } =>
-            version == "workspace",
+        DependencySpec::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None, git: None, git_ref: None } => {
+            version == "workspace"
+        }
         _ => false,
     }
 }

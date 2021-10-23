@@ -18,9 +18,12 @@ test("median returns middle sample", () => {
 
 test("benchmarkSync measures synchronous work", () => {
     let counter = 0;
-    const result = benchmarkSync(() => {
-        counter += 1;
-    }, { iterations: 10, warmup: 2 });
+    const result = benchmarkSync(
+        () => {
+            counter += 1;
+        },
+        { iterations: 10, warmup: 2 },
+    );
     assert.equal(counter, 12);
     assert.equal(result.iterations, 10);
     assert.ok(result.medianMs >= 0);
