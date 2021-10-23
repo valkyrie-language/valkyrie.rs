@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import type { VccCliSpawnResult, VccHostRunner } from "./index.ts";
+import { locateNativeCollect } from "./index.ts";
 import { resolveWasmMjs } from "./index.ts";
 
 /** Node Wasm GC 目标三元组（与 legion build --target node 对齐）。 */
@@ -43,26 +44,9 @@ export function skipUnlessWasmCollectReady(
     return `wasm collect not assembled (${wasmCollect}/${wasmEntry}); run pnpm assemble`;
 }
 
-/** 定位本机 Rust seed `legion`（`LEGION_PATH` 或 `target/release/legion.exe`）。 */
-export function resolveNativeLegion(repoRoot: string): string | null {
-    const fromEnv = process.env.LEGION_PATH;
-    if (fromEnv && existsSync(fromEnv)) {
-        return fromEnv;
-    }
-    const release = join(repoRoot, "target", "release", "legion.exe");
-    if (existsSync(release)) {
-        return release;
-    }
-    const debug = join(repoRoot, "target", "debug", "legion.exe");
-    if (existsSync(debug)) {
-        return debug;
-    }
-    return null;
-}
-
-/** 集成测试可用：已装配 wasm collect，或存在本机 native legion 二进制。 */
-export function integrationRunnerReady(repoRoot: string, wasmCollect: string, wasmEntry: string): boolean {
-    return wasmCollectReady(wasmCollect, wasmEntry) || resolveNativeLegion(repoRoot) !== null;
+/** 集成测试可用：已装配 wasm collect，或已安装 VCC native platform collect。 */
+export function integrationRunnerReady(wasmCollect: string, wasmEntry: string): boolean {
+    return wasmCollectReady(wasmCollect, wasmEntry) || locateNativeCollect() !== null;
 }
 
 /**
@@ -130,29 +114,8 @@ export function spawnHostCli(host: VccHostRunner, argv: string[] = []): VccCliSp
     return host.spawnCli(argv);
 }
 
-/** 通过 native seed `legion` 运行 CLI。 */
-export function spawnNativeLegion(legionPath: string, argv: string[] = []): VccCliSpawnResult {
-    const result = spawnSync(legionPath, argv, { encoding: "utf8" });
-    return {
-        route: "native",
-        status: result.status ?? 1,
-        stdout: String(result.stdout ?? ""),
-        stderr: String(result.stderr ?? ""),
-    };
-}
-
-/**
- * 集成测试路由：优先 native seed legion（真实编译器），否则 wasm collect。
- */
-export function spawnLegionForIntegration(
-    repoRoot: string,
-    host: VccHostRunner,
-    argv: string[] = [],
-): VccCliSpawnResult {
-    const native = resolveNativeLegion(repoRoot);
-    if (native) {
-        return spawnNativeLegion(native, argv);
-    }
+/** 通过组装 VCC 宿主运行 CLI（native platform collect 优先，否则 wasm collect）。 */
+export function spawnLegionForIntegration(host: VccHostRunner, argv: string[] = []): VccCliSpawnResult {
     return host.spawnCli(argv);
 }
 

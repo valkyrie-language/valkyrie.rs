@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import type { VccCliRoute, VccCliSpawnResult, VccHostRunner } from "./index.ts";
-import { resolveNativeLegion, spawnNativeLegion } from "./testing.ts";
+import { createHostRunner, locateNativeCollect } from "./index.ts";
 
 /** `legion bench` 表格中的一行。 */
 export type LegionBenchRow = {
@@ -113,10 +113,12 @@ export type RunBenchmarkSuiteOptions = LegionBenchProjectOptions & {
 };
 
 const DEFAULT_WASM_ENTRY = "legion.mjs";
+const DEFAULT_WASM_PACKAGE = "@valkyrie-language/vcc-unknown-wasm32";
 
 /**
- * `legion bench -t node`：V 源码编译为 Node Wasm GC 产物后在 Node 宿主执行。
+ * `legion bench --target node`：扫描源码内 `[benchmark]` 函数并计时（valkyrie 工程自测用）。
  * `compileMs` = 每次运行的编译耗时，`runtimeMs` = Wasm 入口执行 `[benchmark]` 函数耗时。
+ * leetcode 等外部 harness 应使用 `legion build` + 对 `metadata.tests` 跑产物，勿依赖本 API 的 `runtimeMs`。
  */
 export const WASM_NODE_BENCH_TARGET = "node";
 
@@ -243,7 +245,7 @@ function spawnWasmLegionFromDir(wasmCollectDir: string, wasmEntry: string, argv:
 }
 
 /**
- * 创建基准测试 runner：优先 native `legion.exe`，否则 wasm collect。
+ * 创建基准测试 runner：经 VCC 宿主路由（native platform collect 优先，否则 wasm collect）。
  * 供 leetcode / project-euler 等 conformance 仓对比参考实现与 Valkyrie Wasm。
  */
 export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBenchmarkRunner {
@@ -252,15 +254,25 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
     const wasmCollectDir = config.wasmCollectDir ?? join(valkyrieRsRoot, "projects", "packages", "vcc-unknown-wasm32");
     const host = config.host;
 
+    function resolveHost(): VccHostRunner {
+        return (
+            host ??
+            createHostRunner({
+                wasmCollect: DEFAULT_WASM_PACKAGE,
+                wasmEntry,
+            })
+        );
+    }
+
     function ready(): boolean {
-        return wasmCollectReadyFromDir(wasmCollectDir, wasmEntry) || resolveNativeLegion(valkyrieRsRoot) !== null || host !== undefined;
+        return wasmCollectReadyFromDir(wasmCollectDir, wasmEntry) || locateNativeCollect() !== null || host !== undefined;
     }
 
     function skipReason(): string | null {
         if (ready()) {
             return null;
         }
-        return "Valkyrie runner not ready: build legion (cargo build -p legion --release) or run pnpm assemble for wasm collect";
+        return "Valkyrie runner not ready: install a @valkyrie-language/vcc-* platform package (native) or run node scripts/build.mjs capability in valkyrie.rs (wasm collect)";
     }
 
     function spawnLegion(argv: string[] = []): VccCliSpawnResult {
@@ -272,22 +284,10 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
                 stderr: skipReason() ?? "runner unavailable",
             };
         }
-        const native = resolveNativeLegion(valkyrieRsRoot);
-        if (native) {
-            return spawnNativeLegion(native, argv);
-        }
         if (wasmCollectReadyFromDir(wasmCollectDir, wasmEntry)) {
             return spawnWasmLegionFromDir(wasmCollectDir, wasmEntry, argv);
         }
-        if (host) {
-            return host.spawnCli(argv);
-        }
-        return {
-            route: "wasm",
-            status: 127,
-            stdout: "",
-            stderr: skipReason() ?? "runner unavailable",
-        };
+        return resolveHost().spawnCli(argv);
     }
 
     function benchProject(projectDir: string, options: LegionBenchProjectOptions = {}): LegionBenchProjectResult {
@@ -318,7 +318,15 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
         if (legion.outcome.status !== 0) {
             error = formatLegionCliError("legion bench", legion.outcome);
         } else if (!legion.aggregate) {
-            error = "legion bench produced no timed rows (missing [benchmark] or compile failure)";
+            const combined = `${legion.outcome.stdout}\n${legion.outcome.stderr}`;
+            if (/未发现\s*\[benchmark\]/.test(combined)) {
+                error =
+                    "legion bench: no [benchmark] functions in project (legion bench only times source [benchmark] blocks, not external harness)";
+            } else if (legion.rows.length === 0) {
+                error = "legion bench: exit 0 but stdout had no parseable timing rows";
+            } else {
+                error = "legion bench: failed to aggregate timing rows";
+            }
         }
         const legionRuntimeMs = legion.aggregate?.runtimeMs ?? null;
         return {

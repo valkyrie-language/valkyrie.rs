@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/legion",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Legion â€?Valkyrie compiler & workspace CLI (assembled from VCC platform collects).",
     "type": "module",
     "license": "MPL-2.0",
