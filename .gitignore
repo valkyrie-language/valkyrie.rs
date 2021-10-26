@@ -21,6 +21,9 @@ valkyrie.v/
 .env.npm-trust.local
 .npm-trust-cache.json
 
+# Commit reword scratch files
+reword.pending.txt
+
 # Assembled wasm collect (generated locally or in CI)
 projects/packages/vcc-unknown-wasm32/legion.mjs
 projects/packages/vcc-unknown-wasm32/legion.wasm

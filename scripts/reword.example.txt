@@ -1,0 +1,13 @@
+# Hash-keyed reword map example. Only listed commits are rewritten during rebase.
+
+34e1e665bf08805df66c43930ee03ca45bf696dd
+🔨 Support `continue`, `break`, and early `return`
+
+Close issue 17 for control-flow lowering in the compiler frontend.
+
+---
+
+352b1cb1f4dfd46eea87094593e7efe58000e43b
+🔧 Consolidate repo scripts into `format.mjs`, `build.mjs`, `publish.mjs`, and `test.mjs`
+
+Replace ad-hoc TypeScript and shell publish helpers with shared `scripts/lib` modules.
