@@ -1,0 +1,4 @@
+[submodule "projects/valkyrie.v"]
+	path = projects/valkyrie.v
+	url = https://github.com/valkyrie-language/valkyrie.v.git
+	branch = dev

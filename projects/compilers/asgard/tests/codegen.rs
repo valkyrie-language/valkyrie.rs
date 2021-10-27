@@ -10,12 +10,9 @@ use vcc_data::text::awsl::AwslParser;
 
 fn valkyrie_v_root() -> PathBuf {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for candidate in [manifest.join("../../valkyrie.v"), manifest.join("../../../valkyrie.v")] {
-        if candidate.exists() {
-            return candidate;
-        }
-    }
-    manifest.join("../../../valkyrie.v")
+    let submodule = manifest.join("../../valkyrie.v");
+    assert!(submodule.is_dir(), "missing `projects/valkyrie.v` submodule");
+    submodule
 }
 
 fn fixture(path: &str) -> String {

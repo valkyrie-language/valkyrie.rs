@@ -95,5 +95,5 @@ fn command_exists(command: &str) -> bool {
 }
 
 fn workspace_examples_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("valkyrie.v").join("examples")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("valkyrie.v").join("examples")
 }

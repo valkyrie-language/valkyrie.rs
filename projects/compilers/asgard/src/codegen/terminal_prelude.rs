@@ -29,9 +29,9 @@ pub const TERMINAL_HOST_PRELUDE: &str = r#"
 
 /// `tui.v` 运行时源码：widget 数据结构 + TuiRuntime + 构建原语 + 焦点导航 + 事件循环。
 ///
-/// 通过 `include_str!` 从 `valkyrie.v` 树嵌入，保证 asgard 产物中的 TUI 运行时
-/// 与 V 标准库定义一致。路径相对本文件：上溯 5 层到仓库根，再下探到 valkyrie.v。
-pub const TUI_RUNTIME_SOURCE: &str = include_str!("../../../../../valkyrie.v/projects/std/source/terminal/tui.v");
+/// 通过 `include_str!` 从 `projects/valkyrie.v` 子模块嵌入，保证 asgard 产物中的 TUI 运行时
+/// 与 V 标准库定义一致。
+pub const TUI_RUNTIME_SOURCE: &str = include_str!("../../../../valkyrie.v/projects/std/source/terminal/tui.v");
 
 /// 终端 V 预置：host_contract 声明 + tui.v 运行时，作为 AWSL 生成代码的前导。
 pub fn terminal_prelude() -> String {

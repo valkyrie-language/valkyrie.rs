@@ -5,7 +5,7 @@
  *   node scripts/build.mjs                 # napi + wasm
  *   node scripts/build.mjs napi|wasm
  *   node scripts/build.mjs assemble --from <dir> --source-project <dir>
- *   node scripts/build.mjs capability --valkyrie-v valkyrie.v
+ *   node scripts/build.mjs capability --valkyrie-v projects/valkyrie.v
  */
 
 import { spawnSync } from 'node:child_process';
@@ -81,7 +81,7 @@ function bootstrapFixtureProject() {
 }
 
 function cmdCapability(argv) {
-    const valkyrieVRaw = takeFlag(argv, '--valkyrie-v') ?? 'valkyrie.v';
+    const valkyrieVRaw = takeFlag(argv, '--valkyrie-v') ?? 'projects/valkyrie.v';
     const valkyrieV = resolve(ROOT, valkyrieVRaw);
     const sourceProject = bootstrapFixtureProject();
     if (!existsSync(join(sourceProject, 'legion.von'))) {

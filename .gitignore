@@ -15,7 +15,8 @@ dist/
 
 # Valkyrie
 .cache/
-valkyrie.v/
+# Legacy root checkout only. Canonical read-only tree is `projects/valkyrie.v` submodule.
+/valkyrie.v/
 
 # npm Trusted Publisher local cache / secrets
 .env.npm-trust.local

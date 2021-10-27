@@ -10,15 +10,14 @@ use serde_json::Value;
 
 use crate::{codegen::StaticRenderResult, ssg::render_awsl_static};
 
-/// 定位 `valkyrie.v` 根目录（相对 `valkyrie.rs` 工作区）。
+/// 定位 `projects/valkyrie.v` 子模块根目录。
 pub fn valkyrie_v_roots() -> Result<Vec<PathBuf>> {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let candidates = [manifest.join("../../valkyrie.v"), manifest.join("../../../valkyrie.v"), manifest.join("../../../../valkyrie.v")];
-    let roots: Vec<_> = candidates.into_iter().filter(|p| p.is_dir()).collect();
-    if roots.is_empty() {
-        return Err(miette::miette!("cannot locate valkyrie.v workspace root"));
+    let submodule = manifest.join("../../valkyrie.v");
+    if submodule.is_dir() {
+        return Ok(vec![submodule]);
     }
-    Ok(roots)
+    Err(miette::miette!("cannot locate `projects/valkyrie.v` submodule (run `git submodule update --init`)"))
 }
 
 /// 读取工程 `source/{relative}` 文本。

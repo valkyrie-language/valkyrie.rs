@@ -15,12 +15,8 @@ jobs:
     steps:
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
-      - name: Checkout valkyrie.v
-        uses: actions/checkout@v5
         with:
-          repository: valkyrie-language/valkyrie.v
-          ref: dev
-          path: valkyrie.v
+          submodules: recursive
       - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -45,12 +41,8 @@ jobs:
       - run: git config --global core.autocrlf false
       - name: Checkout valkyrie.rs
         uses: actions/checkout@v5
-      - name: Checkout valkyrie.v
-        uses: actions/checkout@v5
         with:
-          repository: valkyrie-language/valkyrie.v
-          ref: dev
-          path: valkyrie.v
+          submodules: recursive
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -69,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/build.mjs capability --valkyrie-v valkyrie.v
+          node scripts/build.mjs capability --valkyrie-v projects/valkyrie.v
           test -f projects/packages/vcc-unknown-wasm32/legion.wasm
           grep -q '"fixture": false' projects/packages/vcc-unknown-wasm32/provenance.json
           ! grep -qi smoke-out projects/packages/vcc-unknown-wasm32/provenance.json
@@ -81,12 +73,8 @@ jobs:
     steps:
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
-      - name: Checkout valkyrie.v
-        uses: actions/checkout@v5
         with:
-          repository: valkyrie-language/valkyrie.v
-          ref: dev
-          path: valkyrie.v
+          submodules: recursive
       - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:

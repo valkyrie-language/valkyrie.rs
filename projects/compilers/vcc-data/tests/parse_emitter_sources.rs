@@ -1,15 +1,13 @@
-//! Parse every nyar.emitter `.v` via sibling checkout layout:
-//!   <workspace>/valkyrie.rs/projects/vcc-data
-//!   <workspace>/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
-//! Never hardcode machine-local absolute paths.
+//! Parse every nyar.emitter `.v` via `projects/valkyrie.v` submodule:
+//!   projects/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
 use std::{fs, path::PathBuf};
 use vcc_data::text::valkyrie::{AstParser, parser::ParseError};
 
 #[test]
 fn parse_nyar_emitter_sources() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("valkyrie.v/projects/nyar._/projects/nyar.emitter/source");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/projects/nyar._/projects/nyar.emitter/source");
     let root = root.canonicalize().unwrap_or(root);
-    assert!(root.is_dir(), "missing sibling emitter sources at {} (expect workspace layout valkyrie.rs + valkyrie.v)", root.display());
+    assert!(root.is_dir(), "missing valkyrie.v emitter sources at {} (init `projects/valkyrie.v` submodule)", root.display());
 
     let mut files = Vec::new();
     fn walk(dir: &std::path::Path, out: &mut Vec<PathBuf>) {

@@ -292,8 +292,8 @@ mod tests {
 
     #[test]
     fn debug_blog_normalize_shape() {
-        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
-        let source = std::fs::read_to_string(root.join("valkyrie.v/examples/test.blog/asgard.config.v")).expect("read");
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v");
+        let source = std::fs::read_to_string(root.join("examples/test.blog/asgard.config.v")).expect("read");
         let normalized = normalize_config_source(&source).expect("normalize");
         if let Err(error) = VonParser::parse(&normalized) {
             panic!("parse failed: {error:?}\n---\n{normalized}\n---");
