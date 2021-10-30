@@ -15,6 +15,7 @@ dist/
 
 # Valkyrie
 .cache/
+documentation/maintenance/releases/*.reference.md
 # Legacy root checkout only. Canonical read-only tree is `projects/valkyrie.v` submodule.
 /valkyrie.v/
 
@@ -23,7 +24,7 @@ dist/
 .npm-trust-cache.json
 
 # Commit reword scratch files
-reword.pending.txt
+reword.pending.json
 
 # Assembled wasm collect (generated locally or in CI)
 projects/packages/vcc-unknown-wasm32/legion.mjs

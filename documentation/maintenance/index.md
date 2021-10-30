@@ -32,6 +32,13 @@ source → AST → HIR → MIR
 - `documentation/maintenance/`：与**当前代码一致**的架构说明；不得写入未公开计划、发布门槛或工作区外文档链接。
 - 集成测试若需外部语言规范树，通过环境变量注入路径，不得在文档或源码中写死本机路径。
 
+## npm 发布说明
+
+- 模板：[release-notes.template.md](release-notes.template.md)
+- 起草对照：`pnpm change-logs --version X.Y.Z`（`--write` → `releases/vX.Y.Z.reference.md`，与 `vX.Y.Z.md` 同目录、gitignore 勿入库；`--tags` 列出 tag）
+- 非 GitHub 邮箱 → 贡献者映射：[author-github.json](author-github.json)（`id` 稳定，`login` 可改）
+- 已发布版本：`releases/v0.0.0.md` … `releases/v0.0.3.md`（对应 Git tag `v0.0.x`）
+
 ## 相关入口
 
 - [project-architecture.md](project-architecture.md)
