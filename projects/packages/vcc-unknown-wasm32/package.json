@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/vcc-unknown-wasm32",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Valkyrie Compiler Collect (VCC) - wasm32-unknown-wasm Legion host artifacts.",
     "type": "module",
     "license": "MPL-2.0",

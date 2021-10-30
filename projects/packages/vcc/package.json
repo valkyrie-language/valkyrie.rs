@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/vcc",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Valkyrie Compiler Collect shared host runner for assembled Legion and Asgard CLIs.",
     "type": "module",
     "license": "MPL-2.0",

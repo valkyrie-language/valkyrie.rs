@@ -1,220 +1,111 @@
 # Trusted Publisher contract (sole npm trusted workflow — keep this filename):
-
 #   file = publish-npm.yml
-
 #   repo = valkyrie-language/valkyrie.rs
-
 #   env  = NPM_PUBLISH
-
 #
-
 # Triggers:
-
 #   - push tag v*
-
 #   - workflow_dispatch (version input, default 0.0.1)
-
 # Do not register Trusted Publisher on any other workflow file.
-
 # No NPM_TOKEN — OIDC only.
-
-
 
 name: Publish npm
 
-
-
 on:
-
   push:
-
     tags:
-
       - 'v*'
-
   workflow_dispatch:
-
     inputs:
-
       version:
-
         description: 'Version without v prefix'
-
         required: true
-
         type: string
-
         default: '0.0.1'
 
-
-
 permissions:
-
   contents: read
-
   id-token: write
 
-
-
 jobs:
-
   publish:
-
     name: Publish @valkyrie-language packages
-
     runs-on: ubuntu-latest
-
     environment: NPM_PUBLISH
-
     steps:
-
       - name: Checkout valkyrie.rs
-
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-
-
       - name: Resolve version
-
         id: ver
-
         shell: bash
-
         run: |
-
           set -euo pipefail
-
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-
             v="${{ inputs.version }}"
-
             v="${v#v}"
-
           else
-
             ref="${GITHUB_REF#refs/tags/}"
-
             v="${ref#v}"
-
           fi
-
           echo "version=$v" >> "$GITHUB_OUTPUT"
-
           echo "resolved version=$v"
 
-
-
       - name: Record valkyrie.v commit
-
         id: vcommit
-
         working-directory: projects/valkyrie.v
-
         shell: bash
-
         run: |
-
           set -euo pipefail
-
           sha="$(git rev-parse HEAD)"
-
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
           echo "valkyrie.v=$sha"
 
-
-
       - name: Setup Node
-
         uses: actions/setup-node@v4
-
         with:
-
           node-version: '24'
-
           # Do NOT set registry-url: it writes _authToken into npmrc and blocks OIDC.
 
-
-
       - name: Ensure npm supports Trusted Publishing
-
         run: npm install -g npm@latest
 
-
-
       - name: Rust Nightly
-
         uses: dtolnay/rust-toolchain@nightly
-
         with:
-
           components: rustfmt, clippy
 
-
-
       - name: Install Wasmtime
-
         uses: bytecodealliance/actions/wasmtime/setup@v1
-
         with:
-
           github_token: ${{ github.token }}
 
-
-
       - name: Build and assemble vcc-unknown-wasm32
-
         shell: bash
-
         run: |
-
           set -euo pipefail
-
           node scripts/build.mjs capability --valkyrie-v projects/valkyrie.v
-
           test -f projects/packages/vcc-unknown-wasm32/legion.wasm
-
           test -f projects/packages/vcc-unknown-wasm32/legion.mjs
-
           grep -q '"fixture": false' projects/packages/vcc-unknown-wasm32/provenance.json
-
           ! grep -qi smoke-out projects/packages/vcc-unknown-wasm32/provenance.json
 
-
-
       - name: Strip token-style npmrc (OIDC only)
-
         shell: bash
-
         run: |
-
           set -euo pipefail
-
           unset NODE_AUTH_TOKEN NPM_TOKEN || true
-
           for f in "${HOME}/.npmrc" "${NPM_CONFIG_USERCONFIG:-}" "${RUNNER_TEMP:-}/.npmrc"; do
-
             [[ -n "${f}" && -f "${f}" ]] || continue
-
             if grep -q '_authToken' "${f}"; then
-
               grep -v '_authToken' "${f}" > "${f}.oidc" && mv "${f}.oidc" "${f}"
-
               echo "stripped _authToken from ${f}"
-
             fi
-
           done
 
-
-
       - name: Publish npm packages
-
         env:
-
           GITHUB_REF: refs/tags/v${{ steps.ver.outputs.version }}
-
         run: node scripts/publish.mjs ci --version=${{ steps.ver.outputs.version }}
-

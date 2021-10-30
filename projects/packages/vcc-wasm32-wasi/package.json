@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/vcc-wasm32-wasi",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Valkyrie Compiler Collect (VCC) - wasm32-wasip1 Asgard host artifacts.",
     "type": "module",
     "license": "MIT",
