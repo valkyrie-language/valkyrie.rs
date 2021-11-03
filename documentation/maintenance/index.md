@@ -34,7 +34,8 @@ source → AST → HIR → MIR
 
 ## npm 发布说明
 
-- 代理流程：[`.agents/skills/update-change-logs/SKILL.md`](../../.agents/skills/update-change-logs/SKILL.md)（reference → 发布稿 → `gh release edit`）
+- 发布说明：[`.agents/skills/update-change-logs/SKILL.md`](../../.agents/skills/update-change-logs/SKILL.md)（reference → 发布稿 → `gh release edit`）
+- 提交信息与 `git-reword`：[`.agents/skills/update-commit-messages/SKILL.md`](../../.agents/skills/update-commit-messages/SKILL.md)
 - 模板：[release-notes.template.md](release-notes.template.md)
 - 起草对照：`pnpm change-logs --version X.Y.Z`（`--write` → `releases/vX.Y.Z.reference.md`，与 `vX.Y.Z.md` 同目录、gitignore 勿入库；`--tags` 列出 tag）
 - 非 GitHub 邮箱 → 贡献者映射：[author-github.json](author-github.json)（`id` 稳定，`login` 可改）

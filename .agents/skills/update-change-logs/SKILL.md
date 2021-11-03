@@ -8,7 +8,8 @@ description: >-
 
 # Update Change Logs（发布说明）
 
-在本仓，**更新 changelog** 指 **reference → 发布稿 →（可选）GitHub Release** 的完整闭环，不是把 reference 直接发布，也不是写「正式发布 npm」等元信息。
+在本仓， **更新 changelog** 指 **reference → 发布稿 →（可选）GitHub Release** 的完整闭环，不是把 reference 直接发布，也不是写「正式发布
+npm」等元信息。
 
 ```text
 ① 生成 reference  →  ② 提炼发布稿  →  ③ 同步 GitHub Release（用户明确要求时）
@@ -17,13 +18,13 @@ description: >-
 
 ## 路径与产物
 
-| 路径 | 用途 | 入库 |
-| --- | --- | --- |
-| `scripts/change-logs.mjs` | commit 索引生成器 | 是 |
-| `documentation/maintenance/release-notes.template.md` | 发布稿模板 | 是 |
-| `documentation/maintenance/author-github.json` | 非 noreply 邮箱 → GitHub `id` / `login` | 是 |
-| `documentation/maintenance/releases/vX.Y.Z.reference.md` | 按 commit 分组的**对照稿** | **否**（gitignore） |
-| `documentation/maintenance/releases/vX.Y.Z.md` | 面向用户的**发布稿** | 是 |
+| 路径                                                     | 用途                                    | 入库                |
+|----------------------------------------------------------|-----------------------------------------|---------------------|
+| `scripts/change-logs.mjs`                                | commit 索引生成器                       | 是                  |
+| `documentation/maintenance/release-notes.template.md`    | 发布稿模板                              | 是                  |
+| `documentation/maintenance/author-github.json`           | 非 noreply 邮箱 → GitHub `id` / `login` | 是                  |
+| `documentation/maintenance/releases/vX.Y.Z.reference.md` | 按 commit 分组的**对照稿**              | **否**（gitignore） |
+| `documentation/maintenance/releases/vX.Y.Z.md`           | 面向用户的**发布稿**                    | 是                  |
 
 ## ① 生成 reference
 
@@ -40,7 +41,8 @@ pnpm change-logs --from vA.B.C --to vX.Y.Z
 
 ### `v0.0.0` 特例
 
-首个 tag 无 `--from` 时，reference 覆盖**到该 tag 为止的全历史**，不能逐条照抄。只取与 tag 锚点 commit 一致、或用户可感知的里程碑；其余合并或跳过。
+首个 tag 无 `--from` 时，reference 覆盖 **到该 tag 为止的全历史**，不能逐条照抄。只取与 tag 锚点 commit
+一致、或用户可感知的里程碑；其余合并或跳过。
 
 ## ② 提炼发布稿
 
@@ -48,20 +50,21 @@ pnpm change-logs --from vA.B.C --to vX.Y.Z
 
 **完成标准**：
 
-1. 编辑 `documentation/maintenance/releases/vX.Y.Z.md`（**不是** `.reference.md`）。
+1. 编辑 `documentation/maintenance/releases/vX.Y.Z.md`（ **不是** `.reference.md`）。
 2. 保留模板全部分类：`## ✨ Features`、`## 🐛 Bug Fixes`、`## ⚠️ Breaking Changes`、`## 👥 Contributors`、`## 📝 Other`；无内容写「无」。
-3. 正文中文；只写读者安装/使用后**能感知**的变化。
-4. `## 👥 Contributors`：从 reference 复制头像墙；头像优先 `https://avatars.githubusercontent.com/u/<id>?s=100`（`author-github.json` 的 `id` 稳定）。
+3. 正文中文；只写读者安装/使用后 **能感知**的变化。
+4. `## 👥 Contributors`：从 reference 复制头像墙；头像优先 `https://avatars.githubusercontent.com/u/<id>?s=100`（
+   `author-github.json` 的 `id` 稳定）。
 
 ### 提炼规则（硬性）
 
-| reference 内容 | 发布稿 |
-| --- | --- |
-| Release / publish / bump 版本 | **跳过** — 发版本身不是 feature |
-| CI、reword、submodule、文档树整理 | **跳过**（或整节 Other 写「无」） |
-| 用户可感知的 API / CLI / npm 行为变化 | 合并为 1 条通俗中文 |
-| 同主题多条 commit | 合并为 1 条，不列 commit 清单 |
-| reference 标在 Other 的维护项 | 默认不进发布稿；确属贡献者须知时才放 Other |
+| reference 内容                        | 发布稿                                     |
+|---------------------------------------|--------------------------------------------|
+| Release / publish / bump 版本         | **跳过** — 发版本身不是 feature            |
+| CI、reword、submodule、文档树整理     | **跳过**（或整节 Other 写「无」）          |
+| 用户可感知的 API / CLI / npm 行为变化 | 合并为 1 条通俗中文                        |
+| 同主题多条 commit                     | 合并为 1 条，不列 commit 清单              |
+| reference 标在 Other 的维护项         | 默认不进发布稿；确属贡献者须知时才放 Other |
 
 **禁止**：
 
@@ -71,7 +74,13 @@ pnpm change-logs --from vA.B.C --to vX.Y.Z
 
 ### 标题 emoji
 
-与**最主要变更类型**一致：以 bug fix 为主 → `# 🐛`；以 feature 为主 → `# ✨` 或 `# 🚀`；纯维护 → `# 🔧`。
+发布稿首行**固定**与模板相同，无例外：
+
+```markdown
+# 🚀 `@valkyrie-language` vX.Y.Z
+```
+
+🐛 / ✨ / 🔧 只出现在正文 `## …` 小节标题里，**不得**替换首行火箭。
 
 ## 贡献者映射
 
@@ -79,10 +88,10 @@ pnpm change-logs --from vA.B.C --to vX.Y.Z
 
 ```json
 {
-    "email@example.com": {
-        "id": 12345678,
-        "login": "handle"
-    }
+  "email@example.com": {
+    "id": 12345678,
+    "login": "handle"
+  }
 }
 ```
 
@@ -112,5 +121,7 @@ gh release edit vX.Y.Z --notes-file documentation/maintenance/releases/vX.Y.Z.md
 
 ## 相关入口
 
+-
+发布模板：[documentation/maintenance/release-notes.template.md](../../../documentation/maintenance/release-notes.template.md)
 - 维护索引：[documentation/maintenance/index.md](../../../documentation/maintenance/index.md)
-- 发布模板：[documentation/maintenance/release-notes.template.md](../../../documentation/maintenance/release-notes.template.md)
+- 提交信息与 `git-reword`：[update-commit-messages](../update-commit-messages/SKILL.md)
