@@ -13,14 +13,24 @@ npm」等元信息。
 
 ```text
 ① 生成 reference  →  ② 提炼发布稿  →  ③ 同步 GitHub Release（用户明确要求时）
-   pnpm change-logs      releases/vX.Y.Z.md     gh release edit
+   git-change-logs     releases/vX.Y.Z.md     gh release edit
 ```
+
+## 前置：安装 `git-change-logs`
+
+与 `git-reword` 相同，来自 [git-tools](https://github.com/oovm/git-tools)：
+
+```bash
+cargo install --git https://github.com/oovm/git-tools.git --bin git-change-logs
+```
+
+验证：`git-change-logs --help`。本仓 `pnpm change-logs` 仅为同名快捷方式，**须**已安装并在 `PATH` 中。
 
 ## 路径与产物
 
 | 路径                                                     | 用途                                    | 入库                |
 |----------------------------------------------------------|-----------------------------------------|---------------------|
-| `scripts/change-logs.mjs`                                | commit 索引生成器                       | 是                  |
+| `git-change-logs`（git-tools 全局 CLI）                  | commit 索引生成器                       | 否                  |
 | `documentation/maintenance/release-notes.template.md`    | 发布稿模板                              | 是                  |
 | `documentation/maintenance/author-github.json`           | 非 noreply 邮箱 → GitHub `id` / `login` | 是                  |
 | `documentation/maintenance/releases/vX.Y.Z.reference.md` | 按 commit 分组的**对照稿**              | **否**（gitignore） |
@@ -28,12 +38,16 @@ npm」等元信息。
 
 ## ① 生成 reference
 
+在仓库根目录（或任意子目录）：
+
 ```text
-pnpm change-logs --tags
-pnpm change-logs --version X.Y.Z
-pnpm change-logs --version X.Y.Z --write
-pnpm change-logs --from vA.B.C --to vX.Y.Z
+git-change-logs --tags
+git-change-logs --version X.Y.Z
+git-change-logs --version X.Y.Z --write
+git-change-logs --from vA.B.C --to vX.Y.Z
 ```
+
+（等价：`pnpm change-logs …`，前提同上。）
 
 - `--version X.Y.Z`：范围 = 上一个 `v*` tag .. `vX.Y.Z`（semver 回退兜底）。
 - `--write`：写入 `documentation/maintenance/releases/vX.Y.Z.reference.md`（与发布稿同目录）。
@@ -99,7 +113,14 @@ pnpm change-logs --from vA.B.C --to vX.Y.Z
 - 兼容旧格式：`"email": "handle"` 字符串。
 - noreply 邮箱自动解析：`{id}+login@users.noreply.github.com`。
 
-缺映射且 reference 贡献者墙为空时，补映射后重新 `--write`。
+缺映射且 reference 贡献者墙为空时，用 `git-change-logs lookup` 查 `id` / `login`（写入 `author-github.json`），再重新 `--write`：
+
+```text
+git-change-logs lookup --email aster@vers.site
+git-change-logs lookup --login oovm
+```
+
+输出 JSON：`{ "id": …, "login": "…" }`。noreply 邮箱无需映射。自定义邮箱可设 `GITHUB_TOKEN` 后加 `--fetch`。
 
 ## ③ 同步 GitHub Release
 
@@ -125,3 +146,4 @@ gh release edit vX.Y.Z --notes-file documentation/maintenance/releases/vX.Y.Z.md
 发布模板：[documentation/maintenance/release-notes.template.md](../../../documentation/maintenance/release-notes.template.md)
 - 维护索引：[documentation/maintenance/index.md](../../../documentation/maintenance/index.md)
 - 提交信息与 `git-reword`：[update-commit-messages](../update-commit-messages/SKILL.md)
+- git-tools 文档：[change-logs.md](https://github.com/oovm/git-tools/blob/dev/documentation/change-logs.md)
