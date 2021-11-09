@@ -9,6 +9,7 @@ use crate::planner::PlannedSemanticSourceGroup;
 use miette::{IntoDiagnostic, NamedSource, Result as MietteResult, miette};
 use nyar_language::{
     FrontendBuildOutput, Identifier, NamePath, ValkyrieCompiler,
+    mir::validation::validate_module,
     types::hir::{HirDependencySemanticExport, HirModule},
 };
 use nyar_workspace::{combined_hash, file_hash};
@@ -174,6 +175,8 @@ pub fn compile_frontend_with_cache(
                 .validate_hir_semantic_contract(&hir)
                 .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
             let build_output = FrontendBuildOutput::from_hir_module(hir);
+            validate_module(build_output.semantic_mir())
+                .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
             eprintln!("[seed-debug] frontend-semantics-cache-hit");
             return Ok(CachedFrontendCompile {
                 combined_source,
