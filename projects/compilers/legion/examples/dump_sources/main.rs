@@ -1,5 +1,5 @@
 ﻿fn main() {
-    use nyar_language::valkyrie::AstParser;
+    use vcc_data::text::valkyrie::AstParser;
     let path = std::env::args().nth(1).expect("path");
     let src = std::fs::read_to_string(&path).expect("read");
     match AstParser::parse_root(&src) {
