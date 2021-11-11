@@ -47,17 +47,33 @@ expect:
     compile_errors: []
     errors: []
   wasm32-unknown-wasi-wasi:
-    build_success: false
-    dry_run_success: false
+    build_success: true
+    dry_run_success: true
     run_success: false
-    run_contracts: []
-    per_artifact: {}
+    run_contracts:
+    - logical_entry: _start
+      physical_entry: main.wasi
+      invocation: wasmtime
+      validate: wasmtime run -W gc -W wmemcheck -W max-memory-size=16777216 main.wasi
+    per_artifact:
+      main.wasi:
+        run_success: false
+        exit_code: 1
+        stdout: []
+        stderr:
+        - 'Error: wmemcheck (memory checker) was requested but is not enabled in this build'
     artifacts:
     - main.component-wit/
     - main.component-wit/component.wit
     - main.component-wit/deps/
     - main.component-wit/deps/wasi-cli-0.2.12.wit
     - main.core.wasm
-    compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: 调用 `wasm-tools` 失败'
+    - main.wasi
+    - run-contract.txt
+    - run-contracts.txt
+    - wasmtime-config.toml
+    - wasmtime-home/
+    - wasmtime-local-app-data/
+    - wasmtime-tmp/
+    compile_errors: []
     errors: []
