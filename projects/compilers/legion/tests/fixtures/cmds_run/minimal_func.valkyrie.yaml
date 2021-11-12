@@ -12,7 +12,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `answer` is absent from the exact function registry and external import registry'
+    - 'build failed for clr-microsoft-unknown-managed: `Clr` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   jvm-openjdk-unknown-managed:
     build_success: false
@@ -22,7 +22,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `answer` is absent from the exact function registry and external import registry'
+    - 'build failed for jvm-openjdk-unknown-managed: `Jvm` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   wasm32-node-unknown-wasm:
     build_success: false
@@ -32,7 +32,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-node-unknown-wasm: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `answer` is absent from the exact function registry and external import registry'
+    - 'build failed for wasm32-node-unknown-wasm: physical contract failed [BPHYS004] main::main at block 0 instruction 0: static call target is not an exact local semantic function'
     errors: []
   wasm32-unknown-wasi-wasi:
     build_success: false
@@ -42,5 +42,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `answer` is absent from the exact function registry and external import registry'
+    - 'build failed for wasm32-unknown-wasi-wasi: physical contract failed [BPHYS004] main::main at block 0 instruction 0: static call target is not an exact local semantic function'
     errors: []
