@@ -18,8 +18,9 @@ pub fn create_smoke_project(prefix: &str) -> SmokeProject {
     create_fixture(
         prefix,
         default_build_manifest(),
-        r#"micro main() -> i64 {
-    return 0;
+        r#"[main]
+micro main(): i64 {
+    return 0
 }
 "#,
     )

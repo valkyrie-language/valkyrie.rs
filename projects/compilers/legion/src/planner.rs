@@ -312,11 +312,19 @@ impl LegionWorkspace {
             }
         }
 
+        let manifest_path = project_dir.join("legion.von");
+        let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
+        let canonical = canonicalize_lossy(&project_dir);
+        let mut projects = BTreeMap::new();
+        projects.insert(canonical.clone(), manifest.clone());
+        let mut projects_by_name = BTreeMap::new();
+        projects_by_name.insert(manifest.name.clone(), canonical);
+
         Ok(Self {
             root_dir: project_dir.clone(),
             workspace_manifest: None,
-            projects: BTreeMap::new(),
-            projects_by_name: BTreeMap::new(),
+            projects,
+            projects_by_name,
             single_script: None,
         })
     }
@@ -388,7 +396,12 @@ impl LegionWorkspace {
 
         let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
         if let Some(manifest) = self.project_manifest(&project_dir) {
-            return Ok((self.build_plan_for_manifest(project_dir, manifest, request)?, ProjectResolutionMode::Workspace));
+            let mode = if self.workspace_manifest.is_some() {
+                ProjectResolutionMode::Workspace
+            } else {
+                ProjectResolutionMode::Script
+            };
+            return Ok((self.build_plan_for_manifest(project_dir, manifest, request)?, mode));
         }
 
         let manifest_path = project_dir.join("legion.von");
@@ -409,7 +422,12 @@ impl LegionWorkspace {
         else {
             let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
             if let Some(manifest) = self.project_manifest(&project_dir) {
-                (project_dir, manifest.clone(), ProjectResolutionMode::Workspace)
+                let mode = if self.workspace_manifest.is_some() {
+                    ProjectResolutionMode::Workspace
+                } else {
+                    ProjectResolutionMode::Script
+                };
+                (project_dir, manifest.clone(), mode)
             }
             else {
                 let manifest_path = project_dir.join("legion.von");
@@ -532,11 +550,11 @@ impl LegionWorkspace {
                 &dep_name,
             )? {
                 ResolvedDependencySource::Local(dep_dir) => {
-                    if let Some(dep_manifest) = self.project_manifest(&dep_dir) {
-                        if !manifest_supports_build_context(dep_manifest, &build_target.target, &build_target.publish) {
+                    if let Some(dep_manifest) = self.load_project_manifest_from_dir(&dep_dir) {
+                        if !manifest_supports_build_context(&dep_manifest, &build_target.target, &build_target.publish) {
                             continue;
                         }
-                        let dep_files = self.collect_source_closure(&dep_dir, dep_manifest, build_target, visited)?;
+                        let dep_files = self.collect_source_closure(&dep_dir, &dep_manifest, build_target, visited)?;
                         all_files.extend(dep_files);
                     }
                 }

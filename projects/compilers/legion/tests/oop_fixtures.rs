@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use support::oop_fixture::{can_run_oop_fixtures, collect_oop_fixture_cases, verify_oop_fixture};
 
+#[cfg(feature = "legacy-lanes")]
 #[test]
 fn runs_oop_fixtures_on_clr() {
     let fixtures_root = oop_fixture_root();
@@ -28,6 +29,7 @@ fn runs_oop_fixtures_on_clr() {
 /// 与 `runs_oop_fixtures_on_clr` 的区别在于只挑选 `oop/singleton` 目录下的 fixture，
 /// 避免其他尚未对齐的 OOP fixture（如 `access_control` 的 match pattern）阻塞
 /// singleton 闭环验证。
+#[cfg(feature = "legacy-lanes")]
 #[test]
 fn runs_singleton_oop_fixture_on_clr() {
     let singleton_dir = oop_fixture_root().join("singleton");

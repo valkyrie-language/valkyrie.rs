@@ -233,7 +233,7 @@ fn parses_legion_tools_like_manifest_with_explicit_module_dependencies() {
                 target: "wasm"
             },
             {
-                target: "legion"
+                target: "nyar"
             }
         ]
     }
@@ -251,7 +251,7 @@ fn parses_legion_tools_like_manifest_with_explicit_module_dependencies() {
     assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::clr()));
     assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("jvm").unwrap()));
     assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("wasm").unwrap()));
-    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("legion").unwrap()));
+    assert!(manifest.build.iter().any(|item| item.target == CanonicalTarget::parse("nyar").unwrap()));
 }
 
 #[test]

@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+default = []
+legacy-lanes = ["emitter/legacy-lanes"]
+
 [dependencies]
 clap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
