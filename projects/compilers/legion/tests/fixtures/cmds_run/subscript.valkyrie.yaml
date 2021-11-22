@@ -12,7 +12,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `length` is absent from the exact function registry and external import registry'
+    - 'build failed for clr-microsoft-unknown-managed: `Clr` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   jvm-openjdk-unknown-managed:
     build_success: false
@@ -22,25 +22,58 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `length` is absent from the exact function registry and external import registry'
+    - 'build failed for jvm-openjdk-unknown-managed: `Jvm` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   wasm32-node-unknown-wasm:
-    build_success: false
-    dry_run_success: false
-    run_success: false
-    run_contracts: []
-    per_artifact: {}
-    artifacts: []
-    compile_errors:
-    - 'build failed for wasm32-node-unknown-wasm: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `length` is absent from the exact function registry and external import registry'
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main
+      physical_entry: main.mjs
+      invocation: node
+      validate: node main.mjs
+    per_artifact:
+      main.mjs:
+        run_success: true
+        exit_code: 0
+        stdout: []
+        stderr: []
+    artifacts:
+    - main.mjs
+    - main.wasm
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
     errors: []
   wasm32-unknown-wasi-wasi:
-    build_success: false
-    dry_run_success: false
+    build_success: true
+    dry_run_success: true
     run_success: false
-    run_contracts: []
-    per_artifact: {}
-    artifacts: []
-    compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: semantic MIR contract failed [SMIR003] main::main at block 0 instruction 0: static callee `length` is absent from the exact function registry and external import registry'
+    run_contracts:
+    - logical_entry: _start
+      physical_entry: main.wasi
+      invocation: wasmtime
+      validate: wasmtime run -W gc -W wmemcheck -W max-memory-size=16777216 main.wasi
+    per_artifact:
+      main.wasi:
+        run_success: false
+        exit_code: 1
+        stdout: []
+        stderr:
+        - 'Error: wmemcheck (memory checker) was requested but is not enabled in this build'
+    artifacts:
+    - main.component-wit/
+    - main.component-wit/component.wit
+    - main.component-wit/deps/
+    - main.component-wit/deps/wasi-cli-0.2.12.wit
+    - main.core.wasm
+    - main.wasi
+    - run-contract.txt
+    - run-contracts.txt
+    - wasmtime-config.toml
+    - wasmtime-home/
+    - wasmtime-local-app-data/
+    - wasmtime-tmp/
+    compile_errors: []
     errors: []

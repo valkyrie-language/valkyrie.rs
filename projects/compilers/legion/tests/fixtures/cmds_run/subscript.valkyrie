@@ -1,10 +1,22 @@
 [main]
-micro main(args: [utf16]): i64 {
-    if length(args) > 0 {
-        let first: utf16 = args[0];
-        let copied: utf16 = first;
-        let _ = copied;
+
+# 零依赖 smoke：内联容器桩，测偏移下标 `⁅⁆` / `::[]` 与实例 `length()`。
+class Buffer {
+    suffix `⁅⁆`(self, _index: usize): i64 {
+        return 0
     }
 
-    return 0;
+    micro length(self): usize {
+        return 1
+    }
+}
+
+micro main(args: Buffer): i64 {
+    if args.length() > 0 {
+        let first: i64 = args⁅0⁆
+        let copied: i64 = first
+        let _ = copied
+    }
+
+    return 0
 }
