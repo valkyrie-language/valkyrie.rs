@@ -13,9 +13,12 @@ Valkyrie 工作区 CLI：清单解析、依赖解析、构建与目标选择。
 
 ## 构建
 
+`legion` 同时提供库 API（`legion::cli::run_with_argv`）与 **seed 二进制**（`src/main.rs`，供本地调试与 `LEGION_BIN`）。npm 宿主优先经 `@valkyrie-language/vcc` N-API 或 wasm collect 调用库入口。
+
 ```bash
 cargo build -p legion --release
 cargo test -p legion
+pnpm build:napi   # 生成 platform `.node` collect
 ```
 
 npm 装配见 [`projects/packages/legion`](../../packages/legion/README.md)。

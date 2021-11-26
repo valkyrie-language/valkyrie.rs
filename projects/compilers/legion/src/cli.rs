@@ -1,8 +1,8 @@
 //! Legion CLI 解析与分发（库内入口；用户面对的二进制在 `packages/legion`）。
 
-use std::{ffi::OsString, process::ExitCode};
+use std::{ffi::OsString, io::Read, process::ExitCode};
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, error::ErrorKind};
 use miette::Report;
 
 use crate::{
@@ -99,36 +99,114 @@ pub enum LegionCommands {
 
 /// 在独立大栈线程上解析 `argv` 并运行 Legion CLI（供 `vcc-napi` 原生宿主调用）。
 pub fn run_from_env() -> i32 {
-    let result = std::thread::Builder::new()
+    run_with_argv(std::env::args_os().collect())
+}
+
+/// 使用显式 `argv` 运行 Legion CLI（首项通常为 `"legion"`）。
+pub fn run_with_argv(argv: Vec<OsString>) -> i32 {
+    let result = spawn_cli_thread(argv, run_with_argv_inner);
+    exit_code_from_result(result)
+}
+
+/// 在当前线程解析 `argv` 并运行 Legion CLI（供 N-API 捕获 stdout/stderr 时使用）。
+pub fn run_with_argv_in_current_thread(argv: Vec<OsString>) -> i32 {
+    exit_code_from_result(run_with_argv_inner(argv))
+}
+
+/// 与 [`run_with_argv_captured`] 相同，但不在独立线程中运行（供 N-API 宿主避免 Windows 线程+stdio 死锁）。
+pub fn run_with_argv_captured_on_current_thread(argv: Vec<OsString>) -> (i32, String, String) {
+    match capture_cli_run(argv, run_with_argv_inner) {
+        Ok(CapturedCliRun { code, stdout, stderr }) => (exit_code_from_exit_code(code), stdout, stderr),
+        Err(report) => {
+            let message = format!("{report:?}");
+            (1, String::new(), message)
+        }
+    }
+}
+
+/// 与 [`run_with_argv`] 相同，但在 Legion 工作线程内捕获 stdout/stderr。
+pub fn run_with_argv_captured(argv: Vec<OsString>) -> (i32, String, String) {
+    let result = spawn_cli_thread(argv, |argv| capture_cli_run(argv, run_with_argv_inner));
+
+    match result {
+        Ok(CapturedCliRun { code, stdout, stderr }) => (exit_code_from_exit_code(code), stdout, stderr),
+        Err(report) => {
+            let message = format!("{report:?}");
+            (1, String::new(), message)
+        }
+    }
+}
+
+fn capture_cli_run<F>(argv: Vec<OsString>, run: F) -> Result<CapturedCliRun, Report>
+where
+    F: FnOnce(Vec<OsString>) -> Result<ExitCode, Report>,
+{
+    let mut stdout_redirect = gag::BufferRedirect::stdout().map_err(|error| Report::msg(error.to_string()))?;
+    let mut stderr_redirect = gag::BufferRedirect::stderr().map_err(|error| Report::msg(error.to_string()))?;
+    let code = run(argv)?;
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+    let _ = stdout_redirect.read_to_string(&mut stdout);
+    let _ = stderr_redirect.read_to_string(&mut stderr);
+    Ok(CapturedCliRun { code, stdout, stderr })
+}
+
+struct CapturedCliRun {
+    code: ExitCode,
+    stdout: String,
+    stderr: String,
+}
+
+fn spawn_cli_thread<T, F>(argv: Vec<OsString>, run: F) -> Result<T, Report>
+where
+    T: Send + 'static,
+    F: FnOnce(Vec<OsString>) -> Result<T, Report> + Send + 'static,
+{
+    std::thread::Builder::new()
         .name("legion-main".into())
         .stack_size(64 * 1024 * 1024)
-        .spawn(run_from_env_inner)
+        .spawn(move || run(argv))
         .expect("failed to spawn legion main thread")
         .join()
-        .expect("legion main thread panicked");
-    match result {
-        Ok(code) => {
-            if code == ExitCode::SUCCESS {
-                0
-            }
-            else {
-                1
+        .expect("legion main thread panicked")
+}
+
+fn exit_code_from_exit_code(code: ExitCode) -> i32 {
+    if code == ExitCode::SUCCESS {
+        0
+    }
+    else {
+        1
+    }
+}
+
+fn run_with_argv_inner(argv: Vec<OsString>) -> Result<ExitCode, Report> {
+    if let Some(code) = try_forward_companion(&argv) {
+        return Ok(code);
+    }
+    let cli = match LegionCli::try_parse_from(&argv) {
+        Ok(cli) => cli,
+        Err(error) => {
+            let _ = error.print();
+            match error.kind() {
+                ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand | ErrorKind::DisplayVersion => {
+                    return Ok(ExitCode::SUCCESS);
+                }
+                _ => return Err(Report::msg(error.to_string())),
             }
         }
+    };
+    dispatch(cli)
+}
+
+fn exit_code_from_result(result: Result<ExitCode, Report>) -> i32 {
+    match result {
+        Ok(code) => exit_code_from_exit_code(code),
         Err(report) => {
             eprintln!("{report:?}");
             1
         }
     }
-}
-
-fn run_from_env_inner() -> Result<ExitCode, Report> {
-    let argv: Vec<OsString> = std::env::args_os().collect();
-    if let Some(code) = try_forward_companion(&argv) {
-        return Ok(code);
-    }
-    let cli = LegionCli::parse();
-    dispatch(cli)
 }
 
 /// 分发已解析的 Legion 子命令。

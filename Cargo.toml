@@ -58,6 +58,10 @@ tar = "0.4.44"
 base64 = "0.22.1"
 ed25519-dalek = "2.1.1"
 thiserror = "2.0.17"
+napi = { version = "2", default-features = false, features = ["napi8"] }
+napi-derive = "2"
+napi-build = "2"
+gag = "1.0.0"
 
 [profile.release]
 lto = false
