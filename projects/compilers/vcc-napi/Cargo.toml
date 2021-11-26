@@ -15,3 +15,13 @@ crate-type = ["cdylib", "rlib"]
 legion = { path = "../legion" }
 asgard = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+clap = { workspace = true }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console"] }
+
+[build-dependencies]
+napi-build = { workspace = true }
+
+[target.'cfg(not(windows))'.dependencies]
+gag = { workspace = true }
