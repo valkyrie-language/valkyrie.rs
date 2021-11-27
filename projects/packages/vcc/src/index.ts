@@ -46,6 +46,37 @@ export type VccHostConfig = {
     nativePackages?: readonly string[];
 };
 
+/** N-API 绑定导出的 CLI 结果。 */
+export type VccNativeLegionOutcome = {
+    status: number;
+    stdout: string;
+    stderr: string;
+};
+
+/** `legion spy` 目标参数（与 Rust `SpyTargetRunOptions` 对齐）。 */
+export type VccSpyTargetRunOptions = {
+    input?: string;
+    func?: string;
+    method?: string;
+    offset?: number;
+    list?: boolean;
+    context?: number;
+    targetPlatform?: string;
+    json?: boolean;
+    hex?: boolean;
+    types?: boolean;
+    gcAudit?: boolean;
+    glueAudit?: boolean;
+};
+
+/** platform `.node` collect 暴露的 Legion 宿主 API。 */
+export type VccNativeBinding = {
+    legionRun?: (argv: string[]) => number;
+    legionRunCaptured: (argv: string[]) => VccNativeLegionOutcome;
+    legionSpyRun?: (mode: string, options: VccSpyTargetRunOptions) => VccNativeLegionOutcome;
+    legionParse?: (argv: string[]) => string;
+};
+
 /** `spawnCli` 路由结果。 */
 export type VccCliRoute = 'native' | 'wasm';
 
@@ -61,8 +92,10 @@ export type VccCliSpawnResult = {
 export type VccHostRunner = {
     config: Readonly<Required<VccHostConfig>>;
     locateNativeCollect: () => string | null;
+    loadNativeBinding: () => VccNativeBinding | null;
     resolveWasmMjs: () => string;
     spawnCli: (argv?: string[]) => VccCliSpawnResult;
+    spawnSpy: (mode: string, options?: VccSpyTargetRunOptions) => VccCliSpawnResult;
     runCli: (argv?: string[]) => never;
 };
 
@@ -108,7 +141,24 @@ export function resolveWasmMjs(wasmCollect: string, wasmEntry: string): string {
 }
 
 /**
- * 创建组装 CLI 宿主：优先 native cdylib（待 N-API 接线），否则 wasm fallback。
+ * 加载 platform `.node` N-API 绑定；未安装或未构建时返回 `null`。
+ *
+ * @param nativePath
+ */
+export function loadNativeBindingAt(nativePath: string): VccNativeBinding | null {
+    try {
+        const binding = require(nativePath) as Partial<VccNativeBinding>;
+        if (typeof binding.legionRunCaptured !== 'function') {
+            return null;
+        }
+        return binding as VccNativeBinding;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 创建组装 CLI 宿主：优先 native N-API，否则 wasm fallback。
  *
  * @param config
  */
@@ -122,18 +172,32 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
     const locate = () => locateNativeCollect(resolved.nativePackages);
     const resolveWasm = () => resolveWasmMjs(resolved.wasmCollect, resolved.wasmEntry);
 
-    function tryNative(_argv: string[]): number | null {
-        if (locate() === null) {
+    function loadNativeBinding(): VccNativeBinding | null {
+        const nativePath = locate();
+        if (nativePath === null) {
             return null;
         }
-        // TODO: `#[napi]` 导出落地后在此 `require()` platform `.node` 并 dispatch 到对应 Rust CLI。
-        return null;
+        return loadNativeBindingAt(nativePath);
+    }
+
+    function spawnNativeCli(argv: string[]): VccCliSpawnResult | null {
+        const binding = loadNativeBinding();
+        if (binding === null) {
+            return null;
+        }
+        const outcome = binding.legionRunCaptured(['legion', ...argv]);
+        return {
+            route: 'native',
+            status: outcome.status,
+            stdout: outcome.stdout,
+            stderr: outcome.stderr,
+        };
     }
 
     function spawnCli(argv: string[] = []): VccCliSpawnResult {
-        const native = tryNative(argv);
+        const native = spawnNativeCli(argv);
         if (native !== null) {
-            return { route: 'native', status: native, stdout: '', stderr: '' };
+            return native;
         }
         const mjs = resolveWasm();
         const result = spawnSync(process.execPath, [mjs, ...argv], { encoding: 'utf8' });
@@ -145,7 +209,62 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
         };
     }
 
+    function spawnSpy(mode: string, options: VccSpyTargetRunOptions = {}): VccCliSpawnResult {
+        const binding = loadNativeBinding();
+        if (binding?.legionSpyRun) {
+            const outcome = binding.legionSpyRun(mode, options);
+            return {
+                route: 'native',
+                status: outcome.status,
+                stdout: outcome.stdout,
+                stderr: outcome.stderr,
+            };
+        }
+        const argv = ['spy', mode];
+        if (options.input) {
+            argv.push(options.input);
+        }
+        if (options.func) {
+            argv.push('--func', options.func);
+        }
+        if (options.method) {
+            argv.push('--method', options.method);
+        }
+        if (options.offset !== undefined) {
+            argv.push('--offset', String(options.offset));
+        }
+        if (options.list) {
+            argv.push('--list');
+        }
+        if (options.context !== undefined) {
+            argv.push('--context', String(options.context));
+        }
+        if (options.targetPlatform) {
+            argv.push('--target', options.targetPlatform);
+        }
+        if (options.json) {
+            argv.push('--json');
+        }
+        if (options.hex) {
+            argv.push('--hex');
+        }
+        if (options.types) {
+            argv.push('--types');
+        }
+        if (options.gcAudit) {
+            argv.push('--gc-audit');
+        }
+        if (options.glueAudit) {
+            argv.push('--glue-audit');
+        }
+        return spawnCli(argv);
+    }
+
     function runCli(argv: string[] = process.argv.slice(2)): never {
+        const binding = loadNativeBinding();
+        if (binding?.legionRun) {
+            process.exit(binding.legionRun(['legion', ...argv]));
+        }
         const outcome = spawnCli(argv);
         process.exit(outcome.status);
     }
@@ -153,8 +272,10 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
     return {
         config: resolved,
         locateNativeCollect: locate,
+        loadNativeBinding,
         resolveWasmMjs: resolveWasm,
         spawnCli,
+        spawnSpy,
         runCli,
     };
 }
