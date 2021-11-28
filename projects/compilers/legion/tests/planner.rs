@@ -55,6 +55,34 @@ micro main() -> i64 {
 }
 
 #[test]
+fn synthesizes_cli_build_target_for_library_without_manifest_entry() {
+    let fixture = create_smoke_project_with_manifest(
+        "legion-planner-library-nyar",
+        r#"{
+    name: "lib-app",
+    artifact: "library",
+    build: [
+        { target: "node" }
+    ]
+}"#,
+        r#"micro main() -> i64 {
+    return 0;
+}
+"#,
+    );
+    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let nyar = CanonicalTarget::parse("nyar").unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest {
+            project_dir: fixture.project_dir.clone(),
+            target: nyar,
+            output_dir: None,
+        })
+        .unwrap();
+    assert_eq!(plan.project.build_target.target, nyar);
+}
+
+#[test]
 fn discovers_temp_workspace_build_plan() {
     let fixture = create_smoke_project_with_build(
         "legion-planner",
