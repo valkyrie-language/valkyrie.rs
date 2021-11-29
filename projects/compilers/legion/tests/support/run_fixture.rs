@@ -362,8 +362,8 @@ fn execute_run_fixture_target(project_dir: &Path, target: RunFixtureTarget) -> R
         }
     };
 
-    let output = match run_legion_command(project_dir, target, &output_dir) {
-        Ok(output) => output,
+    let output = match run_legion_dry_run(project_dir, target, &output_dir) {
+        Ok(success) => success,
         Err(error) => {
             return RunDelegationFixtureResult {
                 artifacts: collect_output_entries(&output_dir),
@@ -375,7 +375,7 @@ fn execute_run_fixture_target(project_dir: &Path, target: RunFixtureTarget) -> R
         }
     };
 
-    let dry_run_success = output.status.success();
+    let dry_run_success = output;
     if !dry_run_success {
         return RunDelegationFixtureResult {
             artifacts: collect_output_entries(&output_dir),
@@ -471,17 +471,23 @@ fn sanitize_identifier(value: &str) -> String {
     if result.is_empty() { "run_fixture".to_string() } else { result }
 }
 
-fn run_legion_command(project_dir: &Path, target: RunFixtureTarget, output_dir: &Path) -> std::io::Result<std::process::Output> {
-    Command::new(env!("CARGO_BIN_EXE_legion"))
-        .arg("run")
-        .arg(project_dir)
-        .arg("--target")
-        .arg(target.manifest_target())
-        .arg("-o")
-        .arg(output_dir)
-        .arg("--dry-run")
-        .stdin(std::process::Stdio::null())
-        .output()
+fn run_legion_dry_run(project_dir: &Path, target: RunFixtureTarget, output_dir: &Path) -> Result<bool, String> {
+    use legion::cmds::run::{RunArgs, run as run_run};
+
+    let args = RunArgs {
+        project_dir: project_dir.to_path_buf(),
+        target: target.canonical_target(),
+        output_dir: Some(output_dir.to_path_buf()),
+        workspace: false,
+        runner: Vec::new(),
+        artifact: None,
+        dry_run: true,
+        debug_artifacts: false,
+    };
+
+    run_run(&args)
+        .map(|code| code == ExitCode::SUCCESS)
+        .map_err(|error| error.to_string())
 }
 
 fn prepare_runtime_command(output_dir: &Path, target: RunFixtureTarget, run_contract: Option<&RunContract>) -> Result<PreparedCommand, String> {

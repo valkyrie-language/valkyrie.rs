@@ -492,12 +492,6 @@ fn resolve_runner_template(
         }
     }
 
-    if runner_target == RunnerFamily::NyarVm {
-        return Err(miette!(
-            "target `{canonical_target}` 产出 `.legion` 产物，工作区未内置解释器；请通过 manifest runner、`--runner legion=...` 或 `LEGION_RUNNER_NYAR_VM` 配置运行命令"
-        ));
-    }
-
     Ok(default)
 }
 
