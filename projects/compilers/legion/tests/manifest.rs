@@ -16,7 +16,7 @@ fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
 fn parses_project_manifest_entry_field() {
     let source = r#"
     {
-        name: "leetcode.two_sum",
+        name: "demo.two_sum",
         entry: "solution.v",
         build: [{ target: "node" }]
     }
@@ -30,7 +30,7 @@ fn parses_project_manifest_entry_field() {
 fn parses_project_manifest_artifact_library() {
     let source = r#"
     {
-        name: "leetcode.two_sum",
+        name: "demo.two_sum",
         entry: "solution.v",
         artifact: "library",
         build: [{ target: "node" }]

@@ -1090,7 +1090,7 @@ fn select_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> 
         .or_else(|| synthesize_cli_build_target(manifest, target))
 }
 
-/// CLI 显式 `--target` 未写入 `legion.von` 时，为 library 工程合成默认 build 项（leetcode 单文件题解等）。
+/// CLI 显式 `--target` 未写入 `legion.von` 时，为 library 工程合成默认 build 项（单文件库工程等）。
 fn synthesize_cli_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> Option<BuildTargetSpec> {
     if manifest.artifact != crate::manifest::ProjectArtifactKind::Library {
         return None;
