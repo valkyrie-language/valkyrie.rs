@@ -54,6 +54,8 @@ pub enum NyarHeadCode {
     I32LeS = 0x44,
     I32GtS = 0x46,
     I32GeS = 0x48,
+    /// 调用内置（operand1 = intrinsic 稠密下标，operand2 = argc）；与 ADR 0013 / S-W4 对齐。
+    CallIntrinsic = 0xD0,
     CallNative = 0xD1,
 }
 
@@ -90,6 +92,7 @@ impl NyarHeadCode {
             0x44 => Some(Self::I32LeS),
             0x46 => Some(Self::I32GtS),
             0x48 => Some(Self::I32GeS),
+            0xD0 => Some(Self::CallIntrinsic),
             0xD1 => Some(Self::CallNative),
             _ => None,
         }
@@ -123,7 +126,7 @@ impl NyarHeadCode {
             | Self::LoadArg
             | Self::LoadGlobal
             | Self::StoreGlobal => NyarInstructionForm::Imm1,
-            Self::CallNative => NyarInstructionForm::Imm2,
+            Self::CallIntrinsic | Self::CallNative => NyarInstructionForm::Imm2,
             Self::Nop
             | Self::Return
             | Self::Resume
