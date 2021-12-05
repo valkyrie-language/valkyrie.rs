@@ -54,7 +54,7 @@ pub enum NyarHeadCode {
     I32LeS = 0x44,
     I32GtS = 0x46,
     I32GeS = 0x48,
-    /// 调用内置（operand1 = intrinsic 稠密下标，operand2 = argc）；与 ADR 0013 / S-W4 对齐。
+    /// 调用内置（operand1 = intrinsic 稠密下标，operand2 = argc）。
     CallIntrinsic = 0xD0,
     CallNative = 0xD1,
 }
