@@ -6,7 +6,7 @@ use std::fmt::{Display, Formatter};
 pub const NYAR_MAGIC: u32 = 0x4E59_4152;
 
 /// Current `.legion` format version.
-pub const NYAR_VERSION: u32 = 1;
+pub const NYAR_VERSION: u32 = 2;
 
 /// File header size in bytes.
 pub const HEADER_SIZE: usize = 16;
@@ -56,7 +56,9 @@ pub enum NyarHeadCode {
     I32GeS = 0x48,
     /// 调用内置（operand1 = intrinsic 稠密下标，operand2 = argc）。
     CallIntrinsic = 0xD0,
-    CallNative = 0xD1,
+    /// 调用模块导入表项（operand1 = import index，operand2 = argc）。
+    /// 热路径只消费下标；链接名留在 imports section。
+    CallImport = 0xD2,
 }
 
 impl NyarHeadCode {
@@ -93,7 +95,7 @@ impl NyarHeadCode {
             0x46 => Some(Self::I32GtS),
             0x48 => Some(Self::I32GeS),
             0xD0 => Some(Self::CallIntrinsic),
-            0xD1 => Some(Self::CallNative),
+            0xD2 => Some(Self::CallImport),
             _ => None,
         }
     }
@@ -126,7 +128,7 @@ impl NyarHeadCode {
             | Self::LoadArg
             | Self::LoadGlobal
             | Self::StoreGlobal => NyarInstructionForm::Imm1,
-            Self::CallIntrinsic | Self::CallNative => NyarInstructionForm::Imm2,
+            Self::CallIntrinsic | Self::CallImport => NyarInstructionForm::Imm2,
             Self::Nop
             | Self::Return
             | Self::Resume
