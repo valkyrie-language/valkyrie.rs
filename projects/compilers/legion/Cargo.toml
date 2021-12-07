@@ -6,8 +6,12 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-default = []
-legacy-lanes = ["emitter/legacy-lanes"]
+# Native `legion build --target nyar-vm` is on by default; Node/Wasm seed crates stay slim.
+default = ["nyar-vm-lane"]
+nyar-vm-lane = ["emitter/nyar-vm-lane"]
+legacy-lanes = ["nyar-vm-lane"]
+# Frozen CLR / JVM / native delivery; also pulls the Nyar VM lane for shared driver registration.
+legacy-lanes-clr-jvm-native = ["nyar-vm-lane", "emitter/legacy-lanes-clr-jvm-native"]
 
 [dependencies]
 clap = { workspace = true }

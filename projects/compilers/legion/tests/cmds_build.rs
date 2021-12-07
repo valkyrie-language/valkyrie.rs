@@ -17,7 +17,40 @@ use support::{
     create_smoke_project_with_source,
 };
 
-#[cfg(feature = "legacy-lanes")]
+#[test]
+fn builds_minimal_nyar_vm_project() {
+    let fixture = create_smoke_project_with_build(
+        "legion-build-nyar-vm",
+        r#"{
+            target: "nyar-vm"
+        }"#,
+        r#"[main]
+micro main(): i64 {
+    return 0
+}
+"#,
+    );
+    let output_dir = fixture.project_dir.join("dist").join("custom-nyar-vm");
+    let status = run(&BuildArgs {
+        project_dir: fixture.project_dir.clone(),
+        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        output_dir: Some(output_dir.clone()),
+        workspace: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+
+    assert_eq!(status, ExitCode::SUCCESS);
+    let nyar_artifacts: Vec<_> = fs::read_dir(&output_dir)
+        .expect("list nyar-vm output")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("nyar"))
+        .collect();
+    assert!(!nyar_artifacts.is_empty(), "expected at least one `.nyar` artifact under {}", output_dir.display());
+}
+
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_minimal_clr_project() {
     let fixture = create_smoke_project("legion-build");
@@ -36,7 +69,7 @@ fn builds_minimal_clr_project() {
     assert!(output_dir.join("main.runtimeconfig.json").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn second_build_hits_artifact_set_cache() {
     let fixture = create_smoke_project("legion-build-cache-hit");
@@ -82,7 +115,7 @@ fn second_build_hits_artifact_set_cache() {
     assert_eq!(fs::read(output_dir.join("main.exe")).unwrap(), b"FROM_CACHE");
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
     let fixture = create_smoke_project("legion-build-cache-manifest");
@@ -124,7 +157,7 @@ fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
     assert!(!manifest.run_contracts.is_empty());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn second_build_hits_semantics_when_artifact_set_poisoned() {
     let fixture = create_smoke_project("legion-build-semantics-waterfall");
@@ -176,7 +209,7 @@ fn second_build_hits_semantics_when_artifact_set_poisoned() {
     assert!(output_dir.join("main.exe").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_migrated_test_clr_smoke_project() {
     let fixture = create_smoke_project_with_manifest(
@@ -219,7 +252,7 @@ micro main(): i64 {
     assert!(!output_dir.join("host-selection.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_clr_legion_tools_isomorphic_namespace_fixture() {
     let fixture = create_smoke_project_with_manifest(
@@ -282,7 +315,7 @@ micro helper_label() -> utf8 {
     assert!(output_dir.join("run-contracts.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn writes_execution_manifest_with_hashes_by_default() {
     let fixture = create_smoke_project("legion-build-execution-manifest");
@@ -309,7 +342,7 @@ fn writes_execution_manifest_with_hashes_by_default() {
     assert!(!output_dir.join("host-selection.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn writes_host_selection_only_in_debug_artifacts_mode() {
     let fixture = create_smoke_project("legion-build-host-selection-debug");
@@ -328,7 +361,7 @@ fn writes_host_selection_only_in_debug_artifacts_mode() {
     assert!(output_dir.join("run-contracts.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_clr_project_with_real_external_call_edge_in_msil() {
     let fixture = create_smoke_project_with_manifest(
@@ -375,7 +408,7 @@ micro main() -> i64 {
     assert!(msil.lines().any(|line| line.contains("call") && line.contains("__main()")));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn uses_main_attribute_instead_of_function_name_for_entry_selection() {
     let fixture = create_smoke_project_with_source(
@@ -444,7 +477,7 @@ micro beta_entry() -> i64 {
     assert!(output_dir.join("run-contract.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_clr_project_with_tuple_pattern_let_and_loop_in() {
     let fixture = create_smoke_project_with_source(
@@ -538,7 +571,7 @@ micro main(): i64 {
     assert!(run_contract.contains("invocation: \"wasmtime\""));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_native_msvc_project() {
     let fixture = create_smoke_project_with_build(
@@ -576,7 +609,7 @@ fn builds_native_msvc_project() {
     }
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 #[cfg(windows)]
 fn builds_native_msvc_project_with_print() {
@@ -626,7 +659,7 @@ micro main() -> i64 {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "hello from native");
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_native_linux_gnu_project() {
     let fixture = create_smoke_project_with_build(
@@ -663,7 +696,7 @@ fn builds_native_linux_gnu_project() {
     assert!(output.status.success(), "exit={:?} stderr={}", output.status, String::from_utf8_lossy(&output.stderr));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_native_linux_gnu_project_with_print() {
     let fixture = create_smoke_project_with_manifest(
@@ -824,7 +857,7 @@ micro main(): i64 {
     assert!(wasi_output_dir.join("run-contracts.txt").exists());
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_local_package_when_project_is_not_registered_in_workspace_members() {
     let fixture = create_local_package_project(
@@ -872,7 +905,7 @@ micro main(): i64 {
 }
 "#;
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_native_linux_gnu_witness_dispatch() {
     let fixture = create_smoke_project_with_build(
@@ -899,7 +932,7 @@ fn builds_native_linux_gnu_witness_dispatch() {
     assert!(output.status.success(), "exit={:?} stderr={}", output.status, String::from_utf8_lossy(&output.stderr));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_native_msvc_witness_dispatch() {
     let fixture = create_smoke_project_with_build(
@@ -952,7 +985,7 @@ fn builds_wasm_wasi_witness_dispatch() {
     assert!(output.status.success(), "exit={:?} stderr={}", output.status, String::from_utf8_lossy(&output.stderr));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_clr_witness_dispatch() {
     let fixture = create_smoke_project_with_build("legion-build-clr-witness", r#"{ target: "clr" }"#, WITNESS_SMOKE_SOURCE);
@@ -976,7 +1009,7 @@ fn builds_clr_witness_dispatch() {
     assert!(output.status.success(), "exit={:?} stderr={}", output.status, String::from_utf8_lossy(&output.stderr));
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_jvm_witness_dispatch() {
     let fixture =
@@ -1116,7 +1149,7 @@ fn multi_lane_suspend_manifest() -> String {
     .to_string()
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_clr_suspend_await_future() {
     let fixture =
@@ -1141,7 +1174,7 @@ fn builds_clr_suspend_await_future() {
     }
 }
 
-#[cfg(feature = "legacy-lanes")]
+#[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_jvm_suspend_trait_combo() {
     let fixture =
