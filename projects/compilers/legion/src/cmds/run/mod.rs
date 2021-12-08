@@ -494,8 +494,14 @@ fn build_placeholders(
     };
     values.insert("classpath", classpath);
 
+    // `{entry}` is the callable symbol. Nyar VM / JVM keep the module file in `{artifact}`
+    // (or classpath) and must not reuse `physical_entry` filenames here.
     let entry = match run_contract {
-        Some(contract) if runner_target == RunnerFamily::Jvm && !contract.logical_entry.is_empty() => contract.logical_entry.clone(),
+        Some(contract)
+            if matches!(runner_target, RunnerFamily::Jvm | RunnerFamily::NyarVm) && !contract.logical_entry.is_empty() =>
+        {
+            contract.logical_entry.clone()
+        }
         Some(contract) if !contract.physical_entry.is_empty() => contract.physical_entry.clone(),
         Some(contract) if !contract.logical_entry.is_empty() => contract.logical_entry.clone(),
         _ if runner_target == RunnerFamily::Jvm => artifact
