@@ -5,8 +5,12 @@ use std::fmt::{Display, Formatter};
 /// Magic value `NYAR` big-endian (`0x4E594152`).
 pub const NYAR_MAGIC: u32 = 0x4E59_4152;
 
-/// Current `.legion` format version.
+/// Current `.legion` / `.nyar` format version.
 pub const NYAR_VERSION: u32 = 2;
+
+/// Bytecode format contract version（S-W6 provenance / cache 键）。
+/// 与 [`NYAR_VERSION`] 同步；格式破坏时两者一并递增。
+pub const BYTECODE_FORMAT_VERSION: u32 = NYAR_VERSION;
 
 /// File header size in bytes.
 pub const HEADER_SIZE: usize = 16;
@@ -935,6 +939,12 @@ mod tests {
         assert_eq!(NyarHeadCode::from_u8(0x50), Some(NyarHeadCode::ObjectNew));
         assert_eq!(NyarHeadCode::from_u8(0x51), Some(NyarHeadCode::FieldGet));
         assert_eq!(NyarHeadCode::from_u8(0x52), Some(NyarHeadCode::FieldSet));
+    }
+
+    #[test]
+    fn bytecode_format_version_tracks_nyar_version() {
+        assert_eq!(BYTECODE_FORMAT_VERSION, NYAR_VERSION);
+        assert_eq!(BYTECODE_FORMAT_VERSION, 2);
     }
 
     #[test]
