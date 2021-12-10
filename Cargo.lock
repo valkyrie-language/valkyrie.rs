@@ -971,6 +971,7 @@ dependencies = [
  "nyar-language",
  "nyar-package-manager",
  "nyar-runner",
+ "nyar-types",
  "nyar-workspace",
  "pulldown-cmark",
  "serde",

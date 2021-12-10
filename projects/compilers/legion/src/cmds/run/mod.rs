@@ -29,7 +29,7 @@ const COMPILE_PLAN_SNAPSHOT_FILE_NAME: &str = "compile-plan.txt";
 const BACKEND_REQUEST_SNAPSHOT_FILE_NAME: &str = "backend-request.txt";
 /// 后端执行结果快照文件名，由构建流程写入，不属于交付产物。
 const BACKEND_RESULT_SNAPSHOT_FILE_NAME: &str = "backend-result.txt";
-const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 1;
+const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 2;
 
 /// `legion run` 的命令参数。
 #[derive(Debug, Clone, Args)]
@@ -71,6 +71,14 @@ pub struct RunContract {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionManifest {
     pub schema_version: u32,
+    /// 语义 identity 合同版本（旧产物在漂移时失效）。
+    pub identity_schema_version: u32,
+    /// Semantic MIR 合同版本。
+    pub mir_contract_version: u32,
+    /// RepresentationPlan / layout 合同版本。
+    pub layout_plan_version: u32,
+    /// `.nyar` / `.legion` bytecode 格式版本。
+    pub bytecode_format_version: u32,
     pub project_name: String,
     pub target: String,
     pub inputs: Vec<ExecutionInputDigest>,
@@ -145,6 +153,10 @@ impl ExecutionManifest {
     pub fn from_build_plan(plan: &BuildPlan, contracts: &[RunContract]) -> Result<Self> {
         Ok(Self {
             schema_version: EXECUTION_MANIFEST_SCHEMA_VERSION,
+            identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
+            mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
+            layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
+            bytecode_format_version: vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION,
             project_name: plan.project.name.clone(),
             target: plan.project.build_target.target.to_string(),
             inputs: collect_execution_input_digests(plan)?,
@@ -156,6 +168,13 @@ impl ExecutionManifest {
     /// 校验当前 execution manifest 是否仍与 `BuildPlan` 及产物目录匹配。
     pub fn is_fresh_for_plan(&self, plan: &BuildPlan) -> Result<bool> {
         if self.schema_version != EXECUTION_MANIFEST_SCHEMA_VERSION {
+            return Ok(false);
+        }
+        if self.identity_schema_version != nyar_types::IDENTITY_SCHEMA_VERSION
+            || self.mir_contract_version != nyar_types::MIR_CONTRACT_VERSION
+            || self.layout_plan_version != nyar_types::LAYOUT_PLAN_VERSION
+            || self.bytecode_format_version != vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION
+        {
             return Ok(false);
         }
         if self.project_name != plan.project.name {
