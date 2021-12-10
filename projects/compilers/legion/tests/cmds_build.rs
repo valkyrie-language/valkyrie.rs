@@ -50,6 +50,61 @@ micro main(): i64 {
     assert!(!nyar_artifacts.is_empty(), "expected at least one `.nyar` artifact under {}", output_dir.display());
 }
 
+#[test]
+fn builds_cross_file_nyar_vm_project_and_prefers_main_entry() {
+    let fixture = create_smoke_project_with_build(
+        "legion-build-nyar-vm-cross-file",
+        r#"{
+            target: "nyar-vm"
+        }"#,
+        r#"namespace app.smoke;
+
+[main]
+micro main(): i64 {
+    return add_one(41)
+}
+"#,
+    );
+    fs::write(
+        fixture.project_dir.join("source").join("helper.v"),
+        r#"namespace app.smoke;
+
+micro add_one(x: i64): i64 {
+    return x + 1
+}
+"#,
+    )
+    .unwrap();
+
+    let output_dir = fixture.project_dir.join("dist").join("cross-file-nyar-vm");
+    let status = run(&BuildArgs {
+        project_dir: fixture.project_dir.clone(),
+        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        output_dir: Some(output_dir.clone()),
+        workspace: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+    assert_eq!(status, ExitCode::SUCCESS);
+
+    let manifest = ExecutionManifest::read_from_output_dir(&output_dir)
+        .expect("read execution manifest")
+        .expect("execution manifest present");
+    assert_eq!(manifest.schema_version, 2);
+    assert_eq!(manifest.identity_schema_version, nyar_types::IDENTITY_SCHEMA_VERSION);
+    assert_eq!(manifest.mir_contract_version, nyar_types::MIR_CONTRACT_VERSION);
+    assert_eq!(manifest.layout_plan_version, nyar_types::LAYOUT_PLAN_VERSION);
+    assert_eq!(manifest.bytecode_format_version, vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION);
+    assert!(
+        manifest.run_contracts.iter().any(|contract| {
+            contract.logical_entry == "main"
+                || contract.logical_entry.rsplit_once('.').is_some_and(|(_, tail)| tail == "main")
+        }),
+        "expected main logical entry, got {:?}",
+        manifest.run_contracts
+    );
+}
+
 #[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn builds_minimal_clr_project() {
@@ -331,7 +386,11 @@ fn writes_execution_manifest_with_hashes_by_default() {
 
     assert_eq!(status, ExitCode::SUCCESS);
     let manifest = ExecutionManifest::read_from_output_dir(&output_dir).unwrap().expect("execution manifest");
-    assert_eq!(manifest.schema_version, 1);
+    assert_eq!(manifest.schema_version, 2);
+    assert_eq!(manifest.identity_schema_version, nyar_types::IDENTITY_SCHEMA_VERSION);
+    assert_eq!(manifest.mir_contract_version, nyar_types::MIR_CONTRACT_VERSION);
+    assert_eq!(manifest.layout_plan_version, nyar_types::LAYOUT_PLAN_VERSION);
+    assert_eq!(manifest.bytecode_format_version, vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION);
     assert_eq!(manifest.project_name, "app");
     assert_eq!(manifest.target, CanonicalTarget::clr().to_string());
     assert!(!manifest.inputs.is_empty());
