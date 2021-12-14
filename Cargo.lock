@@ -1185,12 +1185,17 @@ version = "0.1.0"
 dependencies = [
  "miette",
  "nyar",
+ "nyar-format",
  "nyar-types",
  "serde",
  "serde_json",
  "vcc-data",
  "zip",
 ]
+
+[[package]]
+name = "nyar-format"
+version = "0.1.0"
 
 [[package]]
 name = "nyar-language"
@@ -1273,9 +1278,9 @@ dependencies = [
 name = "nyar-workspace"
 version = "0.1.0"
 dependencies = [
+ "nyar-format",
  "sha2",
  "thiserror 2.0.20",
- "vcc-data",
 ]
 
 [[package]]
@@ -2425,6 +2430,7 @@ version = "0.0.1"
 dependencies = [
  "miette",
  "nyar",
+ "nyar-format",
  "nyar-language",
  "nyar-types",
  "serde",
