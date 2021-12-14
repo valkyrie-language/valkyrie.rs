@@ -5,7 +5,7 @@
 nyar = { path = "../nyar-vm.rs/projects/compilers/nyar" }
 nyar-analyzer = { path = "../nyar-vm.rs/projects/compilers/nyar-analyzer" }
 nyar-emitter = { path = "../nyar-vm.rs/projects/compilers/nyar-emitter" }
-nyar-format = { path = "../nyar-vm.rs/projects/formats/nyar-format" }
+nyar-bytecode = { path = "../nyar-vm.rs/projects/formats/nyar-bytecode" }
 nyar-language = { path = "../nyar-vm.rs/projects/compilers/nyar-language" }
 nyar-optimizer = { path = "../nyar-vm.rs/projects/compilers/nyar-optimizer" }
 nyar-package-manager = { path = "../nyar-vm.rs/projects/compilers/nyar-package-manager" }
