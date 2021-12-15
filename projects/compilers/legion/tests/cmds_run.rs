@@ -208,6 +208,8 @@ micro main(): i64 {
             artifact: None,
             dry_run: false,
             debug_artifacts: false,
+            workload_json: None,
+            workload_file: None,
         })
         .unwrap(),
         ExitCode::SUCCESS
@@ -269,6 +271,8 @@ micro add_one(x: i64): i64 {
             artifact: None,
             dry_run: false,
             debug_artifacts: false,
+            workload_json: None,
+            workload_file: None,
         })
         .unwrap(),
         ExitCode::SUCCESS
@@ -316,9 +320,54 @@ micro main(): i64 {
         artifact: None,
         dry_run: false,
         debug_artifacts: false,
+        workload_json: None,
+        workload_file: None,
     })
     .unwrap();
     assert_eq!(run_status, ExitCode::SUCCESS);
+}
+
+#[test]
+fn dry_run_nyar_vm_accepts_workload_json() {
+    let fixture = support::create_smoke_project_with_build(
+        "legion-run-nyar-vm-workload",
+        r#"{
+            target: "nyar-vm"
+        }"#,
+        r#"[main]
+micro main(): i64 {
+    return 0
+}
+"#,
+    );
+    let output_dir = fixture.project_dir.join("dist").join("run-nyar-vm-workload");
+    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    let build_status = run_build(&BuildArgs {
+        project_dir: fixture.project_dir.clone(),
+        target,
+        output_dir: Some(output_dir.clone()),
+        workspace: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+    assert_eq!(build_status, ExitCode::SUCCESS);
+
+    let status = run_project(&RunArgs {
+        project_dir: fixture.project_dir.clone(),
+        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        output_dir: Some(output_dir),
+        workspace: false,
+        runner: vec!["nyar-vm=nyar-vm".to_string()],
+        artifact: None,
+        dry_run: true,
+        debug_artifacts: false,
+        workload_json: Some(
+            r#"{"phase":"request","pause_budget_ms":5,"preferred_mode":"generational_low_latency"}"#.into(),
+        ),
+        workload_file: None,
+    })
+    .unwrap();
+    assert_eq!(status, ExitCode::SUCCESS);
 }
 
 fn resolve_nyar_vm_runner() -> Option<PathBuf> {
@@ -376,6 +425,8 @@ fn falls_back_to_local_package_when_unregistered() {
         artifact: None,
         dry_run: false,
         debug_artifacts: false,
+        workload_json: None,
+        workload_file: None,
     })
     .unwrap();
 

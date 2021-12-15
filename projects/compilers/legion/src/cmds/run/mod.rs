@@ -58,6 +58,12 @@ pub struct RunArgs {
     /// 输出调试用构建副产物。
     #[arg(long, default_value_t = false)]
     pub debug_artifacts: bool,
+    /// 进程级工作负载意图 JSON（仅 `nyar-vm`：转发给 `nyar-vm --workload-json`）。
+    #[arg(long = "workload-json", value_name = "json")]
+    pub workload_json: Option<String>,
+    /// 工作负载意图 JSON 文件路径（仅 `nyar-vm`：转发给 `nyar-vm --workload-file`）。
+    #[arg(long = "workload-file", value_name = "path")]
+    pub workload_file: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -292,7 +298,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     };
 
     let execution_manifest = ensure_execution_manifest(args, &plan)?;
-    let command = plan_run_command(
+    let mut command = plan_run_command(
         &workspace,
         &plan.output_dir,
         &plan.project.name,
@@ -301,6 +307,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
         &execution_manifest.run_contracts,
         args.artifact.as_deref(),
     )?;
+    append_nyar_vm_workload_args(&mut command, args)?;
 
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
@@ -333,6 +340,73 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
         .map_err(|error| error.wrap_err(format!("failed to start runner '{}'", command.command)))?;
 
     Ok(exit_code_from_status(status.code()))
+}
+
+/// 将 legion 侧工作负载意图参数转发给 `nyar-vm` runner。
+fn append_nyar_vm_workload_args(command: &mut RunCommand, args: &RunArgs) -> Result<()> {
+    if args.workload_json.is_none() && args.workload_file.is_none() {
+        return Ok(());
+    }
+    if command.target != RunnerFamily::NyarVm {
+        return Err(miette!("--workload-json/--workload-file are only supported for target nyar-vm"));
+    }
+    if let Some(json) = &args.workload_json {
+        command.args.push("--workload-json".to_string());
+        command.args.push(json.clone());
+    }
+    if let Some(path) = &args.workload_file {
+        command.args.push("--workload-file".to_string());
+        command.args.push(strip_verbatim_prefix(path.to_string_lossy().as_ref()).to_owned());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod workload_forward_tests {
+    use super::*;
+
+    fn bare_run_args() -> RunArgs {
+        RunArgs {
+            project_dir: PathBuf::from("."),
+            target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm"),
+            output_dir: None,
+            workspace: false,
+            runner: Vec::new(),
+            artifact: None,
+            dry_run: true,
+            debug_artifacts: false,
+            workload_json: None,
+            workload_file: None,
+        }
+    }
+
+    #[test]
+    fn appends_workload_json_for_nyar_vm() {
+        let mut command = RunCommand {
+            target: RunnerFamily::NyarVm,
+            artifact: PathBuf::from("out.nyar"),
+            command: "nyar-vm".into(),
+            args: vec!["out.nyar".into()],
+        };
+        let mut args = bare_run_args();
+        args.workload_json = Some(r#"{"pause_budget_ms":5}"#.into());
+        append_nyar_vm_workload_args(&mut command, &args).expect("append");
+        assert!(command.args.windows(2).any(|w| w[0] == "--workload-json" && w[1].contains("pause_budget_ms")));
+    }
+
+    #[test]
+    fn rejects_workload_json_for_non_nyar_vm() {
+        let mut command = RunCommand {
+            target: RunnerFamily::Node,
+            artifact: PathBuf::from("out.mjs"),
+            command: "node".into(),
+            args: vec!["out.mjs".into()],
+        };
+        let mut args = bare_run_args();
+        args.workload_json = Some("{}".into());
+        let err = append_nyar_vm_workload_args(&mut command, &args).expect_err("must reject");
+        assert!(err.to_string().contains("nyar-vm"));
+    }
 }
 
 fn plan_run_command(
