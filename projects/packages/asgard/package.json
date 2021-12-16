@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/asgard",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Asgard - cross-platform GUI app framework CLI (assembled from VCC platform collects).",
     "type": "module",
     "license": "MPL-2.0",
