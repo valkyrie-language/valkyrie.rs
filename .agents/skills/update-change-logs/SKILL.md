@@ -86,15 +86,13 @@ git-change-logs --from vA.B.C --to vX.Y.Z
 - 写 hash、完整 commit 列表、安装命令（Release 页与 README 已有）。
 - 写「通过 GitHub Actions 正式发布」「npm 上首次发布」等空话。
 
-### 标题 emoji
+### 标题
 
-发布稿首行**固定**与模板相同，无例外：
+- 发布稿**不要**写一级标题（`# …`）。正文从 `## ✨ Features` 起笔。
+- GitHub Release 标题用 `vX.Y.Z`（与 tag 一致），例如 `gh release create v0.0.4 --title "v0.0.4"`。
+- **禁止**标题或正文首行写 `@valkyrie-language vX.Y.Z` / `🚀 …`——Release 页已有版本名，再写会重复。
 
-```markdown
-# 🚀 `@valkyrie-language` vX.Y.Z
-```
-
-🐛 / ✨ / 🔧 只出现在正文 `## …` 小节标题里，**不得**替换首行火箭。
+🐛 / ✨ / 🔧 只出现在正文 `## …` 小节标题里。
 
 ## 贡献者映射
 

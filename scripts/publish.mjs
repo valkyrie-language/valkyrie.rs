@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 /**
- * npm publish & Trusted Publisher
+ * npm publish helpers kept for CI assembly gates.
+ *
+ * Trusted Publisher 配置请用 nifty（勿再在此脚本内维护 trust 列表）：
+ *   pnpm npm:trust                 → node scripts/run-nifty.mjs trust
+ *   pnpm npm:trust -- --dry-run
  *
  *   node scripts/publish.mjs npm [--dry-run] [--skip legion] [--only vcc]
- *   node scripts/publish.mjs ci --version=0.0.1
- *   node scripts/publish.mjs trust status|configure [--only @valkyrie-language/vcc]
+ *   node scripts/publish.mjs ci --version=0.0.4
  *
- * Auth: repo-root `.env.npm-trust.local` (NPM_TOTP_SECRET / NPM_TOKEN)
+ * Auth: `.env.placeholder.local` 或兼容 `.env.npm-trust.local`（NPM_TOTP_SECRET / NPM_TOKEN）
  */
 
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ENV_PATH, loadLocalEnv, resolveNpmAuth, runNpm, totpCode } from './lib/npm-auth.mjs';
+import { ENV_PATH, PLACEHOLDER_ENV_PATH, resolveNpmAuth, runNpm } from './lib/npm-auth.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_ROOT = path.join(ROOT, 'projects', 'packages');
-const CACHE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', '.npm-trust-cache.json');
 const MIN_WASM_BYTES = 1024;
 
 const PUBLISH_ORDER = [
@@ -32,17 +33,6 @@ const PUBLISH_ORDER = [
     'legion',
     'asgard',
 ];
-
-const TRUST_PACKAGES = PUBLISH_ORDER.map((d) => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGES_ROOT, d, 'package.json'), 'utf8'));
-    return pkg.name;
-});
-
-const TRUST = {
-    repo: 'valkyrie-language/valkyrie.rs',
-    file: 'publish-npm.yml',
-    env: 'NPM_PUBLISH',
-};
 
 const argv = process.argv.slice(2);
 const command = argv[0] ?? 'npm';
@@ -136,12 +126,13 @@ function cmdNpm() {
     const publishList = resolvePublishList(rest);
 
     if (!dryRun && !auth.totpSecretRaw && !auth.token && !auth.currentOtp()) {
-        console.warn(`publish npm: no NPM_TOTP_SECRET in ${ENV_PATH} — may EOTP`);
+        console.warn(`publish npm: no NPM_TOTP_SECRET in ${PLACEHOLDER_ENV_PATH} or ${ENV_PATH} — may EOTP`);
     } else if (!dryRun) {
         console.log(`publish npm: totp=${auth.totpSecretRaw ? 'yes' : 'no'} token=${auth.token ? 'yes' : 'no'}`);
     }
 
     console.log(`publish npm: ${dryRun ? 'dry-run' : 'live'} ${publishList.length} packages @ ${version}`);
+    console.log('hint: Trusted Publisher 配置请用 `pnpm npm:trust`（nifty），本命令仅 token/TOTP 发布。');
 
     let published = 0;
     let skipped = 0;
@@ -257,167 +248,13 @@ function cmdCi() {
                 continue;
             }
             if (/ENEEDAUTH|OIDC|trusted publisher/i.test(blob)) {
-                fail('OIDC failed — Trusted Publisher: publish-npm.yml + NPM_PUBLISH');
+                fail('OIDC failed — run `pnpm npm:trust` then push tag (publish-npm.yml + NPM_PUBLISH)');
             }
             fail(`ci publish failed for ${name}@${version}`);
         }
         published += 1;
     }
     console.log(`\npublish ci: done (published=${published} skipped=${skipped})`);
-}
-
-function trustAuth() {
-    const localEnv = loadLocalEnv();
-    const token = takeFlag(rest, '--token') ?? process.env.NPM_TOKEN ?? localEnv.NPM_TOKEN;
-    const otpFlag = takeFlag(rest, '--otp') ?? process.env.NPM_OTP ?? localEnv.NPM_OTP;
-    const totpSecretRaw =
-        takeFlag(rest, '--totp-secret') ??
-        process.env.NPM_TOTP_SECRET ??
-        localEnv.NPM_TOTP_SECRET ??
-        (otpFlag && !/^\d{6}$/.test(otpFlag.trim()) ? otpFlag : undefined);
-    const otpStatic = otpFlag && /^\d{6}$/.test(otpFlag.trim()) ? otpFlag.trim() : undefined;
-    return {
-        token,
-        currentOtp() {
-            if (totpSecretRaw) return totpCode(totpSecretRaw);
-            return otpStatic;
-        },
-        hasOtp: Boolean(totpSecretRaw || otpStatic),
-    };
-}
-
-function trustFields(cfg) {
-    const claims = cfg?.claims ?? {};
-    return {
-        repo: cfg?.repository ?? claims.repository ?? claims.repo ?? '',
-        file: cfg?.file ?? claims.workflow_ref?.file ?? claims.file ?? '',
-        env: cfg?.environment ?? claims.environment ?? claims.env ?? '',
-    };
-}
-
-function trustMatches(cfg) {
-    if (cfg?.raw && typeof cfg.raw === 'string') {
-        return cfg.raw.includes(TRUST.repo) && cfg.raw.includes(TRUST.file);
-    }
-    const { repo, file, env } = trustFields(cfg);
-    return repo === TRUST.repo && file === TRUST.file && (env === TRUST.env || env === '');
-}
-
-function classifyConfigs(configs) {
-    if (configs.find((c) => trustMatches(c) && trustFields(c).env === TRUST.env)) {
-        return { matches: true, matchKind: 'exact' };
-    }
-    if (configs.find(trustMatches)) return { matches: true, matchKind: 'loose' };
-    if (configs.length === 0) return { matches: false, matchKind: 'none' };
-    return { matches: false, matchKind: 'mismatch' };
-}
-
-function listTrustLive(name, auth) {
-    const args = ['trust', 'list', name, '--json'];
-    const code = auth.currentOtp();
-    if (code) args.push(`--otp=${code}`);
-    const r = runNpm(args, { token: auth.token });
-    if (/EOTP|one-time password/i.test(`${r.stdout}\n${r.stderr}`)) {
-        return { configs: [], authRequired: true };
-    }
-    if (r.status !== 0) return { configs: [], error: r.stderr || r.stdout };
-    try {
-        const data = JSON.parse(r.stdout || '[]');
-        if (Array.isArray(data)) return { configs: data };
-        if (Array.isArray(data?.configurations)) return { configs: data.configurations };
-        if (data?.type || data?.claims) return { configs: [data] };
-        return { configs: [] };
-    } catch {
-        return { configs: [] };
-    }
-}
-
-function trustTargets() {
-    const only = takeFlag(rest, '--only');
-    if (!only) return TRUST_PACKAGES;
-    if (!TRUST_PACKAGES.includes(only)) fail(`--only ${only} not in package set`);
-    return [only];
-}
-
-function cmdTrustStatus() {
-    const auth = trustAuth();
-    const cache = fs.existsSync(CACHE_PATH) ? readJson(CACHE_PATH) : { packages: {} };
-    console.log('publish trust: status\n');
-    let ok = 0;
-    let bad = 0;
-    for (const name of trustTargets()) {
-        const ver = runNpm(['view', name, 'version'], { token: auth.token }).stdout;
-        if (!ver) {
-            console.log(`  ? ${name}  not on registry`);
-            bad += 1;
-            continue;
-        }
-        const entry = auth.hasOtp
-            ? (() => {
-                  const live = listTrustLive(name, auth);
-                  if (live.configs) {
-                      cache.packages[name] = { ...classifyConfigs(live.configs), listedAt: new Date().toISOString() };
-                      writeJson(CACHE_PATH, cache);
-                  }
-                  return cache.packages[name];
-              })()
-            : cache.packages[name];
-        if (entry?.matches) {
-            console.log(`  ok ${name}@${ver}`);
-            ok += 1;
-        } else {
-            console.log(`  ~ ${name}@${ver}  trust missing`);
-            bad += 1;
-        }
-    }
-    console.log(`\n${ok} ok, ${bad} need configure`);
-    process.exit(bad > 0 ? 1 : 0);
-}
-
-function cmdTrustConfigure() {
-    const auth = trustAuth();
-    if (!auth.hasOtp) fail(`need NPM_TOTP_SECRET in ${ENV_PATH}`);
-    const dryRun = rest.includes('--dry-run');
-    let configured = 0;
-    let skipped = 0;
-    for (const name of trustTargets()) {
-        if (!runNpm(['view', name, 'version'], { token: auth.token }).stdout) {
-            console.log(`  skip ${name} (not on registry)`);
-            continue;
-        }
-        const live = listTrustLive(name, auth);
-        if (live.authRequired) fail(`EOTP listing ${name}`);
-        const entry = classifyConfigs(live.configs ?? []);
-        if (entry.matches) {
-            console.log(`  skip ${name} (already configured)`);
-            skipped += 1;
-            continue;
-        }
-        if (entry.matchKind === 'mismatch') fail(`${name}: trust mismatch — revoke manually`);
-        const code = auth.currentOtp();
-        const args = [
-            'trust',
-            'github',
-            name,
-            `--file=${TRUST.file}`,
-            `--repo=${TRUST.repo}`,
-            `--env=${TRUST.env}`,
-            '--allow-publish',
-            '--allow-stage-publish',
-            '--yes',
-            `--otp=${code}`,
-        ];
-        if (dryRun) {
-            console.log(`  dry-run: npm ${args.join(' ')}`);
-            continue;
-        }
-        console.log(`\n=== ${name} ===`);
-        const r = runNpm(args, { token: auth.token });
-        if (r.stdout) process.stdout.write(String(r.stdout));
-        if (r.status !== 0) fail(`trust create failed: ${name}`);
-        configured += 1;
-    }
-    console.log(`\npublish trust: done (configured=${configured} skipped=${skipped})`);
 }
 
 switch (command) {
@@ -427,13 +264,9 @@ switch (command) {
     case 'ci':
         cmdCi();
         break;
-    case 'trust': {
-        const sub = rest.find((a) => !a.startsWith('-')) ?? 'status';
-        if (sub === 'status' || sub === 'check') cmdTrustStatus();
-        else if (sub === 'configure' || sub === 'trust') cmdTrustConfigure();
-        else fail(`unknown trust subcommand \`${sub}\``);
+    case 'trust':
+        fail('trust moved to nifty — use `pnpm npm:trust` (scripts/run-nifty.mjs trust)');
         break;
-    }
     default:
-        fail(`unknown command \`${command}\`. Use: npm | ci | trust`);
+        fail(`unknown command \`${command}\`. Use: npm | ci  (trust → pnpm npm:trust)`);
 }

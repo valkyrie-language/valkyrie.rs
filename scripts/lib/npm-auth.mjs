@@ -1,5 +1,8 @@
 /**
- * Shared npm auth (.env.npm-trust.local: NPM_TOTP_SECRET, NPM_OTP, NPM_TOKEN).
+ * Shared npm auth.
+ *
+ * Prefers nifty's `.env.placeholder.local`, then legacy `.env.npm-trust.local`.
+ * Keys: NPM_TOTP_SECRET / NPM_OTP / NPM_TOKEN.
  */
 
 import crypto from 'node:crypto';
@@ -10,24 +13,33 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+/** @deprecated prefer `.env.placeholder.local` (nifty); kept for local migrate. */
 export const ENV_PATH = path.join(REPO_ROOT, '.env.npm-trust.local');
+export const PLACEHOLDER_ENV_PATH = path.join(REPO_ROOT, '.env.placeholder.local');
 
-export function loadLocalEnv(filePath = ENV_PATH) {
+export function loadLocalEnv(filePath) {
     const out = {};
-    try {
-        for (const raw of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
-            const line = raw.trim();
-            if (!line || line.startsWith('#')) continue;
-            const m = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-            if (!m) continue;
-            let v = m[2].trim();
-            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-                v = v.slice(1, -1);
+    const paths = filePath
+        ? [filePath]
+        : [PLACEHOLDER_ENV_PATH, ENV_PATH].filter((candidate, index, all) => all.indexOf(candidate) === index);
+    for (const candidate of paths) {
+        try {
+            for (const raw of fs.readFileSync(candidate, 'utf8').split(/\r?\n/)) {
+                const line = raw.trim();
+                if (!line || line.startsWith('#')) continue;
+                const m = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+                if (!m) continue;
+                let v = m[2].trim();
+                if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                    v = v.slice(1, -1);
+                }
+                if (out[m[1]] === undefined) {
+                    out[m[1]] = v;
+                }
             }
-            out[m[1]] = v;
+        } catch {
+            /* optional */
         }
-    } catch {
-        /* optional */
     }
     return out;
 }

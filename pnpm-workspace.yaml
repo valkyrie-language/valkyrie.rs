@@ -2,3 +2,8 @@ packages:
   - "projects/packages/*"
   - "projects/*"
   - "packages/*"
+minimumReleaseAgeExclude:
+  - '@doki-land/nifty-darwin-arm64@0.0.8'
+  - '@doki-land/nifty-linux-x64@0.0.8'
+  - '@doki-land/nifty-win32-x64@0.0.8'
+  - '@doki-land/nifty@0.0.8'

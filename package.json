@@ -2,8 +2,8 @@
     "name": "@valkyrie/rusty-valkyrie",
     "private": true,
     "scripts": {
-        "fmt": "node scripts/format.mjs",
-        "fmt:check": "node scripts/format.mjs --check",
+        "fmt": "nifty format",
+        "fmt:check": "nifty format --check",
         "check": "cargo check -p legion -p vcc-napi -p vcc-wasm -p asgard",
         "build": "node scripts/build.mjs",
         "build:napi": "node scripts/build.mjs napi",
@@ -19,12 +19,12 @@
         "publish:dry-run": "node scripts/publish.mjs npm --dry-run",
         "publish:npm": "node scripts/publish.mjs npm",
         "publish:npm:no-legion": "node scripts/publish.mjs npm --skip legion",
-        "change-logs": "git-change-logs",
-        "npm:trust:status": "node scripts/publish.mjs trust status",
-        "npm:trust": "node scripts/publish.mjs trust configure"
+        "change-logs": "nifty change-logs",
+        "npm:trust": "node scripts/run-nifty.mjs trust",
+        "npm:trust:dry-run": "node scripts/run-nifty.mjs trust --dry-run"
     },
     "devDependencies": {
-        "@biomejs/biome": "2.5.14"
+        "@doki-land/nifty": "^0.0.8"
     },
-    "packageManager": "pnpm@10.12.2"
+    "packageManager": "pnpm@12.6.0+sha512.3ef68f951cb111ac204b4a5a16f0b2ddf0da56a96e0413e81d855d9f0b55ef926714709028e1cd00c405c2c5fb7b9e8ec4dc46777c805d0373c2f2ff00fd20ec"
 }
