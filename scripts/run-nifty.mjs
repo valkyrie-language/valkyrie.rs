@@ -58,11 +58,12 @@ for (const [key, value] of Object.entries(TRUST_DEFAULTS)) {
 }
 applyLocalAuth(env);
 
-const niftyBin = path.join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'nifty.CMD' : 'nifty');
-const result = spawnSync(niftyBin, argv, {
+// 直接跑 cli 入口，避免 Windows 上对含空格路径的 `.cmd` + `shell: true` 拆词失败。
+const niftyCli = path.join(ROOT, 'node_modules', '@doki-land', 'nifty', 'cli', 'nifty.mjs');
+const result = spawnSync(process.execPath, [niftyCli, ...argv], {
     cwd: ROOT,
     env,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
 });
 process.exit(result.status ?? 1);
