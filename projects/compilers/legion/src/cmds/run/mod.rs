@@ -311,7 +311,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
 
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
-    println!("output: {}", plan.output_dir.display());
+    println!("output: {}", crate::cmds::path_for_cli_log(&plan.output_dir));
     match resolution_mode {
         ProjectResolutionMode::Workspace => {
             println!("mode: workspace");
@@ -731,14 +731,14 @@ fn collect_execution_input_digests(plan: &BuildPlan) -> Result<Vec<ExecutionInpu
     for source_path in &plan.project.source_files {
         inputs.push(ExecutionInputDigest {
             role: "source".to_string(),
-            path: normalized_path_text(source_path),
+            path: workspace_relative_path_text(&plan.workspace_root, source_path),
             hash: hash_file_sha256(source_path)?,
         });
     }
 
     inputs.push(ExecutionInputDigest {
         role: "project-manifest".to_string(),
-        path: normalized_path_text(&plan.project.manifest_path),
+        path: workspace_relative_path_text(&plan.workspace_root, &plan.project.manifest_path),
         hash: hash_file_sha256(&plan.project.manifest_path)?,
     });
 
@@ -746,7 +746,7 @@ fn collect_execution_input_digests(plan: &BuildPlan) -> Result<Vec<ExecutionInpu
     if workspace_manifest_path.exists() {
         inputs.push(ExecutionInputDigest {
             role: "workspace-manifest".to_string(),
-            path: normalized_path_text(&workspace_manifest_path),
+            path: workspace_relative_path_text(&plan.workspace_root, &workspace_manifest_path),
             hash: hash_file_sha256(&workspace_manifest_path)?,
         });
     }
@@ -782,7 +782,28 @@ fn relative_output_path(output_dir: &Path, path: &Path) -> String {
 }
 
 fn normalized_path_text(path: &Path) -> String {
-    strip_verbatim_prefix(path.to_string_lossy().as_ref()).to_owned()
+    strip_verbatim_prefix(path.to_string_lossy().as_ref()).replace('\\', "/")
+}
+
+/// 写入 execution manifest 的路径必须相对 workspace 根，禁止落盘本机绝对路径。
+fn workspace_relative_path_text(workspace_root: &Path, path: &Path) -> String {
+    let absolute_owned = path.to_string_lossy().into_owned();
+    let root_owned = workspace_root.to_string_lossy().into_owned();
+    let absolute = strip_verbatim_prefix(&absolute_owned);
+    let root = strip_verbatim_prefix(&root_owned);
+    let absolute_norm = absolute.replace('/', "\\");
+    let root_norm = root.trim_end_matches(['/', '\\']).replace('/', "\\");
+    if let Some(rel) = absolute_norm.strip_prefix(&root_norm) {
+        let trimmed = rel.trim_start_matches(['/', '\\']);
+        if !trimmed.is_empty() {
+            return trimmed.replace('\\', "/");
+        }
+    }
+    if let Ok(rel) = path.strip_prefix(workspace_root) {
+        return rel.to_string_lossy().replace('\\', "/");
+    }
+    // 无法相对化时只保留文件名，避免把绝对路径写进产物。
+    path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| normalized_path_text(path))
 }
 
 fn hash_file_sha256(path: &Path) -> Result<String> {

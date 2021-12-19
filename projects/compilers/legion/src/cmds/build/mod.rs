@@ -77,7 +77,7 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     let request = BuildRequest { project_dir: project_input, target: args.target.clone(), output_dir: args.output_dir.clone() };
     let (plan, resolution_mode) = workspace.build_plan_with_local_fallback(&request)?;
 
-    println!("workspace: {}", plan.workspace_root.display());
+    println!("workspace: {}", crate::cmds::path_for_cli_log(&plan.workspace_root));
     match resolution_mode {
         ProjectResolutionMode::Workspace => {
             println!("mode: workspace");
@@ -93,7 +93,7 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     }
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
-    println!("output: {}", plan.output_dir.display());
+    println!("output: {}", crate::cmds::path_for_cli_log(&plan.output_dir));
     println!("sources: {}", plan.project.source_files.len());
     println!("host contracts: {}", plan.project.host_contracts.len());
     println!("selected host providers: {}", plan.project.selected_host_providers.len());
