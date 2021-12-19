@@ -40,7 +40,9 @@ nyar = { workspace = true }
 zip = { workspace = true }
 
 [[bin]]
-name = "legion"
+# 铁律：Rust seed 可执行文件名为 `vcc`，不得产出 `legion.exe`。
+# npm 用户入口仍是 `@valkyrie-language/legion` 的 `bin/legion.js`（经 VCC 宿主）。
+name = "vcc"
 path = "src/main.rs"
 
 [[example]]

@@ -207,9 +207,30 @@ export function aggregateLegionBenchRows(rows: LegionBenchRow[], mode: 'mean' | 
     };
 }
 
+/** 将本机绝对路径收敛为仓相对片段，避免写入看板 / 报告。 */
+export function redactMachinePaths(text: string): string {
+    const relativize = (raw: string): string => {
+        const norm = raw.replace(/^\\\\\?\\/i, '').replace(/\\/g, '/');
+        const markers = ['valkyrie.rs/', 'valkyrie.v/', 'nyar-vm.rs/', 'leetcode.v/', 'project-euler.v/'];
+        const lower = norm.toLowerCase();
+        for (const marker of markers) {
+            const i = lower.indexOf(marker);
+            if (i >= 0) {
+                return norm.slice(i);
+            }
+        }
+        return '<machine-path>';
+    };
+    return text
+        .replace(/\\\\\?[A-Za-z]:\\[^\r\n"]+/g, relativize)
+        .replace(/(^|[\s"=])([A-Za-z]:\\[^\r\n"]+)/g, (_m, prefix: string, abs: string) => `${prefix}${relativize(abs)}`)
+        .replace(/(^|[\s"=])([A-Za-z]:\/[^\r\n"]+)/g, (_m, prefix: string, abs: string) => `${prefix}${relativize(abs)}`);
+}
+
 /** 格式化 Legion CLI 失败输出。 */
 export function formatLegionCliError(label: string, outcome: VccCliSpawnResult): string {
-    return `${label} exited ${outcome.status}\nstdout:\n${outcome.stdout}\nstderr:\n${outcome.stderr}`;
+    const body = `${label} exited ${outcome.status}\nstdout:\n${outcome.stdout}\nstderr:\n${outcome.stderr}`;
+    return redactMachinePaths(body);
 }
 
 function defaultValkyrieRsRoot(configRoot?: string): string {

@@ -1,4 +1,7 @@
-//! Legion CLI 解析与分发（库内入口；用户面对的二进制在 `packages/legion`）。
+//! Legion CLI 解析与分发（库内入口）。
+//!
+//! Rust seed 可执行文件名为 `vcc`（`cargo build -p legion` → `target/*/vcc`）；
+//! 用户面对的 npm 入口在 `packages/legion`（`bin/legion.js` → VCC 宿主）。
 
 use std::{ffi::OsString, io::Read, process::ExitCode};
 
@@ -31,9 +34,9 @@ use crate::{
     run_spy,
 };
 
-/// Legion 根命令。
+/// VCC / Legion 根命令（seed 二进制名 `vcc`；npm 包装仍可称 `legion`）。
 #[derive(Debug, Parser)]
-#[command(name = "legion", version, about = "Valkyrie 工作区命令行入口")]
+#[command(name = "vcc", version, about = "Valkyrie 工作区命令行入口")]
 pub struct LegionCli {
     #[command(subcommand)]
     pub command: LegionCommands,
