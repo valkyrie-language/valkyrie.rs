@@ -38,6 +38,8 @@ pub struct PlannedDependency {
 /// text into this group's parser input.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedSemanticSourceGroup {
+    /// Resolver-assigned dependency identity used for semantic export lookup.
+    pub dependency_key: String,
     pub name: String,
     pub manifest_dir: PathBuf,
     pub source_files: Vec<PathBuf>,
@@ -91,7 +93,7 @@ pub enum ProjectResolutionMode {
 }
 
 #[derive(Debug)]
-pub struct LegionWorkspace {
+pub struct WorkspaceResolver {
     pub root_dir: PathBuf,
     pub workspace_manifest: Option<WorkspaceManifest>,
     projects: BTreeMap<PathBuf, ProjectManifest>,
@@ -106,19 +108,72 @@ pub enum PlannerError {
     Manifest(ManifestError),
     MissingWorkspace(PathBuf),
     MissingProjectManifest(PathBuf),
-    MissingBuildTarget { project: String, target: CanonicalTarget },
-    MissingDependency { project: String, dependency: String },
-    ForcedWorkspaceDependencyMissing { project: String, dependency: String },
-    RegistryDependencyMissingVersion { project: String, dependency: String },
-    RegistryDependencyInstallFailed { project: String, dependency: String, version: String, registry: String, reason: String },
-    PathDependencyMissingPath { project: String, dependency: String },
-    PathDependencyMissingManifest { project: String, dependency: String, manifest_dir: PathBuf },
-    GitDependencyMissingUrl { project: String, dependency: String },
-    GitDependencyMissingManifest { project: String, dependency: String, git_url: String, git_ref: String, manifest_dir: PathBuf },
-    GitDependencyCheckoutFailed { project: String, dependency: String, git_url: String, reason: String },
-    UnknownHostProviderContract { provider: String, contract: String, source_file: PathBuf, line: usize },
-    ConflictingHostProviders { contract: String, providers: Vec<String> },
+    MissingBuildTarget {
+        project: String,
+        target: CanonicalTarget,
+    },
+    MissingDependency {
+        project: String,
+        dependency: String,
+    },
+    ForcedWorkspaceDependencyMissing {
+        project: String,
+        dependency: String,
+    },
+    RegistryDependencyMissingVersion {
+        project: String,
+        dependency: String,
+    },
+    RegistryDependencyInstallFailed {
+        project: String,
+        dependency: String,
+        version: String,
+        registry: String,
+        reason: String,
+    },
+    PathDependencyMissingPath {
+        project: String,
+        dependency: String,
+    },
+    PathDependencyMissingManifest {
+        project: String,
+        dependency: String,
+        manifest_dir: PathBuf,
+    },
+    GitDependencyMissingUrl {
+        project: String,
+        dependency: String,
+    },
+    GitDependencyMissingManifest {
+        project: String,
+        dependency: String,
+        git_url: String,
+        git_ref: String,
+        manifest_dir: PathBuf,
+    },
+    GitDependencyCheckoutFailed {
+        project: String,
+        dependency: String,
+        git_url: String,
+        reason: String,
+    },
+    UnknownHostProviderContract {
+        provider: String,
+        contract: String,
+        source_file: PathBuf,
+        line: usize,
+    },
+    ConflictingHostProviders {
+        contract: String,
+        providers: Vec<String>,
+    },
     Script(crate::script::ScriptError),
+    /// 防止依赖图或源码闭包失控（死循环 / 指数膨胀 / OOM）。
+    ResourceLimitExceeded {
+        kind: &'static str,
+        limit: usize,
+        actual: usize,
+    },
 }
 
 impl Display for PlannerError {
@@ -177,6 +232,9 @@ impl Display for PlannerError {
                 write!(f, "host contract '{}' has multiple visible providers: {}", contract, providers.join(", "))
             }
             Self::Script(error) => Display::fmt(error, f),
+            Self::ResourceLimitExceeded { kind, limit, actual } => {
+                write!(f, "planner {kind} exceeded limit {limit} (actual {actual})")
+            }
         }
     }
 }
@@ -203,6 +261,7 @@ impl Diagnostic for PlannerError {
             PlannerError::UnknownHostProviderContract { .. } => "legion::planner::unknown_host_provider_contract",
             PlannerError::ConflictingHostProviders { .. } => "legion::planner::conflicting_host_providers",
             PlannerError::Script(_) => "legion::script",
+            PlannerError::ResourceLimitExceeded { .. } => "legion::planner::resource_limit",
         }))
     }
 
@@ -237,6 +296,7 @@ impl Diagnostic for PlannerError {
                 "请收窄有效依赖闭包，或移除重复的 provider，保证每个 `host_contract` 最多只有一个可见实现"
             }
             PlannerError::Script(_) => "请在 `.v` 单脚本头部使用 `# ```legion` 内嵌清单，或改用 sidecar `legion.von`",
+            PlannerError::ResourceLimitExceeded { .. } => "请检查 workspace 依赖是否成环、路径别名是否导致重复展开，或缩小 build 闭包",
         }))
     }
 
@@ -267,7 +327,7 @@ impl From<crate::script::ScriptError> for PlannerError {
     }
 }
 
-impl LegionWorkspace {
+impl WorkspaceResolver {
     pub fn discover(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         let workspace_root = find_workspace_root(start).ok_or_else(|| PlannerError::MissingWorkspace(start.to_path_buf()))?;
@@ -294,7 +354,22 @@ impl LegionWorkspace {
     pub fn discover_for_project(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         if let Some(workspace_root) = find_workspace_root(start) {
-            return Self::discover(workspace_root);
+            let mut workspace = Self::discover(workspace_root)?;
+            let project_dir = resolve_project_root(start).unwrap_or_else(|| search_start_dir(start));
+            if workspace.project_manifest(&project_dir).is_some() {
+                return Ok(workspace);
+            }
+            // 题级 / 示例包常有独立 `legion.von` 且不在 `legions.von` members 中，
+            // 但仍通过 `core: true` / `std: true` 引用 workspace 成员；保留已发现的 workspace。
+            let manifest_path = project_dir.join("legion.von");
+            if manifest_path.is_file() {
+                let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
+                let project_name = manifest.name.clone();
+                let canonical = canonicalize_lossy(&project_dir);
+                workspace.projects.insert(canonical.clone(), manifest);
+                workspace.projects_by_name.insert(project_name, canonical);
+                return Ok(workspace);
+            }
         }
 
         if crate::script::is_script_path(start) {
@@ -320,13 +395,7 @@ impl LegionWorkspace {
         let mut projects_by_name = BTreeMap::new();
         projects_by_name.insert(manifest.name.clone(), canonical);
 
-        Ok(Self {
-            root_dir: project_dir.clone(),
-            workspace_manifest: None,
-            projects,
-            projects_by_name,
-            single_script: None,
-        })
+        Ok(Self { root_dir: project_dir.clone(), workspace_manifest: None, projects, projects_by_name, single_script: None })
     }
 
     pub fn project_manifest(&self, project_dir: &Path) -> Option<&ProjectManifest> {
@@ -350,8 +419,18 @@ impl LegionWorkspace {
             return self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request);
         }
 
-        let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
-        let manifest = self.project_manifest(&project_dir).ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?;
+        let project_dir = if self.workspace_manifest.is_none() {
+            self.root_dir.clone()
+        }
+        else {
+            resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir))
+        };
+        let manifest = if self.workspace_manifest.is_none() {
+            self.projects.values().next().ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?
+        }
+        else {
+            self.project_manifest(&project_dir).ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?
+        };
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target })?;
 
@@ -389,31 +468,6 @@ impl LegionWorkspace {
         })
     }
 
-    pub fn build_plan_with_local_fallback(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
-        if let Some(ctx) = &self.single_script {
-            return Ok((self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request)?, ProjectResolutionMode::Script));
-        }
-
-        let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
-        if let Some(manifest) = self.project_manifest(&project_dir) {
-            let mode = if self.workspace_manifest.is_some() {
-                ProjectResolutionMode::Workspace
-            } else {
-                ProjectResolutionMode::Script
-            };
-            return Ok((self.build_plan_for_manifest(project_dir, manifest, request)?, mode));
-        }
-
-        let manifest_path = project_dir.join("legion.von");
-        if !manifest_path.exists() {
-            return Err(PlannerError::MissingProjectManifest(project_dir));
-        }
-
-        let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
-        let mode = if self.workspace_manifest.is_some() { ProjectResolutionMode::Package } else { ProjectResolutionMode::Script };
-        Ok((self.build_plan_for_manifest(project_dir, &manifest, request)?, mode))
-    }
-
     /// 构造测试/基准编译计划：始终允许指定 target，并合并 `source/` + `test/` 源文件。
     pub fn build_test_plan(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
         let (project_dir, manifest, mode) = if let Some(ctx) = &self.single_script {
@@ -422,11 +476,7 @@ impl LegionWorkspace {
         else {
             let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
             if let Some(manifest) = self.project_manifest(&project_dir) {
-                let mode = if self.workspace_manifest.is_some() {
-                    ProjectResolutionMode::Workspace
-                } else {
-                    ProjectResolutionMode::Script
-                };
+                let mode = if self.workspace_manifest.is_some() { ProjectResolutionMode::Workspace } else { ProjectResolutionMode::Script };
                 (project_dir, manifest.clone(), mode)
             }
             else {
@@ -495,13 +545,14 @@ impl LegionWorkspace {
         project_dir: &Path,
         manifest: &ProjectManifest,
         build_target: &BuildTargetSpec,
-        visited: &mut BTreeSet<PathBuf>,
+        visited: &mut BTreeSet<String>,
     ) -> Result<Vec<PathBuf>, PlannerError> {
         let canonical_dir = canonicalize_lossy(project_dir);
-        if visited.contains(&canonical_dir) {
+        let visit_key = project_visit_key(&canonical_dir);
+        if visited.contains(&visit_key) {
             return Ok(Vec::new());
         }
-        visited.insert(canonical_dir.clone());
+        visited.insert(visit_key);
 
         if let Some(ctx) = &self.single_script {
             if same_path(project_dir, &ctx.project_dir) {
@@ -510,7 +561,7 @@ impl LegionWorkspace {
         }
 
         // 收集当前项目自身的源文件，并应用该项目针对当前 target 的 exclude_*。
-        let mut all_files = collect_source_files(&canonical_dir, manifest.entry.as_deref())?;
+        let mut all_files = collect_source_files(&canonical_dir)?;
         let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
         all_files = filter_excluded_sources(all_files, &canonical_dir, &local_build);
 
@@ -551,7 +602,7 @@ impl LegionWorkspace {
             )? {
                 ResolvedDependencySource::Local(dep_dir) => {
                     if let Some(dep_manifest) = self.load_project_manifest_from_dir(&dep_dir) {
-                        if !manifest_supports_build_context(&dep_manifest, &build_target.target, &build_target.publish) {
+                        if !dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
                             continue;
                         }
                         let dep_files = self.collect_source_closure(&dep_dir, &dep_manifest, build_target, visited)?;
@@ -562,13 +613,13 @@ impl LegionWorkspace {
                     let install_dir =
                         self.install_registry_dependency(self.root_dir.as_path(), &dep_name, &version, &registry, &manifest.name)?;
                     if let Some(dep_manifest) = self.load_project_manifest_from_dir(&install_dir) {
-                        if manifest_supports_build_context(&dep_manifest, &build_target.target, &build_target.publish) {
+                        if dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
                             let dep_files = self.collect_source_closure(&install_dir, &dep_manifest, build_target, visited)?;
                             all_files.extend(dep_files);
                         }
                     }
                     else {
-                        all_files.extend(collect_source_files(&install_dir, None)?);
+                        all_files.extend(collect_source_files(&install_dir)?);
                     }
                 }
                 ResolvedDependencySource::MissingImplicit => {}
@@ -578,6 +629,13 @@ impl LegionWorkspace {
         // 去重并排序，确保编译顺序稳定。
         all_files.sort();
         all_files.dedup();
+        if all_files.len() > MAX_SOURCE_CLOSURE_FILES {
+            return Err(PlannerError::ResourceLimitExceeded {
+                kind: "source_closure_files",
+                limit: MAX_SOURCE_CLOSURE_FILES,
+                actual: all_files.len(),
+            });
+        }
         Ok(all_files)
     }
 
@@ -589,7 +647,7 @@ impl LegionWorkspace {
     ) -> Result<Vec<PlannedSemanticSourceGroup>, PlannerError> {
         let mut groups = Vec::new();
         let mut visited = BTreeSet::new();
-        self.collect_semantic_source_groups_inner(project_dir, manifest, build_target, &mut visited, &mut groups)?;
+        self.collect_semantic_source_groups_inner(project_dir, manifest, &manifest.name, build_target, &mut visited, &mut groups, 0)?;
         Ok(groups)
     }
 
@@ -597,12 +655,21 @@ impl LegionWorkspace {
         &self,
         project_dir: &Path,
         manifest: &ProjectManifest,
+        dependency_key: &str,
         build_target: &BuildTargetSpec,
-        visited: &mut BTreeSet<PathBuf>,
+        visited: &mut BTreeSet<String>,
         groups: &mut Vec<PlannedSemanticSourceGroup>,
+        depth: usize,
     ) -> Result<(), PlannerError> {
+        if depth > MAX_SEMANTIC_GROUP_DEPTH {
+            return Err(PlannerError::ResourceLimitExceeded { kind: "semantic_group_depth", limit: MAX_SEMANTIC_GROUP_DEPTH, actual: depth });
+        }
+        if groups.len() >= MAX_SEMANTIC_GROUPS {
+            return Err(PlannerError::ResourceLimitExceeded { kind: "semantic_groups", limit: MAX_SEMANTIC_GROUPS, actual: groups.len() });
+        }
         let manifest_dir = canonicalize_lossy(project_dir);
-        if !visited.insert(manifest_dir.clone()) {
+        let visit_key = project_visit_key(&manifest_dir);
+        if !visited.insert(visit_key) {
             return Ok(());
         }
         let dependencies = self.collect_dependencies(project_dir, manifest, build_target)?;
@@ -610,12 +677,20 @@ impl LegionWorkspace {
             let dependency_manifest = self
                 .load_project_manifest_from_dir(&dependency.manifest_dir)
                 .ok_or_else(|| PlannerError::MissingProjectManifest(dependency.manifest_dir.clone()))?;
-            self.collect_semantic_source_groups_inner(&dependency.manifest_dir, &dependency_manifest, build_target, visited, groups)?;
+            self.collect_semantic_source_groups_inner(
+                &dependency.manifest_dir,
+                &dependency_manifest,
+                &dependency.name,
+                build_target,
+                visited,
+                groups,
+                depth + 1,
+            )?;
         }
         let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
-        let source_files =
-            filter_excluded_sources(collect_source_files(&manifest_dir, manifest.entry.as_deref())?, &manifest_dir, &local_build);
+        let source_files = filter_excluded_sources(collect_source_files(&manifest_dir)?, &manifest_dir, &local_build);
         groups.push(PlannedSemanticSourceGroup {
+            dependency_key: dependency_key.to_string(),
             name: manifest.name.clone(),
             manifest_dir,
             source_files,
@@ -716,7 +791,7 @@ impl LegionWorkspace {
                 ResolvedDependencySource::MissingImplicit => continue,
             };
             if let Some(dependency_manifest) = self.project_manifest(&manifest_dir) {
-                if !manifest_supports_build_context(dependency_manifest, &build_target.target, &build_target.publish) {
+                if !dependency_supports_source_context(&dependency_name, dependency_manifest, &build_target.target, &build_target.publish) {
                     continue;
                 }
             }
@@ -855,7 +930,7 @@ enum ResolvedDependencySource {
 }
 
 fn resolve_dependency_source(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     project_manifest_dir: &Path,
     path_base: &Path,
     dependency_spec: Option<&DependencySpec>,
@@ -977,7 +1052,7 @@ fn resolve_local_dependency_path(project_manifest_dir: &Path, raw_path: &str) ->
     if candidate.is_absolute() { candidate.to_path_buf() } else { project_manifest_dir.join(candidate) }
 }
 
-impl LegionWorkspace {
+impl WorkspaceResolver {
     fn git_vendor_root(&self, git_url: &str, git_ref: &str) -> PathBuf {
         let slug = git_cache_slug(git_url, git_ref);
         self.root_dir.join("vendors").join("git").join(slug)
@@ -1082,12 +1157,7 @@ fn default_dist_output_dir(project_dir: &Path, target: &CanonicalTarget) -> Path
 }
 
 fn select_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> Option<BuildTargetSpec> {
-    manifest
-        .build
-        .iter()
-        .find(|item| item.target == *target)
-        .cloned()
-        .or_else(|| synthesize_cli_build_target(manifest, target))
+    manifest.build.iter().find(|item| item.target == *target).cloned().or_else(|| synthesize_cli_build_target(manifest, target))
 }
 
 /// CLI 显式 `--target` 未写入 `legion.von` 时，为 library 工程合成默认 build 项（单文件库工程等）。
@@ -1098,27 +1168,19 @@ fn synthesize_cli_build_target(manifest: &ProjectManifest, target: &CanonicalTar
     Some(BuildTargetSpec { target: *target, ..BuildTargetSpec::default() })
 }
 
-fn collect_source_files(project_dir: &Path, entry: Option<&str>) -> Result<Vec<PathBuf>, PlannerError> {
+fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let project_dir = path_for_local_fs(project_dir);
-    if let Some(entry) = entry {
-        let path = project_dir.join(entry);
-        if path.is_file() && path.extension().is_some_and(|ext| ext == "v") {
-            return Ok(vec![path]);
-        }
-        return Err(PlannerError::Io(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("legion.von entry '{}' not found under {}", entry, project_dir.display()),
-        )));
+    let source_dir = project_dir.join("source");
+    // 标准包：`source/` 下全部 `.v`；可执行/导出入口由源码 `[main]` / `[export]` 标记。
+    if source_dir.is_dir() {
+        let mut files = Vec::new();
+        collect_v_files(&source_dir, &mut files)?;
+        files.sort();
+        return Ok(files);
     }
 
     let mut files = Vec::new();
-    let source_dir = project_dir.join("source");
-    if source_dir.exists() {
-        collect_v_files(&source_dir, &mut files)?;
-    }
-    else {
-        collect_project_root_v_files(&project_dir, &mut files)?;
-    }
+    collect_project_root_v_files(&project_dir, &mut files)?;
     files.sort();
     Ok(files)
 }
@@ -1142,22 +1204,50 @@ pub fn project_uses_single_script_layout(project_dir: &Path) -> bool {
 }
 
 /// Apply `build[].exclude_directories` / `exclude_files` relative to `project_dir`.
+#[cfg(test)]
+mod exclusion_contract_tests {
+    use super::*;
+
+    #[test]
+    fn collect_source_files_includes_root_v_without_manifest_entry() {
+        let directory = tempfile::tempdir().expect("project directory");
+        fs::write(directory.path().join("solution.v"), "[export] micro solve() -> unit {}").expect("solution");
+        let files = collect_source_files(directory.path()).expect("collect root sources");
+        assert_eq!(files, vec![directory.path().join("solution.v")]);
+    }
+
+    #[test]
+    fn exclusions_use_normalized_project_relative_identity() {
+        let directory = tempfile::tempdir().expect("project directory");
+        fs::create_dir_all(directory.path().join("source/nested/source")).expect("sources");
+        let excluded = directory.path().join("source/skip.v");
+        let retained = directory.path().join("source/nested/source/skip.v");
+        fs::write(&excluded, "").expect("source");
+        fs::write(&retained, "").expect("source");
+        let target = BuildTargetSpec { exclude_files: vec!["source/skip.v".to_owned()], ..BuildTargetSpec::default() };
+        let files = vec![path_for_local_fs(&excluded), path_for_local_fs(&retained)];
+        let result = filter_excluded_sources(files, &canonicalize_lossy(directory.path()), &target);
+        assert_eq!(result, vec![path_for_local_fs(&retained)]);
+    }
+}
+
 fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target: &BuildTargetSpec) -> Vec<PathBuf> {
     if build_target.exclude_directories.is_empty() && build_target.exclude_files.is_empty() {
         return files;
     }
-    let project_dir = canonicalize_lossy(project_dir);
+    let project_dir = path_for_local_fs(&canonicalize_lossy(project_dir));
     files
         .into_iter()
         .filter(|path| {
-            let Ok(relative) = path.strip_prefix(&project_dir)
+            let normalized_path = path_for_local_fs(path);
+            let Ok(relative) = normalized_path.strip_prefix(&project_dir)
             else {
                 return true;
             };
             let relative = relative.to_string_lossy().replace('\\', "/");
             if build_target.exclude_files.iter().any(|item| {
                 let item = item.replace('\\', "/");
-                relative == item || relative.ends_with(item.trim_start_matches("./"))
+                relative == item.trim_start_matches("./")
             }) {
                 return false;
             }
@@ -1174,7 +1264,7 @@ fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target
 
 /// 收集项目 `source/` + `test/` 下的全部 `.v` 文件（测试编译专用）。
 pub fn collect_test_build_sources(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
-    let mut files = collect_source_files(project_dir, None)?;
+    let mut files = collect_source_files(project_dir)?;
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files(&test_dir, &mut files)?;
@@ -1184,7 +1274,7 @@ pub fn collect_test_build_sources(project_dir: &Path) -> Result<Vec<PathBuf>, Pl
     Ok(files)
 }
 
-/// 仅收集项目 `test/` 下的 `.v` 文件；单脚本工程则返回根目录 `.v`。
+/// 仅收集项目 `test/` 下的 `.v` 文件；无 `source/` 布局时包含根目录 `.v`。
 pub fn collect_test_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let mut files = Vec::new();
     let test_dir = project_dir.join("test");
@@ -1200,7 +1290,7 @@ pub fn collect_test_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerE
 
 /// 收集项目 `source/` 与 `test/` 中全部 `.v` 文件（覆盖率扫描，含 `compile_only/`）。
 pub fn collect_project_v_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
-    let mut files = collect_source_files(project_dir, None)?;
+    let mut files = collect_source_files(project_dir)?;
     let test_dir = project_dir.join("test");
     if test_dir.exists() {
         collect_v_files_including_compile_only(&test_dir, &mut files)?;
@@ -1341,6 +1431,17 @@ fn normalize_path_for_lookup(path: &Path) -> String {
     if cfg!(windows) { stripped.to_ascii_lowercase() } else { stripped.to_string() }
 }
 
+fn project_visit_key(path: &Path) -> String {
+    normalize_path_for_lookup(&path_for_local_fs(path))
+}
+
+/// 单次 build 允许纳入编译的最大 `.v` 文件数（含依赖闭包）。
+const MAX_SOURCE_CLOSURE_FILES: usize = 512;
+/// 语义源码组（依赖图节点）上限。
+const MAX_SEMANTIC_GROUPS: usize = 64;
+/// 语义依赖展开最大深度。
+const MAX_SEMANTIC_GROUP_DEPTH: usize = 32;
+
 fn manifest_supports_build_context(manifest: &ProjectManifest, target: &CanonicalTarget, requested_publish: &[String]) -> bool {
     if !manifest.build.is_empty() && !manifest.build.iter().any(|item| item.target == *target) {
         return false;
@@ -1365,6 +1466,18 @@ fn manifest_supports_build_context(manifest: &ProjectManifest, target: &Canonica
         }
     }
     true
+}
+
+fn dependency_supports_source_context(
+    dependency_name: &str,
+    manifest: &ProjectManifest,
+    target: &CanonicalTarget,
+    requested_publish: &[String],
+) -> bool {
+    // `auto_link.core` 是语言语义依赖，不是一个按目标筛选的产物依赖。
+    // core 的 manifest 只描述 seed 语义构建目标；若用同一过滤器匹配
+    // Node/Wasm 或其他 backend target，会在进入 Compiler 前静默丢失 core。
+    dependency_name == "core" || manifest_supports_build_context(manifest, target, requested_publish)
 }
 
 fn implicit_sdk_dependencies(publish: &[String]) -> Vec<&'static str> {

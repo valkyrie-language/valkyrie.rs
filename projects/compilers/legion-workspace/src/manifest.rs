@@ -1,15 +1,97 @@
 use std::{
     collections::BTreeMap,
     fmt::{Display, Formatter},
+    marker::PhantomData,
+    ops::Range,
 };
 
-use miette::{Diagnostic, Severity};
+use miette::{Diagnostic, LabeledSpan, Severity};
+
+use crate::oak::{labeled_span, source_point_span};
 use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use vcc_data::text::von::{VonError, from_str};
+use oak_core::OakError as VonError;
+use oak_von::from_str;
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, MapAccess, Visitor},
+};
+
+/// Oak VON 标量可直接写字符串；serde 的 `Option<T>` 默认需要显式 option 包装。
+fn deserialize_option_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct OptionStringVisitor;
+
+    impl<'de> Visitor<'de> for OptionStringVisitor {
+        type Value = Option<String>;
+
+        fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+            formatter.write_str("string, null, or absent optional string")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(value.to_owned()))
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E> {
+            Ok(Some(value))
+        }
+    }
+
+    deserializer.deserialize_any(OptionStringVisitor)
+}
+
+/// Oak VON 嵌套对象直接写 map；serde 的 `Option<T>` 默认需要显式 option 包装。
+fn deserialize_option_nested<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    struct OptionNestedVisitor<T>(PhantomData<T>);
+
+    impl<'de, T> Visitor<'de> for OptionNestedVisitor<T>
+    where
+        T: Deserialize<'de>,
+    {
+        type Value = Option<T>;
+
+        fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+            formatter.write_str("object, null, or absent optional nested value")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            Ok(Some(T::deserialize(de::value::MapAccessDeserializer::new(map))?))
+        }
+    }
+
+    deserializer.deserialize_any(OptionNestedVisitor(PhantomData))
+}
 
 /// Consumer package artifact mode (`legion build` target interpretation).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ProjectArtifactKind {
     /// CLI / command: `@main` entry, glue auto-runs `main`.
@@ -17,6 +99,43 @@ pub enum ProjectArtifactKind {
     Binary,
     /// Importable library: `[export]` surface, glue exposes `callExport` only.
     Library,
+}
+
+impl<'de> Deserialize<'de> for ProjectArtifactKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct KindVisitor;
+
+        impl<'de> Visitor<'de> for KindVisitor {
+            type Value = ProjectArtifactKind;
+
+            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+                formatter.write_str("'binary' or 'library'")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                match value.to_ascii_lowercase().as_str() {
+                    "binary" => Ok(ProjectArtifactKind::Binary),
+                    "library" => Ok(ProjectArtifactKind::Library),
+                    other => Err(E::custom(format!("unsupported artifact kind '{other}'"))),
+                }
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_str(&value)
+            }
+        }
+
+        deserializer.deserialize_any(KindVisitor)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -53,7 +172,7 @@ pub enum DependencySourcePreference {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct LocalLegionConfig {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub name: Option<String>,
     #[serde(default)]
     pub dependencies: BTreeMap<String, DependencySpec>,
@@ -69,8 +188,6 @@ impl LocalLegionConfig {
 pub struct BuildTargetSpec {
     #[serde(default = "default_canonical_target")]
     pub target: CanonicalTarget,
-    #[serde(default)]
-    pub msil: bool,
     #[serde(default)]
     pub source_map: bool,
     #[serde(default)]
@@ -93,7 +210,6 @@ impl Default for BuildTargetSpec {
     fn default() -> Self {
         Self {
             target: default_canonical_target(),
-            msil: false,
             source_map: false,
             typescript: false,
             wat: false,
@@ -110,11 +226,11 @@ pub struct PublishTargetSpec {
     #[serde(default = "default_canonical_target")]
     pub target: CanonicalTarget,
     /// Registry (`npm` / `jsr`) or artifact publish format (`web-app`, …).
-    #[serde(rename = "type", default)]
+    #[serde(rename = "type", default, deserialize_with = "deserialize_option_string")]
     pub channel_type: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub package_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub version: Option<String>,
 }
 
@@ -149,13 +265,27 @@ pub struct BuildPluginSpec {
     pub export_routes: BTreeMap<String, String>,
 }
 
+fn deserialize_option_sdk_vendor<'de, D>(deserializer: D) -> Result<Option<SdkVendorConfig>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_option_nested(deserializer)
+}
+
+fn deserialize_option_build_plugin<'de, D>(deserializer: D) -> Result<Option<BuildPluginSpec>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_option_nested(deserializer)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SdkVendorConfig {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub organization: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub host: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub kind: Option<String>,
     #[serde(default)]
     pub targets: Vec<String>,
@@ -165,11 +295,11 @@ pub struct SdkVendorConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct WorkspaceDefaults {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub version: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub author: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub license: Option<String>,
     #[serde(default)]
     pub auto_link: AutoLinkConfig,
@@ -185,9 +315,9 @@ pub struct RunnerBinding {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceManifest {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub name: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub version: Option<String>,
     #[serde(default)]
     pub members: Vec<String>,
@@ -200,14 +330,11 @@ pub struct WorkspaceManifest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectManifest {
     pub name: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub version: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_option_string")]
     pub description: Option<String>,
-    /// 单脚本 / library 工程的显式入口 `.v` 路径（相对项目根）。
-    #[serde(default)]
-    pub entry: Option<String>,
-    /// `binary`（默认）或 `library`；与 `@main` / `[export]` 分别建模，不互斥于源码。
+    /// `binary`（默认）或 `library`；可执行入口与导出表面由源码 `[main]` / `[export]` 标记，manifest 不声明单文件路径。
     #[serde(default)]
     pub artifact: ProjectArtifactKind,
     #[serde(default)]
@@ -218,21 +345,31 @@ pub struct ProjectManifest {
     pub build: Vec<BuildTargetSpec>,
     #[serde(default)]
     pub publish: Vec<PublishTargetSpec>,
-    #[serde(rename = "sdk-vendor", default)]
+    #[serde(default, deserialize_with = "deserialize_option_sdk_vendor")]
     pub sdk_vendor: Option<SdkVendorConfig>,
-    #[serde(rename = "build_plugin", default)]
+    #[serde(default, deserialize_with = "deserialize_option_build_plugin")]
     pub build_plugin: Option<BuildPluginSpec>,
+    /// 工具链版本约束（如 `{ vcc: "0.1.*" }`）；解析后由上层消费，manifest 层仅保留。
+    #[serde(default)]
+    pub engines: BTreeMap<String, String>,
 }
 
 #[derive(Debug)]
 pub enum ManifestError {
-    Parse(VonError),
+    Parse { error: VonError, span: Option<Range<usize>> },
+}
+
+impl ManifestError {
+    fn from_von(error: VonError) -> Self {
+        let span = source_point_span(&error);
+        Self::Parse { error, span }
+    }
 }
 
 impl Display for ManifestError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Parse(error) => Display::fmt(error, f),
+            Self::Parse { error, .. } => Display::fmt(error, f),
         }
     }
 }
@@ -252,16 +389,17 @@ impl Diagnostic for ManifestError {
         Some(Box::new("请检查 `legion.von` / `legions.von` 的 `VON` 语法和字段结构"))
     }
 
-    fn diagnostic_source(&self) -> Option<&dyn Diagnostic> {
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
         match self {
-            ManifestError::Parse(error) => Some(error),
+            Self::Parse { span: Some(span), .. } => Some(Box::new(std::iter::once(labeled_span("VON 解析失败位置", span)))),
+            _ => None,
         }
     }
 }
 
 impl From<VonError> for ManifestError {
     fn from(value: VonError) -> Self {
-        Self::Parse(value)
+        Self::from_von(value)
     }
 }
 
@@ -415,4 +553,147 @@ enum DependencySpecDef {
 
 fn default_canonical_target() -> CanonicalTarget {
     CanonicalTarget::clr()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::Path};
+
+    use super::*;
+    use oak_core::OakErrorKind;
+
+    #[test]
+    fn workspace_manifest_accepts_plain_string_name() {
+        let manifest = WorkspaceManifest::parse(
+            r#"{
+    name: "runtime-smoke",
+    members: ["app"]
+}"#,
+        )
+        .expect("workspace manifest must accept plain string option fields");
+        assert_eq!(manifest.name.as_deref(), Some("runtime-smoke"));
+    }
+
+    #[test]
+    fn project_manifest_accepts_workspace_dependency_string() {
+        let manifest = ProjectManifest::parse(
+            r#"{
+    name: "demo",
+    dependencies: { core: "workspace" }
+}"#,
+        )
+        .expect("workspace dependency string must parse");
+        assert_eq!(manifest.dependencies.get("core").map(DependencySpec::source_preference), Some(DependencySourcePreference::Workspace));
+    }
+
+    #[test]
+    fn project_manifest_accepts_sdk_vendor_block() {
+        ProjectManifest::parse(
+            r#"{
+    name: "demo",
+    sdk_vendor: {
+        organization: "valkyrie",
+        host: "browser",
+        kind: "platform-sdk",
+        targets: ["wasm32-unknown-browser-wasm"]
+    }
+}"#,
+        )
+        .unwrap_or_else(|error| panic!("sdk_vendor block must parse: {error}"));
+    }
+
+    #[test]
+    fn project_manifest_accepts_wasm_build_target() {
+        ProjectManifest::parse(
+            r#"{
+    name: "demo",
+    build: [ { target: "wasm32-unknown-browser-wasm", source_map: true, typescript: true, wat: true } ]
+}"#,
+        )
+        .unwrap_or_else(|error| panic!("wasm build target must parse: {error}"));
+    }
+
+    #[test]
+    fn project_manifest_accepts_engines_block() {
+        ProjectManifest::parse(
+            r#"{
+    name: "demo",
+    engines: { vcc: "0.1.*" }
+}"#,
+        )
+        .unwrap_or_else(|error| panic!("engines block must parse: {error}"));
+    }
+
+    #[test]
+    fn project_manifest_accepts_std_adaptor_wasm_shape() {
+        let manifest = ProjectManifest::parse(
+            r#"{
+    name: "std.adaptor.wasm",
+    description: "Valkyrie WebAssembly SDK",
+    dependencies: { core: "workspace" },
+    sdk_vendor: {
+        organization: "valkyrie",
+        host: "browser",
+        kind: "platform-sdk",
+        targets: ["wasm32-unknown-browser-wasm"]
+    },
+    build: [
+        {
+            target: "wasm32-unknown-browser-wasm",
+            source_map: true,
+            typescript: true,
+            wat: true
+        }
+    ],
+    engines: { vcc: "0.1.*" }
+}"#,
+        )
+        .unwrap_or_else(|error| panic!("std.adaptor.wasm legion.von shape must parse: {error}"));
+        assert_eq!(manifest.name, "std.adaptor.wasm");
+        assert!(manifest.sdk_vendor.is_some());
+    }
+
+    #[test]
+    fn project_manifest_accepts_library_artifact_and_node_target() {
+        let manifest = ProjectManifest::parse(
+            r#"{
+    name: "leetcode-two-sum",
+    version: "0.1.0",
+    artifact: "library",
+    dependencies: { core: true, std: true },
+    build: [ { target: "node" } ]
+}"#,
+        )
+        .expect("leetcode legion.von shape must parse");
+        assert_eq!(manifest.artifact, ProjectArtifactKind::Library);
+        assert_eq!(manifest.build[0].target, CanonicalTarget::parse("node").expect("node"));
+    }
+
+    #[test]
+    fn std_adaptor_clr_fixture_manifest_parses() {
+        let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/projects/std.adaptors._/std.adaptor.clr/legion.von");
+        if !manifest_path.is_file() {
+            eprintln!("skip std_adaptor_clr_fixture_manifest_parses: valkyrie.v submodule missing");
+            return;
+        }
+        let source = fs::read_to_string(&manifest_path).expect("read std.adaptor.clr legion.von");
+        let manifest = ProjectManifest::parse(&source).unwrap_or_else(|error| panic!("std.adaptor.clr legion.von must parse: {error}"));
+        assert_eq!(manifest.name, "std.adaptor.clr");
+    }
+
+    #[test]
+    fn manifest_error_exposes_oak_source_offset_as_label() {
+        let error = ManifestError::from(VonError::new(OakErrorKind::SyntaxError {
+            message: "expected value".to_string(),
+            offset: 12,
+            source_id: None,
+        }));
+        let labels: Vec<_> = Diagnostic::labels(&error).unwrap().collect();
+        assert_eq!(labels.len(), 1);
+        let ManifestError::Parse { span: Some(span), .. } = error
+        else {
+            panic!("expected parse error with span");
+        };
+        assert_eq!(span, 12..13);
+    }
 }

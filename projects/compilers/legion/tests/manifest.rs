@@ -13,25 +13,10 @@ fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
 }
 
 #[test]
-fn parses_project_manifest_entry_field() {
-    let source = r#"
-    {
-        name: "demo.two_sum",
-        entry: "solution.v",
-        build: [{ target: "node" }]
-    }
-    "#;
-
-    let manifest = ProjectManifest::parse(source).unwrap();
-    assert_eq!(manifest.entry.as_deref(), Some("solution.v"));
-}
-
-#[test]
 fn parses_project_manifest_artifact_library() {
     let source = r#"
     {
         name: "demo.two_sum",
-        entry: "solution.v",
         artifact: "library",
         build: [{ target: "node" }]
     }
@@ -136,6 +121,30 @@ fn parses_publish_formats() {
 }
 
 #[test]
+fn parses_registry_publish_targets() {
+    let source = r#"
+    {
+        name: "legion.tools",
+        publish: [
+            {
+                target: "node",
+                type: "npm",
+                package_id: "@valkyrie-language/legion",
+                version: "2020.0.0"
+            }
+        ]
+    }
+    "#;
+
+    let manifest = ProjectManifest::parse(source).unwrap();
+    assert_eq!(manifest.publish.len(), 1);
+    assert_eq!(manifest.publish[0].channel_type.as_deref(), Some("npm"));
+    assert_eq!(manifest.publish[0].package_id.as_deref(), Some("@valkyrie-language/legion"));
+    assert_eq!(manifest.publish[0].version.as_deref(), Some("2020.0.0"));
+    assert_eq!(manifest.publish[0].artifact_publish_format(), None);
+}
+
+#[test]
 fn parses_build_target_publish_formats() {
     let source = r#"
     {
@@ -187,7 +196,7 @@ fn parses_sdk_vendor_metadata() {
     let source = r#"
     {
         name: "std.adaptor.wasm",
-        sdk-vendor: {
+        sdk_vendor: {
             organization: "valkyrie",
             host: "browser",
             kind: "platform-sdk",
@@ -376,10 +385,10 @@ fn parses_git_and_path_dependencies() {
     "#;
     let manifest = ProjectManifest::parse(source).unwrap();
     let std = manifest.dependencies.get("std").unwrap();
-    assert_eq!(std.source_preference(), legion::manifest::DependencySourcePreference::Path);
+    assert_eq!(std.source_preference(), legion_workspace::manifest::DependencySourcePreference::Path);
     assert_eq!(std.path_hint(), Some("../valkyrie.v/projects/std"));
     let core = manifest.dependencies.get("core").unwrap();
-    assert_eq!(core.source_preference(), legion::manifest::DependencySourcePreference::Git);
+    assert_eq!(core.source_preference(), legion_workspace::manifest::DependencySourcePreference::Git);
     assert_eq!(core.git_url(), Some("https://github.com/valkyrie-language/valkyrie.v.git"));
     assert_eq!(core.git_ref_hint(), Some("main"));
     assert_eq!(core.path_hint(), Some("projects/core"));

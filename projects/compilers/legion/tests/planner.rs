@@ -5,10 +5,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use legion::{
-    CanonicalTarget,
-    planner::{BuildRequest, LegionWorkspace, ProjectResolutionMode, canonical_target},
-};
+use legion::CanonicalTarget;
+use legion_workspace::planner::{BuildRequest, ProjectResolutionMode, WorkspaceResolver, canonical_target};
 use miette::{GraphicalReportHandler, Report};
 use support::{
     create_local_package_project_with_manifest, create_nested_workspace_member_project_with_manifest, create_smoke_project_with_build,
@@ -43,7 +41,7 @@ micro main() -> i64 {
 }
 "#,
     );
-    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest {
             project_dir: fixture.project_dir.clone(),
@@ -70,15 +68,9 @@ fn synthesizes_cli_build_target_for_library_without_manifest_entry() {
 }
 "#,
     );
-    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
     let nyar = CanonicalTarget::parse("nyar").unwrap();
-    let plan = workspace
-        .build_plan(&BuildRequest {
-            project_dir: fixture.project_dir.clone(),
-            target: nyar,
-            output_dir: None,
-        })
-        .unwrap();
+    let plan = workspace.build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: nyar, output_dir: None }).unwrap();
     assert_eq!(plan.project.build_target.target, nyar);
 }
 
@@ -94,7 +86,7 @@ fn discovers_temp_workspace_build_plan() {
 }
 "#,
     );
-    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
@@ -107,7 +99,7 @@ fn discovers_temp_workspace_build_plan() {
 #[test]
 fn renders_pretty_report_for_missing_workspace() {
     let temp_dir = Builder::new().prefix("legion-miette").tempdir().unwrap();
-    let error = LegionWorkspace::discover(temp_dir.path()).unwrap_err();
+    let error = WorkspaceResolver::discover(temp_dir.path()).unwrap_err();
     let report = Report::new(error);
     let mut rendered = String::new();
 
@@ -144,18 +136,13 @@ fn resolves_root_manifest_without_workspace_as_script_mode() {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover_for_project(temp_dir.path()).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(temp_dir.path()).unwrap();
     assert!(workspace.workspace_manifest.is_none());
 
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
-            project_dir: temp_dir.path().to_path_buf(),
-            target: CanonicalTarget::clr(),
-            output_dir: None,
-        })
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: temp_dir.path().to_path_buf(), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Script);
     assert_eq!(plan.project.name, "script-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(temp_dir.path()));
     assert!(plan.project.source_files.iter().any(|path| path.ends_with(Path::new("source").join("main.v"))));
@@ -180,16 +167,11 @@ fn resolves_workspace_member_from_nested_source_directory() {
 "#,
     );
 
-    let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
-            project_dir: fixture.project_dir.join("source"),
-            target: CanonicalTarget::clr(),
-            output_dir: None,
-        })
+    let workspace = WorkspaceResolver::discover_for_project(fixture.project_dir.join("source")).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: fixture.project_dir.join("source"), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "workspace-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -213,16 +195,11 @@ fn resolves_local_package_from_nested_source_directory() {
 "#,
     );
 
-    let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
-            project_dir: fixture.project_dir.join("source"),
-            target: CanonicalTarget::clr(),
-            output_dir: None,
-        })
+    let workspace = WorkspaceResolver::discover_for_project(fixture.project_dir.join("source")).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: fixture.project_dir.join("source"), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Package);
     assert_eq!(plan.project.name, "package-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -246,16 +223,11 @@ fn keeps_nested_workspace_member_layout_in_workspace_mode() {
 "#,
     );
 
-    let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
-            project_dir: fixture.project_dir.join("source"),
-            target: CanonicalTarget::clr(),
-            output_dir: None,
-        })
+    let workspace = WorkspaceResolver::discover_for_project(fixture.project_dir.join("source")).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: fixture.project_dir.join("source"), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "nested-workspace-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -281,16 +253,11 @@ fn discovers_nested_workspace_members_from_parent_workspace() {
     let outer_workspace_root =
         fixture.project_dir.parent().and_then(|path| path.parent()).and_then(|path| path.parent()).unwrap().to_path_buf();
 
-    let workspace = LegionWorkspace::discover(&outer_workspace_root).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
-            project_dir: fixture.project_dir.clone(),
-            target: CanonicalTarget::clr(),
-            output_dir: None,
-        })
+    let workspace = WorkspaceResolver::discover(&outer_workspace_root).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "nested-member");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -303,7 +270,7 @@ fn nested_legion_tools_resolves_outer_core_via_outermost_workspace() {
     // Discovering from the nested project must not stop at legion._ (missing `core`).
     let fixture = create_nested_legion_tools_with_outer_core_fixture();
 
-    let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&fixture.project_dir).unwrap();
     assert_eq!(canonicalize_lossy(&workspace.root_dir), canonicalize_lossy(&fixture.root_dir));
 
     for target in [CanonicalTarget::clr(), CanonicalTarget::jvm(), CanonicalTarget::parse("node").unwrap()] {
@@ -322,7 +289,7 @@ fn nested_legion_tools_resolves_outer_core_via_outermost_workspace() {
 #[test]
 fn builds_legion_tools_like_plan_with_explicit_dependency_closure() {
     let fixture = create_legion_tools_workspace_fixture();
-    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
@@ -353,7 +320,7 @@ fn builds_legion_tools_like_plan_with_explicit_dependency_closure() {
 #[test]
 fn prefers_workspace_dependency_under_auto_source() {
     let fixture = create_legion_tools_workspace_fixture();
-    let workspace = LegionWorkspace::discover(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
         .unwrap();
@@ -397,7 +364,7 @@ fn reports_registry_dependency_without_version() {
     )
     .unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let error =
         workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap_err();
     let report = Report::new(error);
@@ -442,7 +409,7 @@ fn reports_forced_workspace_dependency_missing() {
     )
     .unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let error =
         workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap_err();
     let report = Report::new(error);
@@ -527,7 +494,7 @@ fn collects_transitive_registry_dependency_sources() {
     .unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert!(plan.project.dependencies.iter().any(|dep| dep.name == "parent.lib"));
@@ -567,7 +534,7 @@ fn workspace_root_without_legion_manifest_is_detected() {
     .unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
 
-    let workspace = LegionWorkspace::discover(root).unwrap();
+    let workspace = WorkspaceResolver::discover(root).unwrap();
     assert!(workspace.is_workspace_only_root(root));
     assert_eq!(workspace.member_manifest_dirs().len(), 1);
 }
@@ -759,13 +726,7 @@ fn create_nested_legion_tools_with_outer_core_fixture() -> WorkspaceFixture {
     },
     build: [
         {
-            target: "clr"
-        },
-        {
-            target: "jvm"
-        },
-        {
-            target: "node"
+            target: "nyar"
         }
     ]
 }
@@ -934,7 +895,7 @@ fn filters_and_injects_sdk_vendor_by_publish_format() {
     .unwrap();
     fs::write(mp_sdk.join("source").join("_.v"), "namespace tencent.wechat.miniprogram.sdk;\n").unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_game_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_game_dir).unwrap();
 
     let game_plan =
         workspace.build_plan(&BuildRequest { project_dir: app_game_dir.clone(), target: CanonicalTarget::wasm(), output_dir: None }).unwrap();
@@ -1096,7 +1057,7 @@ micro get(url: utf8): utf8 { return ""; }
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest {
             project_dir: app_dir.clone(),
@@ -1237,7 +1198,7 @@ micro write(message: utf8): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     let dependency_names: Vec<&str> = plan.project.dependencies.iter().map(|item| item.name.as_str()).collect();
@@ -1297,7 +1258,7 @@ micro write(message: utf8): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
@@ -1393,7 +1354,7 @@ imply demo.Writer {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
@@ -1481,7 +1442,7 @@ micro clear(): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
@@ -1569,7 +1530,7 @@ micro clear(): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
@@ -1714,10 +1675,8 @@ micro write(message: utf8): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
-    let plan = workspace
-        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
-        .unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
+    let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
     assert_eq!(plan.project.host_contracts[0].id, "demo.write");
@@ -1808,10 +1767,8 @@ micro write(message: utf8): unit {
     )
     .unwrap();
 
-    let workspace = LegionWorkspace::discover(&app_dir).unwrap();
-    let plan = workspace
-        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
-        .unwrap();
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
+    let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
     assert_eq!(plan.project.host_contracts[0].id, "demo.write");
@@ -1859,7 +1816,7 @@ fn resolves_path_dependency_outside_workspace() {
     fs::write(std_dir.join("source").join("lib.v"), "namespace std.lib;\n").unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
 
-    let workspace = LegionWorkspace::discover_for_project(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&app_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("node").unwrap(), output_dir: None })
         .unwrap();
@@ -1924,7 +1881,7 @@ fn local_config_overrides_git_dependency_with_path() {
     fs::write(std_dir.join("source").join("lib.v"), "namespace std.lib;\n").unwrap();
     fs::write(app_dir.join("source").join("main.v"), "micro main() -> i64 { return 0; }\n").unwrap();
 
-    let workspace = LegionWorkspace::discover_for_project(&app_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&app_dir).unwrap();
     let plan = workspace
         .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("node").unwrap(), output_dir: None })
         .unwrap();

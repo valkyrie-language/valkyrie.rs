@@ -6,28 +6,35 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-# Native `legion build --target nyar-vm` is on by default; Node/Wasm seed crates stay slim.
+# LeetCode / 正式编译链默认只启用 Nyar + Node/Wasm seed；不链接 `vcc-data` 或自举旁路。
 default = ["nyar-vm-lane"]
-nyar-vm-lane = ["emitter/nyar-vm-lane"]
+nyar-vm-lane = ["nyar-emitter/nyar-vm-lane"]
 legacy-lanes = ["nyar-vm-lane"]
-# Frozen CLR / JVM / native delivery; also pulls the Nyar VM lane for shared driver registration.
-legacy-lanes-clr-jvm-native = ["nyar-vm-lane", "emitter/legacy-lanes-clr-jvm-native"]
+# `legion spy *` 诊断（Wasm/JVM/CLR/Native 格式解码），不属于 build/run 生产链。
+format-spy = ["dep:vcc-data"]
+# `legion bootstrap` 自举验收，不属于 LeetCode 双 target 正式链。
+bootstrap-lane = []
 
 [dependencies]
+legion-workspace = { workspace = true }
 clap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 base64 = { workspace = true }
-emitter = { workspace = true }
+nyar-emitter = { workspace = true }
 nyar-package-manager = { workspace = true }
 nyar-workspace = { workspace = true }
-vcc-data = { workspace = true, features = ["serde"] }
+oak-core = { workspace = true }
+oak-von = { workspace = true }
+oak-valkyrie = { workspace = true }
+vcc-data = { workspace = true, features = ["serde"], optional = true }
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }
 nyar-types = { workspace = true }
 nyar = { workspace = true }
+nyar-bytecode = { workspace = true }
 zip = { workspace = true }
 sha2 = { workspace = true }
 pulldown-cmark = { workspace = true }
@@ -39,13 +46,31 @@ tempfile = { workspace = true }
 nyar = { workspace = true }
 zip = { workspace = true }
 
-[[bin]]
-# 铁律：Rust seed 可执行文件名为 `vcc`，不得产出 `legion.exe`。
-# npm 用户入口仍是 `@valkyrie-language/legion` 的 `bin/legion.js`（经 VCC 宿主）。
-name = "vcc"
-path = "src/main.rs"
+[[test]]
+name = "cmds_spy_wasm"
+path = "tests/cmds_spy_wasm.rs"
+required-features = ["format-spy"]
+
+[[test]]
+name = "cmds_spy_clr"
+path = "tests/cmds_spy_clr.rs"
+required-features = ["format-spy"]
+
+[[test]]
+name = "cmds_spy_pe_parser"
+path = "tests/cmds_spy_pe_parser.rs"
+required-features = ["format-spy"]
+
+[[test]]
+name = "cmds_spy_jvm"
+path = "tests/cmds_spy_jvm.rs"
+required-features = ["format-spy"]
 
 [[example]]
 name = "dump_sources"
 path = "examples/dump_sources/main.rs"
+
+[[example]]
+name = "dump_group_offset"
+path = "examples/dump_group_offset.rs"
 
