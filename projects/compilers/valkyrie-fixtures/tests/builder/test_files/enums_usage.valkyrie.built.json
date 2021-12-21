@@ -1,0 +1,248 @@
+{
+    "success": true,
+    "typed_root": {
+        "type_name": "oak_valkyrie::ast::root_nodes::ValkyrieRoot",
+        "content": {
+            "items": [
+                {
+                    "Enums": {
+                        "annotations": [],
+                        "generics": [],
+                        "kind": "Enums",
+                        "name": {
+                            "name": "Priority",
+                            "span": {
+                                "end": 14,
+                                "start": 6
+                            }
+                        },
+                        "span": {
+                            "end": 50,
+                            "start": 0
+                        },
+                        "variants": [
+                            {
+                                "annotations": [],
+                                "fields": [],
+                                "name": {
+                                    "name": "High",
+                                    "span": {
+                                        "end": 25,
+                                        "start": 21
+                                    }
+                                },
+                                "span": {
+                                    "end": 25,
+                                    "start": 21
+                                },
+                                "value": null
+                            },
+                            {
+                                "annotations": [],
+                                "fields": [],
+                                "name": {
+                                    "name": "Medium",
+                                    "span": {
+                                        "end": 37,
+                                        "start": 31
+                                    }
+                                },
+                                "span": {
+                                    "end": 37,
+                                    "start": 31
+                                },
+                                "value": null
+                            },
+                            {
+                                "annotations": [],
+                                "fields": [],
+                                "name": {
+                                    "name": "Low",
+                                    "span": {
+                                        "end": 46,
+                                        "start": 43
+                                    }
+                                },
+                                "span": {
+                                    "end": 47,
+                                    "start": 43
+                                },
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                {
+                    "Micro": {
+                        "annotations": [],
+                        "body": {
+                            "span": {
+                                "end": 135,
+                                "start": 74
+                            },
+                            "statements": [
+                                {
+                                    "Let": {
+                                        "annotations": [],
+                                        "expr": {
+                                            "DotCall": {
+                                                "field": {
+                                                    "name": "High",
+                                                    "span": {
+                                                        "end": 101,
+                                                        "start": 97
+                                                    }
+                                                },
+                                                "receiver": {
+                                                    "NamePath": {
+                                                        "parts": [
+                                                            {
+                                                                "name": "Priority",
+                                                                "span": {
+                                                                    "end": 96,
+                                                                    "start": 88
+                                                                }
+                                                            }
+                                                        ],
+                                                        "span": {
+                                                            "end": 96,
+                                                            "start": 88
+                                                        }
+                                                    }
+                                                },
+                                                "span": {
+                                                    "end": 101,
+                                                    "start": 88
+                                                }
+                                            }
+                                        },
+                                        "pattern": {
+                                            "Variable": {
+                                                "name": {
+                                                    "name": "a",
+                                                    "span": {
+                                                        "end": 85,
+                                                        "start": 84
+                                                    }
+                                                },
+                                                "span": {
+                                                    "end": 85,
+                                                    "start": 84
+                                                }
+                                            }
+                                        },
+                                        "span": {
+                                            "end": 107,
+                                            "start": 80
+                                        },
+                                        "ty": null
+                                    }
+                                },
+                                {
+                                    "Let": {
+                                        "annotations": [],
+                                        "expr": {
+                                            "NamePath": {
+                                                "parts": [
+                                                    {
+                                                        "name": "Priority",
+                                                        "span": {
+                                                            "end": 123,
+                                                            "start": 115
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "Medium",
+                                                        "span": {
+                                                            "end": 131,
+                                                            "start": 125
+                                                        }
+                                                    }
+                                                ],
+                                                "span": {
+                                                    "end": 131,
+                                                    "start": 115
+                                                }
+                                            }
+                                        },
+                                        "pattern": {
+                                            "Variable": {
+                                                "name": {
+                                                    "name": "b",
+                                                    "span": {
+                                                        "end": 112,
+                                                        "start": 111
+                                                    }
+                                                },
+                                                "span": {
+                                                    "end": 112,
+                                                    "start": 111
+                                                }
+                                            }
+                                        },
+                                        "span": {
+                                            "end": 133,
+                                            "start": 107
+                                        },
+                                        "ty": null
+                                    }
+                                }
+                            ]
+                        },
+                        "generics": [],
+                        "is_abstract": false,
+                        "is_final": false,
+                        "name": {
+                            "name": "main",
+                            "span": {
+                                "end": 60,
+                                "start": 56
+                            }
+                        },
+                        "params": [
+                            {
+                                "annotations": [],
+                                "default": null,
+                                "name": {
+                                    "name": "x",
+                                    "span": {
+                                        "end": 62,
+                                        "start": 61
+                                    }
+                                },
+                                "span": {
+                                    "end": 72,
+                                    "start": 61
+                                },
+                                "ty": {
+                                    "Namepath": {
+                                        "parts": [
+                                            {
+                                                "name": "Priority",
+                                                "span": {
+                                                    "end": 72,
+                                                    "start": 64
+                                                }
+                                            }
+                                        ],
+                                        "span": {
+                                            "end": 72,
+                                            "start": 64
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "return_type": null,
+                        "span": {
+                            "end": 135,
+                            "start": 50
+                        },
+                        "where_constraints": []
+                    }
+                }
+            ]
+        }
+    },
+    "errors": []
+}

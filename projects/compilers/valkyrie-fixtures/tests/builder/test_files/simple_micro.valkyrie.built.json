@@ -1,0 +1,175 @@
+{
+    "success": true,
+    "typed_root": {
+        "type_name": "oak_valkyrie::ast::root_nodes::ValkyrieRoot",
+        "content": {
+            "items": [
+                {
+                    "Micro": {
+                        "annotations": [],
+                        "body": {
+                            "span": {
+                                "end": 46,
+                                "start": 33
+                            },
+                            "statements": [
+                                {
+                                    "Expression": {
+                                        "annotations": [],
+                                        "expr": {
+                                            "Binary": {
+                                                "lhs": {
+                                                    "NamePath": {
+                                                        "parts": [
+                                                            {
+                                                                "name": "x",
+                                                                "span": {
+                                                                    "end": 40,
+                                                                    "start": 39
+                                                                }
+                                                            }
+                                                        ],
+                                                        "span": {
+                                                            "end": 40,
+                                                            "start": 39
+                                                        }
+                                                    }
+                                                },
+                                                "operator": "Plus",
+                                                "rhs": {
+                                                    "NamePath": {
+                                                        "parts": [
+                                                            {
+                                                                "name": "y",
+                                                                "span": {
+                                                                    "end": 44,
+                                                                    "start": 43
+                                                                }
+                                                            }
+                                                        ],
+                                                        "span": {
+                                                            "end": 44,
+                                                            "start": 43
+                                                        }
+                                                    }
+                                                },
+                                                "span": {
+                                                    "end": 45,
+                                                    "start": 39
+                                                }
+                                            }
+                                        },
+                                        "semi": false,
+                                        "span": {
+                                            "end": 45,
+                                            "start": 39
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "generics": [],
+                        "is_abstract": false,
+                        "is_final": false,
+                        "name": {
+                            "name": "add",
+                            "span": {
+                                "end": 9,
+                                "start": 6
+                            }
+                        },
+                        "params": [
+                            {
+                                "annotations": [],
+                                "default": null,
+                                "name": {
+                                    "name": "x",
+                                    "span": {
+                                        "end": 11,
+                                        "start": 10
+                                    }
+                                },
+                                "span": {
+                                    "end": 16,
+                                    "start": 10
+                                },
+                                "ty": {
+                                    "Namepath": {
+                                        "parts": [
+                                            {
+                                                "name": "i32",
+                                                "span": {
+                                                    "end": 16,
+                                                    "start": 13
+                                                }
+                                            }
+                                        ],
+                                        "span": {
+                                            "end": 16,
+                                            "start": 13
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "annotations": [],
+                                "default": null,
+                                "name": {
+                                    "name": "y",
+                                    "span": {
+                                        "end": 19,
+                                        "start": 18
+                                    }
+                                },
+                                "span": {
+                                    "end": 24,
+                                    "start": 18
+                                },
+                                "ty": {
+                                    "Namepath": {
+                                        "parts": [
+                                            {
+                                                "name": "i32",
+                                                "span": {
+                                                    "end": 24,
+                                                    "start": 21
+                                                }
+                                            }
+                                        ],
+                                        "span": {
+                                            "end": 24,
+                                            "start": 21
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "return_type": {
+                            "Namepath": {
+                                "parts": [
+                                    {
+                                        "name": "i32",
+                                        "span": {
+                                            "end": 32,
+                                            "start": 29
+                                        }
+                                    }
+                                ],
+                                "span": {
+                                    "end": 33,
+                                    "start": 29
+                                }
+                            }
+                        },
+                        "span": {
+                            "end": 46,
+                            "start": 0
+                        },
+                        "where_constraints": []
+                    }
+                }
+            ]
+        }
+    },
+    "errors": []
+}

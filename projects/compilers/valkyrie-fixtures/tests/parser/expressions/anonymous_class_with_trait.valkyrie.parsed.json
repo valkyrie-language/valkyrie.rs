@@ -1,0 +1,13 @@
+{
+    "success": false,
+    "node_count": 1,
+    "ast_structure": {
+        "kind": "Error",
+        "children": [],
+        "text_length": 0,
+        "is_leaf": true
+    },
+    "errors": [
+        "SyntaxError { message: \"此处需要表达式\", offset: 17, source_id: None }"
+    ]
+}

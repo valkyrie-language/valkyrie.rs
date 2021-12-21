@@ -1,0 +1,123 @@
+{
+    "success": true,
+    "node_count": 18,
+    "ast_structure": {
+        "kind": "Root",
+        "children": [
+            {
+                "kind": "Micro",
+                "children": [
+                    {
+                        "kind": "ParameterList",
+                        "children": [
+                            {
+                                "kind": "Leaves(3)",
+                                "children": [],
+                                "text_length": 3,
+                                "is_leaf": true
+                            }
+                        ],
+                        "text_length": 3,
+                        "is_leaf": false
+                    },
+                    {
+                        "kind": "BlockExpression",
+                        "children": [
+                            {
+                                "kind": "ExprStatement",
+                                "children": [
+                                    {
+                                        "kind": "LoopExpression",
+                                        "children": [
+                                            {
+                                                "kind": "BooleanLiteral",
+                                                "children": [
+                                                    {
+                                                        "kind": "Leaves(2)",
+                                                        "children": [],
+                                                        "text_length": 5,
+                                                        "is_leaf": true
+                                                    }
+                                                ],
+                                                "text_length": 5,
+                                                "is_leaf": false
+                                            },
+                                            {
+                                                "kind": "BlockExpression",
+                                                "children": [
+                                                    {
+                                                        "kind": "ExprStatement",
+                                                        "children": [
+                                                            {
+                                                                "kind": "BreakExpression",
+                                                                "children": [
+                                                                    {
+                                                                        "kind": "Leaves(1)",
+                                                                        "children": [],
+                                                                        "text_length": 5,
+                                                                        "is_leaf": true
+                                                                    }
+                                                                ],
+                                                                "text_length": 5,
+                                                                "is_leaf": false
+                                                            },
+                                                            {
+                                                                "kind": "Leaves(2)",
+                                                                "children": [],
+                                                                "text_length": 6,
+                                                                "is_leaf": true
+                                                            }
+                                                        ],
+                                                        "text_length": 11,
+                                                        "is_leaf": false
+                                                    },
+                                                    {
+                                                        "kind": "Leaves(4)",
+                                                        "children": [],
+                                                        "text_length": 12,
+                                                        "is_leaf": true
+                                                    }
+                                                ],
+                                                "text_length": 23,
+                                                "is_leaf": false
+                                            },
+                                            {
+                                                "kind": "Leaves(2)",
+                                                "children": [],
+                                                "text_length": 6,
+                                                "is_leaf": true
+                                            }
+                                        ],
+                                        "text_length": 34,
+                                        "is_leaf": false
+                                    }
+                                ],
+                                "text_length": 34,
+                                "is_leaf": false
+                            },
+                            {
+                                "kind": "Leaves(3)",
+                                "children": [],
+                                "text_length": 7,
+                                "is_leaf": true
+                            }
+                        ],
+                        "text_length": 41,
+                        "is_leaf": false
+                    },
+                    {
+                        "kind": "Leaves(3)",
+                        "children": [],
+                        "text_length": 10,
+                        "is_leaf": true
+                    }
+                ],
+                "text_length": 54,
+                "is_leaf": false
+            }
+        ],
+        "text_length": 54,
+        "is_leaf": false
+    },
+    "errors": []
+}

@@ -1,0 +1,10 @@
+[package]
+name = "voc-fixtures"
+version = "0.0.1"
+edition = "2024"
+publish = false
+
+[dev-dependencies]
+oak-awsl = { workspace = true }
+oak-core = { workspace = true }
+serde = { workspace = true }

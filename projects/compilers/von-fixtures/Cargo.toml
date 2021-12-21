@@ -1,0 +1,27 @@
+[package]
+name = "von-fixtures"
+version = "0.0.1"
+edition = "2024"
+publish = false
+
+[dev-dependencies]
+oak-core = { workspace = true }
+oak-testing = { workspace = true }
+oak-von = { workspace = true, features = ["serde"] }
+serde = { workspace = true }
+
+[[test]]
+name = "main"
+path = "tests/main.rs"
+
+[[test]]
+name = "lexer"
+path = "tests/lexer/mod.rs"
+
+[[test]]
+name = "formatter"
+path = "tests/formatter/mod.rs"
+
+[[test]]
+name = "printer"
+path = "tests/printer/mod.rs"

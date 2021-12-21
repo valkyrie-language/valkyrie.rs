@@ -1,0 +1,101 @@
+{
+    "success": true,
+    "typed_root": {
+        "type_name": "oak_valkyrie::ast::root_nodes::ValkyrieRoot",
+        "content": {
+            "items": [
+                {
+                    "Namespace": {
+                        "annotations": [],
+                        "items": [
+                            {
+                                "Micro": {
+                                    "annotations": [],
+                                    "body": {
+                                        "span": {
+                                            "end": 62,
+                                            "start": 34
+                                        },
+                                        "statements": [
+                                            {
+                                                "Let": {
+                                                    "annotations": [],
+                                                    "expr": {
+                                                        "IntegerLiteral": {
+                                                            "span": {
+                                                                "end": 54,
+                                                                "start": 52
+                                                            },
+                                                            "value": "42"
+                                                        }
+                                                    },
+                                                    "pattern": {
+                                                        "Variable": {
+                                                            "name": {
+                                                                "name": "x",
+                                                                "span": {
+                                                                    "end": 49,
+                                                                    "start": 48
+                                                                }
+                                                            },
+                                                            "span": {
+                                                                "end": 49,
+                                                                "start": 48
+                                                            }
+                                                        }
+                                                    },
+                                                    "span": {
+                                                        "end": 60,
+                                                        "start": 44
+                                                    },
+                                                    "ty": null
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "generics": [],
+                                    "is_abstract": false,
+                                    "is_final": false,
+                                    "name": {
+                                        "name": "main",
+                                        "span": {
+                                            "end": 31,
+                                            "start": 27
+                                        }
+                                    },
+                                    "params": [],
+                                    "return_type": null,
+                                    "span": {
+                                        "end": 62,
+                                        "start": 21
+                                    },
+                                    "where_constraints": []
+                                }
+                            }
+                        ],
+                        "name": {
+                            "parts": [
+                                {
+                                    "name": "Test",
+                                    "span": {
+                                        "end": 14,
+                                        "start": 10
+                                    }
+                                }
+                            ],
+                            "span": {
+                                "end": 15,
+                                "start": 10
+                            }
+                        },
+                        "span": {
+                            "end": 63,
+                            "start": 0
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "errors": []
+}
