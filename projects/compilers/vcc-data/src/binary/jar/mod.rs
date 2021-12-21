@@ -144,11 +144,15 @@ impl JvmJarPackage {
 
             let mut entry_bytes = Vec::new();
             file.read_to_end(&mut entry_bytes)?;
-            if file.name().eq_ignore_ascii_case(MANIFEST_PATH) {
+            let entry_name = match file.enclosed_name() {
+                Some(path) => path.to_string_lossy().into_owned(),
+                None => continue,
+            };
+            if entry_name.eq_ignore_ascii_case(MANIFEST_PATH) {
                 package.main_class = parse_manifest_main_class(&entry_bytes);
             }
             else {
-                package.push_entry(file.name(), entry_bytes);
+                package.push_entry(entry_name, entry_bytes);
             }
         }
         Ok(package)

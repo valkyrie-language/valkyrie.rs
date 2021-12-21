@@ -27,9 +27,6 @@ pub mod pe;
 /// `WASM` 二进制格式模型。
 pub mod wasm;
 
-/// Nyar VM `.legion` 字节码模块格式。
-pub mod nyar_ir;
-
 /// TextVM `.tvm` 正则引擎产物格式。
 pub mod tvm;
 
