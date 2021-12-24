@@ -5,15 +5,14 @@
 
 #![warn(missing_docs)]
 
+mod host_api;
 mod stdio_capture;
+
+pub use host_api::{LegionBuildOptions, LegionBuildOutcome, LegionPlanOptions, LegionPlanOutcome, LegionSemanticGroupItem};
 
 use std::{ffi::OsString, process::ExitCode, thread};
 
-use legion::{
-    SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform,
-    cli,
-    run_spy,
-};
+use legion::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, cli, run_spy};
 use napi_derive::napi;
 
 pub use asgard;
@@ -59,13 +58,19 @@ pub struct SpyTargetRunOptions {
     pub glue_audit: Option<bool>,
 }
 
+pub use host_api::{legion_build, legion_plan};
+
 /// 运行 Legion CLI（stdout/stderr 写入 Node 进程终端，不捕获）。
+///
+/// 新宿主请优先使用 [`legion_plan`] / [`legion_build`]；本函数仅保留给 wasm collect 与旧脚本。
 #[napi]
 pub fn legion_run(argv: Vec<String>) -> i32 {
     cli::run_with_argv(argv.into_iter().map(OsString::from).collect())
 }
 
-/// 运行 Legion CLI 并捕获 stdout/stderr（供 `spawnCli` 与程序化调用）。
+/// 运行 Legion CLI 并捕获 stdout/stderr。
+///
+/// 新宿主请优先使用 [`legion_plan`] / [`legion_build`]；本函数仅保留给 wasm collect 回退。
 #[napi]
 pub fn legion_run_captured(argv: Vec<String>) -> LegionRunOutcome {
     let os_argv: Vec<OsString> = argv.into_iter().map(OsString::from).collect();
@@ -76,11 +81,7 @@ pub fn legion_run_captured(argv: Vec<String>) -> LegionRunOutcome {
         .expect("failed to spawn legion captured thread")
         .join()
         .expect("legion captured thread panicked");
-    LegionRunOutcome {
-        status: status as u32,
-        stdout,
-        stderr,
-    }
+    LegionRunOutcome { status: status as u32, stdout, stderr }
 }
 
 /// 运行 `legion spy <mode>` 并捕获输出。
@@ -102,11 +103,7 @@ pub fn legion_spy_run(mode: String, options: SpyTargetRunOptions) -> napi::Resul
         .expect("failed to spawn legion spy thread")
         .join()
         .expect("legion spy thread panicked");
-    Ok(LegionRunOutcome {
-        status: status as u32,
-        stdout,
-        stderr,
-    })
+    Ok(LegionRunOutcome { status: status as u32, stdout, stderr })
 }
 
 /// 解析 argv 但不执行（供宿主探测 clap 行为）。
@@ -124,12 +121,7 @@ pub fn legion_parse(argv: Vec<String>) -> napi::Result<String> {
 }
 
 fn exit_code_to_i32(code: ExitCode) -> i32 {
-    if code == ExitCode::SUCCESS {
-        0
-    }
-    else {
-        1
-    }
+    if code == ExitCode::SUCCESS { 0 } else { 1 }
 }
 
 fn map_spy_options(mode: &str, options: SpyTargetRunOptions) -> napi::Result<SpyOptions> {
@@ -140,11 +132,7 @@ fn map_spy_options(mode: &str, options: SpyTargetRunOptions) -> napi::Result<Spy
         offset: options.offset,
         list: options.list.unwrap_or(false),
         context: options.context.unwrap_or(20) as usize,
-        target_platform: options
-            .target_platform
-            .as_deref()
-            .map(parse_spy_target_platform)
-            .transpose()?,
+        target_platform: options.target_platform.as_deref().map(parse_spy_target_platform).transpose()?,
         json: options.json.unwrap_or(false),
         hex: options.hex.unwrap_or(false),
         types: options.types.unwrap_or(false),
@@ -161,9 +149,7 @@ fn map_spy_options(mode: &str, options: SpyTargetRunOptions) -> napi::Result<Spy
         "mir" => SpyMode::Mir(target),
         "verify" => SpyMode::Verify(target),
         other => {
-            return Err(napi::Error::from_reason(format!(
-                "unsupported spy mode '{other}' (expected wasm/jvm/clr/native/lir/mir/verify)"
-            )));
+            return Err(napi::Error::from_reason(format!("unsupported spy mode '{other}' (expected wasm/jvm/clr/native/lir/mir/verify)")));
         }
     };
 
@@ -175,8 +161,6 @@ fn parse_spy_target_platform(value: &str) -> napi::Result<SpyTargetPlatform> {
         "wasm" => Ok(SpyTargetPlatform::Wasm),
         "jvm" => Ok(SpyTargetPlatform::Jvm),
         "clr" => Ok(SpyTargetPlatform::Clr),
-        other => Err(napi::Error::from_reason(format!(
-            "unsupported spy target platform '{other}' (expected wasm/jvm/clr)"
-        ))),
+        other => Err(napi::Error::from_reason(format!("unsupported spy target platform '{other}' (expected wasm/jvm/clr)"))),
     }
 }
