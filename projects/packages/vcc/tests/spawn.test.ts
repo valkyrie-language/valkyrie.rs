@@ -11,6 +11,8 @@ test('createHostRunner exposes spawnCli', () => {
     });
 
     assert.equal(typeof host.spawnCli, 'function');
+    assert.equal(typeof host.planProject, 'function');
+    assert.equal(typeof host.buildProject, 'function');
     assert.equal(typeof host.runCli, 'function');
 });
 

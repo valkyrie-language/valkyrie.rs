@@ -3,18 +3,25 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import type { VccCliSpawnResult, VccHostRunner } from './index.ts';
-import { locateNativeCollect } from './index.ts';
-import { resolveWasmMjs } from './index.ts';
+import { locateNativeCollect, resolveWasmMjs } from './index.ts';
 
-function defaultValkyrieRsRoot(configRoot?: string): string {
-    if (configRoot) {
-        return configRoot;
-    }
-    if (process.env.VALKYRIE_RS_ROOT) {
-        return process.env.VALKYRIE_RS_ROOT;
-    }
-    return join(process.cwd(), '..', 'valkyrie.rs');
-}
+import { MIN_EXECUTION_MANIFEST_SCHEMA_VERSION, readExecutionManifest } from './execution-manifest.ts';
+
+export {
+    COMPILE_EVIDENCE_FILE,
+    EXECUTION_MANIFEST_FILE,
+    MIN_EXECUTION_MANIFEST_SCHEMA_VERSION,
+    isArtifactCacheFresh,
+    parseExecutionManifest,
+    readExecutionManifest,
+    verifyExecutionManifestFresh,
+    type ArtifactCacheFreshness,
+    type CompileEvidenceDigest,
+    type ExecutionArtifactDigest,
+    type ExecutionInputDigest,
+    type ExecutionManifest,
+    type RunContractDigest,
+} from './execution-manifest.ts';
 
 /** Nyar VM 目标三元组（与 `legion build --target nyar` 对齐）。 */
 export const NYAR_VM_TARGET = 'nyar-unknown-unknown-managed';
@@ -74,15 +81,6 @@ export function resolveArtifactDir(outputDir: string, targetTriple = NODE_WASM_T
     return existsSync(nested) ? nested : outputDir;
 }
 
-function readPhysicalEntryFromContract(contractPath: string): string | null {
-    if (!existsSync(contractPath)) {
-        return null;
-    }
-    const text = readFileSync(contractPath, 'utf8');
-    const match = text.match(/physical_entry\s*:\s*"([^"]+)"/);
-    return match?.[1] ?? null;
-}
-
 function readLogicalEntryFromContract(contractPath: string): string | null {
     if (!existsSync(contractPath)) {
         return null;
@@ -92,72 +90,78 @@ function readLogicalEntryFromContract(contractPath: string): string | null {
     return match?.[1] ?? null;
 }
 
+function wasmSiblingPath(physicalMjs: string): string {
+    return physicalMjs.replace(/\.mjs$/i, '.wasm');
+}
+
 /**
- * 在 Node 构建产物目录中定位 `legion.mjs` / `legion.wasm`。
- * 解析 Node 构建产物目录中的 `legion.mjs` / `legion.wasm`（含 run-contracts 与 legacy 命名）。
+ * 从已解析的 execution manifest 定位 Node wasm/js 入口。
+ * 只接受 manifest 列出的 physical_entry 与 artifacts，不做目录扫描或 legacy fallback。
+ */
+export function resolveNodeEntryFromManifest(manifest: ExecutionManifest | null, targetDir: string): NodeWasmEntry | null {
+    if (!manifest || manifest.schema_version < MIN_EXECUTION_MANIFEST_SCHEMA_VERSION) {
+        return null;
+    }
+    const contract = manifest.run_contracts.find((entry) => entry.physical_entry.endsWith('.mjs'));
+    if (!contract) {
+        return null;
+    }
+    const physical = contract.physical_entry;
+    const wasmRelative = wasmSiblingPath(physical);
+    const artifactPaths = new Set(manifest.artifacts.map((artifact) => artifact.path));
+    if (!artifactPaths.has(physical) || !artifactPaths.has(wasmRelative)) {
+        return null;
+    }
+    const legionMjs = join(targetDir, physical);
+    const legionWasm = join(targetDir, wasmRelative);
+    if (!existsSync(legionMjs) || !existsSync(legionWasm)) {
+        return null;
+    }
+    return {
+        legionMjs,
+        legionWasm,
+        physicalEntry: physical,
+        legacy: false,
+    };
+}
+
+/**
+ * 在 Node 构建产物目录中定位 wasm/js 入口（必须存在 schema v3+ execution manifest）。
  */
 export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
-    const canonicalMjs = join(targetDir, 'legion.mjs');
-    const canonicalWasm = join(targetDir, 'legion.wasm');
-    if (existsSync(canonicalMjs) && existsSync(canonicalWasm)) {
-        return {
-            legionMjs: canonicalMjs,
-            legionWasm: canonicalWasm,
-            physicalEntry: 'legion.mjs',
-            legacy: false,
-        };
-    }
+    return resolveNodeEntryFromManifest(readExecutionManifest(targetDir), targetDir);
+}
 
-    for (const contractName of ['run-contracts.txt', 'run-contract.txt']) {
-        const physical = readPhysicalEntryFromContract(join(targetDir, contractName));
-        if (!physical) {
-            continue;
-        }
-        const mjs = join(targetDir, physical);
-        const wasm = join(targetDir, physical.replace(/\.mjs$/i, '.wasm'));
-        if (existsSync(mjs) && existsSync(wasm)) {
-            return { legionMjs: mjs, legionWasm: wasm, physicalEntry: physical, legacy: false };
-        }
+/** 用 Node 内置 WebAssembly 解析模块导出，不依赖 `format-spy` / `vcc-data`。 */
+export function listWasmModuleExports(wasmPath: string): string[] {
+    try {
+        const bytes = readFileSync(wasmPath);
+        const module = new WebAssembly.Module(bytes);
+        return WebAssembly.Module.exports(module)
+            .map((entry) => entry.name)
+            .filter((name): name is string => typeof name === 'string' && name.length > 0);
+    } catch {
+        return [];
     }
-
-    const legacyMjs = join(targetDir, 'legion_tools.mjs');
-    const legacyWasm = join(targetDir, 'legion_tools.wasm');
-    if (existsSync(legacyMjs) && existsSync(legacyWasm)) {
-        return {
-            legionMjs: legacyMjs,
-            legionWasm: legacyWasm,
-            physicalEntry: 'legion_tools.mjs',
-            legacy: true,
-        };
-    }
-
-    return null;
 }
 
 /**
  * 在 Nyar 构建产物目录中定位 `.nyar` 模块与 run-contract 入口。
  */
 export function resolveNyarEntry(targetDir: string): NyarVmEntry | null {
-    for (const contractName of ['run-contracts.txt', 'run-contract.txt']) {
-        const contractPath = join(targetDir, contractName);
-        const physical = readPhysicalEntryFromContract(contractPath);
-        if (!physical?.endsWith('.nyar')) {
-            continue;
-        }
-        const nyarPath = join(targetDir, physical);
-        if (!existsSync(nyarPath)) {
-            continue;
-        }
-        const logicalEntry = readLogicalEntryFromContract(contractPath) ?? 'main';
-        return { nyarPath, physicalEntry: physical, logicalEntry };
+    const contractPath = join(targetDir, 'run-contracts.txt');
+    if (!existsSync(contractPath)) {
+        return null;
     }
-
-    const fallback = join(targetDir, 'legion.nyar');
-    if (existsSync(fallback)) {
-        return { nyarPath: fallback, physicalEntry: 'legion.nyar', logicalEntry: 'main' };
+    const text = readFileSync(contractPath, 'utf8');
+    const physical = text.match(/physical_entry\s*:\s*"([^"]+\.nyar)"/)?.[1];
+    if (!physical) {
+        return null;
     }
-
-    return null;
+    const nyarPath = join(targetDir, physical);
+    return existsSync(nyarPath)
+        ? { nyarPath, physicalEntry: physical, logicalEntry: readLogicalEntryFromContract(contractPath) ?? 'main' }
+        : null;
 }
 
 /** 通过组装宿主运行 CLI（供集成测试使用）。 */
@@ -175,49 +179,6 @@ export function spawnPackageBin(binPath: string, argv: string[] = []): VccCliSpa
     const result = spawnSync(process.execPath, [binPath, ...argv], { encoding: 'utf8' });
     return {
         route: 'wasm',
-        status: result.status ?? 1,
-        stdout: String(result.stdout ?? ''),
-        stderr: String(result.stderr ?? ''),
-    };
-}
-
-/**
- * 解析本机 Rust seed `vcc` 可执行文件。
- * 优先序：`VCC_BIN` → 兼容别名 `LEGION_BIN` → `target/{release,debug}/vcc[.exe]`。
- * 铁律：valkyrie.rs 不得产出 `legion.exe`；本函数也不再查找该文件名。
- */
-export function locateNativeLegionBinary(valkyrieRsRoot?: string): string | null {
-    for (const key of ['VCC_BIN', 'LEGION_BIN'] as const) {
-        const override = process.env[key]?.trim();
-        if (override && existsSync(override)) {
-            return override;
-        }
-    }
-    const root = defaultValkyrieRsRoot(valkyrieRsRoot);
-    const base = process.platform === 'win32' ? 'vcc.exe' : 'vcc';
-    for (const profile of ['release', 'debug'] as const) {
-        const candidate = join(root, 'target', profile, base);
-        if (existsSync(candidate)) {
-            return candidate;
-        }
-    }
-    return null;
-}
-
-/** 经本机 seed `vcc` 子进程调用 CLI（`nyar` 等需 `legacy-lanes` 的 target 应走此路径）。 */
-export function spawnNativeLegion(valkyrieRsRoot: string | undefined, argv: string[]): VccCliSpawnResult {
-    const binary = locateNativeLegionBinary(valkyrieRsRoot);
-    if (!binary) {
-        return {
-            route: 'native',
-            status: 127,
-            stdout: '',
-            stderr: 'native vcc not found (set VCC_BIN or cargo build -p legion → target/*/vcc)',
-        };
-    }
-    const result = spawnSync(binary, argv, { encoding: 'utf8' });
-    return {
-        route: 'native',
         status: result.status ?? 1,
         stdout: String(result.stdout ?? ''),
         stderr: String(result.stderr ?? ''),

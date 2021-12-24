@@ -51,7 +51,7 @@ export type VccBenchmarkConfig = {
     wasmCollectDir?: string;
     /** Wasm 入口脚本名，默认 `legion.mjs`。 */
     wasmEntry?: string;
-    /** 可选 wasm 宿主（native 不可用且未指定 `wasmCollectDir` 时使用）。 */
+    /** 可选的 Node/Wasm 宿主。 */
     host?: VccHostRunner;
 };
 
@@ -261,7 +261,7 @@ function spawnWasmLegionFromDir(wasmCollectDir: string, wasmEntry: string, argv:
 }
 
 /**
- * 创建基准测试 runner：经 VCC 宿主路由（native platform collect 优先，否则 wasm collect）。
+ * 创建基准测试 runner：经唯一的 Node/Wasm collect 路由。
  * 供 leetcode / project-euler 等 conformance 仓对比参考实现与 Valkyrie Wasm。
  */
 export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBenchmarkRunner {
