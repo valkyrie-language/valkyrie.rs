@@ -23,41 +23,40 @@ if (regenerateFixtures) {
     process.env.LEGION_TEST_REGENERATE = '1';
 }
 
-const coveragePackages = legionOnly
-    ? ['legion']
-    : ['legion', 'vcc-data', 'vcc-napi', 'vcc-wasm'];
+const coveragePackages = legionOnly ? ['legion'] : ['legion', 'vcc-data', 'vcc-napi', 'vcc-wasm'];
 
 /** @type {{ title: string, cmd: string, args: string[] }[]} */
-const steps = coverageOnly || legionOnly
-    ? [
-          {
-              title: `coverage (llvm-cov: ${coveragePackages.join(', ')})`,
-              cmd: 'cargo',
-              args: ['llvm-cov', ...coveragePackages.flatMap((pkg) => ['-p', pkg]), '--no-report'],
-          },
-      ]
-    : [
-          {
-              title: 'build release crates',
-              cmd: 'cargo',
-              args: ['build', '--release', '-p', 'vcc-napi', '-p', 'legion', '-p', 'vcc-data', '-p', 'vcc-wasm', '-p', 'asgard'],
-          },
-          {
-              title: 'legion artifact_formats',
-              cmd: 'cargo',
-              args: ['test', '--release', '-p', 'legion', '--test', 'artifact_formats'],
-          },
-          {
-              title: 'legion bootstrap_node_entry',
-              cmd: 'cargo',
-              args: ['test', '-p', 'legion', '--test', 'bootstrap_node_entry', '--release'],
-          },
-          {
-              title: `coverage (llvm-cov: ${coveragePackages.join(', ')})`,
-              cmd: 'cargo',
-              args: ['llvm-cov', ...coveragePackages.flatMap((pkg) => ['-p', pkg]), '--no-report'],
-          },
-      ];
+const steps =
+    coverageOnly || legionOnly
+        ? [
+              {
+                  title: `coverage (llvm-cov: ${coveragePackages.join(', ')})`,
+                  cmd: 'cargo',
+                  args: ['llvm-cov', ...coveragePackages.flatMap((pkg) => ['-p', pkg]), '--no-report'],
+              },
+          ]
+        : [
+              {
+                  title: 'build release crates',
+                  cmd: 'cargo',
+                  args: ['build', '--release', '-p', 'vcc-napi', '-p', 'legion', '-p', 'vcc-data', '-p', 'vcc-wasm', '-p', 'asgard'],
+              },
+              {
+                  title: 'legion artifact_formats',
+                  cmd: 'cargo',
+                  args: ['test', '--release', '-p', 'legion', '--test', 'artifact_formats'],
+              },
+              {
+                  title: 'legion bootstrap_node_entry',
+                  cmd: 'cargo',
+                  args: ['test', '-p', 'legion', '--test', 'bootstrap_node_entry', '--release'],
+              },
+              {
+                  title: `coverage (llvm-cov: ${coveragePackages.join(', ')})`,
+                  cmd: 'cargo',
+                  args: ['llvm-cov', ...coveragePackages.flatMap((pkg) => ['-p', pkg]), '--no-report'],
+              },
+          ];
 
 /** @type {{ title: string, status: number | null, tail: string }[]} */
 const failures = [];
@@ -76,9 +75,7 @@ for (const step of steps) {
         const highlights = lines.filter((line) =>
             /^(test .+ \.\.\. FAILED|failures:|thread '.+' panicked at|assertion .+ failed|error: test failed)/.test(line),
         );
-        const tail = highlights.length > 0
-            ? highlights.slice(0, 40).join('\n')
-            : lines.slice(-40).join('\n');
+        const tail = highlights.length > 0 ? highlights.slice(0, 40).join('\n') : lines.slice(-40).join('\n');
         failures.push({ title: step.title, status, tail });
         process.stderr.write(`FAILED (${status ?? 'signal'})\n`);
     } else {

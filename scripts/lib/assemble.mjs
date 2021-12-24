@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PACKAGE_DIR = join(REPO_ROOT, 'projects', 'packages', 'vcc-unknown-wasm32');
-const MIN_WASM_BYTES = 1024;
+// Bootstrap node fixture wasm is ~950 bytes; reject only empty/trivial placeholders.
+const MIN_WASM_BYTES = 256;
 const FORBIDDEN_FROM_FRAGMENTS = [`${sep}smoke-out`, `${sep}smoke-legion`, `${sep}smoke-`, `${sep}generate-seed`, 'placeholder-minimal-wasm'];
 
 function fail(message) {
@@ -165,7 +166,7 @@ function assertWasmArtifacts(wasmPath, contractsText, allowFixture) {
     if (!allowFixture && /smoke/i.test(contractsText)) {
         fail('run-contracts.txt mentions fixture marker; use --allow-fixture for local only');
     }
-    if (!/physical_entry:\s*"legion\.mjs"/i.test(contractsText)) {
+    if (!/physical_entry[=:]\s*"legion\.mjs"/i.test(contractsText)) {
         fail('run-contracts.txt must declare physical_entry: "legion.mjs"');
     }
 }

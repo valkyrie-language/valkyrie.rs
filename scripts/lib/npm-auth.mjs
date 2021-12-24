@@ -19,9 +19,7 @@ export const PLACEHOLDER_ENV_PATH = path.join(REPO_ROOT, '.env.placeholder.local
 
 export function loadLocalEnv(filePath) {
     const out = {};
-    const paths = filePath
-        ? [filePath]
-        : [PLACEHOLDER_ENV_PATH, ENV_PATH].filter((candidate, index, all) => all.indexOf(candidate) === index);
+    const paths = filePath ? [filePath] : [PLACEHOLDER_ENV_PATH, ENV_PATH].filter((candidate, index, all) => all.indexOf(candidate) === index);
     for (const candidate of paths) {
         try {
             for (const raw of fs.readFileSync(candidate, 'utf8').split(/\r?\n/)) {

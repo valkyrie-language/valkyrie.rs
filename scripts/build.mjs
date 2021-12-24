@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runAssemble } from './lib/assemble.mjs';
@@ -68,14 +68,6 @@ function gitRev(cwd) {
     return r.status === 0 ? String(r.stdout).trim() : null;
 }
 
-function findToolsProject(valkyrieV) {
-    const candidates = [join(valkyrieV, 'projects/legion._/projects/legion.tools'), join(valkyrieV, 'projects/legion.tools')];
-    for (const p of candidates) {
-        if (existsSync(join(p, 'legion.von'))) return p;
-    }
-    return null;
-}
-
 function bootstrapFixtureProject() {
     return join(ROOT, 'projects', 'compilers', 'legion', 'tests', 'fixtures', 'bootstrap_node', 'entry_contract_canonical');
 }
@@ -88,9 +80,9 @@ function cmdCapability(argv) {
         fail(`bootstrap fixture missing legion.von: ${sourceProject}`);
     }
 
+    mkdirSync(join(ROOT, 'dist'), { recursive: true });
     const outRoot = join(ROOT, 'dist', 'legion-node-capability');
-    mkdirSync(outRoot, { recursive: true });
-    console.log('build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (bootstrap fixture, no native bin)');
+    console.log('build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (bootstrap fixture)');
     run(
         'cargo',
         [
