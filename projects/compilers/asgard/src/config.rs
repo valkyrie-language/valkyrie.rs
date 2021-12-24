@@ -6,8 +6,11 @@ mod config_script;
 use std::path::Path;
 
 use miette::{IntoDiagnostic, Result, WrapErr};
+use oak_von::{
+    from_str,
+    language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue},
+};
 use serde::{Deserialize, Serialize};
-use vcc_data::text::von::{VonParser, VonValue};
 
 /// VOA 项目配置。
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -255,7 +258,7 @@ impl VoaConfig {
     /// 解析 `asgard.config.v`（Valkyrie script）文本。
     pub fn parse(source: &str) -> Result<Self> {
         let normalized = config_script::normalize_config_source(source)?;
-        let value = VonParser::parse(&normalized).map_err(|error| miette::miette!("{error:?}"))?;
+        let value = from_str::<VonValue>(&normalized).map_err(|error| legion_workspace::oak::labeled_report(error, "VON 解析失败位置"))?;
         von_to_config(&value)
     }
 
@@ -284,18 +287,27 @@ fn von_to_config(value: &VonValue) -> Result<VoaConfig> {
 
 fn von_to_json(value: &VonValue) -> serde_json::Value {
     match value {
-        VonValue::Null => serde_json::Value::Null,
-        VonValue::Bool(v) => serde_json::Value::Bool(*v),
-        VonValue::Number(v) => serde_json::Value::Number((*v).into()),
+        VonValue::Null | VonValue::Undefined | VonValue::Inf | VonValue::Nan => serde_json::Value::Null,
+        VonValue::Boolean(v) => serde_json::Value::Bool(*v),
+        VonValue::Number(v) => serde_json::Number::from_f64(*v).map(serde_json::Value::Number).unwrap_or(serde_json::Value::Null),
         VonValue::String(v) => serde_json::Value::String(v.clone()),
-        VonValue::Array(items) => serde_json::Value::Array(items.iter().map(von_to_json).collect()),
-        VonValue::Object(map) => {
+        VonValue::Array(VonArray { elements }) => serde_json::Value::Array(elements.iter().map(von_to_json).collect()),
+        VonValue::Tuple(VonTuple { elements }) => serde_json::Value::Array(elements.iter().map(von_to_json).collect()),
+        VonValue::Object(VonObject { fields }) => {
             let mut object = serde_json::Map::new();
-            for (key, item) in map {
-                object.insert(key.clone(), von_to_json(item));
+            for field in fields {
+                object.insert(field.name.clone(), von_to_json(&field.value));
             }
             serde_json::Value::Object(object)
         }
+        VonValue::Enum(VonEnum { variant, payload }) => match payload {
+            None => serde_json::Value::String(variant.clone()),
+            Some(payload) => {
+                let mut object = serde_json::Map::new();
+                object.insert(variant.clone(), von_to_json(payload));
+                serde_json::Value::Object(object)
+            }
+        },
     }
 }
 

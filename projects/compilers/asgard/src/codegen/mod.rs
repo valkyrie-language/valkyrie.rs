@@ -65,5 +65,5 @@ pub use mp_style::{MpWxssOutput, generate_page_wxss};
 pub use section_framing::magic_bytes_literal;
 pub use tailwind::{TailwindBuildOutput, append_tailwind_css, maybe_build_tailwind_css};
 pub use ui_host_abi::{resolve_call_export, resolve_sig_export};
-pub use v_bundle::{build_awsl_host_source, build_awsl_mp_source, build_awsl_terminal_source, build_awsl_wasm_source, combine_wasm_sources};
+pub use v_bundle::{build_awsl_host_source, build_awsl_mp_source, build_awsl_terminal_source, build_awsl_wasm_source};
 pub use v_render::export_name_for_route;

@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, process::ExitCode};
 use clap::Args;
 use miette::{IntoDiagnostic, Result};
 
-use crate::planner::LegionWorkspace;
+use legion_workspace::planner::WorkspaceResolver;
 
 /// `legion clean` arguments.
 #[derive(Debug, Clone, Args)]
@@ -19,7 +19,7 @@ pub struct CleanArgs {
 /// Run `legion clean`.
 pub fn run(args: &CleanArgs) -> Result<ExitCode> {
     if args.workspace {
-        let workspace = LegionWorkspace::discover(&args.project_dir)?;
+        let workspace = WorkspaceResolver::discover(&args.project_dir)?;
         let mut cleaned = 0usize;
         for member in workspace.member_manifest_dirs() {
             cleaned += clean_project_dirs(&member)?;

@@ -407,7 +407,7 @@ pub fn encode_focusables(focusables: &[TerminalFocusable]) -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     fn lower_source(source: &str) -> LoweredComponent {
         let root = AwslParser::parse_root(source).expect("parse");

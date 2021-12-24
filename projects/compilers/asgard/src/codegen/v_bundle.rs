@@ -155,17 +155,6 @@ fn sanitize_route(name: &str) -> String {
         .to_ascii_lowercase()
 }
 
-/// 合并项目 `.v` 逻辑与 AWSL 生成的 WASM 源码。
-pub fn combine_wasm_sources(project_v: &str, awsl_v: &str) -> String {
-    let mut combined = String::new();
-    if !project_v.trim().is_empty() {
-        combined.push_str(project_v);
-        combined.push('\n');
-    }
-    combined.push_str(awsl_v);
-    combined
-}
-
 fn script_lets_prelude(component: &LoweredComponent) -> String {
     component.script_bindings.iter().map(ScriptBinding::as_v_let_line).collect::<Vec<_>>().join("\n    ")
 }

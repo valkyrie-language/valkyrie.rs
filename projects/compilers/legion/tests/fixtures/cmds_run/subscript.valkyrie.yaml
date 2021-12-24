@@ -12,7 +12,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: `Clr` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
+    - 'build failed for clr-microsoft-unknown-managed: Compiler representation planning failed: MissingBackendInterpreter { fragment: Identifier { text: "functions" }, projection_family: Clr, host_boundary: Clr }'
     errors: []
   jvm-openjdk-unknown-managed:
     build_success: false
@@ -22,58 +22,25 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: `Jvm` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
+    - 'build failed for jvm-openjdk-unknown-managed: Compiler representation planning failed: MissingBackendInterpreter { fragment: Identifier { text: "functions" }, projection_family: Jvm, host_boundary: Jvm }'
     errors: []
   wasm32-node-unknown-wasm:
-    build_success: true
-    dry_run_success: true
-    run_success: true
-    run_contracts:
-    - logical_entry: main
-      physical_entry: main.mjs
-      invocation: node
-      validate: node main.mjs
-    per_artifact:
-      main.mjs:
-        run_success: true
-        exit_code: 0
-        stdout: []
-        stderr: []
-    artifacts:
-    - main.mjs
-    - main.wasm
-    - run-contract.txt
-    - run-contracts.txt
-    compile_errors: []
+    build_success: false
+    dry_run_success: false
+    run_success: false
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for wasm32-node-unknown-wasm: 后端私有计划生产失败: 值 `ValueIdentity { function: ItemInstanceId(2), value: MirValueId(0) }` 的表示 `Reified` 尚无目标私有载体合同，拒绝按语义类型重新选择表示'
     errors: []
   wasm32-unknown-wasi-wasi:
-    build_success: true
-    dry_run_success: true
+    build_success: false
+    dry_run_success: false
     run_success: false
-    run_contracts:
-    - logical_entry: _start
-      physical_entry: main.wasi
-      invocation: wasmtime
-      validate: wasmtime run -W gc -W wmemcheck -W max-memory-size=16777216 main.wasi
-    per_artifact:
-      main.wasi:
-        run_success: false
-        exit_code: 1
-        stdout: []
-        stderr:
-        - 'Error: wmemcheck (memory checker) was requested but is not enabled in this build'
-    artifacts:
-    - main.component-wit/
-    - main.component-wit/component.wit
-    - main.component-wit/deps/
-    - main.component-wit/deps/wasi-cli-0.2.12.wit
-    - main.core.wasm
-    - main.wasi
-    - run-contract.txt
-    - run-contracts.txt
-    - wasmtime-config.toml
-    - wasmtime-home/
-    - wasmtime-local-app-data/
-    - wasmtime-tmp/
-    compile_errors: []
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for wasm32-unknown-wasi-wasi: 后端私有计划生产失败: 值 `ValueIdentity { function: ItemInstanceId(2), value: MirValueId(0) }` 的表示 `Reified` 尚无目标私有载体合同，拒绝按语义类型重新选择表示'
     errors: []

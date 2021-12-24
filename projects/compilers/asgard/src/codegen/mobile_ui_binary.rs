@@ -50,7 +50,7 @@ pub struct DecodedComponent {
     /// Widget name.
     pub name: String,
     /// Component ABI (empty for wire v1).
-    pub abi: vcc_data::text::awsl::ComponentAbi,
+    pub abi: oak_awsl::ComponentAbi,
     /// Script bindings.
     pub bindings: Vec<ScriptBinding>,
     /// Render IR module.
@@ -85,7 +85,7 @@ pub fn decode_mobile_ui_package(bytes: &[u8]) -> Result<DecodedUiPackage, Decode
     for _ in 0..component_count {
         let route_name = read_string(bytes, &mut offset)?;
         let name = read_string(bytes, &mut offset)?;
-        let abi = if version == UI_BIN_VERSION_V2 { read_abi(bytes, &mut offset)? } else { vcc_data::text::awsl::ComponentAbi::default() };
+        let abi = if version == UI_BIN_VERSION_V2 { read_abi(bytes, &mut offset)? } else { oak_awsl::ComponentAbi::default() };
         let bindings = read_bindings(bytes, &mut offset)?;
         let render_ir = read_ir(bytes, &mut offset)?;
         components.push(DecodedComponent { route_name, name, abi, bindings, render_ir });
@@ -112,8 +112,8 @@ fn read_string(bytes: &[u8], offset: &mut usize) -> Result<String, DecodeError> 
     Ok(value)
 }
 
-fn read_abi(bytes: &[u8], offset: &mut usize) -> Result<vcc_data::text::awsl::ComponentAbi, DecodeError> {
-    let mut abi = vcc_data::text::awsl::ComponentAbi::default();
+fn read_abi(bytes: &[u8], offset: &mut usize) -> Result<oak_awsl::ComponentAbi, DecodeError> {
+    let mut abi = oak_awsl::ComponentAbi::default();
     let prop_count = read_u32(bytes, offset)? as usize;
     for _ in 0..prop_count {
         let name = read_string(bytes, offset)?;
@@ -124,7 +124,7 @@ fn read_abi(bytes: &[u8], offset: &mut usize) -> Result<vcc_data::text::awsl::Co
         let required = flags & 1 != 0;
         let has_default = flags & 2 != 0;
         let default_expr = if has_default { Some(read_string(bytes, offset)?) } else { None };
-        abi.properties.push(vcc_data::text::awsl::AbiProperty { name, type_hint: None, required, default_expr, span: 0..0 });
+        abi.properties.push(oak_awsl::AbiProperty { name, type_hint: None, required, default_expr, span: 0..0 });
     }
     let event_count = read_u32(bytes, offset)? as usize;
     for _ in 0..event_count {
@@ -135,9 +135,9 @@ fn read_abi(bytes: &[u8], offset: &mut usize) -> Result<vcc_data::text::awsl::Co
             let param_name = read_string(bytes, offset)?;
             let _type_tag = bytes.get(*offset).copied().ok_or_else(|| DecodeError::InvalidFormat("EOF param tag".into()))?;
             *offset += 1;
-            params.push(vcc_data::text::awsl::AbiParam { name: param_name, type_hint: None });
+            params.push(oak_awsl::AbiParam { name: param_name, type_hint: None });
         }
-        abi.events.push(vcc_data::text::awsl::AbiEvent { name, params, span: 0..0 });
+        abi.events.push(oak_awsl::AbiEvent { name, params, span: 0..0 });
     }
     Ok(abi)
 }
@@ -342,7 +342,7 @@ pub fn encode_mobile_ui_package(components: &[LoweredComponent]) -> Vec<u8> {
     out
 }
 
-fn write_abi(out: &mut Vec<u8>, abi: &vcc_data::text::awsl::ComponentAbi) {
+fn write_abi(out: &mut Vec<u8>, abi: &oak_awsl::ComponentAbi) {
     out.extend_from_slice(&(abi.properties.len() as u32).to_le_bytes());
     for property in &abi.properties {
         write_string(out, &property.name);
@@ -554,7 +554,7 @@ pub fn dex_placeholder() -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     #[test]
     fn counter_ui_bin_snapshot() {

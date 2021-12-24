@@ -2,8 +2,8 @@ use asgard::{
     awsl::{LoweringOptions, lower_component},
     codegen::build_awsl_wasm_source,
 };
+use oak_awsl::AwslParser;
 use std::path::PathBuf;
-use vcc_data::text::awsl::AwslParser;
 
 fn valkyrie_v_root() -> PathBuf {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

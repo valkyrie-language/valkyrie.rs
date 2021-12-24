@@ -1,3 +1,9 @@
+use legion_workspace::{
+    labeled_report_with_context,
+    manifest::RunnerBinding,
+    planner::{BuildPlan, BuildRequest, WorkspaceResolver},
+    source_snapshot::compile_source_snapshot,
+};
 use std::{
     collections::BTreeMap,
     ffi::OsString,
@@ -8,20 +14,18 @@ use std::{
 };
 
 use clap::Args;
-use miette::{IntoDiagnostic, Result, WrapErr, miette};
+use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::{CanonicalAbi, CanonicalTarget, RunnerFamily};
 use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::{
-    cmds::build::{BuildArgs, run as run_build},
-    manifest::RunnerBinding,
-    planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
-};
+use crate::cmds::build::{BuildArgs, run as run_build};
+
+mod artifact_selection;
+pub(crate) use artifact_selection::select_artifact;
 
 const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
-const LEGACY_RUN_CONTRACT_FILE_NAME: &str = "run-contract.txt";
 const HOST_SELECTION_FILE_NAME: &str = "host-selection.txt";
 /// 编译计划快照文件名，由构建流程写入，不属于交付产物。
 const COMPILE_PLAN_SNAPSHOT_FILE_NAME: &str = "compile-plan.txt";
@@ -29,7 +33,8 @@ const COMPILE_PLAN_SNAPSHOT_FILE_NAME: &str = "compile-plan.txt";
 const BACKEND_REQUEST_SNAPSHOT_FILE_NAME: &str = "backend-request.txt";
 /// 后端执行结果快照文件名，由构建流程写入，不属于交付产物。
 const BACKEND_RESULT_SNAPSHOT_FILE_NAME: &str = "backend-result.txt";
-const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 2;
+const COMPILE_EVIDENCE_FILE_NAME: &str = "compile-evidence.txt";
+const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 3;
 
 /// `legion run` 的命令参数。
 #[derive(Debug, Clone, Args)]
@@ -75,6 +80,23 @@ pub struct RunContract {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompileEvidenceDigest {
+    pub semantic_closure_hash: String,
+    pub canonical_surface_hash: String,
+    pub host_provider_binding_hash: String,
+}
+
+impl From<&nyar_language::CompilerCompileEvidence> for CompileEvidenceDigest {
+    fn from(evidence: &nyar_language::CompilerCompileEvidence) -> Self {
+        Self {
+            semantic_closure_hash: evidence.semantic_closure_hash.clone(),
+            canonical_surface_hash: evidence.canonical_surface_hash.clone(),
+            host_provider_binding_hash: evidence.host_provider_binding_hash.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionManifest {
     pub schema_version: u32,
     /// 语义 identity 合同版本（旧产物在漂移时失效）。
@@ -90,6 +112,8 @@ pub struct ExecutionManifest {
     pub inputs: Vec<ExecutionInputDigest>,
     pub artifacts: Vec<ExecutionArtifactDigest>,
     pub run_contracts: Vec<RunContract>,
+    /// Compiler 成功路径的可复现证据（schema v3+）。
+    pub compile_evidence: Option<CompileEvidenceDigest>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,18 +133,12 @@ impl ExecutionManifest {
     /// 将 execution manifest 写入输出目录中的 `run-contracts.txt`。
     pub fn write_to_output_dir(&self, output_dir: &Path) -> Result<()> {
         let manifest_path = output_dir.join(EXECUTION_MANIFEST_FILE_NAME);
-        let content =
-            crate::write_von_indented(self).wrap_err_with(|| format!("序列化 execution manifest 失败 {}", manifest_path.display()))?;
+        let content = crate::write_von_indented(self).map_err(|error| {
+            labeled_report_with_context(error, format!("序列化 execution manifest 失败 {}", manifest_path.display()), "VON 序列化失败位置")
+        })?;
         fs::write(&manifest_path, content)
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("写入 execution manifest 失败 {}", manifest_path.display())))?;
-
-        if let Some(primary_contract) = self.run_contracts.first() {
-            primary_contract.write_legacy_to_output_dir(output_dir)?;
-        }
-        else {
-            RunContract::remove_legacy_from_output_dir(output_dir)?;
-        }
 
         Ok(())
     }
@@ -138,9 +156,9 @@ impl ExecutionManifest {
         let source = fs::read_to_string(path)
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("failed to read execution manifest '{}'", path.display())))?;
-        crate::parse_von::<Self>(&source)
-            .map(Some)
-            .map_err(|error| miette!("failed to parse execution manifest '{}': {}", path.display(), error))
+        crate::parse_von::<Self>(&source).map(Some).map_err(|error| {
+            labeled_report_with_context(error, format!("failed to parse execution manifest '{}'", path.display()), "VON 解析失败位置")
+        })
     }
 
     /// 删除输出目录中的 execution manifest。
@@ -151,23 +169,23 @@ impl ExecutionManifest {
                 .into_diagnostic()
                 .map_err(|error| error.wrap_err(format!("删除 execution manifest 失败 {}", manifest_path.display())))?;
         }
-        RunContract::remove_legacy_from_output_dir(output_dir)?;
         Ok(())
     }
 
-    /// 基于当前 `BuildPlan` 与运行契约生成 execution manifest。
-    pub fn from_build_plan(plan: &BuildPlan, contracts: &[RunContract]) -> Result<Self> {
+    /// 基于当前 `BuildPlan`、运行契约与编译证据生成 execution manifest。
+    pub fn from_build_plan(plan: &BuildPlan, contracts: &[RunContract], evidence: &nyar_language::CompilerCompileEvidence) -> Result<Self> {
         Ok(Self {
             schema_version: EXECUTION_MANIFEST_SCHEMA_VERSION,
             identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
             mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
             layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
-            bytecode_format_version: vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION,
+            bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
             project_name: plan.project.name.clone(),
             target: plan.project.build_target.target.to_string(),
             inputs: collect_execution_input_digests(plan)?,
             artifacts: collect_execution_artifact_digests(&plan.output_dir)?,
             run_contracts: contracts.to_vec(),
+            compile_evidence: Some(CompileEvidenceDigest::from(evidence)),
         })
     }
 
@@ -179,7 +197,7 @@ impl ExecutionManifest {
         if self.identity_schema_version != nyar_types::IDENTITY_SCHEMA_VERSION
             || self.mir_contract_version != nyar_types::MIR_CONTRACT_VERSION
             || self.layout_plan_version != nyar_types::LAYOUT_PLAN_VERSION
-            || self.bytecode_format_version != vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION
+            || self.bytecode_format_version != nyar_bytecode::BYTECODE_FORMAT_VERSION
         {
             return Ok(false);
         }
@@ -206,7 +224,61 @@ impl ExecutionManifest {
             }
         }
 
+        let Some(stored) = &self.compile_evidence
+        else {
+            return Ok(false);
+        };
+        let expected = expected_resolver_compile_evidence(plan)?;
+        if stored.semantic_closure_hash != expected.semantic_closure_hash
+            || stored.host_provider_binding_hash != expected.host_provider_binding_hash
+        {
+            return Ok(false);
+        }
+
+        let Some(file_evidence) = read_compile_evidence_digest(&plan.output_dir)?
+        else {
+            return Ok(false);
+        };
+        if file_evidence != *stored {
+            return Ok(false);
+        }
+
         Ok(true)
+    }
+}
+
+fn read_compile_evidence_digest(output_dir: &Path) -> Result<Option<CompileEvidenceDigest>> {
+    let path = output_dir.join(COMPILE_EVIDENCE_FILE_NAME);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let source = fs::read_to_string(&path)
+        .into_diagnostic()
+        .map_err(|error| error.wrap_err(format!("读取 compile evidence 失败 {}", path.display())))?;
+    let evidence = crate::parse_von::<nyar_language::CompilerCompileEvidence>(&source)
+        .map_err(|error| labeled_report_with_context(error, format!("解析 compile evidence 失败 {}", path.display()), "VON 解析失败位置"))?;
+    Ok(Some(CompileEvidenceDigest::from(&evidence)))
+}
+
+fn expected_resolver_compile_evidence(plan: &BuildPlan) -> Result<CompileEvidenceDigest> {
+    let groups = compile_source_snapshot(&plan.project.semantic_source_groups)?;
+    let host_bindings = plan
+        .project
+        .selected_host_providers
+        .iter()
+        .map(|provider| nyar_language::CompilerHostProviderBinding { contract: provider.contract.clone(), symbol: provider.symbol.clone() })
+        .collect::<Vec<_>>();
+    Ok(expected_resolver_compile_evidence_from_groups(&groups, &host_bindings))
+}
+
+fn expected_resolver_compile_evidence_from_groups(
+    groups: &[nyar_language::CompilerSourceGroup],
+    host_bindings: &[nyar_language::CompilerHostProviderBinding],
+) -> CompileEvidenceDigest {
+    CompileEvidenceDigest {
+        semantic_closure_hash: nyar_language::semantic_closure_hash_for_groups(groups),
+        canonical_surface_hash: String::new(),
+        host_provider_binding_hash: nyar_language::host_provider_binding_hash_for_bindings(host_bindings),
     }
 }
 
@@ -218,55 +290,7 @@ impl RunContract {
 
     /// 从输出目录读取运行契约列表。
     pub fn read_all_from_output_dir(output_dir: &Path) -> Result<Vec<Self>> {
-        if let Some(manifest) = ExecutionManifest::read_from_output_dir(output_dir)? {
-            return Ok(manifest.run_contracts);
-        }
-
-        Ok(Self::read_legacy_from_output_dir(output_dir)?.into_iter().collect())
-    }
-
-    fn matches_artifact(&self, artifact: &Path) -> bool {
-        let Some(file_name) = artifact.file_name().and_then(|value| value.to_str())
-        else {
-            return false;
-        };
-        if file_name.eq_ignore_ascii_case(&self.physical_entry) {
-            return true;
-        }
-        crate::bootstrap_entry_aliases(&self.physical_entry).iter().any(|alias| file_name.eq_ignore_ascii_case(alias))
-    }
-
-    fn write_legacy_to_output_dir(&self, output_dir: &Path) -> Result<()> {
-        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
-        let content = crate::write_von_indented(self).wrap_err_with(|| format!("序列化运行契约失败 {}", contract_path.display()))?;
-        fs::write(&contract_path, content)
-            .into_diagnostic()
-            .map_err(|error| error.wrap_err(format!("写入运行契约失败 {}", contract_path.display())))
-    }
-
-    fn read_legacy_from_output_dir(output_dir: &Path) -> Result<Option<Self>> {
-        Self::read_legacy_from_path(&output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME))
-    }
-
-    fn read_legacy_from_path(path: &Path) -> Result<Option<Self>> {
-        if !path.exists() {
-            return Ok(None);
-        }
-
-        let source = fs::read_to_string(path)
-            .into_diagnostic()
-            .map_err(|error| error.wrap_err(format!("failed to read run contract '{}'", path.display())))?;
-        crate::parse_von::<Self>(&source).map(Some).map_err(|error| miette!("failed to parse run contract '{}': {}", path.display(), error))
-    }
-
-    fn remove_legacy_from_output_dir(output_dir: &Path) -> Result<()> {
-        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
-        if contract_path.exists() {
-            fs::remove_file(&contract_path)
-                .into_diagnostic()
-                .map_err(|error| error.wrap_err(format!("删除运行契约失败 {}", contract_path.display())))?;
-        }
-        Ok(())
+        Ok(ExecutionManifest::read_from_output_dir(output_dir)?.map_or_else(Vec::new, |manifest| manifest.run_contracts))
     }
 }
 
@@ -287,21 +311,19 @@ struct RunCommand {
 
 /// 执行 `legion run`。
 pub fn run(args: &RunArgs) -> Result<ExitCode> {
-    let workspace =
-        if args.workspace { LegionWorkspace::discover(&args.project_dir)? } else { LegionWorkspace::discover_for_project(&args.project_dir)? };
-    let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
-    let (plan, resolution_mode) = if args.workspace {
-        (workspace.build_plan(&request)?, ProjectResolutionMode::Workspace)
+    let workspace = if args.workspace {
+        WorkspaceResolver::discover(&args.project_dir)?
     }
     else {
-        workspace.build_plan_with_local_fallback(&request)?
+        WorkspaceResolver::discover_for_project(&args.project_dir)?
     };
+    let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
+    let plan = workspace.build_plan(&request)?;
 
     let execution_manifest = ensure_execution_manifest(args, &plan)?;
     let mut command = plan_run_command(
         &workspace,
         &plan.output_dir,
-        &plan.project.name,
         &plan.project.build_target.target,
         &args.runner,
         &execution_manifest.run_contracts,
@@ -312,17 +334,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", crate::cmds::path_for_cli_log(&plan.output_dir));
-    match resolution_mode {
-        ProjectResolutionMode::Workspace => {
-            println!("mode: workspace");
-        }
-        ProjectResolutionMode::Package => {
-            println!("mode: package");
-        }
-        ProjectResolutionMode::Script => {
-            println!("mode: script");
-        }
-    }
+    println!("mode: workspace");
     println!("artifact: {}", command.artifact.display());
     println!("runner: {}", command.command);
     println!("args: {}", shell_join(&command.args));
@@ -395,13 +407,255 @@ mod workload_forward_tests {
     }
 
     #[test]
-    fn rejects_workload_json_for_non_nyar_vm() {
-        let mut command = RunCommand {
-            target: RunnerFamily::Node,
-            artifact: PathBuf::from("out.mjs"),
-            command: "node".into(),
-            args: vec!["out.mjs".into()],
+    fn resolver_compile_evidence_matches_compiler_helpers() {
+        let groups = vec![nyar_language::CompilerSourceGroup {
+            dependency_key: "app".into(),
+            name: "app".into(),
+            source: "[main] micro main() -> i32 { return 1 }".into(),
+            sources: Vec::new(),
+            direct_dependencies: Vec::new(),
+        }];
+        let digest = expected_resolver_compile_evidence_from_groups(&groups, &[]);
+        assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups));
+        assert_eq!(digest.host_provider_binding_hash, nyar_language::host_provider_binding_hash_for_bindings(&[]));
+    }
+
+    #[test]
+    fn is_fresh_rejects_stale_host_provider_compile_evidence() {
+        use legion_workspace::{
+            manifest::ProjectArtifactKind,
+            planner::{BuildPlan, PlannedHostProvider, PlannedProject, PlannedSemanticSourceGroup},
         };
+        use std::fs;
+        use tempfile::tempdir;
+
+        let directory = tempdir().expect("tempdir");
+        let root = directory.path();
+        let source_path = root.join("main.v");
+        fs::write(&source_path, "[main] micro main() -> i32 { return 1 }").expect("write source");
+        let manifest_path = root.join("legion.von");
+        fs::write(&manifest_path, "name: demo\n").expect("write manifest");
+        let group = PlannedSemanticSourceGroup {
+            dependency_key: "demo".into(),
+            name: "demo".into(),
+            manifest_dir: root.to_path_buf(),
+            source_files: vec![source_path.clone()],
+            direct_dependencies: Vec::new(),
+        };
+        let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
+        let plan = BuildPlan {
+            workspace_root: root.to_path_buf(),
+            output_dir: root.join("dist"),
+            project: PlannedProject {
+                name: "demo".into(),
+                manifest_dir: root.to_path_buf(),
+                manifest_path: manifest_path.clone(),
+                source_files: vec![source_path.clone()],
+                semantic_source_groups: vec![group],
+                host_contracts: Vec::new(),
+                host_provider_candidates: Vec::new(),
+                selected_host_providers: vec![PlannedHostProvider {
+                    contract: "demo.write".into(),
+                    symbol: "std::write".into(),
+                    source_file: manifest_path.clone(),
+                    line: 1,
+                }],
+                build_target: legion_workspace::manifest::BuildTargetSpec { target, ..Default::default() },
+                artifact_kind: ProjectArtifactKind::Binary,
+                dependencies: Vec::new(),
+            },
+        };
+        fs::create_dir_all(&plan.output_dir).expect("output dir");
+        let artifact_path = plan.output_dir.join("app.nyar");
+        fs::write(&artifact_path, b"nyar-artifact-stub").expect("artifact");
+        let expected = expected_resolver_compile_evidence(&plan).expect("expected evidence");
+        let inputs = collect_execution_input_digests(&plan).expect("input digests");
+        let manifest = ExecutionManifest {
+            schema_version: EXECUTION_MANIFEST_SCHEMA_VERSION,
+            identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
+            mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
+            layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
+            bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
+            project_name: plan.project.name.clone(),
+            target: plan.project.build_target.target.to_string(),
+            inputs,
+            artifacts: vec![ExecutionArtifactDigest {
+                path: "app.nyar".into(),
+                hash: hash_file_sha256(&artifact_path).expect("artifact hash"),
+            }],
+            run_contracts: vec![RunContract {
+                logical_entry: "main".into(),
+                physical_entry: "app.nyar".into(),
+                invocation: "nyar-vm app.nyar".into(),
+                validate: "exists".into(),
+            }],
+            compile_evidence: Some(CompileEvidenceDigest {
+                semantic_closure_hash: expected.semantic_closure_hash.clone(),
+                canonical_surface_hash: String::new(),
+                host_provider_binding_hash: "stale-host-provider-hash".into(),
+            }),
+        };
+        assert!(
+            !manifest.is_fresh_for_plan(&plan).expect("freshness check"),
+            "stale host provider evidence must invalidate execution manifest"
+        );
+    }
+
+    fn write_test_compile_evidence(output_dir: &Path, digest: &CompileEvidenceDigest) {
+        use std::fs;
+
+        let evidence = nyar_language::CompilerCompileEvidence {
+            semantic_closure_hash: digest.semantic_closure_hash.clone(),
+            canonical_surface_hash: digest.canonical_surface_hash.clone(),
+            host_provider_binding_hash: digest.host_provider_binding_hash.clone(),
+        };
+        let content = crate::write_von_indented(&evidence).expect("serialize compile evidence");
+        fs::write(output_dir.join(COMPILE_EVIDENCE_FILE_NAME), content).expect("write compile evidence");
+    }
+
+    fn sample_freshness_plan() -> (tempfile::TempDir, BuildPlan, PathBuf) {
+        use legion_workspace::{
+            manifest::ProjectArtifactKind,
+            planner::{BuildPlan, PlannedProject, PlannedSemanticSourceGroup},
+        };
+        use std::fs;
+        use tempfile::tempdir;
+
+        let directory = tempdir().expect("tempdir");
+        let root = directory.path();
+        let source_path = root.join("main.v");
+        fs::write(&source_path, "[main] micro main() -> i32 { return 1 }").expect("write source");
+        let manifest_path = root.join("legion.von");
+        fs::write(&manifest_path, "name: demo\n").expect("write manifest");
+        let group = PlannedSemanticSourceGroup {
+            dependency_key: "demo".into(),
+            name: "demo".into(),
+            manifest_dir: root.to_path_buf(),
+            source_files: vec![source_path.clone()],
+            direct_dependencies: Vec::new(),
+        };
+        let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
+        let plan = BuildPlan {
+            workspace_root: root.to_path_buf(),
+            output_dir: root.join("dist"),
+            project: PlannedProject {
+                name: "demo".into(),
+                manifest_dir: root.to_path_buf(),
+                manifest_path: manifest_path.clone(),
+                source_files: vec![source_path],
+                semantic_source_groups: vec![group],
+                host_contracts: Vec::new(),
+                host_provider_candidates: Vec::new(),
+                selected_host_providers: Vec::new(),
+                build_target: legion_workspace::manifest::BuildTargetSpec { target, ..Default::default() },
+                artifact_kind: ProjectArtifactKind::Binary,
+                dependencies: Vec::new(),
+            },
+        };
+        fs::create_dir_all(&plan.output_dir).expect("output dir");
+        let artifact_path = plan.output_dir.join("app.nyar");
+        fs::write(&artifact_path, b"nyar-artifact-stub").expect("artifact");
+        (directory, plan, artifact_path)
+    }
+
+    fn sample_execution_manifest(plan: &BuildPlan, artifact_path: &Path, evidence: CompileEvidenceDigest) -> ExecutionManifest {
+        ExecutionManifest {
+            schema_version: EXECUTION_MANIFEST_SCHEMA_VERSION,
+            identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
+            mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
+            layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
+            bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
+            project_name: plan.project.name.clone(),
+            target: plan.project.build_target.target.to_string(),
+            inputs: collect_execution_input_digests(plan).expect("input digests"),
+            artifacts: vec![ExecutionArtifactDigest { path: "app.nyar".into(), hash: hash_file_sha256(artifact_path).expect("artifact hash") }],
+            run_contracts: vec![RunContract {
+                logical_entry: "main".into(),
+                physical_entry: "app.nyar".into(),
+                invocation: "nyar-vm app.nyar".into(),
+                validate: "exists".into(),
+            }],
+            compile_evidence: Some(evidence),
+        }
+    }
+
+    #[test]
+    fn is_fresh_rejects_stale_semantic_closure_compile_evidence() {
+        let (_directory, plan, artifact_path) = sample_freshness_plan();
+        let expected = expected_resolver_compile_evidence(&plan).expect("expected evidence");
+        let evidence = CompileEvidenceDigest {
+            semantic_closure_hash: "stale-semantic-closure-hash".into(),
+            canonical_surface_hash: "canonical-surface-digest".into(),
+            host_provider_binding_hash: expected.host_provider_binding_hash,
+        };
+        write_test_compile_evidence(&plan.output_dir, &evidence);
+        let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
+        assert!(
+            !manifest.is_fresh_for_plan(&plan).expect("freshness check"),
+            "stale semantic closure evidence must invalidate execution manifest"
+        );
+    }
+
+    #[test]
+    fn is_fresh_accepts_matching_compile_evidence_sidecar() {
+        let (_directory, plan, artifact_path) = sample_freshness_plan();
+        let expected = expected_resolver_compile_evidence(&plan).expect("expected evidence");
+        let evidence = CompileEvidenceDigest {
+            semantic_closure_hash: expected.semantic_closure_hash,
+            canonical_surface_hash: "canonical-surface-digest".into(),
+            host_provider_binding_hash: expected.host_provider_binding_hash,
+        };
+        write_test_compile_evidence(&plan.output_dir, &evidence);
+        let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
+        assert!(
+            manifest.is_fresh_for_plan(&plan).expect("freshness check"),
+            "matching compile-evidence sidecar must keep execution manifest fresh"
+        );
+    }
+
+    #[test]
+    fn is_fresh_rejects_mismatched_compile_evidence_sidecar() {
+        let (_directory, plan, artifact_path) = sample_freshness_plan();
+        let expected = expected_resolver_compile_evidence(&plan).expect("expected evidence");
+        let evidence = CompileEvidenceDigest {
+            semantic_closure_hash: expected.semantic_closure_hash,
+            canonical_surface_hash: "canonical-surface-digest".into(),
+            host_provider_binding_hash: expected.host_provider_binding_hash,
+        };
+        write_test_compile_evidence(
+            &plan.output_dir,
+            &CompileEvidenceDigest { canonical_surface_hash: "different-canonical-surface".into(), ..evidence.clone() },
+        );
+        let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
+        assert!(
+            !manifest.is_fresh_for_plan(&plan).expect("freshness check"),
+            "mismatched compile-evidence sidecar must invalidate execution manifest"
+        );
+    }
+
+    #[test]
+    fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
+        let groups = vec![nyar_language::CompilerSourceGroup {
+            dependency_key: "app".into(),
+            name: "app".into(),
+            source: "[main] micro main() -> i32 { return 1 }".into(),
+            sources: Vec::new(),
+            direct_dependencies: Vec::new(),
+        }];
+        let first = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::write".into() };
+        let second = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::print".into() };
+        let without = expected_resolver_compile_evidence_from_groups(&groups, &[]);
+        let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()]);
+        let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second]);
+        assert_eq!(without.semantic_closure_hash, with_first.semantic_closure_hash);
+        assert_ne!(with_first.host_provider_binding_hash, without.host_provider_binding_hash);
+        assert_ne!(with_first.host_provider_binding_hash, with_second.host_provider_binding_hash);
+    }
+
+    #[test]
+    fn rejects_workload_json_for_non_nyar_vm() {
+        let mut command =
+            RunCommand { target: RunnerFamily::Node, artifact: PathBuf::from("out.mjs"), command: "node".into(), args: vec!["out.mjs".into()] };
         let mut args = bare_run_args();
         args.workload_json = Some("{}".into());
         let err = append_nyar_vm_workload_args(&mut command, &args).expect_err("must reject");
@@ -410,27 +664,20 @@ mod workload_forward_tests {
 }
 
 fn plan_run_command(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     output_dir: &Path,
-    project_name: &str,
     canonical_target: &CanonicalTarget,
     cli_runner_overrides: &[String],
     run_contracts: &[RunContract],
     artifact_override: Option<&Path>,
 ) -> Result<RunCommand> {
     let runner_target = runner_target_for(canonical_target);
-    let artifact = match artifact_override {
-        Some(path) => path.to_path_buf(),
-        None => discover_artifact(output_dir, project_name, runner_target, run_contracts.first())?,
-    };
-
-    if !artifact.exists() {
-        return Err(miette!("artifact does not exist: {}", artifact.display()));
-    }
-
-    let run_contract = run_contracts.iter().find(|contract| contract.matches_artifact(&artifact)).or_else(|| run_contracts.first());
-    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, run_contract)?;
-    let placeholders = build_placeholders(output_dir, &artifact, runner_target, run_contract)?;
+    let (artifact, contract_index) =
+        select_artifact(output_dir, run_contracts.iter().map(|contract| contract.physical_entry.as_str()), artifact_override)
+            .map_err(|error| miette!("{error}"))?;
+    let run_contract = &run_contracts[contract_index];
+    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, Some(run_contract))?;
+    let placeholders = build_placeholders(output_dir, &artifact, runner_target, Some(run_contract))?;
     let command = expand_placeholders(&runner.command, &placeholders);
     let args = expand_runner_args(&runner.args, &placeholders);
 
@@ -470,7 +717,7 @@ fn ensure_execution_manifest(args: &RunArgs, plan: &BuildPlan) -> Result<Executi
 }
 
 fn resolve_runner(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     canonical_target: &CanonicalTarget,
     runner_target: RunnerFamily,
     cli_runner_overrides: &[String],
@@ -590,9 +837,7 @@ fn build_placeholders(
     // `{entry}` is the callable symbol. Nyar VM / JVM keep the module file in `{artifact}`
     // (or classpath) and must not reuse `physical_entry` filenames here.
     let entry = match run_contract {
-        Some(contract)
-            if matches!(runner_target, RunnerFamily::Jvm | RunnerFamily::NyarVm) && !contract.logical_entry.is_empty() =>
-        {
+        Some(contract) if matches!(runner_target, RunnerFamily::Jvm | RunnerFamily::NyarVm) && !contract.logical_entry.is_empty() => {
             contract.logical_entry.clone()
         }
         Some(contract) if !contract.physical_entry.is_empty() => contract.physical_entry.clone(),
@@ -616,37 +861,6 @@ fn expand_placeholders(template: &str, placeholders: &BTreeMap<&'static str, Str
     placeholders.iter().fold(template.to_string(), |current, (key, value)| current.replace(&format!("{{{}}}", key), value))
 }
 
-fn discover_artifact(
-    output_dir: &Path,
-    project_name: &str,
-    runner_target: RunnerFamily,
-    run_contract: Option<&RunContract>,
-) -> Result<PathBuf> {
-    let mut files = collect_files(output_dir)?;
-    files.sort();
-
-    if let Some(contract) = run_contract {
-        if let Some(path) = find_contract_artifact(&files, &contract.physical_entry) {
-            return Ok(path);
-        }
-    }
-
-    let preferred = preferred_extensions(runner_target);
-    for extension in preferred {
-        if let Some(path) = files.iter().find(|path| has_extension(path, extension) && matches_project_name(path, project_name)).cloned() {
-            return Ok(path);
-        }
-    }
-
-    for extension in preferred {
-        if let Some(path) = files.iter().find(|path| has_extension(path, extension)).cloned() {
-            return Ok(path);
-        }
-    }
-
-    Err(miette!("no runnable artifact found in '{}' for target '{}'", output_dir.display(), runner_target))
-}
-
 fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
     if !dir.exists() {
         return Err(miette!("output directory does not exist: {}", dir.display()));
@@ -661,48 +875,6 @@ fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
         }
     }
     Ok(files)
-}
-
-fn find_contract_artifact(files: &[PathBuf], physical_entry: &str) -> Option<PathBuf> {
-    if physical_entry.is_empty() {
-        return None;
-    }
-
-    for candidate in crate::bootstrap_entry_aliases(physical_entry).iter().chain(std::iter::once(&physical_entry)) {
-        if let Some(path) = files.iter().find_map(|path| {
-            let file_name = path.file_name()?.to_str()?;
-            let stem = path.file_stem()?.to_str()?;
-            if file_name.eq_ignore_ascii_case(candidate) || stem.eq_ignore_ascii_case(candidate) { Some(path.clone()) } else { None }
-        }) {
-            return Some(path);
-        }
-    }
-    None
-}
-
-fn preferred_extensions(target: RunnerFamily) -> &'static [&'static str] {
-    match target {
-        RunnerFamily::Clr => &["dll", "exe"],
-        RunnerFamily::Jvm => &["jar", "class"],
-        RunnerFamily::Node => &["mjs", "js", "wasm"],
-        RunnerFamily::Windows => &["exe"],
-        RunnerFamily::Wasi => &["wasi", "wasm"],
-        RunnerFamily::NyarVm => &["nyar"],
-    }
-}
-
-fn matches_project_name(path: &Path, project_name: &str) -> bool {
-    let Some(stem) = path.file_stem().and_then(|value| value.to_str())
-    else {
-        return false;
-    };
-    stem.eq_ignore_ascii_case(project_name)
-        || stem.replace('_', ".").eq_ignore_ascii_case(project_name)
-        || stem.replace('.', "_").eq_ignore_ascii_case(project_name)
-}
-
-fn has_extension(path: &Path, expected: &str) -> bool {
-    path.extension().and_then(|value| value.to_str()).is_some_and(|value| value.eq_ignore_ascii_case(expected))
 }
 
 fn shell_join(args: &[String]) -> String {
@@ -769,11 +941,11 @@ fn collect_execution_artifact_digests(output_dir: &Path) -> Result<Vec<Execution
 fn is_execution_metadata_file(path: &Path) -> bool {
     path.file_name().and_then(|value| value.to_str()).is_some_and(|value| {
         value.eq_ignore_ascii_case(EXECUTION_MANIFEST_FILE_NAME)
-            || value.eq_ignore_ascii_case(LEGACY_RUN_CONTRACT_FILE_NAME)
             || value.eq_ignore_ascii_case(HOST_SELECTION_FILE_NAME)
             || value.eq_ignore_ascii_case(COMPILE_PLAN_SNAPSHOT_FILE_NAME)
             || value.eq_ignore_ascii_case(BACKEND_REQUEST_SNAPSHOT_FILE_NAME)
             || value.eq_ignore_ascii_case(BACKEND_RESULT_SNAPSHOT_FILE_NAME)
+            || value.eq_ignore_ascii_case(COMPILE_EVIDENCE_FILE_NAME)
     })
 }
 

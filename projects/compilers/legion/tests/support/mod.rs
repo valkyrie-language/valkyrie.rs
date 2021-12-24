@@ -1,4 +1,3 @@
-pub mod oop_fixture;
 pub mod run_fixture;
 pub mod runtime_fixture;
 
@@ -233,9 +232,7 @@ fn default_build_manifest() -> &'static str {
 
 /// Sibling `valkyrie.v` project path (workspace-relative from this crate).
 pub fn sibling_valkyrie_v_project(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../valkyrie.v/projects")
-        .join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../valkyrie.v/projects").join(name)
 }
 
 /// True when local `valkyrie.v` core/std/adaptors checkout is present for std-backed smoke.

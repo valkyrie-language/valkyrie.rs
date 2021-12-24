@@ -76,11 +76,7 @@ micro main(): i64 {
             assert_eq!(result.stages_completed, vec![BootstrapStage::Seed]);
             assert!(result.v1_path.is_none());
             assert!(result.v2_path.is_none());
-            assert!(
-                message.contains("frozen for 0.0.x")
-                    || message.contains("legacy-lanes")
-                    || message.contains("编译失败")
-            );
+            assert!(message.contains("frozen for 0.0.x") || message.contains("legacy-lanes") || message.contains("编译失败"));
         }
         BootstrapStage::V1Run => {
             assert_eq!(result.stages_completed, vec![BootstrapStage::Seed, BootstrapStage::V1]);

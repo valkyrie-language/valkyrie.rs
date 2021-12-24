@@ -2,8 +2,8 @@
 
 use std::path::Path;
 
+use nyar_language::transitional::notedown::markdown;
 use pulldown_cmark::{Options, Parser, html};
-use vcc_data::text::markdown;
 
 /// 文档页面渲染上下文。
 #[derive(Debug, Clone, Default)]

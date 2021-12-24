@@ -1,9 +1,14 @@
 #![doc = include_str!("readme.md")]
 
+#[cfg(feature = "format-spy")]
 pub mod clr;
+#[cfg(feature = "format-spy")]
 pub mod jvm;
+#[cfg(feature = "format-spy")]
 pub mod native;
+#[cfg(feature = "format-spy")]
 pub mod pe_dump;
+#[cfg(feature = "format-spy")]
 pub mod wasm;
 
 use clap::{Args, Subcommand, ValueEnum};
@@ -104,14 +109,22 @@ impl SpyOptions {
 ///
 /// 根据模式分发到对应的诊断子模块，未指定模式时打印帮助信息。
 pub fn run(options: &SpyOptions) -> Result<ExitCode> {
-    match &options.mode {
-        SpyMode::Clr(_) => clr::run(options),
-        SpyMode::Wasm(_) => wasm::run(options),
-        SpyMode::Jvm(_) => jvm::run(options),
-        SpyMode::Native(_) => native::run(options),
-        SpyMode::Lir(_) | SpyMode::Mir(_) | SpyMode::Verify(_) => {
-            let (mode, _) = options.split();
-            Err(miette!("spy 模式 '{}' 尚未实现，当前只支持 `clr`、`wasm`、`jvm` 和 `native`", mode))
+    #[cfg(not(feature = "format-spy"))]
+    {
+        let (mode, _) = options.split();
+        return Err(miette!("legion spy `{mode}` 不属于正式 build/run 链；请使用 `cargo build -p legion --features format-spy` 装配诊断能力"));
+    }
+    #[cfg(feature = "format-spy")]
+    {
+        match &options.mode {
+            SpyMode::Clr(_) => clr::run(options),
+            SpyMode::Wasm(_) => wasm::run(options),
+            SpyMode::Jvm(_) => jvm::run(options),
+            SpyMode::Native(_) => native::run(options),
+            SpyMode::Lir(_) | SpyMode::Mir(_) | SpyMode::Verify(_) => {
+                let (mode, _) = options.split();
+                Err(miette!("spy 模式 '{}' 尚未实现，当前只支持 `clr`、`wasm`、`jvm` 和 `native`", mode))
+            }
         }
     }
 }

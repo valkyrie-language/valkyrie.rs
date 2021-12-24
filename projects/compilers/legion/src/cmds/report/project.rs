@@ -13,11 +13,6 @@ pub fn legion_report_project_dir() -> Result<PathBuf> {
         if nested.is_dir() && nested.join("legion.von").is_file() {
             return Ok(nested);
         }
-        // Legacy top-level layout (stub-only after move).
-        let legacy = root.join("projects/legion.report");
-        if legacy.is_dir() && legacy.join("legion.von").is_file() {
-            return Ok(legacy);
-        }
     }
     Err(miette::miette!("missing Valyrie project: projects/legion._/projects/legion.report"))
 }

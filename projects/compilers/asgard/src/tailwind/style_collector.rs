@@ -231,7 +231,7 @@ pub fn take_runtime_utilities() -> BTreeSet<String> {
 mod collector_tests {
     use super::*;
     use crate::awsl::{LoweringOptions, RenderAttrValue, RenderNode, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     fn first_element_attrs(lowered: &crate::awsl::LoweredComponent) -> Option<&[crate::awsl::RenderAttr]> {
         let module = &lowered.render_ir;

@@ -54,7 +54,7 @@ pub fn package_desktop_project(
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     #[test]
     fn package_desktop_no_gtk_artifacts() {

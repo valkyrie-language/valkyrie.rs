@@ -1,3 +1,4 @@
+use legion_workspace::{LEGION_PROJECT_LAYOUT, bootstrap_entry_aliases};
 use nyar_package_manager::{PackMeta, RegistryPackOptions, pack_registry_artifact, unpack};
 use std::fs;
 
@@ -38,7 +39,7 @@ fn pack_resolves_historical_legion_legion_entry_to_canonical_mjs() {
         },
         include_files: Vec::new(),
         flat_layout: false,
-        layout: legion::LEGION_PROJECT_LAYOUT,
+        layout: LEGION_PROJECT_LAYOUT,
     })
     .expect("pack with Legion aliases");
 
@@ -55,10 +56,10 @@ fn pack_resolves_historical_legion_legion_entry_to_canonical_mjs() {
 
 #[test]
 fn bootstrap_entry_aliases_cover_mjs_and_wasm() {
-    assert_eq!(legion::bootstrap_entry_aliases("legion_legion.mjs"), &["legion.mjs"]);
-    assert_eq!(legion::bootstrap_entry_aliases("legion_legion.wasm"), &["legion.wasm"]);
-    assert_eq!(legion::bootstrap_entry_aliases("legion__main_legion.mjs"), &["legion.mjs"]);
-    assert_eq!(legion::bootstrap_entry_aliases("legion__main_legion.wasm"), &["legion.wasm"]);
-    assert!(legion::bootstrap_entry_aliases("legion.mjs").is_empty());
-    assert!(legion::bootstrap_entry_aliases("demo_cli.mjs").is_empty());
+    assert_eq!(bootstrap_entry_aliases("legion_legion.mjs"), &["legion.mjs"]);
+    assert_eq!(bootstrap_entry_aliases("legion_legion.wasm"), &["legion.wasm"]);
+    assert_eq!(bootstrap_entry_aliases("legion__main_legion.mjs"), &["legion.mjs"]);
+    assert_eq!(bootstrap_entry_aliases("legion__main_legion.wasm"), &["legion.wasm"]);
+    assert!(bootstrap_entry_aliases("legion.mjs").is_empty());
+    assert!(bootstrap_entry_aliases("demo_cli.mjs").is_empty());
 }

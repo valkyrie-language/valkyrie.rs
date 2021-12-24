@@ -401,7 +401,7 @@ fn sanitize_v_string(text: &str) -> String {
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     fn lower(source: &str) -> LoweredComponent {
         let root = AwslParser::parse_root(source).expect("parse");

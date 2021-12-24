@@ -6,9 +6,10 @@ use std::{
 
 use clap::Args;
 use miette::{IntoDiagnostic, Result, miette};
-use nyar_language::ValkyrieCompiler;
+use nyar_language::{ValkyrieCompiler, lint_valkyrie_source, lint_valkyrie_vx_source};
 
-use crate::{cmds::source_hygiene, planner::LegionWorkspace};
+use crate::cmds::source_hygiene;
+use legion_workspace::planner::WorkspaceResolver;
 
 /// `legion lint` arguments.
 #[derive(Debug, Clone, Args)]
@@ -33,7 +34,7 @@ pub fn run(args: &LintArgs) -> Result<ExitCode> {
 
     let mut files = Vec::new();
     if args.workspace {
-        let workspace = LegionWorkspace::discover(&args.project_dir)?;
+        let workspace = WorkspaceResolver::discover(&args.project_dir)?;
         for member in workspace.member_manifest_dirs() {
             collect_lint_files(&member, lint_awsl, &mut files)?;
         }
@@ -99,13 +100,13 @@ pub fn run(args: &LintArgs) -> Result<ExitCode> {
                 }
             }
             Some("vx") if !lint_awsl => {
-                if let Err(error) = compiler.compile_vx_source(&source) {
+                if let Err(error) = lint_valkyrie_vx_source(&compiler, &source) {
                     failed += 1;
                     eprintln!("lint error: {} -> {}", file.display(), error);
                 }
             }
             Some("v") if !lint_awsl => {
-                if let Err(error) = compiler.compile_source(&source) {
+                if let Err(error) = lint_valkyrie_source(&compiler, &source) {
                     failed += 1;
                     eprintln!("lint error: {} -> {}", file.display(), error);
                 }

@@ -222,8 +222,9 @@ pub fn verify_run_fixture_for_context(fixture_path: &Path, context: &RunFixtureC
 }
 
 fn verify_run_fixture_with_context(fixture_path: &Path, explicit_context: Option<&RunFixtureContext>) {
-    let source =
-        fs::read_to_string(fixture_path).unwrap_or_else(|error| panic!("failed to read run fixture '{}': {}", fixture_path.display(), error));
+    let source = fs::read_to_string(fixture_path)
+        .unwrap_or_else(|error| panic!("failed to read run fixture '{}': {}", fixture_path.display(), error))
+        .replace("\r\n", "\n");
     let project_name = explicit_context.and_then(|context| context.project_name.clone()).unwrap_or_else(|| fixture_project_name(fixture_path));
     let targets = explicit_context
         .map(|context| parse_run_fixture_target_strings(&context.targets))
@@ -487,9 +488,7 @@ fn run_legion_dry_run(project_dir: &Path, target: RunFixtureTarget, output_dir: 
         workload_file: None,
     };
 
-    run_run(&args)
-        .map(|code| code == ExitCode::SUCCESS)
-        .map_err(|error| error.to_string())
+    run_run(&args).map(|code| code == ExitCode::SUCCESS).map_err(|error| error.to_string())
 }
 
 fn prepare_runtime_command(output_dir: &Path, target: RunFixtureTarget, run_contract: Option<&RunContract>) -> Result<PreparedCommand, String> {

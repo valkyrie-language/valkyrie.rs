@@ -40,7 +40,7 @@ pub fn package_terminal_project(components: &[LoweredComponent], module_name: &s
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     fn demo_component() -> LoweredComponent {
         let source = r#"<widget Demo><text>hi</text></widget>"#;

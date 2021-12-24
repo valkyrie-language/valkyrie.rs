@@ -6,7 +6,7 @@ use asgard::{
     awsl::{LoweringOptions, RenderNode, lower_component},
     codegen::{asgard_boot_script_tag, build_awsl_wasm_source, generate_boot_script, generate_component_glue, manifest_url_for_mode},
 };
-use vcc_data::text::awsl::AwslParser;
+use oak_awsl::AwslParser;
 
 fn valkyrie_v_root() -> PathBuf {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -204,7 +204,7 @@ micro handler() {
     let lowered = lower_component(&root, "demo", "demo.awsl", &LoweringOptions::default());
     assert_eq!(lowered.component_abi.properties.len(), 1);
     assert_eq!(lowered.component_abi.events.len(), 1);
-    assert!(lowered.abi_issues.iter().all(|issue| issue.severity != vcc_data::text::awsl::AbiSeverity::Error));
+    assert!(lowered.abi_issues.iter().all(|issue| issue.severity != oak_awsl::AbiSeverity::Error));
 }
 
 fn collect_awsl_components(dir: &std::path::Path, out: &mut Vec<asgard::awsl::LoweredComponent>) {

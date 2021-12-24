@@ -1,7 +1,7 @@
 //! Legion CLI 解析与分发（库内入口）。
 //!
-//! Rust seed 可执行文件名为 `vcc`（`cargo build -p legion` → `target/*/vcc`）；
-//! 用户面对的 npm 入口在 `packages/legion`（`bin/legion.js` → VCC 宿主）。
+//! 原生宿主仅经 `vcc-napi` platform `.node`（`legionRun*` N-API）或 wasm collect 调用；
+//! npm 用户入口在 `packages/legion`（`bin/legion.js` → `@valkyrie-language/vcc` 宿主）。
 
 use std::{ffi::OsString, io::Read, process::ExitCode};
 
@@ -23,6 +23,7 @@ use crate::{
         install::{AddArgs, InstallArgs, RemoveArgs, UpdateArgs, run as run_install, run_add, run_remove, run_update},
         lint::{LintArgs, run as run_lint},
         login::{LoginArgs, LogoutArgs, WhoamiArgs, run_login, run_logout, run_whoami},
+        plan::{PlanArgs, run as run_plan},
         publish::{PublishArgs, run as run_publish},
         registry::{RegistryArgs, run as run_registry},
         run::{RunArgs, run as run_run},
@@ -47,6 +48,8 @@ pub struct LegionCli {
 pub enum LegionCommands {
     /// 构建项目。
     Build(BuildArgs),
+    /// 解析 workspace 并输出 build plan（不进入 Compiler）。
+    Plan(PlanArgs),
     /// 检查项目可编译性。
     Check(CheckArgs),
     /// 清理构建产物目录。
@@ -175,12 +178,7 @@ where
 }
 
 fn exit_code_from_exit_code(code: ExitCode) -> i32 {
-    if code == ExitCode::SUCCESS {
-        0
-    }
-    else {
-        1
-    }
+    if code == ExitCode::SUCCESS { 0 } else { 1 }
 }
 
 fn run_with_argv_inner(argv: Vec<OsString>) -> Result<ExitCode, Report> {
@@ -216,6 +214,7 @@ fn exit_code_from_result(result: Result<ExitCode, Report>) -> i32 {
 pub fn dispatch(cli: LegionCli) -> Result<ExitCode, Report> {
     match cli.command {
         LegionCommands::Build(args) => run_build(&args),
+        LegionCommands::Plan(args) => run_plan(&args),
         LegionCommands::Check(args) => run_check(&args),
         LegionCommands::Clean(args) => run_clean(&args),
         LegionCommands::Run(args) => run_run(&args),
