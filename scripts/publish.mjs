@@ -20,7 +20,8 @@ import { ENV_PATH, PLACEHOLDER_ENV_PATH, resolveNpmAuth, runNpm } from './lib/np
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_ROOT = path.join(ROOT, 'projects', 'packages');
-const MIN_WASM_BYTES = 1024;
+// 与 scripts/lib/assemble.mjs 一致；bootstrap capability wasm 可小于 1KiB
+const MIN_WASM_BYTES = 256;
 
 const PUBLISH_ORDER = [
     'vcc',
