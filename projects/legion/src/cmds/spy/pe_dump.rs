@@ -1,8 +1,16 @@
 //! `PE` 解析结果的格式化输出。
 //!
 //! 将 `PeImage` 渲染为人类可读的诊断文本。
+//!
+//! `PE/CLR` 二进制模型与结构化解码器统一由 `std-data` 提供，
+//! 本模块仅保留纯文本渲染函数（`dump_image` / `dump_user_strings` / `dump_blobs`），
+//! 以及少量将结构化解码结果转为可读字符串的格式化辅助。
 
-use super::pe_parser::{read_blob, read_strings_string, read_user_string, PeImage, TableKind};
+use std_data::binary::pe::{
+    CliHeader, CodedIndex, CoffHeader, DosHeader, MetadataRoot, OptionalHeader, PeImage, SectionHeader, TableKind, coded_index_size, read_blob,
+    read_compressed_uint, read_strings_string, read_user_string, table_data_offset,
+    tables::{ElementType, MemberRefParent, MethodSignature, decode_member_ref_parent, decode_method_signature, read_idx, read_u32_table},
+};
 
 /// 将 `PE` 镜像格式化为诊断文本。
 pub fn dump_image(image: &PeImage) -> String {
@@ -23,12 +31,12 @@ pub fn dump_image(image: &PeImage) -> String {
     out
 }
 
-fn dump_dos(out: &mut String, dos: &super::pe_parser::DosHeader) {
+fn dump_dos(out: &mut String, dos: &DosHeader) {
     out.push_str("=== DOS Header ===\n");
     out.push_str(&format!("  PE offset: 0x{:08X}\n", dos.pe_offset));
 }
 
-fn dump_coff(out: &mut String, coff: &super::pe_parser::CoffHeader) {
+fn dump_coff(out: &mut String, coff: &CoffHeader) {
     out.push_str("\n=== COFF Header ===\n");
     out.push_str(&format!("  Machine: 0x{:04X} ({})\n", coff.machine, machine_name(coff.machine)));
     out.push_str(&format!("  NumberOfSections: {}\n", coff.number_of_sections));
@@ -49,7 +57,7 @@ fn machine_name(machine: u16) -> &'static str {
     }
 }
 
-fn dump_optional(out: &mut String, opt: &super::pe_parser::OptionalHeader) {
+fn dump_optional(out: &mut String, opt: &OptionalHeader) {
     let is_pe32plus = opt.magic == 0x20B;
     let label = if is_pe32plus { "PE32+" } else { "PE32" };
     out.push_str(&format!("\n=== Optional Header ({}) ===\n", label));
@@ -113,7 +121,7 @@ fn subsystem_name(subsystem: u16) -> &'static str {
     }
 }
 
-fn dump_sections(out: &mut String, sections: &[super::pe_parser::SectionHeader]) {
+fn dump_sections(out: &mut String, sections: &[SectionHeader]) {
     out.push_str("\n=== Section Headers ===\n");
     for (i, s) in sections.iter().enumerate() {
         out.push_str(&format!("\n  [{}] {}\n", i, s.name));
@@ -125,7 +133,7 @@ fn dump_sections(out: &mut String, sections: &[super::pe_parser::SectionHeader])
     }
 }
 
-fn dump_cli(out: &mut String, cli: &super::pe_parser::CliHeader) {
+fn dump_cli(out: &mut String, cli: &CliHeader) {
     out.push_str("\n=== CLI Header ===\n");
     out.push_str(&format!("  Cb: 0x{:08X}\n", cli.cb));
     out.push_str(&format!("  RuntimeVersion: {}.{}\n", cli.major_runtime_version, cli.minor_runtime_version));
@@ -148,7 +156,7 @@ fn token_table_name(table: u8) -> &'static str {
     }
 }
 
-fn dump_metadata(out: &mut String, md: &super::pe_parser::MetadataRoot) {
+fn dump_metadata(out: &mut String, md: &MetadataRoot) {
     out.push_str("\n=== Metadata Root ===\n");
     out.push_str(&format!("  Version: {} ({}.{})\n", md.version, md.major_version, md.minor_version));
     out.push_str(&format!("  Streams: {}\n", md.streams.len()));
@@ -191,11 +199,9 @@ fn dump_metadata(out: &mut String, md: &super::pe_parser::MetadataRoot) {
 
 /// 解码并输出关键元数据表。
 ///
-/// 使用 `table_sizes::table_data_offset` 精确定位每个目标表的起始偏移，
+/// 使用 `table_data_offset` 精确定位每个目标表的起始偏移，
 /// 避免依赖脆弱的顺序 cursor 推进（中间穿插未知表时会错位）。
-fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
-    use super::table_sizes::table_data_offset;
-
+fn dump_tables(out: &mut String, md: &MetadataRoot) {
     // 计算各堆索引大小。
     let strings_idx_size = if md.strings.len() > 0xFFFF { 4 } else { 2 };
     let guid_idx_size = if md.guid.len() > 0xFFFF { 4 } else { 2 };
@@ -230,7 +236,7 @@ fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
     // TypeRef 表。
     if typeref_rows > 0 {
         out.push_str("\n  --- TypeRef table ---\n");
-        let res_scope_idx_size = coded_index_size_def_or_ref(md, 0x00, 0x1A, 0x23, 0x01, 2);
+        let res_scope_idx_size = coded_index_size(md, CodedIndex::ResolutionScope);
         let row_size = res_scope_idx_size + strings_idx_size + strings_idx_size;
         let cursor = table_data_offset(md, 0x01).unwrap_or(0);
         for i in 0..typeref_rows {
@@ -260,7 +266,7 @@ fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
         let field_list_idx_size = if field_rows > 0xFFFF { 4 } else { 2 };
         let method_list_idx_size = if method_rows > 0xFFFF { 4 } else { 2 };
         // TypeDefOrRef 编码索引：TypeDef | TypeRef | TypeSpec（2 个 tag bit）
-        let extends_idx_size = coded_index_size_def_or_ref(md, 0x02, 0x01, 0x1B, 0, 2);
+        let extends_idx_size = coded_index_size(md, CodedIndex::TypeDefOrRef);
         let row_size = 4 + strings_idx_size + strings_idx_size + extends_idx_size + field_list_idx_size + method_list_idx_size;
         let cursor = table_data_offset(md, 0x02).unwrap_or(0);
         for i in 0..typedef_rows {
@@ -340,7 +346,7 @@ fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
     if memberref_rows > 0 {
         out.push_str("\n  --- MemberRef table ---\n");
         // MemberRefParent 编码索引：TypeDef | TypeRef | ModuleRef | MethodDef | TypeSpec（3 tag bits）
-        let class_idx_size = coded_index_size_def_or_ref(md, 0x02, 0x01, 0x1A, 0x06, 3);
+        let class_idx_size = coded_index_size(md, CodedIndex::MemberRefParent);
         let row_size = class_idx_size + strings_idx_size + blob_idx_size;
         let cursor = table_data_offset(md, 0x0A).unwrap_or(0);
         for i in 0..memberref_rows {
@@ -363,9 +369,9 @@ fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
                 "    [{}] Class=0x{:X} ({}) Name=\"{}\" Signature={} SigBlob=0x{:X}\n",
                 i + 1,
                 class,
-                parent,
+                format_member_ref_parent(&parent),
                 name,
-                signature,
+                format_method_signature(&signature),
                 sig_idx
             ));
         }
@@ -468,44 +474,12 @@ fn dump_tables(out: &mut String, md: &super::pe_parser::MetadataRoot) {
 }
 
 /// 反汇编方法体 IL 指令。
-fn dump_method_bodies(_out: &mut String, _md: &super::pe_parser::MetadataRoot) {
+fn dump_method_bodies(_out: &mut String, _md: &MetadataRoot) {
     // 预留扩展点：需要从外部传入 PE 数据和 .text 节信息。
 }
 
-/// 计算编码索引的字节大小。
-///
-/// `tag_bits` 为该编码索引的标记位数，`tables` 为该编码索引引用的所有表种类。
-fn coded_index_size_def_or_ref(md: &super::pe_parser::MetadataRoot, _t0: u8, t1: u8, t2: u8, t3: u8, tag_bits: u32) -> usize {
-    // 取所有引用表的最大行数。
-    let _ = t1; // 抑制未使用警告，参数名顺序便于阅读。
-    let tables: [u8; 4] = [t1, t2, t3, 0];
-    let max_rows = tables.iter().map(|&t| md.row_counts[t as usize]).max().unwrap_or(0);
-    let threshold = 1u32 << (16 - tag_bits);
-    if max_rows < threshold {
-        2
-    }
-    else {
-        4
-    }
-}
-
-/// 从表数据中读取变长索引。
-pub fn read_idx(data: &[u8], offset: usize, size: usize) -> u32 {
-    if size == 2 {
-        u16::from_le_bytes([data[offset], data[offset + 1]]) as u32
-    }
-    else {
-        u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
-    }
-}
-
-/// 从表数据中读取 4 字节无符号整数。
-pub fn read_u32_table(data: &[u8], offset: usize) -> u32 {
-    u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
-}
-
 /// 输出 `#US` 堆中的用户字符串。
-pub fn dump_user_strings(md: &super::pe_parser::MetadataRoot) -> String {
+pub fn dump_user_strings(md: &MetadataRoot) -> String {
     let mut out = String::new();
     out.push_str("\n=== #US (User Strings) ===\n");
     let us = &md.user_strings;
@@ -517,44 +491,15 @@ pub fn dump_user_strings(md: &super::pe_parser::MetadataRoot) -> String {
     while (offset as usize) < us.len() {
         let s = read_user_string(us, offset);
         // 计算下一个偏移。
-        let (len, len_bytes) = read_compressed_uint_at(us, offset as usize);
+        let (len, len_bytes) = read_compressed_uint(us, offset as usize);
         out.push_str(&format!("  [0x{:08X}] {:?}\n", offset, s));
         offset += len_bytes as u32 + len;
     }
     out
 }
 
-fn read_compressed_uint_at(data: &[u8], offset: usize) -> (u32, usize) {
-    if offset >= data.len() {
-        return (0, 0);
-    }
-    let b0 = data[offset];
-    if b0 & 0x80 == 0 {
-        (b0 as u32, 1)
-    }
-    else if b0 & 0xC0 == 0x80 {
-        if offset + 1 >= data.len() {
-            return (0, 0);
-        }
-        let b1 = data[offset + 1];
-        (((b0 as u32 & 0x3F) << 8) | b1 as u32, 2)
-    }
-    else if b0 & 0xE0 == 0xC0 {
-        if offset + 3 >= data.len() {
-            return (0, 0);
-        }
-        let b1 = data[offset + 1];
-        let b2 = data[offset + 2];
-        let b3 = data[offset + 3];
-        (((b0 as u32 & 0x1F) << 24) | ((b1 as u32) << 16) | ((b2 as u32) << 8) | b3 as u32, 4)
-    }
-    else {
-        (0, 0)
-    }
-}
-
 /// 输出 `#Blob` 堆内容。
-pub fn dump_blobs(md: &super::pe_parser::MetadataRoot) -> String {
+pub fn dump_blobs(md: &MetadataRoot) -> String {
     let mut out = String::new();
     out.push_str("\n=== #Blob ===\n");
     let blob = &md.blob;
@@ -569,7 +514,7 @@ pub fn dump_blobs(md: &super::pe_parser::MetadataRoot) -> String {
         if data.is_empty() {
             break;
         }
-        let (len, len_bytes) = read_compressed_uint_at(blob, offset as usize);
+        let (len, len_bytes) = read_compressed_uint(blob, offset as usize);
         out.push_str(&format!("  [0x{:08X}] len={} {:02X?}\n", offset, len, &data[..data.len().min(32)]));
         offset += len_bytes as u32 + len;
         count += 1;
@@ -577,100 +522,47 @@ pub fn dump_blobs(md: &super::pe_parser::MetadataRoot) -> String {
     out
 }
 
-/// 解码 `MemberRefParent` 编码索引为人类可读描述。
-///
-/// `MemberRefParent` 使用 3 个 tag bit：
-/// - 0: TypeDef
-/// - 1: TypeRef
-/// - 2: ModuleRef
-/// - 3: MethodDef
-/// - 4: TypeSpec
-fn decode_member_ref_parent(coded: u32, idx_size: usize) -> String {
-    let tag = coded & 0x07;
-    let row = if idx_size == 2 { coded >> 3 } else { coded >> 3 };
-    match tag {
-        0 => format!("TypeDef[{}]", row),
-        1 => format!("TypeRef[{}]", row),
-        2 => format!("ModuleRef[{}]", row),
-        3 => format!("MethodDef[{}]", row),
-        4 => format!("TypeSpec[{}]", row),
-        _ => format!("Unknown(tag={}, row={})", tag, row),
+/// 将 `MemberRefParent` 结构化解码结果渲染为人类可读描述。
+fn format_member_ref_parent(parent: &MemberRefParent) -> String {
+    match parent {
+        MemberRefParent::TypeDef(row) => format!("TypeDef[{}]", row),
+        MemberRefParent::TypeRef(row) => format!("TypeRef[{}]", row),
+        MemberRefParent::ModuleRef(row) => format!("ModuleRef[{}]", row),
+        MemberRefParent::MethodDef(row) => format!("MethodDef[{}]", row),
+        MemberRefParent::TypeSpec(row) => format!("TypeSpec[{}]", row),
+        MemberRefParent::Unknown { tag, row } => format!("Unknown(tag={}, row={})", tag, row),
     }
 }
 
-/// 解码方法签名 blob 为人类可读签名（如 `void(string)`）。
-///
-/// 格式参考 `ECMA-335` II.23.2.1：
-/// `CallingConvention(1) + ParamCount(compressed) + RetType + ParamType × N`
-fn decode_method_signature(blob: &[u8]) -> String {
-    if blob.is_empty() {
-        return "<empty>".to_string();
-    }
-    let mut cursor = 0usize;
-    // 跳过 calling convention（1 字节，0x00 = DEFAULT）。
-    let cc = blob[cursor];
-    cursor += 1;
-    if cc != 0x00 {
-        return format!("<unsupported_cc=0x{:02X}>", cc);
-    }
-    // 读取 ParamCount。
-    let (param_count, len_bytes) = read_compressed_uint_at(blob, cursor);
-    cursor += len_bytes;
-    // 读取返回类型。
-    let (return_type, ret_len) = decode_element_type(blob, cursor);
-    cursor += ret_len;
-    // 读取各参数类型。
-    let mut params = Vec::with_capacity(param_count as usize);
-    for _ in 0..param_count {
-        if cursor >= blob.len() {
-            break;
-        }
-        let (ty, ty_len) = decode_element_type(blob, cursor);
-        cursor += ty_len;
-        params.push(ty);
-    }
-    format!("{}({})", return_type, params.join(", "))
+/// 将 `MethodSignature` 结构化解码结果渲染为人类可读签名（如 `void(string)`）。
+fn format_method_signature(sig: &MethodSignature) -> String {
+    let ret = format_element_type(&sig.return_type);
+    let params: Vec<String> = sig.param_types.iter().map(format_element_type).collect();
+    format!("{}({})", ret, params.join(", "))
 }
 
-/// 解码 `ELEMENT_TYPE` 编码，返回 `(类型名, 占用字节数)`。
-///
-/// 参考 `ECMA-335` II.23.1.16。
-fn decode_element_type(blob: &[u8], offset: usize) -> (String, usize) {
-    if offset >= blob.len() {
-        return ("<eof>".to_string(), 0);
+/// 将 `ElementType` 结构化解码结果渲染为人类可读类型名。
+fn format_element_type(ty: &ElementType) -> String {
+    match ty {
+        ElementType::Void => "void".to_string(),
+        ElementType::Bool => "bool".to_string(),
+        ElementType::Char => "char".to_string(),
+        ElementType::Int8 => "int8".to_string(),
+        ElementType::UInt8 => "uint8".to_string(),
+        ElementType::Int16 => "int16".to_string(),
+        ElementType::UInt16 => "uint16".to_string(),
+        ElementType::Int32 => "int32".to_string(),
+        ElementType::UInt32 => "uint32".to_string(),
+        ElementType::Int64 => "int64".to_string(),
+        ElementType::UInt64 => "uint64".to_string(),
+        ElementType::Float32 => "float32".to_string(),
+        ElementType::Float64 => "float64".to_string(),
+        ElementType::String => "string".to_string(),
+        ElementType::IntPtr => "IntPtr".to_string(),
+        ElementType::UIntPtr => "UIntPtr".to_string(),
+        ElementType::Object => "object".to_string(),
+        ElementType::SzArray(inner) => format!("{}[]", format_element_type(inner)),
+        ElementType::Complex(et) => format!("ElementType_0x{:02X}", et),
+        ElementType::Unknown(et) => format!("Unknown_0x{:02X}", et),
     }
-    let et = blob[offset];
-    let mut consumed = 1usize;
-    let name = match et {
-        0x01 => "void".to_string(),
-        0x02 => "bool".to_string(),
-        0x03 => "char".to_string(),
-        0x04 => "int8".to_string(),
-        0x05 => "uint8".to_string(),
-        0x06 => "int16".to_string(),
-        0x07 => "uint16".to_string(),
-        0x08 => "int32".to_string(),
-        0x09 => "uint32".to_string(),
-        0x0A => "int64".to_string(),
-        0x0B => "uint64".to_string(),
-        0x0C => "float32".to_string(),
-        0x0D => "float64".to_string(),
-        0x0E => "string".to_string(),
-        0x18 => "IntPtr".to_string(),
-        0x19 => "UIntPtr".to_string(),
-        0x1C => "object".to_string(),
-        0x1D => {
-            // SZARRAY：后跟元素类型。
-            let (inner, inner_len) = decode_element_type(blob, offset + 1);
-            consumed += inner_len;
-            format!("{}[]", inner)
-        }
-        0x11 | 0x12 | 0x13 | 0x14 | 0x15 | 0x16 | 0x17 | 0x1B | 0x50 | 0x55 => {
-            // VALUETYPE / CLASS / VAR / MVAR / GENERICINST 等复杂类型，
-            // 需要读取后续 TypeDefOrRef 编码索引，此处仅给出标记名。
-            format!("ElementType_0x{:02X}", et)
-        }
-        _ => format!("Unknown_0x{:02X}", et),
-    };
-    (name, consumed)
 }

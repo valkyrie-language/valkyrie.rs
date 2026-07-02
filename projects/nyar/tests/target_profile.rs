@@ -1,5 +1,6 @@
 use nyar::{
-    abstractions::CanonicalTarget, HostProjectionBoundary, PublishFormat, ReferenceManagement, RunnerFamily, RunnerSelector, TargetHostKind,
+    CanonicalAbi, HostProjectionBoundary, PublishFormat, ReferenceManagement, RunnerFamily, RunnerSelector, TargetHostKind,
+    abstractions::CanonicalTarget,
 };
 
 #[test]
@@ -19,10 +20,18 @@ fn parses_runner_selector_from_family_and_canonical_target() {
 }
 
 #[test]
-fn checks_publish_format_support() {
-    let profile = CanonicalTarget::wasm().to_profile(None);
-    assert_eq!(profile.host_boundary, HostProjectionBoundary::WasmJsGlue);
-    assert_eq!(profile.reference_management, ReferenceManagement::HostGc);
-    assert!(profile.supports_publish_format(PublishFormat::WebApp));
-    assert!(!profile.supports_publish_format(PublishFormat::Jar));
+fn derives_profile_for_wasip3() {
+    let profile = CanonicalTarget::wasip3().to_profile(None);
+    assert_eq!(profile.host_kind, TargetHostKind::Wasi);
+    assert_eq!(profile.host_boundary, HostProjectionBoundary::WasiComponent);
+    assert_eq!(profile.host_flavor, "wasi-component-model-p3");
+    assert_eq!(profile.abi, CanonicalAbi::WasiP3);
+    assert!(profile.capability_tags.iter().any(|tag| tag == "wasip3"));
+}
+
+#[test]
+fn parses_wasip3_alias() {
+    let target = CanonicalTarget::parse("wasip3").expect("parse wasip3");
+    assert_eq!(target, CanonicalTarget::wasip3());
+    assert_eq!(target.to_string(), "wasm32-unknown-wasi-wasip3");
 }

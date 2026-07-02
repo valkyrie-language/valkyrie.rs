@@ -1,0 +1,18 @@
+[package]
+name = "legion-unity"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Valkyrie Unity 构建器 CLI（MSIL 导出与 Unity 工程同步）"
+
+[[bin]]
+name = "legion-unity"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+legion = { path = "../legion" }
+miette = { workspace = true, features = ["fancy"] }
+emitter = { workspace = true }
+nyar-language = { workspace = true, features = ["serde"] }

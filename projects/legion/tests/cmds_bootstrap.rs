@@ -1,12 +1,14 @@
 mod support;
 
-use legion::cmds::bootstrap::{run, BootstrapArgs, BootstrapStage};
+use legion::cmds::bootstrap::{BootstrapArgs, BootstrapStage, run};
+use nyar_language::CanonicalTarget;
 use std::{panic::AssertUnwindSafe, path::PathBuf};
 use support::create_smoke_project_with_manifest;
-use valkyrie_compiler::CanonicalTarget;
 
 #[test]
 #[cfg_attr(target_os = "windows", ignore = "seed launch is unstable under sandboxed Windows hosts")]
+/// 完整 L2 自举：v1 尚不能自编译 `legion.tools` 时应在 V2 阶段诚实失败。
+/// smoke 切片验收见 `bootstrap-smoke-clr.mjs` 与 `examples/bootstrap-smoke`。
 fn bootstrap_stops_at_v2_when_v1_artifact_is_not_yet_a_self_hosting_seed() {
     if cfg!(target_os = "macos") {
         eprintln!("skip bootstrap acceptance: macOS host cannot execute managed PE artifacts directly");
@@ -58,6 +60,7 @@ micro main(args: [utf16]): i32 {
     let seed_path = PathBuf::from(env!("CARGO_BIN_EXE_legion"));
     let args = BootstrapArgs {
         project_dir: fixture.project_dir.clone(),
+        bootstrap_project: None,
         seed_path: Some(seed_path),
         skip_compare: true,
         target: CanonicalTarget::clr(),
@@ -85,6 +88,10 @@ micro main(args: [utf16]): i32 {
             assert!(result.v2_path.is_none());
             assert!(
                 message.contains("执行产物失败")
+                    || message.contains("执行 v1 --version 失败")
+                    || message.contains("执行 v1 --help 失败")
+                    || message.contains("v1 --version 返回非零退出码")
+                    || message.contains("v1 --help 返回非零退出码")
                     || message.contains("无法执行")
                     || message.contains("Permission denied")
                     || message.contains("Exec format error")
@@ -116,4 +123,32 @@ fn panic_payload_to_string(payload: &Box<dyn std::any::Any + Send>) -> String {
         return (*message).to_string();
     }
     String::new()
+}
+
+#[test]
+fn bootstrap_smoke_fixture_builds_with_seed() {
+    use legion::cmds::build::{BuildArgs, run as build_run};
+    use std::process::ExitCode;
+
+    let smoke_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/examples/bootstrap-smoke");
+    if !smoke_dir.join("legion.von").exists() {
+        eprintln!("skip: bootstrap-smoke fixture not found at {}", smoke_dir.display());
+        return;
+    }
+
+    let output_dir = smoke_dir.join("dist").join("bootstrap-smoke-seed-test");
+    let _ = std::fs::remove_dir_all(&output_dir);
+    let status = build_run(&BuildArgs {
+        project_dir: smoke_dir.clone(),
+        target: CanonicalTarget::clr(),
+        output_dir: Some(output_dir.clone()),
+        workspace: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+
+    assert_eq!(status, ExitCode::SUCCESS);
+    assert!(output_dir.join("main.exe").exists());
+    assert!(output_dir.join("main.msil").exists());
+    assert!(output_dir.join("run-contracts.txt").exists());
 }

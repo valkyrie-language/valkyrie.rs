@@ -1,4 +1,9 @@
-use legion::cmds::spy::pe_parser::{parse_pe, PeParseError};
+//! `PE` 解析入口的行为测试。
+//!
+//! `PE/CLR` 解析逻辑已下沉至 `std-data`，本测试直接消费 `std_data::binary::pe`，
+//! 验证 `parse_pe` 在边界输入下的错误归类。
+
+use std_data::binary::pe::{PeParseError, parse_pe};
 
 #[test]
 fn rejects_empty_data() {

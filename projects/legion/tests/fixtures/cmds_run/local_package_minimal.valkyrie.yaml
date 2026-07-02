@@ -1,0 +1,26 @@
+targets:
+- clr-microsoft-unknown-managed
+expect:
+  clr-microsoft-unknown-managed:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: Main
+      physical_entry: main.exe
+      invocation: dotnet
+      validate: dotnet exec main.exe
+    per_artifact:
+      main.exe:
+        run_success: true
+        exit_code: 0
+        stdout: []
+        stderr: []
+    artifacts:
+    - main.exe
+    - main.msil
+    - main.runtimeconfig.json
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []

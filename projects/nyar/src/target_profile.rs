@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeError};
 
 use crate::abstractions::{
     BinaryArch, BinaryFlavor, BinaryTarget, ByteOrder, CanonicalAbi, CanonicalArch, CanonicalSpecification, CanonicalTarget,
@@ -100,6 +100,8 @@ pub enum PublishFormat {
     Extension,
     /// 小游戏包。
     MiniGame,
+    /// 微信小程序包。
+    MiniProgram,
     /// `jar`
     Jar,
     /// `jlink` 镜像。
@@ -134,6 +136,8 @@ pub enum PublishFormat {
     AppImage,
     /// `nupkg` / `nuget` 包。
     Nuget,
+    /// Unity Player 脚本包（MSIL → Editor 导入）。
+    UnityPlayer,
 }
 
 impl PublishFormat {
@@ -147,6 +151,7 @@ impl PublishFormat {
             "web-app" => Some(Self::WebApp),
             "extension" => Some(Self::Extension),
             "mini-game" => Some(Self::MiniGame),
+            "mini-program" => Some(Self::MiniProgram),
             "jar" => Some(Self::Jar),
             "jlink-image" => Some(Self::JlinkImage),
             "apk" => Some(Self::Apk),
@@ -164,6 +169,7 @@ impl PublishFormat {
             "rpm" => Some(Self::Rpm),
             "appimage" => Some(Self::AppImage),
             "nuget" | "nupkg" => Some(Self::Nuget),
+            "unity-player" => Some(Self::UnityPlayer),
             _ => None,
         }
     }
@@ -178,6 +184,7 @@ impl PublishFormat {
             Self::WebApp => "web-app",
             Self::Extension => "extension",
             Self::MiniGame => "mini-game",
+            Self::MiniProgram => "mini-program",
             Self::Jar => "jar",
             Self::JlinkImage => "jlink-image",
             Self::Apk => "apk",
@@ -195,6 +202,7 @@ impl PublishFormat {
             Self::Rpm => "rpm",
             Self::AppImage => "appimage",
             Self::Nuget => "nuget",
+            Self::UnityPlayer => "unity-player",
         }
     }
 }
@@ -245,6 +253,8 @@ pub enum RunnerFamily {
     Windows,
     /// `WASI`
     Wasi,
+    /// `NyarVM`
+    NyarVm,
 }
 
 impl RunnerFamily {
@@ -256,6 +266,7 @@ impl RunnerFamily {
             "node" => Some(Self::Node),
             "windows" => Some(Self::Windows),
             "wasi" => Some(Self::Wasi),
+            "nyar-vm" | "nyarvm" | "nyar" | "nvm" => Some(Self::NyarVm),
             _ => None,
         }
     }
@@ -268,6 +279,7 @@ impl RunnerFamily {
             Self::Node => "node",
             Self::Windows => "windows",
             Self::Wasi => "wasi",
+            Self::NyarVm => "nyar-vm",
         }
     }
 }
@@ -461,6 +473,7 @@ impl TargetProfile {
     /// 选择默认运行器家族。
     pub fn runner_family(&self) -> RunnerFamily {
         match self.host_kind {
+            TargetHostKind::NyarVm => RunnerFamily::NyarVm,
             TargetHostKind::DotNet => RunnerFamily::Clr,
             TargetHostKind::Jvm => RunnerFamily::Jvm,
             TargetHostKind::Wasi => RunnerFamily::Wasi,
@@ -541,12 +554,12 @@ impl CanonicalTarget {
             | CanonicalSpecification::MacOs
             | CanonicalSpecification::Android
             | CanonicalSpecification::Ios => TargetHostKind::Native,
-            CanonicalSpecification::Unknown if abi == CanonicalAbi::Wasi => TargetHostKind::Wasi,
+            CanonicalSpecification::Unknown if abi.is_wasi_component() => TargetHostKind::Wasi,
             _ => TargetHostKind::Unknown,
         }
     }
 
-    fn derive_host_flavor(self, _abi: CanonicalAbi) -> &'static str {
+    fn derive_host_flavor(self, abi: CanonicalAbi) -> &'static str {
         match self.arch {
             CanonicalArch::NyarVm => "nyarvm",
             CanonicalArch::Clr => "dotnet",
@@ -564,7 +577,10 @@ impl CanonicalTarget {
                 CanonicalVendor::Bun => "bun",
                 _ => match self.specification {
                     CanonicalSpecification::Browser => "web-standard",
-                    CanonicalSpecification::Wasi => "wasi-component-model",
+                    CanonicalSpecification::Wasi => match abi {
+                        CanonicalAbi::WasiP3 => "wasi-component-model-p3",
+                        _ => "wasi-component-model",
+                    },
                     CanonicalSpecification::Windows => "win32",
                     CanonicalSpecification::Linux => "linux-gnu",
                     CanonicalSpecification::MacOs => "apple-darwin",
@@ -595,7 +611,7 @@ impl CanonicalTarget {
             | CanonicalSpecification::MacOs
             | CanonicalSpecification::Android
             | CanonicalSpecification::Ios => HostProjectionBoundary::Native,
-            CanonicalSpecification::Unknown if abi == CanonicalAbi::Wasi => HostProjectionBoundary::WasiComponent,
+            CanonicalSpecification::Unknown if abi.is_wasi_component() => HostProjectionBoundary::WasiComponent,
             _ => HostProjectionBoundary::Native,
         }
     }
@@ -625,7 +641,10 @@ impl CanonicalTarget {
                 }
                 _ => match self.specification {
                     CanonicalSpecification::Browser => &["javascript", "dom", "canvas", "fetch", "esmodule", "precise-gc"],
-                    CanonicalSpecification::Wasi => &["wasi", "filesystem", "cli", "component-model", "precise-gc"],
+                    CanonicalSpecification::Wasi => match self.resolved_abi() {
+                        CanonicalAbi::WasiP3 => &["wasi", "wasip3", "filesystem", "cli", "component-model", "precise-gc"],
+                        _ => &["wasi", "wasip2", "filesystem", "cli", "component-model", "precise-gc"],
+                    },
                     CanonicalSpecification::Windows | CanonicalSpecification::Linux | CanonicalSpecification::MacOs => {
                         &["native", "filesystem", "process", "perceus-rc"]
                     }
@@ -639,7 +658,7 @@ impl CanonicalTarget {
     }
 
     fn derive_entry_policy(self, abi: CanonicalAbi) -> EntryPolicy {
-        if abi == CanonicalAbi::Wasi {
+        if abi.is_wasi_component() {
             return EntryPolicy { default_entry: "main".to_string(), wrap_strategy: WrapStrategy::Hosted, generate_wrapper: true };
         }
         match self.arch {
@@ -671,15 +690,21 @@ impl CanonicalTarget {
             },
             CanonicalArch::Wasm32 | CanonicalArch::Wasm64 => ArtifactPolicy {
                 primary_extension: ".wasm".to_string(),
-                default_publish_format: if abi == CanonicalAbi::Wasi { PublishFormat::WasmComponent } else { PublishFormat::WasmModule },
-                supported_publish_formats: if abi == CanonicalAbi::Wasi {
+                default_publish_format: if abi.is_wasi_component() { PublishFormat::WasmComponent } else { PublishFormat::WasmModule },
+                supported_publish_formats: if abi.is_wasi_component() {
                     vec![PublishFormat::WasmComponent, PublishFormat::Oci]
                 }
                 else {
-                    vec![PublishFormat::WasmModule, PublishFormat::WebApp, PublishFormat::Extension, PublishFormat::MiniGame]
+                    vec![
+                        PublishFormat::WasmModule,
+                        PublishFormat::WebApp,
+                        PublishFormat::Extension,
+                        PublishFormat::MiniGame,
+                        PublishFormat::MiniProgram,
+                    ]
                 },
-                required_adaptors: if abi == CanonicalAbi::Wasi {
-                    vec!["std:wasi".to_string()]
+                required_adaptors: if abi.is_wasi_component() {
+                    vec![if abi == CanonicalAbi::WasiP3 { "std:wasip3".to_string() } else { "std:wasi".to_string() }]
                 }
                 else {
                     let adaptor = match self.vendor {
@@ -717,14 +742,14 @@ impl CanonicalTarget {
                 },
                 supported_publish_formats: match self.specification {
                     CanonicalSpecification::Windows => {
-                        vec![PublishFormat::Directory, PublishFormat::Zip, PublishFormat::SingleFile]
+                        vec![PublishFormat::Directory, PublishFormat::Zip, PublishFormat::SingleFile, PublishFormat::UnityPlayer]
                     }
                     CanonicalSpecification::Android => vec![PublishFormat::Apk, PublishFormat::Aab],
                     CanonicalSpecification::Ios => vec![PublishFormat::Ipa, PublishFormat::AppBundle],
                     CanonicalSpecification::MacOs => {
-                        vec![PublishFormat::AppBundle, PublishFormat::Pkg, PublishFormat::Directory]
+                        vec![PublishFormat::AppBundle, PublishFormat::Pkg, PublishFormat::Directory, PublishFormat::UnityPlayer]
                     }
-                    _ => vec![PublishFormat::Directory, PublishFormat::Tar, PublishFormat::SingleFile],
+                    _ => vec![PublishFormat::Directory, PublishFormat::Tar, PublishFormat::SingleFile, PublishFormat::UnityPlayer],
                 },
                 required_adaptors: match self.specification {
                     CanonicalSpecification::Android => vec!["std:android".to_string()],

@@ -1,6 +1,18 @@
 #![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 
+mod egraph;
+mod extract;
+mod pattern;
+mod term;
+mod theory;
+
+pub use egraph::{EGraphHost, EGraphStats, StructuredRewrite};
+pub use pattern::{TermPattern, parse_pattern};
+pub use term::{AlgebraicTerm, parse_term};
+pub use theory::{TermRewrite, builtin_core_rewrite_theory, builtin_core_term_rewrites, filter_equations, filter_term_rewrites};
+
+use egraph::EGraphHost as OptimizerEGraph;
 use nyar_types::{CapabilityTag, Identifier, QualifiedName};
 
 /// 单个 `Object Algebraic` 语义维度的清单。
@@ -31,6 +43,8 @@ pub struct ObjectAlgebraicProgram {
     pub exports: Vec<QualifiedName>,
     /// 已注册的语义维度。
     pub dimensions: Vec<ObjectAlgebraicDimension>,
+    /// 可直接进入 `E-Graph` 的结构化项。
+    pub structured_terms: Vec<AlgebraicTerm>,
 }
 
 impl ObjectAlgebraicProgram {
@@ -104,6 +118,10 @@ pub struct RewriteRule {
 pub struct RewriteTheory {
     /// 已注册规则。
     pub rules: Vec<RewriteRule>,
+    /// 已注册等式。
+    pub equations: Vec<RewriteEquation>,
+    /// 结构化项级重写。
+    pub term_rewrites: Vec<TermRewrite>,
 }
 
 impl RewriteTheory {
@@ -112,9 +130,71 @@ impl RewriteTheory {
         self.rules.push(rule);
     }
 
+    /// 注册一条等式。
+    pub fn equate(&mut self, equation: RewriteEquation) {
+        self.equations.push(equation);
+    }
+
     /// 统计某阶段的规则数量。
     pub fn count_in_phase(&self, phase: RewritePhase) -> usize {
         self.rules.iter().filter(|rule| rule.phase == phase).count()
+            + self.equations.iter().filter(|equation| equation.phase == phase).count()
+            + self.term_rewrites.iter().filter(|rewrite| rewrite.phase == phase).count()
+    }
+
+    /// 注册一条结构化项级重写。
+    pub fn register_term_rewrite(&mut self, rewrite: TermRewrite) {
+        self.term_rewrites.push(rewrite);
+    }
+}
+
+/// 单条可进入 `E-Graph` 的等式。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RewriteEquation {
+    /// 等式左侧操作。
+    pub left: QualifiedName,
+    /// 等式右侧操作。
+    pub right: QualifiedName,
+    /// 所属阶段。
+    pub phase: RewritePhase,
+    /// 触发等式所需能力。
+    pub required_capabilities: Vec<CapabilityTag>,
+}
+
+/// 供片段提交携带的理论 bundle。
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TheoryBundle {
+    /// 共享理论。
+    pub shared: RewriteTheory,
+    /// 当前片段私有理论。
+    pub fragment: RewriteTheory,
+}
+
+impl TheoryBundle {
+    /// 合并共享理论与片段私有理论。
+    pub fn merged(&self) -> RewriteTheory {
+        let mut merged = self.shared.clone();
+        for rule in &self.fragment.rules {
+            if !merged.rules.contains(rule) {
+                merged.rules.push(rule.clone());
+            }
+        }
+        for rewrite in &self.shared.term_rewrites {
+            if !merged.term_rewrites.iter().any(|existing| existing.name == rewrite.name) {
+                merged.term_rewrites.push(rewrite.clone());
+            }
+        }
+        for equation in &self.fragment.equations {
+            if !merged.equations.contains(equation) {
+                merged.equations.push(equation.clone());
+            }
+        }
+        for rewrite in &self.fragment.term_rewrites {
+            if !merged.term_rewrites.iter().any(|existing| existing.name == rewrite.name) {
+                merged.term_rewrites.push(rewrite.clone());
+            }
+        }
+        merged
     }
 }
 
@@ -125,6 +205,16 @@ pub struct EGraphSnapshot {
     pub equivalence_class_count: usize,
     /// 维度操作数量。
     pub operation_count: usize,
+    /// 被真正吸收进 `E-Graph` 的等式数量。
+    pub applied_equation_count: usize,
+    /// 被应用的模式重写数量。
+    pub applied_rewrite_count: usize,
+    /// 常量折叠次数。
+    pub constant_fold_count: usize,
+    /// 饱和迭代轮次。
+    pub iteration_count: usize,
+    /// 被管理的 `E-Node` 数量。
+    pub enode_count: usize,
     /// 是否达到当前理论下的饱和。
     pub saturated: bool,
 }
@@ -142,6 +232,8 @@ pub enum FutamuraProjectionFamily {
     Native,
     /// `futa_vm`
     NyarVm,
+    /// `futa_gpu`
+    Gpu,
 }
 
 impl FutamuraProjectionFamily {
@@ -153,6 +245,7 @@ impl FutamuraProjectionFamily {
             Self::Wasm => "futa_wasm",
             Self::Native => "futa_native",
             Self::NyarVm => "futa_vm",
+            Self::Gpu => "futa_gpu",
         }
     }
 }
@@ -242,15 +335,10 @@ pub struct OptimizationResult {
 pub struct OptimizationSession;
 
 impl OptimizationSession {
-    /// 执行一次最小优化骨架。
-    ///
-    /// 当前阶段只固定：
-    /// - `Object Algebraic` 的组合边界
-    /// - `E-Graph` 的规则筛选入口
-    /// - `Futamura projection` 的目标选择边界
+    /// 执行 `E-Graph` 饱和、常量折叠与代表元抽取。
     pub fn optimize(&self, request: OptimizationRequest) -> OptimizationResult {
-        let applied_rules = request
-            .rewrite_theory
+        let theory = merge_with_builtin_core(request.rewrite_theory);
+        let applied_rules = theory
             .rules
             .iter()
             .filter(|rule| {
@@ -262,7 +350,19 @@ impl OptimizationSession {
             .map(|rule| rule.name.clone())
             .collect::<Vec<_>>();
 
-        let operation_count = request.program.dimensions.iter().map(|dimension| dimension.exported_operations.len()).sum();
+        let mut egraph = OptimizerEGraph::default();
+        egraph.ingest_program(&request.program);
+
+        let phases = [RewritePhase::Normalize, RewritePhase::Saturate, RewritePhase::PreProjection];
+        let mut stats = egraph.stats().clone();
+        for phase in phases {
+            let rewrites = filter_term_rewrites(&theory.term_rewrites, phase, &request.capabilities);
+            let equations = filter_equations(&theory.equations, phase, &request.capabilities);
+            stats = egraph.saturate(&rewrites, &equations);
+        }
+
+        let optimized_program = egraph.extract_program(request.program);
+        let operation_count = optimized_program.dimensions.iter().map(|dimension| dimension.exported_operations.len()).sum();
         let preserved_capabilities = request
             .capabilities
             .iter()
@@ -271,8 +371,17 @@ impl OptimizationSession {
             .collect();
 
         OptimizationResult {
-            program: request.program,
-            egraph: EGraphSnapshot { equivalence_class_count: applied_rules.len().max(1), operation_count, saturated: true },
+            program: optimized_program,
+            egraph: EGraphSnapshot {
+                equivalence_class_count: stats.equivalence_class_count,
+                operation_count,
+                applied_equation_count: stats.applied_equation_count,
+                applied_rewrite_count: stats.applied_rewrite_count,
+                constant_fold_count: stats.constant_fold_count,
+                iteration_count: stats.iteration_count,
+                enode_count: stats.enode_count,
+                saturated: stats.saturated,
+            },
             projection: ProjectionPlan {
                 family: request.projection_policy.family,
                 host_boundary: request.projection_policy.host_boundary,
@@ -281,5 +390,137 @@ impl OptimizationSession {
             },
             applied_rules,
         }
+    }
+}
+
+fn merge_with_builtin_core(mut theory: RewriteTheory) -> RewriteTheory {
+    for rewrite in builtin_core_term_rewrites() {
+        if !theory.term_rewrites.iter().any(|existing| existing.name == rewrite.name) {
+            theory.term_rewrites.push(rewrite);
+        }
+    }
+    theory
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn qualified(parts: &[&str]) -> QualifiedName {
+        QualifiedName::new(parts.iter().map(|part| Identifier::new(part)).collect())
+    }
+
+    #[test]
+    fn constant_fold_addition() {
+        let session = OptimizationSession;
+        let result = session.optimize(OptimizationRequest {
+            program: ObjectAlgebraicProgram {
+                module_name: qualified(&["demo"]),
+                structured_terms: vec![parse_term("core.add(2, 3)").expect("term")],
+                ..Default::default()
+            },
+            capabilities: Vec::new(),
+            rewrite_theory: RewriteTheory::default(),
+            projection_policy: ProjectionPolicy {
+                family: FutamuraProjectionFamily::Clr,
+                host_boundary: HostProjectionBoundary::Clr,
+                reference_management: ReferenceManagement::HostGc,
+                prefer_small_artifacts: false,
+                preserve_effect_boundaries: true,
+            },
+        });
+
+        assert!(result.egraph.constant_fold_count >= 1);
+        assert!(result.egraph.saturated);
+        assert_eq!(result.program.structured_terms, vec![AlgebraicTerm::Literal(5)]);
+    }
+
+    #[test]
+    fn identity_rewrite_eliminates_add_zero() {
+        let session = OptimizationSession;
+        let x = qualified(&["demo", "x"]);
+        let result = session.optimize(OptimizationRequest {
+            program: ObjectAlgebraicProgram {
+                module_name: qualified(&["demo"]),
+                structured_terms: vec![AlgebraicTerm::apply(
+                    qualified(&["core", "add"]),
+                    vec![AlgebraicTerm::symbol(x.clone()), AlgebraicTerm::literal(0)],
+                )],
+                ..Default::default()
+            },
+            capabilities: Vec::new(),
+            rewrite_theory: RewriteTheory::default(),
+            projection_policy: ProjectionPolicy {
+                family: FutamuraProjectionFamily::Clr,
+                host_boundary: HostProjectionBoundary::Clr,
+                reference_management: ReferenceManagement::HostGc,
+                prefer_small_artifacts: false,
+                preserve_effect_boundaries: true,
+            },
+        });
+
+        assert!(result.egraph.applied_rewrite_count >= 1 || result.egraph.constant_fold_count >= 1);
+        assert_eq!(result.program.structured_terms, vec![AlgebraicTerm::Symbol(x)]);
+    }
+
+    #[test]
+    fn nested_constant_fold() {
+        let session = OptimizationSession;
+        let result = session.optimize(OptimizationRequest {
+            program: ObjectAlgebraicProgram {
+                module_name: qualified(&["demo"]),
+                structured_terms: vec![parse_term("core.add(core.mul(2, 3), 4)").expect("term")],
+                ..Default::default()
+            },
+            capabilities: Vec::new(),
+            rewrite_theory: RewriteTheory::default(),
+            projection_policy: ProjectionPolicy {
+                family: FutamuraProjectionFamily::Clr,
+                host_boundary: HostProjectionBoundary::Clr,
+                reference_management: ReferenceManagement::HostGc,
+                prefer_small_artifacts: false,
+                preserve_effect_boundaries: true,
+            },
+        });
+
+        assert_eq!(result.program.structured_terms, vec![AlgebraicTerm::Literal(10)]);
+        assert!(result.egraph.saturated);
+    }
+
+    #[test]
+    fn flat_equation_union_still_works() {
+        let mut rewrite_theory = RewriteTheory::default();
+        rewrite_theory.equate(RewriteEquation {
+            left: qualified(&["graphic", "dot"]),
+            right: qualified(&["graphic", "dot_commutative"]),
+            phase: RewritePhase::Saturate,
+            required_capabilities: vec![CapabilityTag::new("gpu-shader")],
+        });
+
+        let session = OptimizationSession;
+        let result = session.optimize(OptimizationRequest {
+            program: ObjectAlgebraicProgram {
+                module_name: qualified(&["demo"]),
+                exports: vec![qualified(&["graphic", "dot"])],
+                dimensions: vec![ObjectAlgebraicDimension {
+                    name: Identifier::new("graphic"),
+                    exported_operations: vec![qualified(&["graphic", "dot"])],
+                    required_capabilities: vec![CapabilityTag::new("gpu-shader")],
+                    reference_management_hint: None,
+                }],
+                ..Default::default()
+            },
+            capabilities: vec![CapabilityTag::new("gpu-shader")],
+            rewrite_theory,
+            projection_policy: ProjectionPolicy {
+                family: FutamuraProjectionFamily::Gpu,
+                host_boundary: HostProjectionBoundary::Native,
+                reference_management: ReferenceManagement::PerceusRc,
+                prefer_small_artifacts: false,
+                preserve_effect_boundaries: true,
+            },
+        });
+
+        assert!(result.egraph.applied_equation_count >= 1);
     }
 }

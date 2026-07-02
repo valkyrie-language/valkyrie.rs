@@ -59,7 +59,7 @@ ProgramFacts
 
 ### MIR 做什么
 - `MIR` 是主分析表示，必须是 `SSA`，具备 `CFG`、基本块、块参数、显式终结符和显式值依赖。
-- `MIR` 负责单态化、去虚化前提分析、effect 摘要、逃逸分析、循环分析、数据流分析，以及闭世界展开。
+- `MIR` 负责单态化、见证消除前提分析、effect 摘要、逃逸分析、循环分析、数据流分析，以及闭世界展开。
 - `MIR` 必须把 `HIR` 的结构化调用降成可分析形式：
 - 当前调用属于哪种 dispatch。
 - 若为 `witness dispatch`，对应 contract / slot / evidence operand 是什么。
@@ -107,6 +107,38 @@ ProgramFacts
 - `CLR / JVM / WASM` 线必须允许各自拥有更贴近目标约束的 backend input，不要求共用 `NyarIR`。
 - `GPU / Shader` 线必须直接进入目标专用模型，例如 `DXIL / SPIR-V / MSL`，不能再借道 CPU 导向兼容壳。
 - `CLR` 自举是当前最高优先级，因此 `CLR` lane 必须优先保证“拒绝未闭合 witness 伪装成静态调用”。
+
+## GPU Shader 编译链（开发者指引）
+
+### 目标
+- 统一编排协议，不统一 GPU 物理表示。
+- GPU 路径采用 `shader -> OA/ENode -> E-graph -> SPIR-V/DXIL`。
+- `NyarVM` 是独立路线，不参与 GPU 编译链路中转。
+
+### 数据流
+```text
+ShaderDecl
+  -> Object Algebra / ENode reification
+  -> fragment rewrite theory (graphic/neural)
+  -> E-graph optimization session
+  -> ArtifactPartitionPlan (lane=Gpu)
+  -> BackendInputKind::{SpirvModule,DxilContainer}
+  -> target-specific emit (SPIR-V / DXIL)
+```
+
+### 扩展点
+- **规则扩展**：在 `graphic/neural` 片段追加 ENode 规则，并同步到 rewrite theory manifest。
+- **规划扩展**：在 frontend contract 中识别新 shader/neural 构件，映射到对应 `SemanticFragment`。
+- **发射扩展**：为新增操作补齐 SPIR-V 与 DXIL 的 emitter 映射，不引入统一中间层兜底。
+
+### 约束
+- 不新增“统一 IR 层”承载 GPU 语义。
+- 不把 GPU 语义改写为 VM/CPU 线再回译。
+- DXIL 路线允许分期深化：先容器合法，再逐步推进指令级语义 lowering。
+
+### 回归门禁（CI）
+- 必跑 `nyar` GPU 片段测试：`cargo test -p nyar --test gpu_fragment`
+- 必跑 `legion` GPU 格式映射测试：`cargo test -p legion artifact_formats`
 
 ## 禁止
 - 不在这里放任何单一语言专属的 `AST / HIR / MIR / LIR`。

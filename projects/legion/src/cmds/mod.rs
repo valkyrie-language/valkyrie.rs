@@ -1,6 +1,24 @@
 #![doc = include_str!("readme.md")]
 
+pub mod audit;
+pub mod bench;
 pub mod bootstrap;
 pub mod build;
+pub mod check;
+pub mod clean;
+pub mod cov;
+pub mod doc;
+pub mod fmt;
+pub mod install;
+pub mod lint;
+pub mod login;
+pub mod publish;
+pub mod registry;
+pub mod report;
 pub mod run;
+pub mod search;
+pub mod source_hygiene;
 pub mod spy;
+pub mod test;
+pub mod test_engine;
+pub mod vendor;

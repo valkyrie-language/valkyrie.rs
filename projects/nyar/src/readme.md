@@ -5,6 +5,7 @@
 ## 职责
 - 维护中性规划、目标 lane、backend 选择和产物编排协议。
 - 为 `CLR / JVM / WASM / native / VM` 等路线提供公共综合层，而不是具体前端的延长线。
+- 提供与具体语言、具体 CLI 无关的通用 fixture / 基线校验能力。
 
 ## 分层原则
 - `src/abstractions` 只放最小公共协议，不放统一物理 `IR`。
@@ -51,6 +52,10 @@
 ### packaging
 - 负责 `ArtifactSet`、`OutputSpec`、sidecar 和最终交付协议。
 - 不负责重新解释调用语义。
+
+### testing
+- 负责通用 fixture 收集、YAML sidecar 读写、首次生成与基线比对。
+- 这里不感知 `VALKYRIE / legion` 之类上层命名，只承接通用 fixture 机制。
 
 ## HIR / MIR / LIR 与源码目录的关系
 - `HIR / MIR` 的定义与变换应继续留在上游编译器。

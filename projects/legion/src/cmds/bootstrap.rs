@@ -7,8 +7,8 @@ use std::{
 };
 
 use clap::Args;
-use miette::{miette, IntoDiagnostic, Report, Result};
-use valkyrie_compiler::CanonicalTarget;
+use miette::{IntoDiagnostic, Report, Result, miette};
+use nyar_language::CanonicalTarget;
 
 /// `legion bootstrap` 的命令参数。
 #[derive(Debug, Clone, Args)]
@@ -16,6 +16,10 @@ pub struct BootstrapArgs {
     /// 项目目录，默认当前目录。
     #[arg(value_name = "project-dir", default_value = ".")]
     pub project_dir: PathBuf,
+    /// 自举目标项目目录；若指定则覆盖 `project-dir`。
+    /// 统一验收默认指向 `valkyrie.v/projects/legion._/projects/legion.tools`。
+    #[arg(long = "project", value_name = "PATH")]
+    pub bootstrap_project: Option<PathBuf>,
     /// seed 路径，用于自举的已有可运行二进制。
     #[arg(long = "seed")]
     pub seed_path: Option<PathBuf>,
@@ -81,14 +85,16 @@ impl BootstrapResult {
 
 /// 执行自举流程。
 pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
+    let project_dir = args.bootstrap_project.clone().unwrap_or_else(|| args.project_dir.clone());
     let mut result = BootstrapResult { stages_completed: Vec::new(), failed_stage: None, v1_path: None, v2_path: None };
     let target_str = args.target.to_string();
     // `WASI` 目标的规范字符串形如 `wasm32-unknown-wasi-wasi`，以 `wasm` 开头但包含 `wasi`。
     // 因此用 `contains("wasi")` 检测 `WASI` 目标，`contains("wasm")` 检测所有 `WASM` 系目标。
     let is_wasm_target = target_str.contains("wasm") || target_str.contains("wasi");
+    let is_jvm_target = is_jvm_target(&target_str);
 
     // 阶段 1: 获取 seed。
-    let seed_path = match resolve_seed(&args.seed_path, &args.project_dir) {
+    let seed_path = match resolve_seed(&args.seed_path, &project_dir) {
         Ok(path) => {
             result.stages_completed.push(BootstrapStage::Seed);
             println!("seed: {}", path.display());
@@ -101,9 +107,9 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
     };
 
     // 阶段 2: 用 seed 编译编译器源码，得到 v1。
-    let v1_output_dir = args.project_dir.join("dist").join("v1");
-    let source_file = get_compiler_source_path(&args.project_dir);
-    match compile_with_seed(&seed_path, &args.project_dir, &v1_output_dir, "v1", &target_str, &source_file) {
+    let v1_output_dir = project_dir.join("dist").join("v1");
+    let source_file = get_compiler_source_path(&project_dir);
+    match compile_with_seed(&seed_path, &project_dir, &v1_output_dir, "v1", &target_str, &source_file) {
         Ok(_) => {
             result.stages_completed.push(BootstrapStage::V1);
             println!("v1: compiled");
@@ -115,17 +121,18 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
     }
 
     // 阶段 3: 运行 v1 验证。
-    let v1_artifact_name = get_artifact_name(&args.project_dir);
-    let v1_artifact = v1_output_dir.join(artifact_filename(&v1_artifact_name, &target_str));
+    let v1_artifact = match resolve_cli_artifact(&v1_output_dir, &project_dir, &target_str) {
+        Ok(path) => path,
+        Err(e) => {
+            result.failed_stage = Some((BootstrapStage::V1, e));
+            return Ok(result);
+        }
+    };
+    // 对于 Wasm 家族目标，运行 v1 会产生一个输出文件（Node=`.wasm`，WASI=`.wasi`），用于后续比对。
+    let v1_output_path =
+        if is_wasm_target { Some(v1_output_dir.join(format!("v1_output.{}", wasm_family_extension(&target_str)))) } else { None };
 
-    // 获取编译器源文件路径（用于 WASM 目标的 v1 运行输入）。
-    // 诚实自举要求 v1 实际读取源文件内容，而非使用固定输入值。
-    // （source_file 已在阶段 2 计算，此处复用）
-
-    // 对于 WASM 目标，运行 v1 会产生一个输出文件（v1_output.wasm），用于后续比对。
-    let v1_output_path = if is_wasm_target { Some(v1_output_dir.join("v1_output.wasm")) } else { None };
-
-    match run_and_verify(&v1_artifact, &target_str, &seed_path, v1_output_path.as_deref(), &source_file) {
+    match run_and_verify(&v1_artifact, &target_str, v1_output_path.as_deref(), &source_file) {
         Ok(()) => {
             result.stages_completed.push(BootstrapStage::V1Run);
             println!("v1: verified");
@@ -137,11 +144,9 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
     }
 
     // 阶段 4: 用 v1 编译同一份编译器源码，得到 v2。
-    // 这是诚实自举的核心：v1 必须是编译器，能编译产生 v2。
-    // 对于 WASM 目标：v1 读取源文件，产生 v2_output.wasm（输出依赖于源文件内容）。
-    let v2_output_dir = args.project_dir.join("dist").join("v2");
-    match compile_with_seed(&v1_artifact, &args.project_dir, &v2_output_dir, "v2", &target_str, &source_file) {
-        Ok(_) => {
+    let v2_output_dir = project_dir.join("dist").join("v2");
+    match compile_with_seed(&v1_artifact, &project_dir, &v2_output_dir, "v2", &target_str, &source_file) {
+        Ok(()) => {
             result.stages_completed.push(BootstrapStage::V2);
             println!("v2: compiled");
         }
@@ -151,22 +156,30 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
         }
     }
 
+    let v2_artifact = match resolve_cli_artifact(&v2_output_dir, &project_dir, &target_str) {
+        Ok(path) => path,
+        Err(e) => {
+            result.failed_stage = Some((BootstrapStage::V2, e));
+            return Ok(result);
+        }
+    };
     // 阶段 5: 比对 v1 和 v2。
-    // 两次编译同一份源码，产物应字节一致（或语义等价）。
-    // 对于 WASM 目标，比对的是运行 v1 两次产生的输出文件，而非 v1.wasm 和 v2.wasm 本身。
     if !args.skip_compare {
-        let (compare_v1, compare_v2) = if is_wasm_target {
-            // WASM 目标：比对 v1_output.wasm 和 v2_output.wasm（运行 v1 两次的输出）
-            let v2_output = v2_output_dir.join("v2_output.wasm");
-            (v1_output_path.unwrap(), v2_output)
+        let compare_result = if target_str.contains("wasi") {
+            compare_artifacts(&v1_artifact, &v2_artifact)
+        }
+        else if is_wasm_target {
+            let v2_output = v2_output_dir.join(format!("v2_output.{}", wasm_family_extension(&target_str)));
+            compare_artifacts(&v1_output_path.unwrap(), &v2_output)
+        }
+        else if is_jvm_target {
+            compare_jvm_contracts(&v1_output_dir, &v2_output_dir, &project_dir)
         }
         else {
-            // CLR 目标：比对 v1.exe 和 v2.exe
-            let v2_artifact = v2_output_dir.join(artifact_filename(&v1_artifact_name, &target_str));
-            (v1_artifact.clone(), v2_artifact)
+            compare_clr_contracts(&v1_output_dir, &v2_output_dir, &project_dir)
         };
 
-        match compare_artifacts(&compare_v1, &compare_v2) {
+        match compare_result {
             Ok(()) => {
                 result.stages_completed.push(BootstrapStage::Compare);
                 println!("v1/v2 比对: 一致");
@@ -181,8 +194,8 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
         println!("v1/v2 比对: skipped");
     }
 
-    result.v1_path = Some(v1_artifact.clone());
-    result.v2_path = Some(v2_output_dir.join(artifact_filename(&v1_artifact_name, &target_str)));
+    result.v1_path = Some(v1_artifact);
+    result.v2_path = Some(v2_artifact);
     Ok(result)
 }
 
@@ -192,8 +205,7 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
 /// 1. 用户指定的 --seed 参数
 /// 2. 使用当前二进制作为 seed（self-seed）
 ///
-/// 注意：seed 始终是当前 `legion.exe`（编译器自身），不是之前的 v1 产物。
-/// v1 产物是编译结果，不具备编译能力（除非 CLR 后端已能 lowering 完整编译器）。
+/// 注意：seed 始终是可运行的 `legion` 二进制；后续阶段必须由产物自身完成编译。
 fn resolve_seed(seed_path: &Option<PathBuf>, _project_dir: &Path) -> Result<PathBuf> {
     if let Some(path) = seed_path {
         if !path.exists() {
@@ -230,23 +242,110 @@ fn find_wasmtime_cli() -> Result<PathBuf> {
 /// 移除 Windows extended-length path 前缀 `\\?\`。
 fn strip_verbatim_prefix(path: &Path) -> PathBuf {
     let path_str = path.to_string_lossy();
-    if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
-        PathBuf::from(stripped)
+    if let Some(stripped) = path_str.strip_prefix(r"\\?\") { PathBuf::from(stripped) } else { path.to_path_buf() }
+}
+
+/// 用 `.wasi` seed 经 wasmtime 执行 `build`，产出下一阶段编译器产物。
+///
+/// 对齐 `bootstrap-wasi.mjs` / `compileV2`：
+/// `wasmtime run -W gc [-S p3] --dir … <seed>.wasi -- build <project> --target <target> -o <out>`
+fn compile_wasi_seed_with_wasmtime(seed: &Path, project_dir: &Path, output_dir: &Path, stage_name: &str, target: &str) -> Result<()> {
+    let wasmtime = find_wasmtime_cli()?;
+    let stderr_path = output_dir.join(format!("{stage_name}_stderr.log"));
+    let stderr_file = std::fs::File::create(&stderr_path)
+        .into_diagnostic()
+        .map_err(|error| error.wrap_err(format!("创建 stderr 日志文件失败 {}", stderr_path.display())))?;
+
+    // Guest 需读写工程与依赖；挂载项目、输出，以及可见的 workspace 根（若可推断）。
+    let mut preopens = vec![project_dir.to_path_buf(), output_dir.to_path_buf()];
+    // Walk up to workspace root (`legions.von`), covering nested package paths:
+    // `…/valkyrie.v/projects/legion._/projects/legion.tools` → `…/valkyrie.v`
+    {
+        let mut cursor = project_dir.parent();
+        while let Some(dir) = cursor {
+            preopens.push(dir.to_path_buf());
+            if dir.join("legions.von").is_file() {
+                if let Some(repo) = dir.parent() {
+                    preopens.push(repo.to_path_buf());
+                }
+                break;
+            }
+            cursor = dir.parent();
+        }
     }
-    else {
-        path.to_path_buf()
+    preopens.sort();
+    preopens.dedup();
+
+    let mut cmd = Command::new(&wasmtime);
+    cmd.arg("run");
+    cmd.arg("-W");
+    cmd.arg("gc");
+    cmd.arg("-W");
+    cmd.arg("max-memory-size=16777216");
+    if target.contains("wasip3") {
+        cmd.arg("-S");
+        cmd.arg("p3");
+    }
+    for dir in &preopens {
+        cmd.arg("--dir");
+        cmd.arg(dir);
+    }
+    cmd.arg(seed);
+    cmd.arg("--");
+    cmd.arg("build");
+    cmd.arg(project_dir);
+    cmd.arg("--target");
+    cmd.arg(target);
+    cmd.arg("-o");
+    cmd.arg(output_dir);
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::from(stderr_file));
+
+    println!("{}: executing {:?}", stage_name, cmd);
+
+    let output = cmd.output().into_diagnostic().map_err(|error| error.wrap_err(format!("{stage_name} wasmtime 运行失败")))?;
+
+    if !output.status.success() {
+        let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(miette!(
+            r#"{stage_name} WASI seed 再编译失败
+stdout: {stdout}
+stderr: {stderr}"#,
+            stage_name = stage_name,
+            stdout = stdout.trim(),
+            stderr = stderr.trim(),
+        ));
+    }
+
+    match resolve_cli_artifact(output_dir, project_dir, target) {
+        Ok(path) => {
+            println!("  {} artifact: {}", stage_name, path.display());
+            Ok(())
+        }
+        Err(_) => {
+            let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Err(miette!(
+                r#"{stage_name} WASI seed 退出码为 0 但未产出 `.wasi`
+seed（{seed}）可能尚不具备 `legion build` 能力，或 FS/argv cabi 未打通。
+stdout: {stdout}
+stderr: {stderr}"#,
+                stage_name = stage_name,
+                seed = seed.display(),
+                stdout = stdout.trim(),
+                stderr = stderr.trim(),
+            ))
+        }
     }
 }
 
 /// 使用指定的 seed 编译项目。
 ///
 /// 对于原生 seed（`legion.exe`）：直接运行 `seed build <project_dir> --target <target> --output <output_dir>`。
-/// 对于 WASM seed（`.wasm` 文件）：
-///   - `wasm` 目标：通过 `node <seed>.mjs <source_file> <output>` 运行微编译器
-///   - `wasi` 目标：当前只保留“直接运行本机 `wasmtime` 验证产物”的路径，
-///     旧 `wasi_host` 源文件驱动自举链已移除，因此不再支持 `wasm seed -> 再编译`
-///   微编译器读取源文件内容，产生一个依赖于源文件内容的 WASM 输出文件。
-///   这是 WASM/WASI 自举的"编译"等价物。
+/// 对于 Wasm 家族 seed（`.wasm` / `.wasi` 文件）：
+///   - `wasm` 目标：通过 `node <seed>.mjs` 运行（**非 CLR 发布门**，`micro_compiler` 已废弃）
+///   - `wasi` / `wasip3` 目标：通过本机 `wasmtime run … <seed>.wasi -- build …` 再编译
 fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_name: &str, target: &str, source_file: &Path) -> Result<()> {
     fs::create_dir_all(output_dir).into_diagnostic().map_err(|error| error.wrap_err(format!("创建输出目录失败 {}", output_dir.display())))?;
 
@@ -254,8 +353,8 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
     let normalized_project_dir = strip_verbatim_prefix(project_dir);
     let normalized_output_dir = strip_verbatim_prefix(output_dir);
 
-    // 检测 seed 是否为 WASM 文件（v1 产物）。
-    let is_wasm_seed = normalized_seed.extension().is_some_and(|ext| ext == "wasm");
+    // 检测 seed 是否为 Wasm 家族文件（v1 产物）。
+    let is_wasm_seed = normalized_seed.extension().is_some_and(|ext| ext == "wasm" || ext == "wasi");
     // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasi`，用 `contains("wasi")` 检测。
     let is_wasi_target = target.contains("wasi");
 
@@ -269,32 +368,29 @@ fn compile_with_seed(seed: &Path, project_dir: &Path, output_dir: &Path, stage_n
             ));
         }
 
-        // 对于 V2 阶段，输出文件名为 v2_output.wasm；对于 V1 阶段，由调用方处理。
-        let output_file =
-            if stage_name == "v2" { normalized_output_dir.join("v2_output.wasm") } else { normalized_output_dir.join("v1_output.wasm") };
-        let mut cmd = if is_wasi_target {
-            return Err(miette!(
-                r#"{stage_name} 当前不支持 `WASI` wasm seed 自举
-旧 `valkyrie-wasi-host` 源文件驱动链已移除；
-现在只保留本机 `wasmtime` 直接运行产物的验证路径。"#,
-                stage_name = stage_name
-            ));
+        if is_wasi_target {
+            return compile_wasi_seed_with_wasmtime(&normalized_seed, &normalized_project_dir, &normalized_output_dir, stage_name, target);
+        }
+
+        // 对于 V2 阶段，输出文件名为 v2_output.<ext>；对于 V1 阶段，由调用方处理。
+        let output_file = if stage_name == "v2" {
+            normalized_output_dir.join(format!("v2_output.{}", wasm_family_extension(target)))
         }
         else {
-            // WASM 目标：通过 node 运行 .mjs 启动壳。
-            let launcher_path = normalized_seed.with_extension("mjs");
-            if !launcher_path.exists() {
-                return Err(miette!(
-                    "{stage_name} WASM seed 缺少启动壳: {launcher_path}\n\
-                     请确认 seed 编译时已生成 .mjs 启动壳",
-                    stage_name = stage_name,
-                    launcher_path = launcher_path.display()
-                ));
-            }
-            let mut cmd = Command::new("node");
-            cmd.arg(&launcher_path).arg(source_file).arg(&output_file);
-            cmd
+            normalized_output_dir.join(format!("v1_output.{}", wasm_family_extension(target)))
         };
+        // WASM 目标：通过 node 运行 .mjs 启动壳。
+        let launcher_path = normalized_seed.with_extension("mjs");
+        if !launcher_path.exists() {
+            return Err(miette!(
+                "{stage_name} WASM seed 缺少启动壳: {launcher_path}\n\
+                 请确认 seed 编译时已生成 .mjs 启动壳",
+                stage_name = stage_name,
+                launcher_path = launcher_path.display()
+            ));
+        }
+        let mut cmd = Command::new("node");
+        cmd.arg(&launcher_path).arg(source_file).arg(&output_file);
 
         println!("{}: executing {:?}", stage_name, cmd);
 
@@ -335,9 +431,7 @@ stderr: {stderr}"#,
         return Ok(());
     }
 
-    // 原生 seed：直接运行 build 命令。
-    let artifact_name = get_artifact_name(project_dir);
-    let expected_artifact = output_dir.join(artifact_filename(&artifact_name, target));
+    // 原生 seed 或自举产物：运行 build 命令。
 
     // 将 stderr 重定向到文件，避免 `Command::output()` 在 Windows 上
     // 因子进程写入 stderr 管道而 panic（Windows pipe 读取的已知问题）。
@@ -346,7 +440,7 @@ stderr: {stderr}"#,
         .into_diagnostic()
         .map_err(|error| error.wrap_err(format!("创建 stderr 日志文件失败 {}", stderr_path.display())))?;
 
-    let mut cmd = Command::new(&normalized_seed);
+    let mut cmd = compiler_command(&normalized_seed);
     cmd.arg("build").arg(&normalized_project_dir).arg("--target").arg(target).arg("--output").arg(&normalized_output_dir);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::from(stderr_file));
@@ -369,65 +463,54 @@ stderr: {}"#,
     }
 
     // 验证产物确实被生成了。
-    if !expected_artifact.exists() {
-        let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        return Err(miette!(
-            r#"{stage_name} 编译退出码为 0 但未产出产物 {path}
+    match resolve_cli_artifact(output_dir, project_dir, target) {
+        Ok(path) => {
+            println!("  {} artifact: {}", stage_name, path.display());
+            Ok(())
+        }
+        Err(_) => {
+            let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let expected_name = get_artifact_name(project_dir);
+            let expected_path = output_dir.join(artifact_filename(&expected_name, target));
+            Err(miette!(
+                r#"{stage_name} 编译退出码为 0 但未产出产物 {path}
 seed（{seed}）可能不具备 `legion build` 命令行能力。
 stdout: {stdout}
 stderr: {stderr}"#,
-            stage_name = stage_name,
-            path = expected_artifact.display(),
-            seed = seed.display(),
-            stdout = stdout.trim(),
-            stderr = stderr.trim(),
-        ));
+                stage_name = stage_name,
+                path = expected_path.display(),
+                seed = seed.display(),
+                stdout = stdout.trim(),
+                stderr = stderr.trim(),
+            ))
+        }
     }
-
-    Ok(())
 }
 
 /// 运行并验证产物。
 ///
 /// 对于 `CLR` 目标，直接执行 `.exe` 并检查退出码。
+/// 对于 `JVM` 目标，通过本机 `java -jar` 校验 `--version` / `--help`。
 /// 对于 `WASM` 目标，通过 `node <artifact>.mjs <source_file> <output>` 运行，
 ///   微编译器读取源文件内容，产生输出文件用于后续比对。
-/// 对于 `WASI` 目标，通过本机 `wasmtime <artifact>.wasm` 运行。
-fn run_and_verify(artifact_path: &Path, target: &str, _seed: &Path, output_path: Option<&Path>, source_file: &Path) -> Result<()> {
+/// 对于 `WASI` 目标，通过本机 `wasmtime run -W gc -W wmemcheck -W max-memory-size=...` 运行。
+fn run_and_verify(artifact_path: &Path, target: &str, output_path: Option<&Path>, source_file: &Path) -> Result<()> {
     if !artifact_path.exists() {
         return Err(miette!("产物文件不存在: {}", artifact_path.display()));
     }
 
     let normalized_artifact = strip_verbatim_prefix(artifact_path);
 
+    if is_jvm_target(target) {
+        verify_jvm_cli_runtime(&normalized_artifact)?;
+        return Ok(());
+    }
+
     // `WASI` 目标字符串形如 `wasm32-unknown-wasi-wasi`，用 `contains("wasi")` 检测。
     // 注意：必须先检查 `wasi` 再检查 `wasm`，因为 `WASI` 字符串也包含 `wasm`。
     if target.contains("wasi") {
-        // WASI 目标：直接通过本机 wasmtime 运行 wasm 模块。
-        let wasmtime = find_wasmtime_cli()?;
-
-        if !source_file.exists() {
-            return Err(miette!("源文件不存在: {}", source_file.display()));
-        }
-
-        let mut cmd = Command::new(&wasmtime);
-        cmd.arg(&normalized_artifact);
-
-        println!("verify: executing {:?}", cmd);
-        let output = cmd.output().into_diagnostic().map_err(|error| error.wrap_err("执行本机 wasmtime 失败"))?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(miette!(
-                r#"WASI 产物运行失败
-stdout: {}
-stderr: {}"#,
-                stdout.trim(),
-                stderr.trim()
-            ));
-        }
-
+        verify_wasi_cli_runtime(&normalized_artifact, target)?;
         return Ok(());
     }
 
@@ -477,23 +560,347 @@ stderr: {}"#,
         return Ok(());
     }
 
-    // CLR 目标：直接执行 .exe。
-    let path_str = normalized_artifact.to_str().ok_or_else(|| miette!("路径包含非 UTF-8 字符"))?;
-    let status = run_cli_program(path_str, &[]).map_err(|error| error.wrap_err("执行产物失败"))?;
+    // CLR 目标：执行 .exe 并校验 `--version` / `--help`（与 bootstrap-clr.mjs 对齐）。
+    verify_clr_cli_runtime(&normalized_artifact)?;
+    Ok(())
+}
 
-    if !status.success() {
-        return Err(miette!("产物运行返回非零退出码: {} (code={})", status, status.code().unwrap_or(-1)));
+/// 校验 CLR 产物可响应最小 CLI 契约。
+fn verify_clr_cli_runtime(artifact_path: &Path) -> Result<()> {
+    let path_str = artifact_path.to_str().ok_or_else(|| miette!("路径包含非 UTF-8 字符"))?;
+    let artifact_dir = artifact_path.parent().unwrap_or_else(|| Path::new("."));
+
+    let version_status = run_dotnet_cli(path_str, &["--version"], artifact_dir).map_err(|error| error.wrap_err("执行 v1 --version 失败"))?;
+    if !version_status.success() {
+        return Err(miette!("v1 --version 返回非零退出码: {} (code={})", version_status, version_status.code().unwrap_or(-1)));
+    }
+
+    let help_status = run_dotnet_cli(path_str, &["--help"], artifact_dir).map_err(|error| error.wrap_err("执行 v1 --help 失败"))?;
+    if !help_status.success() {
+        return Err(miette!("v1 --help 返回非零退出码: {} (code={})", help_status, help_status.code().unwrap_or(-1)));
     }
 
     Ok(())
 }
 
+/// 校验 WASI 产物经 wasmtime 可响应最小 CLI 契约（`--version` / `--help`）。
+fn verify_wasi_cli_runtime(artifact_path: &Path, target: &str) -> Result<()> {
+    let version = run_wasmtime_cli(artifact_path, target, &["--version"])?;
+    if !version.status.success() {
+        return Err(miette!(
+            r#"v1 --version 失败
+stdout: {}
+stderr: {}"#,
+            String::from_utf8_lossy(&version.stdout).trim(),
+            String::from_utf8_lossy(&version.stderr).trim()
+        ));
+    }
+    println!("  v1 --version: {}", String::from_utf8_lossy(&version.stdout).trim());
+
+    let help = run_wasmtime_cli(artifact_path, target, &["--help"])?;
+    if !help.status.success() {
+        return Err(miette!(
+            r#"v1 --help 失败
+stdout: {}
+stderr: {}"#,
+            String::from_utf8_lossy(&help.stdout).trim(),
+            String::from_utf8_lossy(&help.stderr).trim()
+        ));
+    }
+    println!("  v1 --help: ok");
+    Ok(())
+}
+
+/// 运行 `wasmtime run -W gc [-S p3] <artifact> -- <args…>`；若本机未启用 wmemcheck 则不再强求。
+fn run_wasmtime_cli(artifact_path: &Path, target: &str, guest_args: &[&str]) -> Result<std::process::Output> {
+    let wasmtime = find_wasmtime_cli()?;
+    let mut cmd = Command::new(&wasmtime);
+    cmd.arg("run");
+    cmd.arg("-W");
+    cmd.arg("gc");
+    cmd.arg("-W");
+    cmd.arg("max-memory-size=16777216");
+    if target.contains("wasip3") {
+        cmd.arg("-S");
+        cmd.arg("p3");
+    }
+    cmd.arg(artifact_path);
+    if !guest_args.is_empty() {
+        cmd.arg("--");
+        for arg in guest_args {
+            cmd.arg(arg);
+        }
+    }
+    println!("verify: executing {:?}", cmd);
+    cmd.output().into_diagnostic().map_err(|error| error.wrap_err("执行本机 wasmtime 失败"))
+}
+
+/// 校验 JVM 产物可被本机 `java -jar` 加载并响应最小 CLI 契约。
+fn verify_jvm_cli_runtime(artifact_path: &Path) -> Result<()> {
+    let path_str = artifact_path.to_str().ok_or_else(|| miette!("路径包含非 UTF-8 字符"))?;
+    let artifact_dir = artifact_path.parent().unwrap_or_else(|| Path::new("."));
+
+    let version_status = run_java_jar_cli(path_str, &["--version"], artifact_dir).map_err(|error| error.wrap_err("执行 v1 --version 失败"))?;
+    if !version_status.success() {
+        return Err(miette!("v1 --version 返回非零退出码: {} (code={})", version_status, version_status.code().unwrap_or(-1)));
+    }
+
+    let help_status = run_java_jar_cli(path_str, &["--help"], artifact_dir).map_err(|error| error.wrap_err("执行 v1 --help 失败"))?;
+    if !help_status.success() {
+        return Err(miette!("v1 --help 返回非零退出码: {} (code={})", help_status, help_status.code().unwrap_or(-1)));
+    }
+
+    Ok(())
+}
+
+/// 通过 `dotnet exec` 运行 CLR 产物。
+fn run_dotnet_cli(artifact: &str, args: &[&str], cwd: &Path) -> Result<ExitStatus> {
+    let output = Command::new("dotnet")
+        .arg("exec")
+        .arg(artifact)
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .into_diagnostic()
+        .map_err(|error| error.wrap_err("无法执行 dotnet"))?;
+    Ok(output.status)
+}
+
+/// 通过本机 `java -jar` 运行 JVM 产物。
+fn run_java_jar_cli(artifact: &str, args: &[&str], cwd: &Path) -> Result<ExitStatus> {
+    let output = Command::new("java")
+        .arg("-jar")
+        .arg(artifact)
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .into_diagnostic()
+        .map_err(|error| error.wrap_err("无法执行 java"))?;
+    Ok(output.status)
+}
+
 /// 运行 CLI 程序并返回退出状态。
+#[allow(dead_code)]
 fn run_cli_program(program: &str, args: &[&str]) -> Result<ExitStatus> {
     let output =
         Command::new(program).args(args).output().into_diagnostic().map_err(|error| error.wrap_err(format!("无法执行 {}", program)))?;
 
     Ok(output.status)
+}
+
+fn compiler_command(seed: &Path) -> Command {
+    if is_managed_jvm_artifact(seed) {
+        let mut cmd = Command::new("java");
+        cmd.arg("-jar").arg(seed);
+        cmd
+    }
+    else if is_managed_clr_artifact(seed) {
+        let mut cmd = Command::new("dotnet");
+        cmd.arg("exec").arg(seed);
+        cmd
+    }
+    else {
+        Command::new(seed)
+    }
+}
+
+fn is_jvm_target(target: &str) -> bool {
+    let lowered = target.to_ascii_lowercase();
+    lowered == "jvm" || lowered.starts_with("jvm-") || lowered.contains("-jvm") || lowered.contains("openjdk")
+}
+
+fn is_managed_jvm_artifact(path: &Path) -> bool {
+    path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
+}
+
+fn is_managed_clr_artifact(path: &Path) -> bool {
+    let runtimeconfig = path.with_extension("runtimeconfig.json");
+    if runtimeconfig.exists() {
+        return true;
+    }
+    // Some hosts use `name.runtimeconfig.json` while path is `name.exe`.
+    let alt = format!("{}.runtimeconfig.json", path.file_stem().and_then(|s| s.to_str()).unwrap_or_default());
+    path.parent().map(|p| p.join(&alt).exists()).unwrap_or(false)
+}
+
+fn resolve_cli_artifact(output_dir: &Path, project_dir: &Path, target: &str) -> Result<PathBuf> {
+    if target.contains("wasi") {
+        return resolve_wasi_cli_artifact(output_dir, project_dir);
+    }
+
+    if target.contains("wasm") {
+        let name = get_artifact_name(project_dir);
+        let path = output_dir.join(artifact_filename(&name, target));
+        if path.exists() {
+            return Ok(path);
+        }
+        return Err(miette!("产物文件不存在: {}", path.display()));
+    }
+
+    if is_jvm_target(target) {
+        return resolve_jvm_cli_artifact(output_dir, project_dir);
+    }
+
+    let project_name = get_artifact_name(project_dir);
+    let candidates = [
+        output_dir.join("legion.exe"),
+        output_dir.join("legion__main_legion.exe"),
+        output_dir.join(format!("{project_name}.exe")),
+        output_dir.join(format!("{project_name}__main_{project_name}.exe")),
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() {
+            return Ok(candidate.clone());
+        }
+    }
+
+    // Fallback: first `*__main_*.exe` that looks like a CLI partition.
+    if let Ok(entries) = fs::read_dir(output_dir) {
+        let mut found = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("exe") {
+                continue;
+            }
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            if name.contains("__main_") {
+                found.push(path);
+            }
+        }
+        found.sort();
+        if let Some(path) = found.into_iter().next() {
+            return Ok(path);
+        }
+    }
+
+    Err(miette!("产物不存在: {}（或 legion.exe / legion__main_legion.exe）", output_dir.join(format!("{project_name}.exe")).display()))
+}
+
+/// 解析 WASI 轨 CLI 入口（优先 `legion.wasi` / `*wasi_run*`，对齐 `resolveWasiEntry`）。
+fn resolve_wasi_cli_artifact(output_dir: &Path, project_dir: &Path) -> Result<PathBuf> {
+    let canonical = output_dir.join("legion.wasi");
+    if canonical.exists() {
+        return Ok(canonical);
+    }
+
+    let project_name = get_artifact_name(project_dir);
+    let named = output_dir.join(format!("{project_name}.wasi"));
+    if named.exists() {
+        return Ok(named);
+    }
+
+    for contract_name in ["run-contracts.txt", "run-contract.txt"] {
+        let contract_path = output_dir.join(contract_name);
+        if let Ok(text) = fs::read_to_string(&contract_path) {
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if let Some(value) = trimmed
+                    .strip_prefix("physical_entry:")
+                    .or_else(|| trimmed.strip_prefix("physicalEntry:"))
+                    .or_else(|| trimmed.strip_prefix("entry:"))
+                {
+                    let physical = value.trim().trim_matches('"');
+                    if physical.ends_with(".wasi") {
+                        let path = output_dir.join(physical);
+                        if path.exists() {
+                            return Ok(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Ok(entries) = fs::read_dir(output_dir) {
+        let mut found = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("wasi") {
+                continue;
+            }
+            found.push(path);
+        }
+        found.sort_by(|left, right| {
+            let score = |path: &Path| {
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+                if name.to_ascii_lowercase().contains("wasi_run") {
+                    0
+                }
+                else if name.to_ascii_lowercase().contains("main_legion") {
+                    2
+                }
+                else {
+                    1
+                }
+            };
+            score(left).cmp(&score(right)).then_with(|| left.cmp(right))
+        });
+        if let Some(path) = found.into_iter().next() {
+            return Ok(path);
+        }
+    }
+
+    Err(miette!("产物不存在: {}（或任意 *.wasi / *wasi_run*.wasi）", canonical.display()))
+}
+
+fn resolve_jvm_cli_artifact(output_dir: &Path, project_dir: &Path) -> Result<PathBuf> {
+    let project_name = get_artifact_name(project_dir);
+    let candidates = [
+        output_dir.join("legion.jar"),
+        output_dir.join("legion__main_legion.jar"),
+        output_dir.join(format!("{project_name}.jar")),
+        output_dir.join(format!("{project_name}__main_{project_name}.jar")),
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() {
+            return Ok(candidate.clone());
+        }
+    }
+
+    if let Ok(entries) = fs::read_dir(output_dir) {
+        let mut found = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()).is_none_or(|ext| !ext.eq_ignore_ascii_case("jar")) {
+                continue;
+            }
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            if name.contains("__main_") || name.eq_ignore_ascii_case("legion.jar") {
+                found.push(path);
+            }
+        }
+        found.sort();
+        if let Some(path) = found.into_iter().next() {
+            return Ok(path);
+        }
+    }
+
+    Err(miette!("产物不存在: {}（或 legion.jar / legion__main_legion.jar）", output_dir.join(format!("{project_name}.jar")).display()))
+}
+
+fn compare_clr_contracts(v1_dir: &Path, v2_dir: &Path, project_dir: &Path) -> Result<()> {
+    let v1_contract = v1_dir.join("run-contract.txt");
+    let v2_contract = v2_dir.join("run-contract.txt");
+    if v1_contract.exists() && v2_contract.exists() {
+        return compare_artifacts(&v1_contract, &v2_contract);
+    }
+    // 无契约文件时回退到 CLI 入口 PE 比对（小项目 smoke）。
+    let v1 = resolve_cli_artifact(v1_dir, project_dir, "clr")?;
+    let v2 = resolve_cli_artifact(v2_dir, project_dir, "clr")?;
+    compare_artifacts(&v1, &v2)
+}
+
+fn compare_jvm_contracts(v1_dir: &Path, v2_dir: &Path, project_dir: &Path) -> Result<()> {
+    let v1_contract = v1_dir.join("run-contract.txt");
+    let v2_contract = v2_dir.join("run-contract.txt");
+    if v1_contract.exists() && v2_contract.exists() {
+        return compare_artifacts(&v1_contract, &v2_contract);
+    }
+    let v1 = resolve_cli_artifact(v1_dir, project_dir, "jvm")?;
+    let v2 = resolve_cli_artifact(v2_dir, project_dir, "jvm")?;
+    compare_artifacts(&v1, &v2)
 }
 
 fn candidate_command_paths(dir: &Path, command: &str, extensions: &[String]) -> Vec<PathBuf> {
@@ -569,13 +976,22 @@ v1 长度: {v1_len}, v2 长度: {v2_len}"#,
 
 /// 根据目标平台返回产物文件名。
 fn artifact_filename(artifact_name: &str, target: &str) -> String {
-    // `WASM` 和 `WASI` 目标都生成 `.wasm` 文件。
-    if target.contains("wasm") || target.contains("wasi") {
+    if target.contains("wasi") {
+        format!("{}.wasi", artifact_name)
+    }
+    else if target.contains("wasm") {
         format!("{}.wasm", artifact_name)
+    }
+    else if is_jvm_target(target) {
+        format!("{}.jar", artifact_name)
     }
     else {
         format!("{}.exe", artifact_name)
     }
+}
+
+fn wasm_family_extension(target: &str) -> &'static str {
+    if target.contains("wasi") { "wasi" } else { "wasm" }
 }
 
 /// 从项目目录或 legion.von 中提取产物名称。
@@ -584,7 +1000,7 @@ fn get_artifact_name(project_dir: &Path) -> String {
     let manifest_path = project_dir.join("legion.von");
     if manifest_path.exists() {
         if let Ok(content) = fs::read_to_string(&manifest_path) {
-            if let Ok(value) = von_parser::from_str::<von_parser::VonValue>(&content) {
+            if let Ok(value) = std_data::text::von::from_str::<std_data::text::von::VonValue>(&content) {
                 if let Some(object) = value.as_object() {
                     if let Some(name) = object.get("name") {
                         if let Some(name_str) = name.as_str() {
@@ -603,7 +1019,8 @@ fn get_artifact_name(project_dir: &Path) -> String {
 /// 获取编译器源文件路径。
 ///
 /// 诚实自举要求 v1 实际读取源文件内容，而非使用固定输入值。
-/// 源文件位于 `<project_dir>/source/main.v`。
+/// CLR 目标通过 `legion build <project_dir>` 收集项目源码闭包；
+/// WASM 目标仍使用 `<project_dir>/source/main.v` 作为运行输入。
 fn get_compiler_source_path(project_dir: &Path) -> PathBuf {
     project_dir.join("source").join("main.v")
 }

@@ -1,0 +1,107 @@
+targets:
+- clr-microsoft-unknown-managed
+- jvm-openjdk-unknown-managed
+- wasm32-node-unknown-wasm
+- wasm32-unknown-wasi-wasi
+expect:
+  clr-microsoft-unknown-managed:
+    build_success: true
+    dry_run_success: true
+    run_success: false
+    run_contracts:
+    - logical_entry: Main
+      physical_entry: legion.exe
+      invocation: dotnet
+      validate: dotnet exec legion.exe
+    per_artifact:
+      legion.exe:
+        run_success: false
+        exit_code: -532462766
+        stdout: []
+        stderr:
+        - 'Unhandled exception. System.InvalidProgramException: <normalized>'
+        - '   at _GlobalMethods.Main(String[] )'
+    artifacts:
+    - legion.exe
+    - legion.runtimeconfig.json
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []
+  jvm-openjdk-unknown-managed:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main.functions
+      physical_entry: legion.jar
+      invocation: java
+      validate: java -jar legion.jar
+    per_artifact:
+      legion.jar:
+        run_success: true
+        exit_code: 0
+        stdout: []
+        stderr: []
+    artifacts:
+    - ExitCode.class
+    - legion.jar
+    - main/
+    - main/functions.class
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []
+  wasm32-node-unknown-wasm:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: main
+      physical_entry: legion.mjs
+      invocation: node
+      validate: node legion.mjs
+    per_artifact:
+      legion.mjs:
+        run_success: true
+        exit_code: 0
+        stdout: []
+        stderr: []
+    artifacts:
+    - legion.mjs
+    - legion.wasm
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []
+  wasm32-unknown-wasi-wasi:
+    build_success: true
+    dry_run_success: true
+    run_success: false
+    run_contracts:
+    - logical_entry: _start
+      physical_entry: legion.wasi
+      invocation: wasmtime
+      validate: wasmtime run -W gc -W wmemcheck -W max-memory-size=16777216 legion.wasi
+    per_artifact:
+      legion.wasi:
+        run_success: false
+        exit_code: 1
+        stdout: []
+        stderr:
+        - 'Error: wmemcheck (memory checker) was requested but is not enabled in this build'
+    artifacts:
+    - legion.component-wit/
+    - legion.component-wit/component.wit
+    - legion.component-wit/deps/
+    - legion.component-wit/deps/wasi-cli-0.2.12.wit
+    - legion.core.wasm
+    - legion.wasi
+    - run-contract.txt
+    - run-contracts.txt
+    - wasmtime-config.toml
+    - wasmtime-home/
+    - wasmtime-local-app-data/
+    - wasmtime-tmp/
+    compile_errors: []
+    errors: []

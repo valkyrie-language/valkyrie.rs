@@ -1,0 +1,384 @@
+# 联合类型 (Unite Types)
+
+联合类型用于表示多种可能值，并使用 `unite` 定义。`unite` 的默认表示是抽象类；`[tag(XXXKind)]` 是可选优化，用于要求 tagged union；少数特例还会走利基优化，但通常不需要在前端单独处理。
+
+## 基本联合类型
+
+### 简单联合类型
+
+```valkyrie
+# 结果类型 - 表示操作可能成功或失败
+unite Result⟨T, E⟩ {
+    Fine { value: T }
+    Fail { error: E }
+}
+
+# 选项类型 - 表示值可能存在或不存在
+unite Option⟨T⟩ {
+    Some { value: T }
+    None
+}
+```
+
+### 变体构造函数
+
+`unite` 里的 variant 声明本身可以采用具名字段体，例如：
+
+```valkyrie
+unite Option⟨T⟩ {
+    Some { value: T }
+    None
+}
+```
+
+这并不妨碍语言另外提供更方便的表面语法：
+
+- `Some(0)` / `Fine(0)` 这类写法可以是 **variant 对应 constructor 的调用**
+- `case Some(x)` 这类写法可以是 **variant 对应 extractor 的匹配入口**
+
+也就是说，`Some(xxx)`、`Fine(xxx)` 作为**构造 / 匹配语法**可以是合法的；关键在于不要把它误解成“variant 只能以 tuple-style 声明”。
+
+标准库里的 `Option` / `Result` 预定义仍然可以写成 record-style：
+
+```valkyrie
+unite Option⟨T⟩ {
+    Some { value: T }
+    None
+}
+
+unite Result⟨T, E⟩ {
+    Fine { value: T }
+    Fail { error: E }
+}
+```
+
+随后由 `constructor` / `extractor` 提供 `Some(xxx)`、`Fine(xxx)`、`case Some(x)` 这一层更紧凑的使用体验。
+
+从 OOP 视角看，可以把：
+
+- `unite Option⟨T⟩` 理解为一个封闭的抽象基类
+- `Some` / `None` 理解为这个抽象基类之下的封闭 variant 子类
+- `Some(0)` 理解为 `Some` 这个 variant 的构造函数调用
+- `case Some(x)` 理解为 `Some` 这个 variant 暴露出来的 extractor 模式入口
+
+因此，文档里讨论 `unite` 时，应区分清楚三层概念：
+
+- **声明层**：variant 以具名字段形式定义自身结构（`Some { value: T }`）
+- **构造层**：variant 暴露构造函数，允许 `Some(0)` 这类调用写法
+- **匹配层**：variant 暴露 extractor，允许 `case Some(x)` 这类模式写法
+
+`unite` 体内的 `Some(T)` / `Fine(T)` **不是**合法 variant 声明，编译器与 IDE 必须硬拒绝。
+
+### 复杂联合类型
+
+```valkyrie
+# JSON 值类型
+unite JsonValue {
+    Null,
+    Bool { value: bool },
+    Number { value: f64 },
+    String { value: utf8 },
+    Array { items: [JsonValue] },
+    Object { fields: {utf8: JsonValue} }
+}
+
+# 表达式抽象语法树
+unite Expression {
+    Literal { value: i32 },
+    Variable { name: utf8 },
+    Binary {
+        left: Expression,
+        operator: utf8,
+        right: Expression
+    }
+}
+```
+
+如果你明确希望某个 `unite` 采用 tagged union 形态，可以显式写出 `tag`：
+
+```valkyrie
+[tag(ResultKind)]
+unite TaggedResult⟨T, E⟩ {
+    Fine { value: T }
+    Fail { error: E }
+}
+```
+
+## 使用
+
+### 模式匹配
+
+```valkyrie
+# 基本模式匹配
+let result: Result⟨i32, string⟩ = Fine { value: 42 }
+match result {
+    case Fine { value }: print("成功: {value}")
+    case Fail { error }: print("失败: {error}")
+}
+```
+
+# 嵌套模式匹配
+let nested: Result⟨Option⟨i32⟩, string⟩ = Fine { value: Some { value: 42 } }
+match nested {
+    case Fine { value: Some { value } }: print("值: {value}")
+    case Fine { value: None }: print("无值")
+    case Fail { error }: print("错误: {error}")
+}
+```
+
+### if let 表达式
+
+```valkyrie
+# 简化的模式匹配
+if let Fine { value } = result {
+    print("成功获得值: {value}")
+}
+
+# 带 else 分支
+if let Some { value } = option {
+    process(value)
+} else {
+    print("选项为空")
+}
+```
+
+## 关联方法
+
+### 关联方法
+
+```valkyrie
+unite Result⟨T, E⟩ {
+    Fine { value: T },
+    Fail { error: E },
+    # 检查是否成功
+    micro is_ok(self) -> bool {
+        if let Fine { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+    # 检查是否失败
+    micro is_err(self) -> bool {
+        if let Fail { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+    # 获取值（可能 panic）
+    micro unwrap(self) -> T {
+        if let Fine { value } = self {
+            value
+        } else {
+            panic("Called unwrap on Fail")
+        }
+    }
+    # 安全获取值
+    micro unwrap_or(self, default: T) -> T {
+        if let Fine { value } = self {
+            value
+        } else {
+            default
+        }
+    }
+    # 映射成功值
+    micro map⟨U⟩(self, f: micro(T) -> U) -> Result⟨U, E⟩ {
+        if let Fine { value } = self {
+            Fine { value: f(value) }
+        } else if let Fail { error } = self {
+            Fail { error }
+        }
+    }
+    # 映射错误值
+    micro map_err⟨F⟩(self, f: micro(E) -> F) -> Result⟨T, F⟩ {
+        if let Fine { value } = self {
+            Fine { value }
+        } else if let Fail { error } = self {
+            Fail { error: f(error) }
+        }
+    }
+}
+```
+
+### Option 类型方法
+
+```valkyrie
+unite Option⟨T⟩ {
+    Some { value: T },
+    None,
+    # 检查是否有值
+    micro is_some(self) -> bool {
+        if let Some { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+    # 检查是否为空
+    micro is_none(self) -> bool {
+        if let None = self {
+            true
+        } else {
+            false
+        }
+    }
+    # 映射值
+    micro map⟨U⟩(self, f: micro(T) -> U) -> Option⟨U⟩ {
+        if let Some { value } = self {
+            Some { value: f(value) }
+        } else {
+            None
+        }
+    }
+    # 过滤值
+    micro filter(self, predicate: micro(T) -> bool) -> Option⟨T⟩ {
+        if let Some { value } = self {
+            if predicate(value) {
+                Some { value }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+```
+
+## 扩展形式
+
+### 泛型联合类型
+
+```valkyrie
+# 多参数泛型
+unite Either⟨L, R⟩ {
+    Left { value: L },
+    Right { value: R }
+}
+
+# 带约束的泛型
+unite Container⟨T⟩ where T: Clone {
+    Single { item: T },
+    Multiple { items: [T] }
+}
+```
+
+### 递归联合类型
+
+```valkyrie
+# 链表
+unite List⟨T⟩ {
+    Empty,
+    Node {
+        value: T,
+        next: List⟨T⟩
+    }
+}
+
+# 二叉树
+unite Tree⟨T⟩ {
+    Leaf { value: T },
+    Branch {
+        left: Tree⟨T⟩,
+        right: Tree⟨T⟩
+    }
+}
+```
+
+## 声明边界与名义身份
+
+`unite` 不只是若干分支的表面语法，它还是一个具名声明家族。
+
+- `unite` 的 variants 来自同一条 `unite` 声明。
+- 一个值不会因为“结构上像某个 variant”就自动成为这个 `unite`。
+- 穷尽性检查依赖的是这组已声明分支，而不是后验的结构兼容。
+
+因此，`unite` 虽然表达 union，但在语言语义中仍然保留具名 identity。
+
+## 书写约定
+
+### 1. 使用描述性的变体名称
+
+```valkyrie
+# 好的命名
+unite HttpResponse {
+    Success { data: String, status: u16 },
+    ClientError { message: String, code: u16 },
+    ServerError { message: String, code: u16 },
+    NetworkError { reason: String }
+}
+
+# 避免过于简单的命名
+unite Bad {
+    A { x: i32 },
+    B { y: String }
+}
+```
+
+### 2. 合理使用字段命名
+
+```valkyrie
+# 当只有一个字段时，使用 value
+unite Option⟨T⟩ {
+    Some { value: T },
+    None
+}
+
+# 多个字段时使用描述性名称
+unite Person {
+    Student { name: String, grade: i32 },
+    Teacher { name: String, subject: String }
+}
+```
+
+### 3. 辅助方法
+
+```valkyrie
+unite ValidationResult⟨T⟩ {
+    Valid { data: T },
+    Invalid { errors: [String] },
+    # 便利方法
+    micro is_valid(self) -> bool {
+        matches!(self, Valid { .. })
+    }
+    
+    micro get_errors(self) -> [String] {
+        if let Invalid { errors } = self {
+            errors
+        } else {
+            []
+        }
+    }
+}
+```
+
+### 4. 错误处理
+
+```valkyrie
+# 使用 Result 进行错误处理
+micro divide(a: f64, b: f64) -> Result⟨f64, String⟩ {
+    if b == 0.0 {
+        Fail { error: "除零错误" }
+    } else {
+        Fine { value: a / b }
+    }
+}
+
+# 链式错误处理
+micro process_data(input: String) -> Result⟨ProcessedData, Error⟩ {
+    input
+        .parse()
+        .map_err { Error::ParseError(%e) }?
+        .validate()
+        .map_err { Error::ValidationError(%e) }?
+        .transform()
+        .map_err { Error::TransformError(%e) }
+}
+```
+
+联合类型用于以类型安全的方式处理多种可能值，适用于错误处理、状态表示和数据建模等场景。
+
+---
+
+**上一页**: [代数数据类型 (ADT)](./algebraic-data-types.md) | **下一页**: [指针与引用](./pointer-type.md)

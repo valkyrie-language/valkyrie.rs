@@ -5,6 +5,9 @@
 //! 2. `ildasm` 文本转换（可选，仅 `Windows` 且 `ildasm` 可用时）。
 //!
 //! 对于 `.msil` / `.il` 文本，直接使用 `MsilParser` 解析方法体。
+//!
+//! `PE/CLR` 二进制解析与 `MSIL` 文本解析模型统一由 `std-data` 提供，
+//! 本模块仅负责命令行入口与纯文本渲染。
 
 use std::{
     fs,
@@ -12,10 +15,17 @@ use std::{
     process::{Command, ExitCode},
 };
 
-use clr_backend::msil::{MsilParser, MsilTextMethod};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
+use std_data::{
+    binary::pe::{
+        CliHeader, IlInstruction, MetadataRoot, SectionHeader, parse_method_body_il, parse_pe, read_strings_string, rva_to_offset,
+        table_data_offset,
+        tables::{read_idx, read_u32_table},
+    },
+    text::msil::{IlOperand, MsilParser, MsilTextMethod},
+};
 
-use super::{pe_dump, pe_parser, SpyOptions, SpyTargetOptions};
+use super::{SpyOptions, SpyTargetOptions, pe_dump};
 
 /// 执行 CLR / MSIL dump。
 ///
@@ -53,7 +63,7 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
 fn run_pe_binary(target: &str, options: &SpyTargetOptions) -> Result<ExitCode> {
     let data = fs::read(target).into_diagnostic().map_err(|error| error.wrap_err(format!("无法读取文件 {}", target)))?;
 
-    match pe_parser::parse_pe(&data) {
+    match parse_pe(&data) {
         Ok(image) => {
             let dump = pe_dump::dump_image(&image);
             println!("{}", dump);
@@ -76,13 +86,7 @@ fn run_pe_binary(target: &str, options: &SpyTargetOptions) -> Result<ExitCode> {
 }
 
 /// 反汇编指定名称的方法体。
-fn disassemble_method(
-    data: &[u8],
-    sections: &[pe_parser::SectionHeader],
-    method_name: &str,
-    _cli: &pe_parser::CliHeader,
-    md: &pe_parser::MetadataRoot,
-) {
+fn disassemble_method(data: &[u8], sections: &[SectionHeader], method_name: &str, _cli: &CliHeader, md: &MetadataRoot) {
     // 查找匹配的方法名。
     let methoddef_rows = md.row_counts[0x06 as usize]; // MethodDef
     let strings_idx_size = if md.strings.len() > 0xFFFF { 4 } else { 2 };
@@ -95,32 +99,32 @@ fn disassemble_method(
 
     for i in 0..methoddef_rows {
         // 从 table_sizes 获取正确的偏移。
-        let cursor = super::table_sizes::table_data_offset(md, 0x06).unwrap_or(0);
+        let cursor = table_data_offset(md, 0x06).unwrap_or(0);
         let row_start = cursor + (i as usize) * row_size;
         if row_start + row_size > md.tables.len() {
             continue;
         }
 
         let mut off = row_start + 8; // 跳过 RVA, ImplFlags, Flags
-        let name_idx = super::pe_dump::read_idx(&md.tables, off, strings_idx_size);
-        let name = pe_parser::read_strings_string(&md.strings, name_idx);
+        let name_idx = read_idx(&md.tables, off, strings_idx_size);
+        let name = read_strings_string(&md.strings, name_idx);
 
         if !name.contains(method_name) {
             continue;
         }
 
         off += strings_idx_size;
-        let sig_idx = super::pe_dump::read_idx(&md.tables, off, blob_idx_size);
+        let sig_idx = read_idx(&md.tables, off, blob_idx_size);
 
         // 从 MethodDef 表获取 RVA。
-        let rva = super::pe_dump::read_u32_table(&md.tables, row_start);
+        let rva = read_u32_table(&md.tables, row_start);
 
         println!("\n=== 方法体反汇编: {} (Row {}) ===", name, i + 1);
         println!("  RVA: 0x{:08X}", rva);
         println!("  SigBlob: 0x{:08X}", sig_idx);
 
         // 从 .text 节读取方法体原始字节。
-        let file_offset = match pe_parser::rva_to_offset(sections, rva) {
+        let file_offset = match rva_to_offset(sections, rva) {
             Ok(offset) => offset as usize,
             Err(_) => {
                 println!("  错误：无法解析 RVA 0x{:08X}", rva);
@@ -143,11 +147,11 @@ fn disassemble_method(
         let is_tiny = (header_byte & 0x03) == 0x02;
 
         if is_tiny {
-            let code_len_bytes = ((header_byte >> 3) & 0x1F) * 2;
+            let code_len_bytes = (header_byte >> 2) as usize;
             println!("  Format: Tiny ({} bytes)", code_len_bytes);
 
             let il_data = &data[file_offset + 1..file_offset + 1 + code_len_bytes as usize];
-            let instructions = pe_parser::parse_method_body_il(il_data, true);
+            let instructions = parse_method_body_il(il_data, true);
             print_il_instructions(&instructions);
         }
         else {
@@ -171,7 +175,7 @@ fn disassemble_method(
 
             // 传递完整方法体（含 header）给 parse_method_body_il，让它自行解析 header。
             let body_data = &data[file_offset..file_offset + 12 + code_len];
-            let instructions = pe_parser::parse_method_body_il(body_data, false);
+            let instructions = parse_method_body_il(body_data, false);
             print_il_instructions(&instructions);
         }
 
@@ -180,10 +184,32 @@ fn disassemble_method(
 }
 
 /// 打印 IL 指令列表。
-fn print_il_instructions(instructions: &[pe_parser::IlInstruction]) {
+fn print_il_instructions(instructions: &[IlInstruction]) {
     for instr in instructions {
-        let line = format!("    {:>4}:  {}\t{}", instr.offset, instr.opcode, instr.operand.as_deref().unwrap_or(""));
+        let operand = format_il_operand(&instr.operand);
+        let line = format!("    {:>4}:  {}\t{}", instr.offset, instr.opcode, operand);
         println!("{}", line);
+    }
+}
+
+/// 将结构化 `IL` 操作数渲染为人类可读文本。
+fn format_il_operand(operand: &IlOperand) -> String {
+    match operand {
+        IlOperand::None => String::new(),
+        IlOperand::ShortBrTarget(target) | IlOperand::BrTarget(target) => format!("0x{:X}", target),
+        IlOperand::FieldToken(token)
+        | IlOperand::MethodToken(token)
+        | IlOperand::TypeToken(token)
+        | IlOperand::StringToken(token)
+        | IlOperand::Token(token) => format!("0x{:08X}", token),
+        IlOperand::Byte(value) => value.to_string(),
+        IlOperand::Short(value) => value.to_string(),
+        IlOperand::Int8(value) => value.to_string(),
+        IlOperand::Int32(value) => value.to_string(),
+        IlOperand::Int64(value) => value.to_string(),
+        IlOperand::Float32(value) => value.to_string(),
+        IlOperand::Float64(value) => value.to_string(),
+        IlOperand::Switch(targets) => format!("{:?}", targets),
     }
 }
 

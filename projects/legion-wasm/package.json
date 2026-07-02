@@ -1,0 +1,42 @@
+{
+  "name": "@valkyrie-language/legion",
+  "version": "0.1.4",
+  "description": "Legion compiler CLI for Node.js (WebAssembly).",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "legion": "bin/legion.mjs"
+  },
+  "exports": {
+    ".": "./bin/legion.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "legion.wasm",
+    "run-contracts.txt",
+    "provenance.json",
+    "SHA256SUMS",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "valkyrie",
+    "legion",
+    "wasm",
+    "wasm-gc",
+    "compiler"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/valkyrie-language/valkyrie.rs.git",
+    "directory": "packages/legion-wasm"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

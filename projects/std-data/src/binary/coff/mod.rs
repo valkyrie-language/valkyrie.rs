@@ -1,6 +1,4 @@
-#![doc = include_str!("readme.md")]
-
-use miette::{miette, Result};
+use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
 
 use nyar::abstractions::{BinaryArch, ObjectKind};
@@ -61,12 +59,26 @@ pub struct CoffSection {
 /// 重定位种类。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CoffRelocationKind {
-    /// 绝对地址。
+    /// `IMAGE_REL_AMD64_ADDR64`
+    Addr64,
+    /// `IMAGE_REL_AMD64_REL32`
+    Rel32,
+    /// 绝对地址（占位）。
     Absolute,
-    /// 相对地址。
+    /// 相对地址（占位）。
     Relative,
-    /// 段地址。
+    /// 段地址（占位）。
     SectionRelative,
+}
+
+impl CoffRelocationKind {
+    fn amd64_type(self) -> u16 {
+        match self {
+            Self::Addr64 => 0x0001,
+            Self::Rel32 => 0x0004,
+            Self::Absolute | Self::Relative | Self::SectionRelative => 0x0004,
+        }
+    }
 }
 
 /// `COFF` 重定位项。
@@ -118,13 +130,17 @@ impl CoffObjectWriter {
         let section_headers_size = object.sections.len() * 40usize;
         let mut raw_data_offset = header_size + section_headers_size;
         let mut section_raw_offsets = Vec::with_capacity(object.sections.len());
+        let mut section_reloc_offsets = Vec::with_capacity(object.sections.len());
 
         for section in &object.sections {
+            section_reloc_offsets.push(u32::try_from(raw_data_offset).map_err(|_| miette!("`COFF` 重定位偏移超过 32 位范围"))?);
+            raw_data_offset += section.relocations.len() * 10;
             section_raw_offsets.push(u32::try_from(raw_data_offset).map_err(|_| miette!("`COFF` 偏移超过 32 位范围"))?);
             raw_data_offset += section.data.len();
         }
 
         let symbol_table_offset = u32::try_from(raw_data_offset).map_err(|_| miette!("符号表偏移超过 32 位范围"))?;
+        let symbol_name_to_index = build_symbol_index_map(object);
         let mut bytes = Vec::new();
         let mut string_table = CoffStringTable::new();
 
@@ -142,14 +158,21 @@ impl CoffObjectWriter {
             bytes.extend_from_slice(&0u32.to_le_bytes());
             bytes.extend_from_slice(&(u32::try_from(section.data.len()).map_err(|_| miette!("节数据过大"))?).to_le_bytes());
             bytes.extend_from_slice(&section_raw_offsets[index].to_le_bytes());
-            bytes.extend_from_slice(&0u32.to_le_bytes());
-            bytes.extend_from_slice(&0u32.to_le_bytes());
-            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&section_reloc_offsets[index].to_le_bytes());
+            bytes.extend_from_slice(&(u16::try_from(section.relocations.len()).map_err(|_| miette!("重定位项过多"))?).to_le_bytes());
             bytes.extend_from_slice(&0u16.to_le_bytes());
             bytes.extend_from_slice(&section.characteristics.to_le_bytes());
         }
 
         for section in &object.sections {
+            for relocation in &section.relocations {
+                let symbol_index = *symbol_name_to_index
+                    .get(&relocation.symbol_name)
+                    .ok_or_else(|| miette!("重定位引用未知符号 `{}`", relocation.symbol_name))?;
+                bytes.extend_from_slice(&relocation.offset.to_le_bytes());
+                bytes.extend_from_slice(&symbol_index.to_le_bytes());
+                bytes.extend_from_slice(&relocation.kind.amd64_type().to_le_bytes());
+            }
             bytes.extend_from_slice(&section.data);
         }
 
@@ -165,6 +188,10 @@ impl CoffObjectWriter {
         bytes.extend_from_slice(&string_table.to_bytes()?);
         Ok(bytes)
     }
+}
+
+fn build_symbol_index_map(object: &CoffObject) -> std::collections::BTreeMap<String, u32> {
+    object.symbols.iter().enumerate().map(|(index, symbol)| (symbol.name.clone(), index as u32)).collect()
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -214,4 +241,43 @@ fn encode_name(name: &str, out: &mut Vec<u8>, string_table: &mut CoffStringTable
     let offset = string_table.intern(name)?;
     out.extend_from_slice(&offset.to_le_bytes());
     Ok(())
+}
+
+/// 从原生镜像构建 `COFF` 对象 sidecar。
+pub fn coff_object_from_sections(machine: CoffMachine, sections: Vec<CoffSection>, symbols: Vec<CoffSymbol>) -> CoffObject {
+    CoffObject {
+        header: CoffHeader {
+            machine,
+            section_count: u16::try_from(sections.len()).unwrap_or(0),
+            symbol_table_offset: 0,
+            symbol_count: u32::try_from(symbols.len()).unwrap_or(0),
+            characteristics: 0,
+        },
+        object_kind: ObjectKind::ObjectFile,
+        sections,
+        symbols,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn writes_section_relocations() {
+        let object = CoffObject {
+            header: CoffHeader { machine: CoffMachine::Amd64, section_count: 1, symbol_table_offset: 0, symbol_count: 1, characteristics: 0 },
+            object_kind: ObjectKind::ObjectFile,
+            sections: vec![CoffSection {
+                name: ".text".to_string(),
+                data: vec![0x31, 0xC0, 0xC3],
+                relocations: vec![CoffRelocation { offset: 0, symbol_name: "main".to_string(), kind: CoffRelocationKind::Rel32 }],
+                characteristics: 0x6000_0020,
+            }],
+            symbols: vec![CoffSymbol { name: "main".to_string(), section_index: 1, value: 0, storage_class: 2 }],
+        };
+        let bytes = CoffObjectWriter::write(&object).expect("write coff");
+        assert!(bytes.len() > 40);
+        assert_eq!(u16::from_le_bytes([bytes[0], bytes[1]]), 0x8664);
+    }
 }

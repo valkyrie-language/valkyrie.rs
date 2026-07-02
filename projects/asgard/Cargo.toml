@@ -1,0 +1,26 @@
+[package]
+name = "voa"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "VOA (Valkyrie of Asgard) compiler — AWSL frontend, packaging, and WASM delivery"
+
+[[bin]]
+name = "asgard"
+path = "src/main.rs"
+
+[dependencies]
+std-data = { workspace = true }
+nyar-language = { workspace = true, features = ["serde"] }
+nyar-analyzer = { workspace = true }
+emitter = { workspace = true }
+nyar = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+zip = { workspace = true }
+[dev-dependencies]
+tempfile = { workspace = true }
+zip = { workspace = true }

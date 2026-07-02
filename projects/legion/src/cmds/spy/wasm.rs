@@ -2,25 +2,14 @@
 
 use std::{fs, path::Path, process::ExitCode};
 
-use miette::{miette, IntoDiagnostic, Result};
-use wasi_backend::WasmBinaryModule;
+use miette::{IntoDiagnostic, Result, miette};
+use std_data::binary::wasm::{
+    DecodedInstruction, DecodedOperand, SECTION_CUSTOM, WasmBinaryModule, WasmExternalKind, WasmFunctionEntry, WasmImport, WasmTypeEntry,
+    WasmTypeKind, decode_code_body, parse_code_section, parse_export_section, parse_import_section, parse_type_section, section_name,
+    uleb128_size, wasm_value_type_name,
+};
 
 use super::{SpyOptions, SpyTargetOptions};
-
-/// WASM 段 id 常量。
-const SECTION_CUSTOM: u8 = 0;
-const SECTION_TYPE: u8 = 1;
-const SECTION_IMPORT: u8 = 2;
-const SECTION_FUNCTION: u8 = 3;
-const SECTION_TABLE: u8 = 4;
-const SECTION_MEMORY: u8 = 5;
-const SECTION_GLOBAL: u8 = 6;
-const SECTION_EXPORT: u8 = 7;
-const SECTION_START: u8 = 8;
-const SECTION_ELEMENT: u8 = 9;
-const SECTION_CODE: u8 = 10;
-const SECTION_DATA: u8 = 11;
-const SECTION_DATA_COUNT: u8 = 12;
 
 /// 执行 WASM 二进制反汇编。
 ///
@@ -30,13 +19,14 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
     let Some(target) = &opts.input
     else {
         return Err(miette!(
-            r#"用法：legion spy wasm <file> [--func <index|name>] [--list] [--offset <abs>] [--json] [--hex]
-  file             目标 WASM 二进制文件
-  --func <i|name>  反汇编指定函数（索引或名称）
-  --list           列出所有函数 / 段
-  --offset <abs>   定位绝对偏移量处的指令
+            r#"用法：legion spy wasm <file> [--func <index|name>] [--list] [--offset <abs>] [--json] [--hex] [--glue-audit]
+  file             目标 WASM / WASI component（`.wasm` / `.wasi` / `.core.wasm`）
+  --func <i|name>  反汇编指定函数（索引或名称；仅 core module）
+  --list           列出所有函数 / 段（component 则列出 section id）
+  --offset <abs>   定位绝对偏移量处的指令（仅 core module）
   --json           以 JSON 格式输出
-  --hex            dump 函数体原始字节（配合 --func）"#
+  --hex            dump 函数体原始字节（配合 --func）
+  --glue-audit     审计 Node JS-glue：cli_get_* 导入与 help/version/build/main 导出匹配性"#
         ));
     };
 
@@ -46,7 +36,28 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
 
     let data = fs::read(target).into_diagnostic().map_err(|error| error.wrap_err(format!("无法读取文件 {}", target)))?;
 
+    // Component-model binaries share the `\0asm` magic but use a non-1 version.
+    // Prefer a dedicated overview over failing the core-module parser.
+    if let Some(component_version) = detect_component_version(&data) {
+        return dump_component_overview(target, &data, component_version, opts);
+    }
+
     let module = WasmBinaryModule::from_bytes(&data).map_err(|error| miette!("WASM 解析失败：{error}"))?;
+
+    // Type 段结构化解析模式（优先级仅次于偏移定位）
+    if opts.types {
+        return dump_type_section(&module, &data, opts);
+    }
+
+    // GC layout 覆盖审计
+    if opts.gc_audit {
+        return dump_gc_audit(&module, &data, opts);
+    }
+
+    // Node JS-glue 契约审计
+    if opts.glue_audit {
+        return dump_glue_audit(&module, opts);
+    }
 
     // 偏移定位模式优先级最高
     if let Some(offset) = opts.offset {
@@ -77,35 +88,35 @@ fn print_overview(module: &WasmBinaryModule, data: &[u8], opts: &SpyTargetOption
     // 段摘要
     println!("=== 段列表 ===");
     for (index, section) in module.sections.iter().enumerate() {
-        let section_name = section_name(section.id);
+        let name = section_name(section.id);
         let detail =
             if section.id == SECTION_CUSTOM { section.name.clone().unwrap_or_default() } else { format!("{} 字节", section.bytes.len()) };
-        println!("  [{}] id={} {:<16} {}", index, section.id, section_name, detail);
+        println!("  [{}] id={} {:<16} {}", index, section.id, name, detail);
     }
     println!();
 
     // imports
-    let imports = parse_imports(module);
+    let imports = parse_import_section(module);
     if !imports.is_empty() {
         println!("=== Imports（{} 项）===", imports.len());
         for imp in &imports {
-            println!("  {:<12} {}.{} : {}", imp.kind_str(), imp.module, imp.field, imp.type_str());
+            println!("  {:<12} {}.{} : {}", imp.kind.name(), imp.module, imp.field, format_import_type(imp));
         }
         println!();
     }
 
     // exports
-    let exports = parse_exports(module);
+    let exports = parse_export_section(module);
     if !exports.is_empty() {
         println!("=== Exports（{} 项）===", exports.len());
         for exp in &exports {
-            println!("  {:<12} {} : index={}", exp.kind_str(), exp.name, exp.index);
+            println!("  {:<12} {} : index={}", exp.kind.name(), exp.name, exp.index);
         }
         println!();
     }
 
     // 函数列表
-    let functions = parse_functions(module);
+    let functions = parse_code_section(module);
     if !functions.is_empty() {
         println!("=== 函数（{} 项）===", functions.len());
         for func in &functions {
@@ -120,20 +131,27 @@ fn print_overview(module: &WasmBinaryModule, data: &[u8], opts: &SpyTargetOption
 
 /// 反汇编指定函数。
 fn disassemble_function(module: &WasmBinaryModule, data: &[u8], func_spec: &str, opts: &SpyTargetOptions) -> Result<ExitCode> {
-    let functions = parse_functions(module);
+    let functions = parse_code_section(module);
+    let mir_functions = parse_nyar_wasm_functions(module);
 
-    // 按索引或名称查找函数
+    // 按索引、导出名，或 `nyar.wasm.functions` MIR 符号（完整路径 / 后缀）查找。
     let target_func = if let Ok(index) = func_spec.parse::<usize>() {
         functions.iter().find(|f| f.index == index)
     }
     else {
-        functions.iter().find(|f| f.name.as_deref() == Some(func_spec))
+        functions.iter().find(|f| f.name.as_deref() == Some(func_spec)).or_else(|| {
+            mir_functions.iter().find_map(|(index, symbol)| {
+                let matched =
+                    symbol == func_spec || symbol.ends_with(&format!("::{func_spec}")) || symbol.rsplit([':', '.']).next() == Some(func_spec);
+                matched.then(|| functions.iter().find(|f| f.index == *index)).flatten()
+            })
+        })
     };
 
     let Some(func) = target_func
     else {
         return Err(miette!(
-            "未找到函数 '{}'，当前共有 {} 个函数（索引 0..{}）",
+            "未找到函数 '{}'，当前共有 {} 个函数（索引 0..{}）；可用导出名、函数索引或 MIR 符号（如 `legion::execute_build_from_cli`）",
             func_spec,
             functions.len(),
             functions.len().saturating_sub(1)
@@ -147,8 +165,10 @@ fn disassemble_function(module: &WasmBinaryModule, data: &[u8], func_spec: &str,
         return Ok(ExitCode::SUCCESS);
     }
 
+    let instructions = disassemble_function_body(data, func);
+
     if opts.json {
-        print_json_function(func, data);
+        print_json_function(func, &instructions);
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -157,12 +177,14 @@ fn disassemble_function(module: &WasmBinaryModule, data: &[u8], func_spec: &str,
     if let Some(name) = &func.name {
         println!("名称: {}", name);
     }
+    if let Some(mir_symbol) = mir_functions.get(&func.index) {
+        println!("MIR: {}", mir_symbol);
+    }
     println!("代码偏移: 0x{:04X}", func.code_offset);
     println!("代码长度: {} 字节", func.body_len);
     println!("局部变量组: {}", func.local_groups);
     println!();
 
-    let instructions = disassemble_function_body(data, func);
     print_instructions(&instructions);
     Ok(ExitCode::SUCCESS)
 }
@@ -175,7 +197,7 @@ fn locate_offset(data: &[u8], offset: usize, opts: &SpyTargetOptions) -> Result<
 
     let module = WasmBinaryModule::from_bytes(data).map_err(|error| miette!("WASM 解析失败：{error}"))?;
 
-    let functions = parse_functions(&module);
+    let functions = parse_code_section(&module);
 
     // 查找包含该偏移的函数
     let containing = functions.iter().find(|f| {
@@ -194,14 +216,20 @@ fn locate_offset(data: &[u8], offset: usize, opts: &SpyTargetOptions) -> Result<
         if let Some(name) = &func.name {
             println!("函数名: {}", name);
         }
+        let mir_functions = parse_nyar_wasm_functions(&module);
+        if let Some(mir_symbol) = mir_functions.get(&func.index) {
+            println!("MIR: {}", mir_symbol);
+        }
         println!("函数代码范围: 0x{:04X}..0x{:04X}", func.code_offset, func.code_offset + func.body_len);
         println!();
 
         // 反汇编该函数并高亮目标偏移
         let instructions = disassemble_function_body(data, func);
         let context = opts.context;
-        let target_pos =
-            instructions.iter().position(|instr| instr.offset == offset || (instr.offset <= offset && offset < instr.offset + instr.size));
+        let target_pos = instructions.iter().enumerate().find_map(|(i, instr)| {
+            let end = instructions.get(i + 1).map(|n| n.offset).unwrap_or(instr.offset + 1);
+            if instr.offset == offset || (instr.offset <= offset && offset < end) { Some(i) } else { None }
+        });
 
         match target_pos {
             Some(center) => {
@@ -209,7 +237,7 @@ fn locate_offset(data: &[u8], offset: usize, opts: &SpyTargetOptions) -> Result<
                 let end = (center + context + 1).min(instructions.len());
                 for (i, instr) in instructions[start..end].iter().enumerate() {
                     let marker = if i == center - start { ">>>" } else { "   " };
-                    println!("{} {:>4}:  {:<20} {}", marker, instr.offset, instr.mnemonic, instr.operand.as_deref().unwrap_or(""));
+                    println!("{} {:>4}:  {:<20} {}", marker, instr.offset, instr.mnemonic, format_operands(&instr.operands));
                 }
             }
             None => {
@@ -249,600 +277,376 @@ fn locate_offset(data: &[u8], offset: usize, opts: &SpyTargetOptions) -> Result<
     Ok(ExitCode::SUCCESS)
 }
 
-// ========== WASM 段解析 ==========
-
-/// 导入项。
-#[derive(Debug, Clone)]
-struct WasmImport {
-    module: String,
-    field: String,
-    kind: u8,
-    /// 函数类型索引（kind=0 时有效）。
-    type_index: u32,
-    /// 表元素类型（kind=1 时有效）。
-    table_elem_type: u8,
-    /// 内存限制（kind=2 时有效）。
-    memory_min: u32,
-    memory_max: Option<u32>,
-    /// 全局变量类型（kind=3 时有效）。
-    global_value_type: u8,
-    global_mutable: bool,
-}
-
-impl WasmImport {
-    fn kind_str(&self) -> &'static str {
-        match self.kind {
-            0 => "func",
-            1 => "table",
-            2 => "memory",
-            3 => "global",
-            _ => "unknown",
-        }
-    }
-
-    fn type_str(&self) -> String {
-        match self.kind {
-            0 => format!("type={}", self.type_index),
-            1 => format!("elem={:02X}", self.table_elem_type),
-            2 => match self.memory_max {
-                Some(max) => format!("limits={}..{}", self.memory_min, max),
-                None => format!("limits={}", self.memory_min),
-            },
-            3 => format!("valtype={:02X}, mut={}", self.global_value_type, self.global_mutable),
-            _ => "?".to_string(),
-        }
-    }
-}
-
-/// 导出项。
-#[derive(Debug, Clone)]
-struct WasmExport {
-    name: String,
-    kind: u8,
-    index: u32,
-}
-
-impl WasmExport {
-    fn kind_str(&self) -> &'static str {
-        match self.kind {
-            0 => "func",
-            1 => "table",
-            2 => "memory",
-            3 => "global",
-            _ => "unknown",
-        }
-    }
-}
-
-/// 函数信息。
-#[derive(Debug, Clone)]
-struct WasmFunction {
-    index: usize,
-    name: Option<String>,
-    code_offset: usize,
-    body_len: usize,
-    local_groups: usize,
-}
-
-/// 反汇编后的指令。
-#[derive(Debug, Clone)]
-struct WasmInstruction {
-    offset: usize,
-    size: usize,
-    mnemonic: String,
-    operand: Option<String>,
-}
-
-/// 解析 Import 段。
-fn parse_imports(module: &WasmBinaryModule) -> Vec<WasmImport> {
-    let Some(import_section) = module.sections.iter().find(|s| s.id == SECTION_IMPORT)
-    else {
-        return Vec::new();
-    };
-
-    let mut reader = ByteReader::new(&import_section.bytes);
-    let count = match reader.read_uleb128() {
-        Ok(c) => c,
-        Err(_) => return Vec::new(),
-    };
-
-    let mut imports = Vec::with_capacity(count as usize);
-    for _ in 0..count {
-        let module_name = match reader.read_string() {
-            Ok(s) => s,
-            Err(_) => break,
-        };
-        let field_name = match reader.read_string() {
-            Ok(s) => s,
-            Err(_) => break,
-        };
-        let kind = match reader.read_u8() {
-            Ok(k) => k,
-            Err(_) => break,
-        };
-
-        let mut imp = WasmImport {
-            module: module_name,
-            field: field_name,
-            kind,
-            type_index: 0,
-            table_elem_type: 0,
-            memory_min: 0,
-            memory_max: None,
-            global_value_type: 0,
-            global_mutable: false,
-        };
-
-        match kind {
-            0 => {
-                if let Ok(idx) = reader.read_uleb128() {
-                    imp.type_index = idx;
-                }
-            }
-            1 => {
-                if let Ok(elem_type) = reader.read_u8() {
-                    imp.table_elem_type = elem_type;
-                }
-                if let Ok(flags) = reader.read_u8() {
-                    if flags & 0x01 != 0 {
-                        if let Ok(min) = reader.read_uleb128() {
-                            imp.memory_min = min;
-                        }
-                        if let Ok(max) = reader.read_uleb128() {
-                            imp.memory_max = Some(max);
-                        }
-                    }
-                    else {
-                        if let Ok(min) = reader.read_uleb128() {
-                            imp.memory_min = min;
-                        }
-                    }
-                }
-            }
-            2 => {
-                if let Ok(flags) = reader.read_u8() {
-                    if let Ok(min) = reader.read_uleb128() {
-                        imp.memory_min = min;
-                    }
-                    if flags & 0x01 != 0 {
-                        if let Ok(max) = reader.read_uleb128() {
-                            imp.memory_max = Some(max);
-                        }
-                    }
-                }
-            }
-            3 => {
-                if let Ok(val_type) = reader.read_u8() {
-                    imp.global_value_type = val_type;
-                }
-                if let Ok(mutability) = reader.read_u8() {
-                    imp.global_mutable = mutability != 0;
-                }
-            }
-            _ => break,
-        }
-
-        imports.push(imp);
-    }
-
-    imports
-}
-
-/// 解析 Export 段。
-fn parse_exports(module: &WasmBinaryModule) -> Vec<WasmExport> {
-    let Some(export_section) = module.sections.iter().find(|s| s.id == SECTION_EXPORT)
-    else {
-        return Vec::new();
-    };
-
-    let mut reader = ByteReader::new(&export_section.bytes);
-    let count = match reader.read_uleb128() {
-        Ok(c) => c,
-        Err(_) => return Vec::new(),
-    };
-
-    let mut exports = Vec::with_capacity(count as usize);
-    for _ in 0..count {
-        let name = match reader.read_string() {
-            Ok(s) => s,
-            Err(_) => break,
-        };
-        let kind = match reader.read_u8() {
-            Ok(k) => k,
-            Err(_) => break,
-        };
-        let index = match reader.read_uleb128() {
-            Ok(i) => i,
-            Err(_) => break,
-        };
-        exports.push(WasmExport { name, kind, index });
-    }
-
-    exports
-}
-
-/// 解析 Code 段中的函数列表。
-fn parse_functions(module: &WasmBinaryModule) -> Vec<WasmFunction> {
-    let Some(code_section) = module.sections.iter().find(|s| s.id == SECTION_CODE)
-    else {
-        return Vec::new();
-    };
-
-    // 计算段在文件中的绝对偏移
-    let section_abs_offset = compute_section_offset(module, SECTION_CODE);
-
-    let mut reader = ByteReader::new(&code_section.bytes);
-    let count = match reader.read_uleb128() {
-        Ok(c) => c,
-        Err(_) => return Vec::new(),
-    };
-
-    // 导入函数数量（用于计算函数索引基址）
-    let import_func_count = parse_imports(module).iter().filter(|i| i.kind == 0).count();
-
-    // 从 Export 段提取函数名
-    let export_names = parse_exports(module);
-    let mut func_names = std::collections::HashMap::new();
-    for exp in &export_names {
-        if exp.kind == 0 {
-            func_names.insert(exp.index as usize, exp.name.clone());
-        }
-    }
-
-    let mut functions = Vec::with_capacity(count as usize);
-
-    for i in 0..count {
-        let func_index = import_func_count + i as usize;
-
-        let body_size = match reader.read_uleb128() {
-            Ok(s) => s as usize,
-            Err(_) => break,
-        };
-
-        // 函数体在段内的偏移
-        let body_offset_in_section = reader.offset;
-        // 函数体在文件中的绝对偏移（reader.offset 已指向 body 开始）
-        let code_offset = section_abs_offset + reader.offset;
-
-        // 读取局部变量组
-        let local_groups = match reader.read_uleb128() {
-            Ok(g) => g as usize,
-            Err(_) => break,
-        };
-
-        // 跳过局部变量声明
-        for _ in 0..local_groups {
-            let _ = reader.read_uleb128();
-            let _ = reader.read_u8();
-        }
-
-        // 跳过整个函数体
-        let body_end = body_offset_in_section + body_size;
-        if body_end > code_section.bytes.len() {
-            break;
-        }
-        reader.offset = body_end;
-
-        functions.push(WasmFunction {
-            index: func_index,
-            name: func_names.get(&func_index).cloned(),
-            code_offset,
-            body_len: body_size,
-            local_groups,
-        });
-    }
-
-    functions
-}
-
-/// 计算指定段在文件中的绝对偏移。
-fn compute_section_offset(module: &WasmBinaryModule, target_id: u8) -> usize {
-    let mut offset = 8; // magic(4) + version(4)
-    for section in &module.sections {
-        let id_field_size = 1;
-        let name_overhead =
-            if section.id == SECTION_CUSTOM { section.name.as_ref().map(|n| n.len() + uleb128_size(n.len() as u32)).unwrap_or(0) } else { 0 };
-        let payload_len = if section.id == SECTION_CUSTOM { name_overhead + section.bytes.len() } else { section.bytes.len() };
-        let len_field_size = uleb128_size(payload_len as u32);
-
-        if section.id == target_id {
-            return offset + id_field_size + len_field_size + name_overhead;
-        }
-
-        offset += id_field_size + len_field_size + payload_len;
-    }
-    offset
-}
+// ========== 函数体辅助 ==========
 
 /// 读取函数体原始字节。
-fn read_function_body(data: &[u8], func: &WasmFunction) -> Vec<u8> {
+fn read_function_body(data: &[u8], func: &WasmFunctionEntry) -> Vec<u8> {
     let start = func.code_offset;
     let end = (start + func.body_len).min(data.len());
     data[start..end].to_vec()
 }
 
 /// 反汇编函数体指令。
-fn disassemble_function_body(data: &[u8], func: &WasmFunction) -> Vec<WasmInstruction> {
+///
+/// 委托 `std-data` 的 `decode_code_body` 完成局部变量跳过与逐条解码，
+/// 再将相对偏移修正为文件绝对偏移，以保持 `spy` 的偏移语义。
+fn disassemble_function_body(data: &[u8], func: &WasmFunctionEntry) -> Vec<DecodedInstruction> {
     let body_start = func.code_offset;
     let body_end = (body_start + func.body_len).min(data.len());
 
-    let mut reader = ByteReader::new(&data[body_start..body_end]);
-    let mut instructions = Vec::new();
-
-    // 跳过局部变量声明
-    let local_groups = match reader.read_uleb128() {
-        Ok(g) => g,
-        Err(_) => return instructions,
-    };
-    for _ in 0..local_groups {
-        let _ = reader.read_uleb128();
-        let _ = reader.read_u8();
+    let mut instructions = decode_code_body(&data[body_start..body_end]);
+    for instr in &mut instructions {
+        instr.offset += body_start;
     }
-
-    // 反汇编指令直到 end
-    loop {
-        if reader.is_eof() {
-            break;
-        }
-
-        let instr_offset = body_start + reader.offset;
-        let opcode = match reader.read_u8() {
-            Ok(b) => b,
-            Err(_) => break,
-        };
-
-        let (mnemonic, operand, _) = decode_instruction(opcode, &mut reader, instr_offset);
-        let total_size = reader.offset - (instr_offset - body_start);
-
-        instructions.push(WasmInstruction { offset: instr_offset, size: total_size, mnemonic, operand });
-
-        // end (0x0B) 表示函数结束
-        if opcode == 0x0B {
-            break;
-        }
-    }
-
     instructions
 }
 
-/// 解码单条指令。
-fn decode_instruction(opcode: u8, reader: &mut ByteReader, _offset: usize) -> (String, Option<String>, usize) {
-    match opcode {
-        // 控制流
-        0x00 => ("unreachable".to_string(), None, 1),
-        0x01 => ("nop".to_string(), None, 1),
-        0x02 => {
-            let bt = reader.read_block_type().ok();
-            ("block".to_string(), bt.map(|b| block_type_str(b)), 1)
+// ========== nyar custom section 解析 ==========
+
+fn custom_section_bytes(module: &WasmBinaryModule, name: &str) -> Option<Vec<u8>> {
+    module
+        .sections
+        .iter()
+        .find(|section| section.id == SECTION_CUSTOM && section.name.as_deref() == Some(name))
+        .map(|section| section.bytes.clone())
+}
+
+fn parse_nyar_wasm_functions(module: &WasmBinaryModule) -> std::collections::HashMap<usize, String> {
+    let Some(bytes) = custom_section_bytes(module, "nyar.wasm.functions")
+    else {
+        return std::collections::HashMap::new();
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    let mut map = std::collections::HashMap::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("import_count=") {
+            continue;
         }
-        0x03 => {
-            let bt = reader.read_block_type().ok();
-            ("loop".to_string(), bt.map(|b| block_type_str(b)), 1)
+        let Some((index, symbol)) = line.split_once('\t')
+        else {
+            continue;
+        };
+        if let Ok(wasm_index) = index.parse::<usize>() {
+            map.insert(wasm_index, symbol.to_string());
         }
-        0x04 => {
-            let bt = reader.read_block_type().ok();
-            ("if".to_string(), bt.map(|b| block_type_str(b)), 1)
+    }
+    map
+}
+
+/// 审计 Node / JS-glue 契约：CLI 导入是否与启动壳所需导出匹配。
+///
+/// `.mjs` 启动壳在同时存在 `cli_get_project` / `cli_get_target` / `cli_get_output` 时进入 CLI 模式，
+/// 并要求 `help` / `version` / `build` 导出。本审计用于在 Node 运行前用 spy 发现不匹配。
+fn dump_glue_audit(module: &WasmBinaryModule, opts: &SpyTargetOptions) -> Result<ExitCode> {
+    let imports = parse_import_section(module);
+    let exports = parse_export_section(module);
+    let import_fields: Vec<&str> = imports.iter().filter(|imp| imp.module == "env").map(|imp| imp.field.as_str()).collect();
+    let export_names: Vec<&str> = exports.iter().map(|exp| exp.name.as_str()).collect();
+
+    let has_cli_project = import_fields.contains(&"cli_get_project");
+    let has_cli_target = import_fields.contains(&"cli_get_target");
+    let has_cli_output = import_fields.contains(&"cli_get_output");
+    let cli_mode = has_cli_project && has_cli_target && has_cli_output;
+    let has_main = export_names.iter().any(|name| *name == "main" || *name == "_start");
+    let has_help = export_names.contains(&"help");
+    let has_version = export_names.contains(&"version");
+    let has_build = export_names.contains(&"build");
+
+    let mut warnings = Vec::new();
+    if cli_mode {
+        if !has_help {
+            warnings.push("CLI 模式导入齐全，但缺少 export `help`（`node <launcher> --help` / 空 argv 会失败）");
         }
-        0x05 => ("else".to_string(), None, 1),
-        0x0B => ("end".to_string(), None, 1),
-        0x0C => {
-            let l = reader.read_uleb128().ok();
-            ("br".to_string(), l.map(|v| v.to_string()), 1)
+        if !has_version {
+            warnings.push("CLI 模式导入齐全，但缺少 export `version`（`node <launcher> --version` 会失败）");
         }
-        0x0D => {
-            let l = reader.read_uleb128().ok();
-            ("br_if".to_string(), l.map(|v| v.to_string()), 1)
+        if !has_build {
+            warnings.push("CLI 模式导入齐全，但缺少 export `build`（`node <launcher> build ...` 会失败）");
         }
-        0x0E => {
-            let n = reader.read_uleb128().ok();
-            let mut targets = Vec::new();
-            if let Some(n) = n {
-                for _ in 0..n {
-                    if let Ok(t) = reader.read_uleb128() {
-                        targets.push(t);
-                    }
-                }
-            }
-            let default = reader.read_uleb128().ok();
-            ("br_table".to_string(), Some(format!("targets={:?}, default={:?}", targets, default)), 1)
+    }
+    if !has_main {
+        warnings.push("缺少 export `main` / `_start`（启动壳入口分派会失败）");
+    }
+
+    if opts.json {
+        let payload = serde_json::json!({
+            "cli_mode": cli_mode,
+            "imports": import_fields,
+            "exports": export_names,
+            "has_main": has_main,
+            "has_help": has_help,
+            "has_version": has_version,
+            "has_build": has_build,
+            "warnings": warnings,
+            "ok": warnings.is_empty(),
+        });
+        println!("{}", serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string()));
+        return Ok(if warnings.is_empty() { ExitCode::SUCCESS } else { ExitCode::FAILURE });
+    }
+
+    println!("=== Node JS-glue 契约审计 ===");
+    println!("  CLI 模式（cli_get_project/target/output 齐全）: {}", if cli_mode { "是" } else { "否" });
+    println!("  Imports (env): {}", if import_fields.is_empty() { "<none>".to_string() } else { import_fields.join(", ") });
+    println!("  Exports: {}", if export_names.is_empty() { "<none>".to_string() } else { export_names.join(", ") });
+    println!("  main/_start: {}  help: {}  version: {}  build: {}", has_main, has_help, has_version, has_build);
+    if warnings.is_empty() {
+        println!("  结果: OK");
+        Ok(ExitCode::SUCCESS)
+    }
+    else {
+        println!("  结果: 发现问题");
+        for warning in &warnings {
+            println!("  - {warning}");
         }
-        0x0F => ("return".to_string(), None, 1),
-        0x10 => {
-            let f = reader.read_uleb128().ok();
-            ("call".to_string(), f.map(|v| v.to_string()), 1)
-        }
-        0x11 => {
-            let t = reader.read_uleb128().ok();
-            let idx = reader.read_uleb128().ok();
-            ("call_indirect".to_string(), Some(format!("type={}, table={:?}", t.unwrap_or(0), idx)), 1)
-        }
-        // 参数指令
-        0x1A => ("drop".to_string(), None, 1),
-        0x1B => ("select".to_string(), None, 1),
-        0x1C => {
-            let n = reader.read_uleb128().ok();
-            let mut types = Vec::new();
-            if let Some(n) = n {
-                for _ in 0..n {
-                    if let Ok(t) = reader.read_u8() {
-                        types.push(t);
-                    }
-                }
-            }
-            ("select".to_string(), Some(format!("types={:?}", types)), 1)
-        }
-        // 变量指令
-        0x20 => {
-            let l = reader.read_uleb128().ok();
-            ("local.get".to_string(), l.map(|v| v.to_string()), 1)
-        }
-        0x21 => {
-            let l = reader.read_uleb128().ok();
-            ("local.set".to_string(), l.map(|v| v.to_string()), 1)
-        }
-        0x22 => {
-            let l = reader.read_uleb128().ok();
-            ("local.tee".to_string(), l.map(|v| v.to_string()), 1)
-        }
-        0x23 => {
-            let g = reader.read_uleb128().ok();
-            ("global.get".to_string(), g.map(|v| v.to_string()), 1)
-        }
-        0x24 => {
-            let g = reader.read_uleb128().ok();
-            ("global.set".to_string(), g.map(|v| v.to_string()), 1)
-        }
-        // 内存指令
-        0x28 => ("i32.load".to_string(), read_memarg(reader), 1),
-        0x29 => ("i64.load".to_string(), read_memarg(reader), 1),
-        0x2A => ("f32.load".to_string(), read_memarg(reader), 1),
-        0x2B => ("f64.load".to_string(), read_memarg(reader), 1),
-        0x2C => ("i32.load8_s".to_string(), read_memarg(reader), 1),
-        0x2D => ("i32.load8_u".to_string(), read_memarg(reader), 1),
-        0x2E => ("i32.load16_s".to_string(), read_memarg(reader), 1),
-        0x2F => ("i32.load16_u".to_string(), read_memarg(reader), 1),
-        0x36 => ("i32.store".to_string(), read_memarg(reader), 1),
-        0x37 => ("i64.store".to_string(), read_memarg(reader), 1),
-        0x38 => ("f32.store".to_string(), read_memarg(reader), 1),
-        0x39 => ("f64.store".to_string(), read_memarg(reader), 1),
-        0x3A => ("i32.store8".to_string(), read_memarg(reader), 1),
-        0x3B => ("i32.store16".to_string(), read_memarg(reader), 1),
-        0x3F => {
-            let _ = reader.read_u8();
-            ("memory.size".to_string(), None, 2)
-        }
-        0x40 => {
-            let _ = reader.read_u8();
-            ("memory.grow".to_string(), None, 2)
-        }
-        // 常量指令
-        0x41 => {
-            let v = reader.read_sleb128_i32().ok();
-            ("i32.const".to_string(), v.map(|v| v.to_string()), 1)
-        }
-        0x42 => {
-            let v = reader.read_sleb128_i64().ok();
-            ("i64.const".to_string(), v.map(|v| v.to_string()), 1)
-        }
-        0x43 => {
-            let v = reader.read_f32().ok();
-            ("f32.const".to_string(), v.map(|v| v.to_string()), 1)
-        }
-        0x44 => {
-            let v = reader.read_f64().ok();
-            ("f64.const".to_string(), v.map(|v| v.to_string()), 1)
-        }
-        // 比较指令
-        0x45 => ("i32.eqz".to_string(), None, 1),
-        0x46 => ("i32.eq".to_string(), None, 1),
-        0x47 => ("i32.ne".to_string(), None, 1),
-        0x48 => ("i32.lt_s".to_string(), None, 1),
-        0x49 => ("i32.lt_u".to_string(), None, 1),
-        0x4A => ("i32.gt_s".to_string(), None, 1),
-        0x4B => ("i32.gt_u".to_string(), None, 1),
-        0x4C => ("i32.le_s".to_string(), None, 1),
-        0x4D => ("i32.le_u".to_string(), None, 1),
-        0x4E => ("i32.ge_s".to_string(), None, 1),
-        0x4F => ("i32.ge_u".to_string(), None, 1),
-        // 数值指令
-        0x6A => ("i32.add".to_string(), None, 1),
-        0x6B => ("i32.sub".to_string(), None, 1),
-        0x6C => ("i32.mul".to_string(), None, 1),
-        0x6D => ("i32.div_s".to_string(), None, 1),
-        0x6E => ("i32.div_u".to_string(), None, 1),
-        0x6F => ("i32.rem_s".to_string(), None, 1),
-        0x70 => ("i32.rem_u".to_string(), None, 1),
-        0x71 => ("i32.and".to_string(), None, 1),
-        0x72 => ("i32.or".to_string(), None, 1),
-        0x73 => ("i32.xor".to_string(), None, 1),
-        0x74 => ("i32.shl".to_string(), None, 1),
-        0x75 => ("i32.shr_s".to_string(), None, 1),
-        0x76 => ("i32.shr_u".to_string(), None, 1),
-        // 参考指令
-        0xD0 => {
-            let t = reader.read_uleb128().ok();
-            ("ref.null".to_string(), t.map(|v| format!("0x{:02X}", v)), 1)
-        }
-        0xD1 => ("ref.is_null".to_string(), None, 1),
-        0xD2 => {
-            let x = reader.read_uleb128().ok();
-            ("ref.func".to_string(), x.map(|v| v.to_string()), 1)
-        }
-        // 前缀指令
-        0xFC => {
-            let sub = reader.read_uleb128().ok();
-            let name = match sub.unwrap_or(0) {
-                0 => "i32.trunc_f32_s",
-                1 => "i32.trunc_f32_u",
-                2 => "i32.trunc_f64_s",
-                3 => "i32.trunc_f64_u",
-                4 => "i64.trunc_f32_s",
-                5 => "i64.trunc_f32_u",
-                6 => "i64.trunc_f64_s",
-                7 => "i64.trunc_f64_u",
-                8 => "memory.copy",
-                9 => "memory.fill",
-                10 => "memory.init",
-                11 => "data.drop",
-                _ => "fc.unknown",
-            };
-            (name.to_string(), sub.map(|s| s.to_string()), 1)
-        }
-        _ => (format!("unknown(0x{:02X})", opcode), None, 1),
+        Ok(ExitCode::FAILURE)
     }
 }
 
-/// 读取 memarg 并格式化。
-fn read_memarg(reader: &mut ByteReader) -> Option<String> {
-    let align = reader.read_uleb128().ok()?;
-    let offset = reader.read_uleb128().ok()?;
-    Some(format!("align={}, offset={}", align, offset))
+fn dump_gc_audit(module: &WasmBinaryModule, _data: &[u8], opts: &SpyTargetOptions) -> Result<ExitCode> {
+    let Some(bytes) = custom_section_bytes(module, "nyar.wasm.gc_layouts")
+    else {
+        return Err(miette!("未找到 nyar.wasm.gc_layouts 段；请用新版 legion 重新编译 wasm 目标"));
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    if opts.json {
+        println!(
+            "{{\"section\":\"nyar.wasm.gc_layouts\",\"lines\":{}}}",
+            serde_json::to_string(&text.lines().collect::<Vec<_>>()).unwrap_or_default()
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    println!("=== wasm-gc 布局审计 (nyar.wasm.gc_layouts) ===");
+    let mut registered = 0usize;
+    let mut missing = 0usize;
+    let mut mir_uses = 0usize;
+    let mut linear = 0usize;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("gc_required=") {
+            println!("  {line}");
+            continue;
+        }
+        let cols: Vec<&str> = line.split('\t').collect();
+        match cols.first().copied() {
+            Some("struct") if cols.get(4) == Some(&"registered") => {
+                registered += 1;
+                println!(
+                    "  [struct OK] id={} name={} type_index={} storage={}",
+                    cols.get(1).unwrap_or(&"?"),
+                    cols.get(2).unwrap_or(&"?"),
+                    cols.get(3).unwrap_or(&"?"),
+                    cols.get(5).unwrap_or(&"?")
+                );
+            }
+            Some("struct") if cols.get(3) == Some(&"missing") => {
+                missing += 1;
+                println!(
+                    "  [struct MISSING] id={} name={} reason={}",
+                    cols.get(1).unwrap_or(&"?"),
+                    cols.get(2).unwrap_or(&"?"),
+                    cols.get(4).unwrap_or(&"?")
+                );
+            }
+            Some("struct") if cols.get(4) == Some(&"linear_memory") => {
+                linear += 1;
+                println!("  [struct linear] id={} name={}", cols.get(1).unwrap_or(&"?"), cols.get(2).unwrap_or(&"?"));
+            }
+            Some("array") => {
+                println!(
+                    "  [array] key={} type_index={} status={}",
+                    cols.get(1).unwrap_or(&"?"),
+                    cols.get(2).unwrap_or(&"?"),
+                    cols.get(3).unwrap_or(&"?")
+                );
+            }
+            Some("mir_use") => {
+                mir_uses += 1;
+                println!(
+                    "  [mir_use MISSING] layout_id={} type={} site={} in {}",
+                    cols.get(1).unwrap_or(&"?"),
+                    cols.get(2).unwrap_or(&"?"),
+                    cols.get(3).unwrap_or(&"?"),
+                    cols.get(4).unwrap_or(&"?")
+                );
+            }
+            _ => println!("  {line}"),
+        }
+    }
+    println!();
+    println!("摘要: struct_registered={registered} struct_missing={missing} linear_memory={linear} mir_use_gaps={mir_uses}");
+    if missing > 0 || mir_uses > 0 {
+        println!("状态: FAIL — 存在未注册的 gc struct 布局");
+    }
+    else {
+        println!("状态: OK — 闭包内引用 aggregate 均已注册 gc structtype");
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
-/// 将 block type 转为字符串。
-fn block_type_str(bt: i64) -> String {
+// ========== Type 段结构化解析 ==========
+
+/// 执行 Type 段结构化 dump。
+fn dump_type_section(module: &WasmBinaryModule, _data: &[u8], opts: &SpyTargetOptions) -> Result<ExitCode> {
+    let entries = parse_type_section(module);
+    if opts.json {
+        print_json_types(&entries);
+        return Ok(ExitCode::SUCCESS);
+    }
+    if entries.is_empty() {
+        println!("（无 Type 段）");
+        return Ok(ExitCode::SUCCESS);
+    }
+    println!("=== Type 段（{} 项）===", entries.len());
+    for entry in &entries {
+        let detail = format_type_detail(&entry.kind);
+        let offset_tag = format!("0x{:04X}", entry.file_offset);
+        println!("  [{:>3}] @{} {:<11} {}", entry.index, offset_tag, entry.kind.name(), detail);
+    }
+    // 统计 arraytype 数量，便于诊断 V8 兼容性。
+    let array_count = entries.iter().filter(|e| matches!(e.kind, WasmTypeKind::Array { .. })).count();
+    if array_count > 0 {
+        println!();
+        println!("注意：检测到 {} 个 arraytype(0x61) 条目，Node.js v24 V8 不支持，会导致 `unknown type form: 97`。", array_count);
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// 格式化 type 条目内容。
+fn format_type_detail(kind: &WasmTypeKind) -> String {
+    match kind {
+        WasmTypeKind::Func { params, results } => {
+            let p = params.iter().map(wasm_value_type_name).collect::<Vec<_>>().join(", ");
+            let r = results.iter().map(wasm_value_type_name).collect::<Vec<_>>().join(", ");
+            format!("({}) -> ({})", p, r)
+        }
+        WasmTypeKind::Struct { fields } => {
+            let f = fields
+                .iter()
+                .map(|(ty, m)| format!("{}{}", wasm_value_type_name(ty), if *m { "(mut)" } else { "" }))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{ {} }}", f)
+        }
+        WasmTypeKind::Array { element, mutable } => {
+            format!("[{}] mut={}", wasm_value_type_name(element), mutable)
+        }
+        WasmTypeKind::Unknown { form } => format!("form=0x{:02X}", form),
+    }
+}
+
+/// JSON 格式输出 type 段。
+fn print_json_types(entries: &[WasmTypeEntry]) {
+    let items: Vec<String> = entries
+        .iter()
+        .map(|e| {
+            let detail = format_type_detail(&e.kind);
+            format!(
+                "    {{\"index\": {}, \"offset\": {}, \"kind\": {}, \"detail\": {}}}",
+                e.index,
+                e.file_offset,
+                json_string(e.kind.name()),
+                json_string(&detail)
+            )
+        })
+        .collect();
+    println!(
+        r#"{{
+  "count": {},
+  "entries": [
+{}
+  ]
+}}"#,
+        entries.len(),
+        items.join(",\n")
+    );
+}
+
+// ========== 辅助输出 ==========
+
+/// 格式化导入项的类型描述。
+///
+/// 按 `WasmExternalKind` 变体分发，与原 `spy` 本地 `WasmImport::type_str` 输出一致。
+fn format_import_type(imp: &WasmImport) -> String {
+    match &imp.kind {
+        WasmExternalKind::Func => format!("type={}", imp.type_index),
+        WasmExternalKind::Table => format!("elem={}", wasm_value_type_name(&imp.table_elem_type)),
+        WasmExternalKind::Memory => match imp.memory_max {
+            Some(max) => format!("limits={}..{}", imp.memory_min, max),
+            None => format!("limits={}", imp.memory_min),
+        },
+        WasmExternalKind::Global => {
+            format!("valtype={}, mut={}", wasm_value_type_name(&imp.global_value_type), imp.global_mutable)
+        }
+        WasmExternalKind::Unknown(_) => "?".to_string(),
+    }
+}
+
+/// 将外部实体种类映射回原始字节值，用于 JSON 序列化。
+fn external_kind_byte(kind: &WasmExternalKind) -> u8 {
+    match kind {
+        WasmExternalKind::Func => 0,
+        WasmExternalKind::Table => 1,
+        WasmExternalKind::Memory => 2,
+        WasmExternalKind::Global => 3,
+        WasmExternalKind::Unknown(b) => *b,
+    }
+}
+
+/// 将 `block type` 的有符号整数表示映射为可读名称。
+fn block_type_name(bt: i64) -> String {
     match bt {
         -64 => "void".to_string(),
         -1 => "i32".to_string(),
         -2 => "i64".to_string(),
         -3 => "f32".to_string(),
         -4 => "f64".to_string(),
-        _ => format!("type={}", bt),
+        other => format!("type={}", other),
     }
 }
 
-/// 段名。
-fn section_name(id: u8) -> &'static str {
-    match id {
-        SECTION_CUSTOM => "custom",
-        SECTION_TYPE => "type",
-        SECTION_IMPORT => "import",
-        SECTION_FUNCTION => "function",
-        SECTION_TABLE => "table",
-        SECTION_MEMORY => "memory",
-        SECTION_GLOBAL => "global",
-        SECTION_EXPORT => "export",
-        SECTION_START => "start",
-        SECTION_ELEMENT => "element",
-        SECTION_CODE => "code",
-        SECTION_DATA => "data",
-        SECTION_DATA_COUNT => "data_count",
-        _ => "unknown",
-    }
+/// 将解码后的操作数列表格式化为可读字符串，尽量贴近原 `spy` 输出风格。
+///
+/// 多个操作数以 `", "` 连接；空列表返回空字符串。
+fn format_operands(operands: &[DecodedOperand]) -> String {
+    let parts: Vec<String> = operands
+        .iter()
+        .map(|operand| match operand {
+            DecodedOperand::TypeIndex(t) => format!("type={t}"),
+            DecodedOperand::FieldIndex(f) => format!("field={f}"),
+            DecodedOperand::Count(c) => format!("count={c}"),
+            DecodedOperand::LocalIndex(l) => l.to_string(),
+            DecodedOperand::GlobalIndex(g) => g.to_string(),
+            DecodedOperand::LabelIndex(l) => l.to_string(),
+            DecodedOperand::FuncIndex(f) => f.to_string(),
+            DecodedOperand::SubOpcode(s) => s.to_string(),
+            DecodedOperand::MemArg { align, offset } => format!("align={align}, offset={offset}"),
+            DecodedOperand::BlockType(bt) => block_type_name(*bt),
+            DecodedOperand::BrTargets { targets, default } => format!("targets={targets:?}, default={default}"),
+            DecodedOperand::ValueI32(v) => v.to_string(),
+            DecodedOperand::ValueI64(v) => v.to_string(),
+            DecodedOperand::ValueF32(v) => v.to_string(),
+            DecodedOperand::ValueF64(v) => v.to_string(),
+            DecodedOperand::RefNull(r) => format!("0x{r:02X}"),
+            DecodedOperand::RefFunc(f) => f.to_string(),
+            DecodedOperand::SelectTypes(types) => format!("types={types:?}"),
+            DecodedOperand::CallIndirect { type_idx, table_idx } => format!("type={type_idx}, table={table_idx}"),
+        })
+        .collect();
+    parts.join(", ")
 }
-
-// ========== 辅助输出 ==========
 
 /// 打印指令列表。
-fn print_instructions(instructions: &[WasmInstruction]) {
+fn print_instructions(instructions: &[DecodedInstruction]) {
     println!("=== 指令 ===");
     for instr in instructions {
-        println!("  {:>4}:  {:<20} {}", instr.offset, instr.mnemonic, instr.operand.as_deref().unwrap_or(""));
+        println!("  {:>4}:  {:<20} {}", instr.offset, instr.mnemonic, format_operands(&instr.operands));
     }
 }
 
 /// 打印 hex dump。
-fn print_hex_dump(body: &[u8], func: &WasmFunction) {
+fn print_hex_dump(body: &[u8], func: &WasmFunctionEntry) {
     println!("=== 函数 {} 原始字节（{} 字节）===", func.index, body.len());
     print_hex_range(body, 0, body.len(), usize::MAX);
 }
@@ -903,7 +707,7 @@ fn print_json_overview(module: &WasmBinaryModule, data: &[u8]) {
         })
         .collect();
 
-    let imports = parse_imports(module);
+    let imports = parse_import_section(module);
     let imports_json: Vec<String> = imports
         .iter()
         .map(|i| {
@@ -911,28 +715,28 @@ fn print_json_overview(module: &WasmBinaryModule, data: &[u8]) {
                 "    {{\"module\": {}, \"field\": {}, \"kind\": {}, \"kind_str\": {}, \"type\": {}}}",
                 json_string(&i.module),
                 json_string(&i.field),
-                i.kind,
-                json_string(i.kind_str()),
-                json_string(&i.type_str())
+                external_kind_byte(&i.kind),
+                json_string(i.kind.name()),
+                json_string(&format_import_type(i))
             )
         })
         .collect();
 
-    let exports = parse_exports(module);
+    let exports = parse_export_section(module);
     let exports_json: Vec<String> = exports
         .iter()
         .map(|e| {
             format!(
                 "    {{\"name\": {}, \"kind\": {}, \"kind_str\": {}, \"index\": {}}}",
                 json_string(&e.name),
-                e.kind,
-                json_string(e.kind_str()),
+                external_kind_byte(&e.kind),
+                json_string(e.kind.name()),
                 e.index
             )
         })
         .collect();
 
-    let functions = parse_functions(module);
+    let functions = parse_code_section(module);
     let functions_json: Vec<String> = functions
         .iter()
         .map(|f| {
@@ -973,42 +777,19 @@ fn print_json_overview(module: &WasmBinaryModule, data: &[u8]) {
     );
 }
 
-fn print_json_function(func: &WasmFunction, data: &[u8]) {
-    let instructions = disassemble_function_body(data, func);
-    let instr_json: Vec<String> = instructions
-        .iter()
-        .map(|i| {
-            format!(
-                "    {{\"offset\": {}, \"size\": {}, \"mnemonic\": {}, \"operand\": {}}}",
-                i.offset,
-                i.size,
-                json_string(&i.mnemonic),
-                json_string(i.operand.as_deref().unwrap_or(""))
-            )
-        })
-        .collect();
-
-    println!(
-        r#"{{
-  "index": {},
-  "name": {},
-  "code_offset": {},
-  "body_len": {},
-  "local_groups": {},
-  "instructions": [
-{}
-  ]
-}}"#,
-        func.index,
-        json_string(func.name.as_deref().unwrap_or("")),
-        func.code_offset,
-        func.body_len,
-        func.local_groups,
-        instr_json.join(",\n")
-    );
+fn print_json_function(func: &WasmFunctionEntry, instructions: &[DecodedInstruction]) {
+    let json = serde_json::json!({
+        "index": func.index,
+        "name": func.name,
+        "code_offset": func.code_offset,
+        "body_len": func.body_len,
+        "local_groups": func.local_groups,
+        "instructions": instructions,
+    });
+    println!("{}", serde_json::to_string_pretty(&json).unwrap_or_default());
 }
 
-fn print_json_offset(offset: usize, func: Option<&WasmFunction>, _data: &[u8]) {
+fn print_json_offset(offset: usize, func: Option<&WasmFunctionEntry>, _data: &[u8]) {
     match func {
         Some(f) => {
             println!(
@@ -1057,136 +838,233 @@ fn json_string(value: &str) -> String {
     result
 }
 
-// ========== LEB128 辅助 ==========
-
-/// 计算 ULEB128 编码占用的字节数。
-fn uleb128_size(value: u32) -> usize {
-    let mut size = 1;
-    let mut v = value >> 7;
-    while v != 0 {
-        size += 1;
-        v >>= 7;
+/// Component-model binaries use magic `\0asm` with version `0x0d000001` (LE).
+fn detect_component_version(data: &[u8]) -> Option<u32> {
+    if data.len() < 8 || &data[0..4] != b"\0asm" {
+        return None;
     }
-    size
+    let version = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
+    // Core modules use version 1; component-model uses 0x0d000001.
+    if version == 1 { None } else { Some(version) }
 }
 
-/// 字节读取器。
-struct ByteReader<'a> {
-    bytes: &'a [u8],
+/// Dump a high-level overview of a WASI / component-model binary.
+///
+/// Full instruction disassembly still targets the paired `.core.wasm` (or a
+/// nested core module extracted below when present as raw `\0asm` payload).
+fn dump_component_overview(path: &str, data: &[u8], version: u32, opts: &SpyTargetOptions) -> Result<ExitCode> {
+    let sections = scan_component_sections(data)?;
+    let nested_cores = find_nested_core_modules_from_component(data, &sections);
+
+    if opts.json {
+        println!("{{");
+        println!("  \"kind\": \"component\",");
+        println!("  \"path\": {},", json_string(path));
+        println!("  \"bytes\": {},", data.len());
+        println!("  \"version\": {},", version);
+        println!("  \"sections\": [");
+        for (index, section) in sections.iter().enumerate() {
+            let comma = if index + 1 == sections.len() { "" } else { "," };
+            println!("    {{\"index\": {}, \"id\": {}, \"size\": {}, \"offset\": {}}}{comma}", index, section.id, section.size, section.offset);
+        }
+        println!("  ],");
+        println!("  \"nested_core_modules\": [");
+        for (index, core) in nested_cores.iter().enumerate() {
+            let comma = if index + 1 == nested_cores.len() { "" } else { "," };
+            println!("    {{\"offset\": {}, \"bytes\": {}}}{comma}", core.offset, core.bytes.len());
+        }
+        println!("  ]");
+        println!("}}");
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    // Function disassembly short-circuits overview noise.
+    if let Some(func_spec) = &opts.func {
+        if nested_cores.is_empty() {
+            return Err(miette!("component 中没有可反汇编的嵌套 core module"));
+        }
+        let core = &nested_cores[0];
+        let module = WasmBinaryModule::from_bytes(&core.bytes).map_err(|error| miette!("嵌套 core 解析失败：{error}"))?;
+        return disassemble_function(&module, &core.bytes, func_spec, opts);
+    }
+
+    println!("WASI component（{} 字节，version=0x{version:08x}）", data.len());
+    println!("文件：{path}");
+    println!();
+    if let Some(wit_text) = dump_component_wit_via_wasm_tools(path) {
+        println!("=== Component WIT（wasm-tools）===");
+        for line in wit_text.lines().take(40) {
+            println!("{line}");
+        }
+        if wit_text.lines().count() > 40 {
+            println!("…（已截断）");
+        }
+        println!();
+    }
+    println!("=== Component 段列表 ===");
+    for (index, section) in sections.iter().enumerate() {
+        println!("  [{index}] id={} size={} offset=0x{:X}", section.id, section.size, section.offset);
+    }
+    println!();
+    if nested_cores.is_empty() {
+        println!("未在 component 载荷中发现嵌套 core module。");
+        println!("提示：构建通常同时写出 `<name>.core.wasm`，可用 `legion spy wasm <name>.core.wasm --list` 反汇编。");
+    }
+    else {
+        println!("=== 嵌套 core module ===");
+        for (index, core) in nested_cores.iter().enumerate() {
+            println!("  [{index}] offset=0x{:X} bytes={}", core.offset, core.bytes.len());
+            match WasmBinaryModule::from_bytes(&core.bytes) {
+                Ok(module) => {
+                    let exports = parse_export_section(&module);
+                    if !exports.is_empty() {
+                        println!("    exports:");
+                        for exp in &exports {
+                            println!("      {} {} : index={}", exp.kind.name(), exp.name, exp.index);
+                        }
+                    }
+                    if opts.list {
+                        println!("    core 段数：{}", module.sections.len());
+                        for (section_index, section) in module.sections.iter().enumerate() {
+                            println!("      [{section_index}] {} size={}", section_name(section.id), section.bytes.len());
+                        }
+                    }
+                }
+                Err(error) => println!("    core 解析失败：{error}"),
+            }
+        }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn dump_component_wit_via_wasm_tools(path: &str) -> Option<String> {
+    let output = std::process::Command::new("wasm-tools").args(["component", "wit", path]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8(output.stdout).ok()
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ComponentSectionRef {
+    id: u8,
+    size: usize,
     offset: usize,
 }
 
-impl<'a> ByteReader<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes, offset: 0 }
-    }
+#[derive(Debug, Clone)]
+struct NestedCoreModule {
+    offset: usize,
+    bytes: Vec<u8>,
+}
 
-    fn is_eof(&self) -> bool {
-        self.offset >= self.bytes.len()
+fn scan_component_sections(data: &[u8]) -> Result<Vec<ComponentSectionRef>> {
+    if data.len() < 8 {
+        return Err(miette!("component 文件过短"));
     }
-
-    fn read_u8(&mut self) -> Result<u8, ()> {
-        let value = *self.bytes.get(self.offset).ok_or(())?;
-        self.offset += 1;
-        Ok(value)
+    let mut cursor = 8usize;
+    let mut sections = Vec::new();
+    while cursor < data.len() {
+        let id = data[cursor];
+        cursor += 1;
+        let (size, size_len) = read_uleb128_at(data, cursor)?;
+        cursor += size_len;
+        let size = size as usize;
+        if cursor + size > data.len() {
+            return Err(miette!("component 段越界：id={id} size={size} offset=0x{cursor:X}"));
+        }
+        sections.push(ComponentSectionRef { id, size, offset: cursor });
+        cursor += size;
     }
+    Ok(sections)
+}
 
-    fn read_uleb128(&mut self) -> Result<u32, ()> {
-        let mut result = 0u32;
-        let mut shift = 0u32;
-        loop {
-            let byte = self.read_u8()?;
-            result |= ((byte & 0x7F) as u32) << shift;
-            if byte & 0x80 == 0 {
-                return Ok(result);
-            }
-            shift += 7;
-            if shift > 35 {
-                return Err(());
-            }
+fn find_nested_core_modules_from_component(data: &[u8], sections: &[ComponentSectionRef]) -> Vec<NestedCoreModule> {
+    // Component section id 1 is a core `module` whose payload is a complete `\0asm` binary.
+    let mut found = Vec::new();
+    for section in sections {
+        if section.id != 1 {
+            continue;
+        }
+        let end = section.offset.saturating_add(section.size);
+        if end > data.len() || section.size < 8 {
+            continue;
+        }
+        let bytes = data[section.offset..end].to_vec();
+        if &bytes[0..4] != b"\0asm" {
+            continue;
+        }
+        let version = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        if version != 1 {
+            continue;
+        }
+        if WasmBinaryModule::from_bytes(&bytes).is_ok() {
+            found.push(NestedCoreModule { offset: section.offset, bytes });
         }
     }
-
-    fn read_sleb128_i32(&mut self) -> Result<i32, ()> {
-        let mut result = 0i32;
-        let mut shift = 0u32;
-        let mut byte;
-        loop {
-            byte = self.read_u8()?;
-            result |= ((byte & 0x7F) as i32) << shift;
-            shift += 7;
-            if byte & 0x80 == 0 {
-                break;
-            }
-            if shift > 35 {
-                return Err(());
-            }
-        }
-        if shift < 32 && (byte & 0x40) != 0 {
-            result |= (!0i32) << shift;
-        }
-        Ok(result)
+    if !found.is_empty() {
+        return found;
     }
+    // Fallback: scan for embedded `\0asm` version-1 payloads (best-effort).
+    find_nested_core_modules(data)
+}
 
-    fn read_sleb128_i64(&mut self) -> Result<i64, ()> {
-        let mut result = 0i64;
-        let mut shift = 0u32;
-        let mut byte;
-        loop {
-            byte = self.read_u8()?;
-            result |= ((byte & 0x7F) as i64) << shift;
-            shift += 7;
-            if byte & 0x80 == 0 {
-                break;
-            }
-            if shift > 70 {
-                return Err(());
-            }
-        }
-        if shift < 64 && (byte & 0x40) != 0 {
-            result |= (!0i64) << shift;
-        }
-        Ok(result)
-    }
-
-    fn read_f32(&mut self) -> Result<f32, ()> {
-        let bytes = self.bytes.get(self.offset..self.offset + 4).ok_or(())?;
-        self.offset += 4;
-        Ok(f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
-    }
-
-    fn read_f64(&mut self) -> Result<f64, ()> {
-        let bytes = self.bytes.get(self.offset..self.offset + 8).ok_or(())?;
-        self.offset += 8;
-        Ok(f64::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]]))
-    }
-
-    fn read_block_type(&mut self) -> Result<i64, ()> {
-        let byte = self.read_u8()?;
-        if byte & 0x80 == 0 {
-            // 单字节编码
-            Ok(byte as i8 as i64)
-        }
-        else {
-            // 多字节 LEB128（简化处理）
-            let mut result = (byte & 0x7F) as i64;
-            let mut shift = 7u32;
-            loop {
-                let b = self.read_u8()?;
-                result |= ((b & 0x7F) as i64) << shift;
-                if b & 0x80 == 0 {
-                    break;
+fn find_nested_core_modules(data: &[u8]) -> Vec<NestedCoreModule> {
+    let mut found = Vec::new();
+    let mut index = 0usize;
+    while index + 8 <= data.len() {
+        if &data[index..index + 4] == b"\0asm" {
+            let version = u32::from_le_bytes([data[index + 4], data[index + 5], data[index + 6], data[index + 7]]);
+            if version == 1 {
+                if let Some(end) = measure_core_module_end(&data[index..]) {
+                    found.push(NestedCoreModule { offset: index, bytes: data[index..index + end].to_vec() });
+                    index += end;
+                    continue;
                 }
-                shift += 7;
             }
-            Ok(result)
+        }
+        index += 1;
+    }
+    found
+}
+
+fn measure_core_module_end(data: &[u8]) -> Option<usize> {
+    if data.len() < 8 || &data[0..4] != b"\0asm" {
+        return None;
+    }
+    let mut cursor = 8usize;
+    while cursor < data.len() {
+        let id = *data.get(cursor)?;
+        // Core module section ids are 0..=12; component sections use other ids.
+        if id > 12 {
+            return Some(cursor);
+        }
+        cursor += 1;
+        let (size, size_len) = read_uleb128_at(data, cursor).ok()?;
+        cursor += size_len;
+        let size = size as usize;
+        cursor = cursor.checked_add(size)?;
+        if cursor > data.len() {
+            return None;
         }
     }
+    Some(cursor)
+}
 
-    fn read_string(&mut self) -> Result<String, ()> {
-        let len = self.read_uleb128()? as usize;
-        let bytes = self.bytes.get(self.offset..self.offset + len).ok_or(())?;
-        self.offset += len;
-        String::from_utf8(bytes.to_vec()).map_err(|_| ())
+fn read_uleb128_at(data: &[u8], start: usize) -> Result<(u64, usize)> {
+    let mut result = 0u64;
+    let mut shift = 0u32;
+    let mut consumed = 0usize;
+    loop {
+        let byte = *data.get(start + consumed).ok_or_else(|| miette!("uleb128 越界 @ {}", start + consumed))?;
+        consumed += 1;
+        result |= u64::from(byte & 0x7f) << shift;
+        if byte & 0x80 == 0 {
+            return Ok((result, consumed));
+        }
+        shift += 7;
+        if shift > 63 {
+            return Err(miette!("uleb128 过长 @ {start}"));
+        }
     }
 }

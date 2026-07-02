@@ -1,0 +1,27 @@
+targets:
+- clr-microsoft-unknown-managed
+expect:
+  clr-microsoft-unknown-managed:
+    build_success: true
+    dry_run_success: true
+    run_success: true
+    run_contracts:
+    - logical_entry: Main
+      physical_entry: clr_interop_stdout.exe
+      invocation: dotnet
+      validate: dotnet exec clr_interop_stdout.exe
+    per_artifact:
+      clr_interop_stdout.exe:
+        run_success: true
+        exit_code: 0
+        stdout:
+        - hello from clr
+        stderr: []
+    artifacts:
+    - clr_interop_stdout.exe
+    - clr_interop_stdout.msil
+    - clr_interop_stdout.runtimeconfig.json
+    - run-contract.txt
+    - run-contracts.txt
+    compile_errors: []
+    errors: []

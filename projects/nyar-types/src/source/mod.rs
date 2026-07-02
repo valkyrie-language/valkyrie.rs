@@ -16,6 +16,7 @@ pub struct SourceSpan {
     /// 区间所属的源文件。
     pub source: SourceID,
     /// 在源文件中 byte offset 半开区间。
+    #[cfg_attr(feature = "serde", serde(with = "range_u32_serde"))]
     pub span: Range<u32>,
 }
 
@@ -59,5 +60,33 @@ impl SourceSpan {
     /// 返回区间结束偏移。
     pub fn get_end(&self) -> u32 {
         self.span.end
+    }
+}
+
+#[cfg(feature = "serde")]
+mod range_u32_serde {
+    use std::range::Range;
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize, Deserialize)]
+    struct RangeRepr {
+        start: u32,
+        end: u32,
+    }
+
+    pub fn serialize<S>(range: &Range<u32>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        RangeRepr { start: range.start, end: range.end }.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Range<u32>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let range = RangeRepr::deserialize(deserializer)?;
+        Ok(Range { start: range.start, end: range.end })
     }
 }

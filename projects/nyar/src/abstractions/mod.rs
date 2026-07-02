@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeError};
 
 /// 目标家族。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,10 +54,16 @@ pub enum ArtifactFormat {
     Pe,
     /// `COFF object`
     Coff,
+    /// `ELF` 可执行或目标文件
+    Elf,
     /// `MSIL` 文本
     MsilText,
     /// 原始字节流
     RawBinary,
+    /// SPIR-V 着色器模块
+    SpirvModule,
+    /// DXIL 容器
+    DxilContainer,
 }
 
 /// 产物种类。
@@ -112,6 +118,10 @@ pub enum BackendInputKind {
     PeImage,
     /// `MSIL` 文本输入。
     MsilText,
+    /// SPIR-V 模块输入。
+    SpirvModule,
+    /// DXIL 容器输入。
+    DxilContainer,
 }
 
 /// 目标描述。
@@ -321,8 +331,10 @@ pub enum CanonicalAbi {
     Jvm,
     /// `WASM`
     WebAssembly,
-    /// `WASI component model`
+    /// `WASI` Preview 2 / wasip2 component model（默认 `wasi` / `wasip2` 别名）。
     Wasi,
+    /// `WASI` 0.3 / wasip3 component model（与 Preview2 共享 core codegen，适配层版本不同）。
+    WasiP3,
     /// `MSVC`
     Msvc,
     /// `GNU`
@@ -341,6 +353,7 @@ impl CanonicalAbi {
             "jvm" => Some(Self::Jvm),
             "wasm" | "webassembly" | "web-assembly" => Some(Self::WebAssembly),
             "wasi" | "wasip1" | "wasi-p1" | "wasip2" | "wasi-p2" => Some(Self::Wasi),
+            "wasip3" | "wasi-p3" => Some(Self::WasiP3),
             "msvc" | "microsoft-x64" => Some(Self::Msvc),
             "gnu" => Some(Self::Gnu),
             "systemv" | "system-v" => Some(Self::SystemV),
@@ -356,11 +369,17 @@ impl CanonicalAbi {
             Self::Jvm => "jvm",
             Self::WebAssembly => "wasm",
             Self::Wasi => "wasi",
+            Self::WasiP3 => "wasip3",
             Self::Msvc => "msvc",
             Self::Gnu => "gnu",
             Self::SystemV => "systemv",
             Self::Aapcs64 => "aapcs64",
         }
+    }
+
+    /// 是否为 WASI component-model ABI（wasip2 或 wasip3）。
+    pub fn is_wasi_component(self) -> bool {
+        matches!(self, Self::Wasi | Self::WasiP3)
     }
 }
 
@@ -432,6 +451,16 @@ impl CanonicalTarget {
         Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Browser, Some(CanonicalAbi::WebAssembly))
     }
 
+    /// 创建 `WASI` Preview 2（wasip2）目标。
+    pub const fn wasi() -> Self {
+        Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::Wasi))
+    }
+
+    /// 创建 `WASI` 0.3（wasip3）目标。
+    pub const fn wasip3() -> Self {
+        Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::WasiP3))
+    }
+
     /// 解析目标别名或四元组。
     pub fn parse(value: &str) -> Result<Self, CanonicalTargetParseError> {
         value.parse()
@@ -472,6 +501,9 @@ impl CanonicalTarget {
             "wasi" | "wasip1" | "wasip2" => {
                 Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::Wasi)))
             }
+            "wasip3" => {
+                Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Unknown, CanonicalSpecification::Wasi, Some(CanonicalAbi::WasiP3)))
+            }
             "node" => {
                 Some(Self::new(CanonicalArch::Wasm32, CanonicalVendor::Node, CanonicalSpecification::Unknown, Some(CanonicalAbi::WebAssembly)))
             }
@@ -490,10 +522,16 @@ impl CanonicalTarget {
     }
 
     fn host_native() -> Self {
+        let arch = match std::env::consts::ARCH {
+            "x86_64" => CanonicalArch::X86_64,
+            "aarch64" => CanonicalArch::AArch64,
+            "x86" => CanonicalArch::X86,
+            _ => CanonicalArch::X86_64,
+        };
         match std::env::consts::OS {
-            "windows" => Self::new(CanonicalArch::X86_64, CanonicalVendor::Pc, CanonicalSpecification::Windows, Some(CanonicalAbi::Msvc)),
+            "windows" => Self::new(arch, CanonicalVendor::Pc, CanonicalSpecification::Windows, Some(CanonicalAbi::Msvc)),
             "macos" => Self::new(CanonicalArch::AArch64, CanonicalVendor::Apple, CanonicalSpecification::MacOs, Some(CanonicalAbi::SystemV)),
-            _ => Self::new(CanonicalArch::X86_64, CanonicalVendor::Unknown, CanonicalSpecification::Linux, Some(CanonicalAbi::Gnu)),
+            _ => Self::new(arch, CanonicalVendor::Unknown, CanonicalSpecification::Linux, Some(CanonicalAbi::Gnu)),
         }
     }
 }

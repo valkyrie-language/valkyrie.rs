@@ -3,7 +3,7 @@ use legion::{CanonicalTarget, DependencySpec, ProjectManifest, PublishFormat, Ru
 fn is_workspace_like_dependency(spec: &DependencySpec) -> bool {
     match spec {
         DependencySpec::Workspace => true,
-        DependencySpec::Detailed { version: Some(version), path: None, abi: None } => version == "workspace",
+        DependencySpec::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None } => version == "workspace",
         _ => false,
     }
 }
@@ -99,7 +99,54 @@ fn parses_publish_formats() {
 
     let manifest = ProjectManifest::parse(source).unwrap();
     assert_eq!(manifest.publish.len(), 1);
-    assert_eq!(manifest.publish[0].publish_format, Some(PublishFormat::WebApp));
+    assert_eq!(manifest.publish[0].artifact_publish_format(), Some(PublishFormat::WebApp));
+}
+
+#[test]
+fn parses_build_target_publish_formats() {
+    let source = r#"
+    {
+        name: "demo.wechat.game",
+        build: [
+            {
+                target: "wasm32-unknown-browser-wasm",
+                publish: ["mini-game", "mini-program"],
+                source_map: true
+            }
+        ]
+    }
+    "#;
+    let manifest = ProjectManifest::parse(source).unwrap();
+    assert_eq!(manifest.build.len(), 1);
+    assert_eq!(manifest.build[0].publish, vec!["mini-game".to_string(), "mini-program".to_string()]);
+
+    let apk_source = r#"
+    {
+        name: "demo.android",
+        build: [
+            {
+                target: "jvm-android-android-managed",
+                publish: ["apk"]
+            }
+        ]
+    }
+    "#;
+    let apk_manifest = ProjectManifest::parse(apk_source).unwrap();
+    assert_eq!(apk_manifest.build[0].publish, vec!["apk".to_string()]);
+
+    let ipa_source = r#"
+    {
+        name: "demo.ios",
+        build: [
+            {
+                target: "aarch64-apple-ios-aapcs64",
+                publish: ["ipa"]
+            }
+        ]
+    }
+    "#;
+    let ipa_manifest = ProjectManifest::parse(ipa_source).unwrap();
+    assert_eq!(ipa_manifest.build[0].publish, vec!["ipa".to_string()]);
 }
 
 #[test]
@@ -204,4 +251,73 @@ fn parses_actual_workspace_members_after_examples_are_narrowed() {
     assert!(!manifest.members.contains(&"examples/test.module_system".to_string()));
     assert!(!manifest.workspace.auto_link.core);
     assert!(!manifest.workspace.auto_link.std);
+}
+
+#[test]
+fn parses_build_plugin() {
+    let source = r#"
+    {
+        name: "demo.unity.game",
+        build_plugin: {
+            kind: "unity-project-export",
+            sdk: "unity.engine.sdk",
+            mode: "auto",
+            input_directory: "build/unity/msil",
+            output_directory: "build/unity/project"
+        }
+    }
+    "#;
+    let manifest = ProjectManifest::parse(source).unwrap();
+    let plugin = manifest.build_plugin.expect("build_plugin should parse");
+    assert_eq!(plugin.kind, "unity-project-export");
+    assert_eq!(plugin.sdk.as_deref(), Some("unity.engine.sdk"));
+    assert_eq!(plugin.input_directory.as_deref(), Some("build/unity/msil"));
+    assert_eq!(plugin.output_directory.as_deref(), Some("build/unity/project"));
+}
+
+#[test]
+fn parses_build_plugin_export_routes() {
+    let source = r#"
+    {
+        name: "valkyrie.unity",
+        build_plugin: {
+            kind: "unity-project-export",
+            export_routes: {
+                "unity.runtime": "../../../../valkyrie.unity/Runtime",
+                "unity.editor": "../../../../valkyrie.unity/Editor"
+            }
+        }
+    }
+    "#;
+    let manifest = ProjectManifest::parse(source).unwrap();
+    let plugin = manifest.build_plugin.expect("build_plugin should parse");
+    assert_eq!(plugin.export_routes.get("unity.runtime").map(String::as_str), Some("../../../../valkyrie.unity/Runtime"));
+}
+
+#[test]
+fn parses_dependency_source_registry_and_workspace() {
+    let source = r#"
+    {
+        name: "demo",
+        dependencies: {
+            "foo": {
+                version: "1.2.3",
+                source: "registry"
+            },
+            "bar": {
+                source: "workspace"
+            }
+        }
+    }
+    "#;
+    let manifest = ProjectManifest::parse(source).unwrap();
+    assert!(matches!(
+        manifest.dependencies.get("foo"),
+        Some(DependencySpec::Detailed { version: Some(version), source: Some(dep_source), .. })
+            if version == "1.2.3" && dep_source == "registry"
+    ));
+    assert!(matches!(
+        manifest.dependencies.get("bar"),
+        Some(DependencySpec::Detailed { source: Some(dep_source), .. }) if dep_source == "workspace"
+    ));
 }

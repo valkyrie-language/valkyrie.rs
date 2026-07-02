@@ -29,11 +29,15 @@ jobs:
         run: cargo build --release
       - name: Tests
         run: cargo test --release
+      - name: GPU tests (nyar.gpu_fragment)
+        run: cargo test --release -p nyar --test gpu_fragment
+      - name: GPU tests (legion.artifact_formats)
+        run: cargo test --release -p legion artifact_formats
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Install Rust
+      - name: Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
@@ -41,8 +45,6 @@ jobs:
         uses: bytecodealliance/actions/wasmtime/setup@v1
         with:
           github_token: ${{ github.token }}
-      - name: Verify Wasmtime
-        run: wasmtime --version
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
@@ -52,3 +54,73 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: false
+  asgard-demo-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          github_token: ${{ github.token }}
+      - name: Build asgard CLI
+        run: cargo build --release -p asgard
+      - name: Build demo.android
+        run: |
+          if [ -d "../valkyrie.v/examples/demo.android" ]; then
+            cargo run --release -p voa -- build ../valkyrie.v/examples/demo.android
+          else
+            echo "skip demo.android (valkyrie.v not in checkout)"
+          fi
+      - name: Build demo.ios
+        run: |
+          if [ -d "../valkyrie.v/examples/demo.ios" ]; then
+            cargo run --release -p voa -- build ../valkyrie.v/examples/demo.ios
+          fi
+      - name: Build demo.wechat.miniprogram
+        run: |
+          if [ -d "../valkyrie.v/examples/demo.wechat.miniprogram" ]; then
+            cargo run --release -p voa -- build ../valkyrie.v/examples/demo.wechat.miniprogram
+          fi
+      - name: Assert no placeholder magic in dist
+        shell: bash
+        run: |
+          for demo in demo.android demo.ios demo.wechat.miniprogram; do
+            dist="../valkyrie.v/examples/$demo/dist"
+            if [ -d "$dist" ]; then
+              if grep -rq "ASGDHOST" "$dist" 2>/dev/null; then exit 1; fi
+              if grep -rq "asgard/Placeholder" "$dist" 2>/dev/null; then exit 1; fi
+            fi
+          done
+  value-semantics-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v5
+      - name: Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          github_token: ${{ github.token }}
+      - name: Value semantics frontend + MIR invariants (nyar-language::valkyrie)
+        run: cargo test -p nyar-language --test valkyrie value_semantics -- --skip backend_fragment_carries_mir_final_aggregate_layouts
+      - name: Value type checker regression (nyar-language::type_checker::value_type)
+        run: cargo test -p nyar-language --test valkyrie type_checker::value_type
+      - name: Cross-backend parity integration tests (nyar_emittervalue_semantics_parity)
+        run: cargo test -p emitter --test value_semantics_parity
+      - name: CLR backend regression (nyar-backend-clr)
+        run: cargo test -p nyar-backend-clr
+      - name: JVM backend regression (nyar-backend-jvm)
+        run: cargo test -p nyar-backend-jvm
+      - name: WASI backend regression (nyar-backend-wasi)
+        run: cargo test -p nyar-backend-wasi
+      - name: Emitter JVM lowering regression (emitter jvm)
+        run: cargo test -p emitter jvm
+      - name: Emitter WASM lowering regression (emitter wasm)
+        run: cargo test -p emitter wasm
+      - name: Emitter NyarVM lowering regression (emitter nyar_vm)
+        run: cargo test -p emitter nyar_vm
+      - name: Emitter Native lowering regression (emitter native)
+        run: cargo test -p emitter native

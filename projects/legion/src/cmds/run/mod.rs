@@ -1,21 +1,35 @@
 use std::{
     collections::BTreeMap,
     ffi::OsString,
+    fmt::Write,
     fs,
     path::{Path, PathBuf},
     process::{Command, ExitCode},
 };
 
 use clap::Args;
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, WrapErr, miette};
+use nyar_language::{CanonicalAbi, CanonicalTarget, RunnerFamily};
+use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 use serde::{Deserialize, Serialize};
-use valkyrie_compiler::{CanonicalTarget, RunnerFamily};
-use valkyrie_interpreter::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
+use sha2::{Digest, Sha256};
 
 use crate::{
+    cmds::build::{BuildArgs, run as run_build},
     manifest::RunnerBinding,
-    planner::{BuildRequest, LegionWorkspace},
+    planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
 };
+
+const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
+const LEGACY_RUN_CONTRACT_FILE_NAME: &str = "run-contract.txt";
+const HOST_SELECTION_FILE_NAME: &str = "host-selection.txt";
+/// 编译计划快照文件名，由构建流程写入，不属于交付产物。
+const COMPILE_PLAN_SNAPSHOT_FILE_NAME: &str = "compile-plan.txt";
+/// 后端执行请求快照文件名，由构建流程写入，不属于交付产物。
+const BACKEND_REQUEST_SNAPSHOT_FILE_NAME: &str = "backend-request.txt";
+/// 后端执行结果快照文件名，由构建流程写入，不属于交付产物。
+const BACKEND_RESULT_SNAPSHOT_FILE_NAME: &str = "backend-result.txt";
+const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 1;
 
 /// `legion run` 的命令参数。
 #[derive(Debug, Clone, Args)]
@@ -41,14 +55,194 @@ pub struct RunArgs {
     /// 只打印即将执行的命令，不真正启动。
     #[arg(long)]
     pub dry_run: bool,
+    /// 输出调试用构建副产物。
+    #[arg(long, default_value_t = false)]
+    pub debug_artifacts: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct RunContract {
-    pub(crate) logical_entry: String,
-    pub(crate) physical_entry: String,
-    pub(crate) invocation: String,
-    pub(crate) validate: String,
+pub struct RunContract {
+    pub logical_entry: String,
+    pub physical_entry: String,
+    pub invocation: String,
+    pub validate: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionManifest {
+    pub schema_version: u32,
+    pub project_name: String,
+    pub target: String,
+    pub inputs: Vec<ExecutionInputDigest>,
+    pub artifacts: Vec<ExecutionArtifactDigest>,
+    pub run_contracts: Vec<RunContract>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionInputDigest {
+    pub role: String,
+    pub path: String,
+    pub hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionArtifactDigest {
+    pub path: String,
+    pub hash: String,
+}
+
+impl ExecutionManifest {
+    /// 将 execution manifest 写入输出目录中的 `run-contracts.txt`。
+    pub fn write_to_output_dir(&self, output_dir: &Path) -> Result<()> {
+        let manifest_path = output_dir.join(EXECUTION_MANIFEST_FILE_NAME);
+        let content =
+            crate::write_von_indented(self).wrap_err_with(|| format!("序列化 execution manifest 失败 {}", manifest_path.display()))?;
+        fs::write(&manifest_path, content)
+            .into_diagnostic()
+            .map_err(|error| error.wrap_err(format!("写入 execution manifest 失败 {}", manifest_path.display())))?;
+
+        if let Some(primary_contract) = self.run_contracts.first() {
+            primary_contract.write_legacy_to_output_dir(output_dir)?;
+        }
+        else {
+            RunContract::remove_legacy_from_output_dir(output_dir)?;
+        }
+
+        Ok(())
+    }
+
+    /// 从输出目录读取 execution manifest。
+    pub fn read_from_output_dir(output_dir: &Path) -> Result<Option<Self>> {
+        Self::read_from_path(&output_dir.join(EXECUTION_MANIFEST_FILE_NAME))
+    }
+
+    /// 从指定路径读取 execution manifest。
+    pub fn read_from_path(path: &Path) -> Result<Option<Self>> {
+        if !path.exists() {
+            return Ok(None);
+        }
+        let source = fs::read_to_string(path)
+            .into_diagnostic()
+            .map_err(|error| error.wrap_err(format!("failed to read execution manifest '{}'", path.display())))?;
+        crate::parse_von::<Self>(&source)
+            .map(Some)
+            .map_err(|error| miette!("failed to parse execution manifest '{}': {}", path.display(), error))
+    }
+
+    /// 删除输出目录中的 execution manifest。
+    pub fn remove_from_output_dir(output_dir: &Path) -> Result<()> {
+        let manifest_path = output_dir.join(EXECUTION_MANIFEST_FILE_NAME);
+        if manifest_path.exists() {
+            fs::remove_file(&manifest_path)
+                .into_diagnostic()
+                .map_err(|error| error.wrap_err(format!("删除 execution manifest 失败 {}", manifest_path.display())))?;
+        }
+        RunContract::remove_legacy_from_output_dir(output_dir)?;
+        Ok(())
+    }
+
+    /// 基于当前 `BuildPlan` 与运行契约生成 execution manifest。
+    pub fn from_build_plan(plan: &BuildPlan, contracts: &[RunContract]) -> Result<Self> {
+        Ok(Self {
+            schema_version: EXECUTION_MANIFEST_SCHEMA_VERSION,
+            project_name: plan.project.name.clone(),
+            target: plan.project.build_target.target.to_string(),
+            inputs: collect_execution_input_digests(plan)?,
+            artifacts: collect_execution_artifact_digests(&plan.output_dir)?,
+            run_contracts: contracts.to_vec(),
+        })
+    }
+
+    /// 校验当前 execution manifest 是否仍与 `BuildPlan` 及产物目录匹配。
+    pub fn is_fresh_for_plan(&self, plan: &BuildPlan) -> Result<bool> {
+        if self.schema_version != EXECUTION_MANIFEST_SCHEMA_VERSION {
+            return Ok(false);
+        }
+        if self.project_name != plan.project.name {
+            return Ok(false);
+        }
+        if self.target != plan.project.build_target.target.to_string() {
+            return Ok(false);
+        }
+        if self.inputs != collect_execution_input_digests(plan)? {
+            return Ok(false);
+        }
+        if self.run_contracts.is_empty() || self.artifacts.is_empty() {
+            return Ok(false);
+        }
+
+        for artifact in &self.artifacts {
+            let artifact_path = plan.output_dir.join(PathBuf::from(&artifact.path));
+            if !artifact_path.exists() {
+                return Ok(false);
+            }
+            if hash_file_sha256(&artifact_path)? != artifact.hash {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+}
+
+impl RunContract {
+    /// 从输出目录读取主运行契约。
+    pub fn read_from_output_dir(output_dir: &Path) -> Result<Option<Self>> {
+        Ok(Self::read_all_from_output_dir(output_dir)?.into_iter().next())
+    }
+
+    /// 从输出目录读取运行契约列表。
+    pub fn read_all_from_output_dir(output_dir: &Path) -> Result<Vec<Self>> {
+        if let Some(manifest) = ExecutionManifest::read_from_output_dir(output_dir)? {
+            return Ok(manifest.run_contracts);
+        }
+
+        Ok(Self::read_legacy_from_output_dir(output_dir)?.into_iter().collect())
+    }
+
+    fn matches_artifact(&self, artifact: &Path) -> bool {
+        let Some(file_name) = artifact.file_name().and_then(|value| value.to_str())
+        else {
+            return false;
+        };
+        if file_name.eq_ignore_ascii_case(&self.physical_entry) {
+            return true;
+        }
+        crate::bootstrap_entry_aliases(&self.physical_entry).iter().any(|alias| file_name.eq_ignore_ascii_case(alias))
+    }
+
+    fn write_legacy_to_output_dir(&self, output_dir: &Path) -> Result<()> {
+        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
+        let content = crate::write_von_indented(self).wrap_err_with(|| format!("序列化运行契约失败 {}", contract_path.display()))?;
+        fs::write(&contract_path, content)
+            .into_diagnostic()
+            .map_err(|error| error.wrap_err(format!("写入运行契约失败 {}", contract_path.display())))
+    }
+
+    fn read_legacy_from_output_dir(output_dir: &Path) -> Result<Option<Self>> {
+        Self::read_legacy_from_path(&output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME))
+    }
+
+    fn read_legacy_from_path(path: &Path) -> Result<Option<Self>> {
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let source = fs::read_to_string(path)
+            .into_diagnostic()
+            .map_err(|error| error.wrap_err(format!("failed to read run contract '{}'", path.display())))?;
+        crate::parse_von::<Self>(&source).map(Some).map_err(|error| miette!("failed to parse run contract '{}': {}", path.display(), error))
+    }
+
+    fn remove_legacy_from_output_dir(output_dir: &Path) -> Result<()> {
+        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
+        if contract_path.exists() {
+            fs::remove_file(&contract_path)
+                .into_diagnostic()
+                .map_err(|error| error.wrap_err(format!("删除运行契约失败 {}", contract_path.display())))?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,28 +262,40 @@ struct RunCommand {
 
 /// 执行 `legion run`。
 pub fn run(args: &RunArgs) -> Result<ExitCode> {
-    let workspace = LegionWorkspace::discover(&args.project_dir)?;
+    let workspace =
+        if args.workspace { LegionWorkspace::discover(&args.project_dir)? } else { LegionWorkspace::discover_for_project(&args.project_dir)? };
     let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
-    let (plan, fallback_to_package) =
-        if args.workspace { (workspace.build_plan(&request)?, false) } else { workspace.build_plan_with_local_fallback(&request)? };
+    let (plan, resolution_mode) = if args.workspace {
+        (workspace.build_plan(&request)?, ProjectResolutionMode::Workspace)
+    }
+    else {
+        workspace.build_plan_with_local_fallback(&request)?
+    };
 
+    let execution_manifest = ensure_execution_manifest(args, &plan)?;
     let command = plan_run_command(
         &workspace,
         &plan.output_dir,
         &plan.project.name,
         &plan.project.build_target.target,
         &args.runner,
+        &execution_manifest.run_contracts,
         args.artifact.as_deref(),
     )?;
 
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", plan.output_dir.display());
-    if fallback_to_package {
-        println!("mode: package");
-    }
-    else {
-        println!("mode: workspace");
+    match resolution_mode {
+        ProjectResolutionMode::Workspace => {
+            println!("mode: workspace");
+        }
+        ProjectResolutionMode::Package => {
+            println!("mode: package");
+        }
+        ProjectResolutionMode::Script => {
+            println!("mode: script");
+        }
     }
     println!("artifact: {}", command.artifact.display());
     println!("runner: {}", command.command);
@@ -116,25 +322,58 @@ fn plan_run_command(
     project_name: &str,
     canonical_target: &CanonicalTarget,
     cli_runner_overrides: &[String],
+    run_contracts: &[RunContract],
     artifact_override: Option<&Path>,
 ) -> Result<RunCommand> {
     let runner_target = runner_target_for(canonical_target);
-    let run_contract = read_run_contract(output_dir)?;
     let artifact = match artifact_override {
         Some(path) => path.to_path_buf(),
-        None => discover_artifact(output_dir, project_name, runner_target, run_contract.as_ref())?,
+        None => discover_artifact(output_dir, project_name, runner_target, run_contracts.first())?,
     };
 
     if !artifact.exists() {
         return Err(miette!("artifact does not exist: {}", artifact.display()));
     }
 
-    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, run_contract.as_ref())?;
-    let placeholders = build_placeholders(output_dir, &artifact, runner_target, run_contract.as_ref())?;
+    let run_contract = run_contracts.iter().find(|contract| contract.matches_artifact(&artifact)).or_else(|| run_contracts.first());
+    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, run_contract)?;
+    let placeholders = build_placeholders(output_dir, &artifact, runner_target, run_contract)?;
     let command = expand_placeholders(&runner.command, &placeholders);
     let args = expand_runner_args(&runner.args, &placeholders);
 
     Ok(RunCommand { target: runner_target, artifact, command, args })
+}
+
+fn ensure_execution_manifest(args: &RunArgs, plan: &BuildPlan) -> Result<ExecutionManifest> {
+    if let Some(manifest) = ExecutionManifest::read_from_output_dir(&plan.output_dir)? {
+        if manifest.is_fresh_for_plan(plan)? {
+            println!("build status: reused");
+            return Ok(manifest);
+        }
+        println!("build status: stale");
+    }
+    else {
+        println!("build status: missing");
+    }
+
+    let build_status = run_build(&BuildArgs {
+        project_dir: args.project_dir.clone(),
+        target: args.target.clone(),
+        output_dir: args.output_dir.clone(),
+        workspace: args.workspace,
+        debug_artifacts: args.debug_artifacts,
+    })?;
+    if build_status != ExitCode::SUCCESS {
+        return Err(miette!("build returned non-zero status"));
+    }
+
+    let manifest = ExecutionManifest::read_from_output_dir(&plan.output_dir)?
+        .ok_or_else(|| miette!("missing execution manifest after build: {}", plan.output_dir.join(EXECUTION_MANIFEST_FILE_NAME).display()))?;
+    if !manifest.is_fresh_for_plan(plan)? {
+        return Err(miette!("execution manifest is still stale after build"));
+    }
+
+    Ok(manifest)
 }
 
 fn resolve_runner(
@@ -144,7 +383,10 @@ fn resolve_runner(
     cli_runner_overrides: &[String],
     run_contract: Option<&RunContract>,
 ) -> Result<RunnerTemplate> {
-    let default_template = default_runner_template(runner_target, run_contract);
+    let mut default_template = default_runner_template(runner_target, run_contract);
+    if runner_target == RunnerFamily::Wasi && is_wasip3_target(canonical_target) {
+        inject_wasmtime_p3_flag(&mut default_template.args);
+    }
 
     if let Some(command) = parse_runner_overrides(cli_runner_overrides)?.remove(&runner_target) {
         let mut template = default_template.clone();
@@ -155,7 +397,11 @@ fn resolve_runner(
     if let Some(workspace_manifest) = &workspace.workspace_manifest {
         if let Some(binding) = workspace_manifest.runner.iter().find(|binding| runner_binding_matches(binding, runner_target, canonical_target))
         {
-            return Ok(RunnerTemplate { target: runner_target, command: binding.command.clone(), args: binding.args.clone() });
+            let mut template = RunnerTemplate { target: runner_target, command: binding.command.clone(), args: binding.args.clone() };
+            if runner_target == RunnerFamily::Wasi && is_wasip3_target(canonical_target) {
+                inject_wasmtime_p3_flag(&mut template.args);
+            }
+            return Ok(template);
         }
     }
 
@@ -168,6 +414,21 @@ fn resolve_runner(
     }
 
     Ok(default_template)
+}
+
+fn is_wasip3_target(canonical_target: &CanonicalTarget) -> bool {
+    matches!(canonical_target.abi, Some(CanonicalAbi::WasiP3))
+        || canonical_target.to_string().contains("wasip3")
+        || canonical_target.to_profile(None).capability_tags.iter().any(|tag| tag == "wasip3")
+}
+
+fn inject_wasmtime_p3_flag(args: &mut Vec<String>) {
+    if args.windows(2).any(|pair| pair[0] == "-S" && pair[1] == "p3") {
+        return;
+    }
+    let insert_at = args.len().saturating_sub(1);
+    args.insert(insert_at, "-S".to_string());
+    args.insert(insert_at + 1, "p3".to_string());
 }
 
 fn parse_runner_overrides(values: &[String]) -> Result<BTreeMap<RunnerFamily, String>> {
@@ -203,6 +464,7 @@ fn runtime_family_for(target: RunnerFamily) -> InterpreterRuntimeFamily {
         RunnerFamily::Node => InterpreterRuntimeFamily::Node,
         RunnerFamily::Windows => InterpreterRuntimeFamily::Windows,
         RunnerFamily::Wasi => InterpreterRuntimeFamily::Wasi,
+        RunnerFamily::NyarVm => InterpreterRuntimeFamily::NyarVm,
     }
 }
 
@@ -210,6 +472,7 @@ fn interpreter_runtime_contract(run_contract: Option<&RunContract>) -> Option<In
     run_contract.map(|contract| InterpreterRuntimeContract {
         logical_entry: (!contract.logical_entry.is_empty()).then_some(contract.logical_entry.as_str()),
         physical_entry: (!contract.physical_entry.is_empty()).then_some(contract.physical_entry.as_str()),
+        wasi_p3: contract.validate.contains("-S p3") || contract.validate.contains(" p3"),
     })
 }
 
@@ -252,43 +515,6 @@ fn expand_runner_args(args: &[String], placeholders: &BTreeMap<&'static str, Str
 
 fn expand_placeholders(template: &str, placeholders: &BTreeMap<&'static str, String>) -> String {
     placeholders.iter().fold(template.to_string(), |current, (key, value)| current.replace(&format!("{{{}}}", key), value))
-}
-
-fn read_run_contract(output_dir: &Path) -> Result<Option<RunContract>> {
-    let path = output_dir.join("run-contract.txt");
-    if !path.exists() {
-        return Ok(None);
-    }
-
-    let source = fs::read_to_string(&path)
-        .into_diagnostic()
-        .map_err(|error| error.wrap_err(format!("failed to read run contract '{}'", path.display())))?;
-    let mut logical_entry = String::new();
-    let mut physical_entry = String::new();
-    let mut invocation = String::new();
-    let mut validate = String::new();
-
-    for line in source.lines() {
-        let Some((key, value)) = line.split_once(':')
-        else {
-            continue;
-        };
-        let value = parse_von_scalar(value);
-        match key.trim() {
-            "logical_entry" => logical_entry = value,
-            "physical_entry" => physical_entry = value,
-            "invocation" => invocation = value,
-            "validate" => validate = value,
-            _ => {}
-        }
-    }
-
-    Ok(Some(RunContract { logical_entry, physical_entry, invocation, validate }))
-}
-
-/// 解析 `run-contract.txt` 中的简单 `VON` 标量字符串。
-fn parse_von_scalar(value: &str) -> String {
-    value.trim().trim_end_matches(',').trim().trim_matches('"').to_string()
 }
 
 fn discover_artifact(
@@ -343,16 +569,16 @@ fn find_contract_artifact(files: &[PathBuf], physical_entry: &str) -> Option<Pat
         return None;
     }
 
-    files.iter().find_map(|path| {
-        let file_name = path.file_name()?.to_str()?;
-        let stem = path.file_stem()?.to_str()?;
-        if file_name.eq_ignore_ascii_case(physical_entry) || stem.eq_ignore_ascii_case(physical_entry) {
-            Some(path.clone())
+    for candidate in crate::bootstrap_entry_aliases(physical_entry).iter().chain(std::iter::once(&physical_entry)) {
+        if let Some(path) = files.iter().find_map(|path| {
+            let file_name = path.file_name()?.to_str()?;
+            let stem = path.file_stem()?.to_str()?;
+            if file_name.eq_ignore_ascii_case(candidate) || stem.eq_ignore_ascii_case(candidate) { Some(path.clone()) } else { None }
+        }) {
+            return Some(path);
         }
-        else {
-            None
-        }
-    })
+    }
+    None
 }
 
 fn preferred_extensions(target: RunnerFamily) -> &'static [&'static str] {
@@ -361,7 +587,8 @@ fn preferred_extensions(target: RunnerFamily) -> &'static [&'static str] {
         RunnerFamily::Jvm => &["jar", "class"],
         RunnerFamily::Node => &["mjs", "js", "wasm"],
         RunnerFamily::Windows => &["exe"],
-        RunnerFamily::Wasi => &["wasm"],
+        RunnerFamily::Wasi => &["wasi", "wasm"],
+        RunnerFamily::NyarVm => &["nyar"],
     }
 }
 
@@ -384,17 +611,7 @@ fn shell_join(args: &[String]) -> String {
         return String::new();
     }
 
-    args.iter()
-        .map(|value| {
-            if value.contains(' ') {
-                format!("\"{}\"", value)
-            }
-            else {
-                value.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+    args.iter().map(|value| if value.contains(' ') { format!("\"{}\"", value) } else { value.clone() }).collect::<Vec<_>>().join(" ")
 }
 
 fn exit_code_from_status(code: Option<i32>) -> ExitCode {
@@ -408,4 +625,78 @@ fn exit_code_from_status(code: Option<i32>) -> ExitCode {
 /// 移除 Windows extended-length path 前缀 `\\?\`，避免 Node/wasmtime 等外部工具无法解析。
 fn strip_verbatim_prefix(path: &str) -> &str {
     path.strip_prefix(r"\\?\").unwrap_or(path)
+}
+
+fn collect_execution_input_digests(plan: &BuildPlan) -> Result<Vec<ExecutionInputDigest>> {
+    let mut inputs = Vec::new();
+    for source_path in &plan.project.source_files {
+        inputs.push(ExecutionInputDigest {
+            role: "source".to_string(),
+            path: normalized_path_text(source_path),
+            hash: hash_file_sha256(source_path)?,
+        });
+    }
+
+    inputs.push(ExecutionInputDigest {
+        role: "project-manifest".to_string(),
+        path: normalized_path_text(&plan.project.manifest_path),
+        hash: hash_file_sha256(&plan.project.manifest_path)?,
+    });
+
+    let workspace_manifest_path = plan.workspace_root.join("legions.von");
+    if workspace_manifest_path.exists() {
+        inputs.push(ExecutionInputDigest {
+            role: "workspace-manifest".to_string(),
+            path: normalized_path_text(&workspace_manifest_path),
+            hash: hash_file_sha256(&workspace_manifest_path)?,
+        });
+    }
+
+    inputs.sort_by(|left, right| left.role.cmp(&right.role).then(left.path.cmp(&right.path)));
+    Ok(inputs)
+}
+
+fn collect_execution_artifact_digests(output_dir: &Path) -> Result<Vec<ExecutionArtifactDigest>> {
+    let mut files = collect_files(output_dir)?;
+    files.retain(|path| !is_execution_metadata_file(path));
+    files.sort();
+
+    files
+        .into_iter()
+        .map(|path| Ok(ExecutionArtifactDigest { path: relative_output_path(output_dir, &path), hash: hash_file_sha256(&path)? }))
+        .collect()
+}
+
+fn is_execution_metadata_file(path: &Path) -> bool {
+    path.file_name().and_then(|value| value.to_str()).is_some_and(|value| {
+        value.eq_ignore_ascii_case(EXECUTION_MANIFEST_FILE_NAME)
+            || value.eq_ignore_ascii_case(LEGACY_RUN_CONTRACT_FILE_NAME)
+            || value.eq_ignore_ascii_case(HOST_SELECTION_FILE_NAME)
+            || value.eq_ignore_ascii_case(COMPILE_PLAN_SNAPSHOT_FILE_NAME)
+            || value.eq_ignore_ascii_case(BACKEND_REQUEST_SNAPSHOT_FILE_NAME)
+            || value.eq_ignore_ascii_case(BACKEND_RESULT_SNAPSHOT_FILE_NAME)
+    })
+}
+
+fn relative_output_path(output_dir: &Path, path: &Path) -> String {
+    path.strip_prefix(output_dir).unwrap_or(path).to_string_lossy().replace('\\', "/")
+}
+
+fn normalized_path_text(path: &Path) -> String {
+    strip_verbatim_prefix(path.to_string_lossy().as_ref()).to_owned()
+}
+
+fn hash_file_sha256(path: &Path) -> Result<String> {
+    let bytes = fs::read(path).into_diagnostic().map_err(|error| error.wrap_err(format!("failed to read '{}'", path.display())))?;
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    Ok(hex_encode(&hasher.finalize()))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut text = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(&mut text, "{byte:02x}");
+    }
+    text
 }

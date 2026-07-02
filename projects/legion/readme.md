@@ -5,10 +5,11 @@
 ## 职责
 - 提供 `legion` CLI 入口。
 - 负责 workspace、manifest、build plan、target 选择与任务编排。
-- 聚合 `valkyrie-parser`、`valkyrie-compiler`、`valkyrie-interpreter` 的能力。
+- 聚合 `valkyrie-parser`、`valkyrie-compiler`、`nyar-runner` 的能力。
 
 ## 禁止
 - 不在这里实现语言主链。
 - 不在这里定义 `AST / HIR / MIR / LIR`。
 - 不在这里堆积目标后端细节或运行时实现。
 - 不引入新的统一 `god ir`。
+- 多语言 host-script demo 的解释路径属 `legend` + `legacy-vm`（PE 基板）+ `nyar-language` guests，不在 legion 内实现语言 interpret。

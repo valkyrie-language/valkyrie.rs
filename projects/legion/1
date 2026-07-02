@@ -1,0 +1,11 @@
+entry_operation: Some(QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "main" }] })
+exported_operations: [QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "gen" }] }, QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "delegate_gen" }] }, QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "async_fn" }] }, QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "main" }] }]
+control_flow functions: Some([QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "gen" }] }, QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "delegate_gen" }] }, QualifiedName { parts: [Identifier { text: "main" }, Identifier { text: "async_fn" }] }])
+  method: main__gen desc: JvmMethodDescriptor { parameter_types: [], return_type: Void }
+  method: main__delegate_gen desc: JvmMethodDescriptor { parameter_types: [], return_type: Void }
+  method: main__async_fn desc: JvmMethodDescriptor { parameter_types: [], return_type: Void }
+  method: main__main desc: JvmMethodDescriptor { parameter_types: [], return_type: Void }
+  method: witness_CounterIterator_Iterator_next desc: JvmMethodDescriptor { parameter_types: [Object("java/lang/Object")], return_type: Object("java/lang/String") }
+  method: witness_ReadyFuture_Future_poll desc: JvmMethodDescriptor { parameter_types: [Object("java/lang/Object")], return_type: Boolean }
+  method: entry_main__main desc: JvmMethodDescriptor { parameter_types: [], return_type: Int }
+  method: main desc: JvmMethodDescriptor { parameter_types: [], return_type: Int }

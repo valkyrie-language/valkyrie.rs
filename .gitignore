@@ -1,6 +1,7 @@
 # IDE
 .vscode
 .idea
+.worktrees/
 *.iml
 time-travel.*
 
@@ -9,11 +10,13 @@ target/
 Cargo.lock
 Untitled.ipynb
 .ipynb_checkpoints/
-
+*.rlib
+*.tgz
 
 # Node
 node_modules/
 cache/
+.cache/
 package-lock.json
 *.wasm
 dist/
@@ -31,7 +34,6 @@ htmlcov/
 .tmp/
 *.jar
 
-
 *.txt
 *.log
 
@@ -39,3 +41,5 @@ htmlcov/
 *.exe
 *.wasm
 *.wasi
+
+.env.placeholder.local

@@ -7,19 +7,34 @@ license.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-clr-backend = { workspace = true }
-jvm-backend = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true }
-nyar-driver = { workspace = true }
-von-parser = { workspace = true }
-valkyrie-compiler = { workspace = true }
-valkyrie-interpreter = { workspace = true }
-valkyrie-parser = { workspace = true }
-valkyrie-types = { workspace = true }
-wasi-backend = { workspace = true }
+serde_json = { workspace = true }
+base64 = { workspace = true }
+emitter = { workspace = true }
+nyar-package-manager = { workspace = true }
+nyar-workspace = { workspace = true }
+std-data = { workspace = true, features = ["serde"] }
+nyar-language = { workspace = true, features = ["serde"] }
+nyar-analyzer = { workspace = true }
+nyar-runner = { workspace = true }
+nvm = { workspace = true }
+nyar = { workspace = true }
 zip = { workspace = true }
+sha2 = { workspace = true }
+pulldown-cmark = { workspace = true }
+voa = { workspace = true }
+
+[[bin]]
+name = "legion"
+path = "src/main.rs"
 
 [dev-dependencies]
 tempfile = { workspace = true }
-wasi-backend = { workspace = true }
+nyar = { workspace = true }
+zip = { workspace = true }
+
+[[example]]
+name = "dump_sources"
+path = "examples/dump_sources/main.rs"
+

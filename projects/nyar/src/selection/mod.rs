@@ -1,11 +1,9 @@
 #![doc = include_str!("readme.md")]
 
-use serde::{Deserialize, Serialize};
-
 use crate::planning::PartitionBackendRequirement;
 
 /// 候选后端元信息。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackendCandidate {
     /// 后端名。
     pub name: String,
@@ -16,7 +14,7 @@ pub struct BackendCandidate {
 }
 
 /// 简单后端选择器。
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BackendSelector {
     /// 注册的候选后端。
     pub candidates: Vec<BackendCandidate>,

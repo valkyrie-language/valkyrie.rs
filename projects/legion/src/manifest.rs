@@ -4,9 +4,9 @@ use std::{
 };
 
 use miette::{Diagnostic, Severity};
+use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use valkyrie_compiler::{CanonicalTarget, PublishFormat, RunnerSelector};
-use von_parser::{from_str, VonError};
+use std_data::text::von::{VonError, from_str};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AutoLinkConfig {
@@ -20,7 +20,14 @@ pub struct AutoLinkConfig {
 pub enum DependencySpec {
     Disabled,
     Workspace,
-    Detailed { version: Option<String>, path: Option<String>, abi: Option<String> },
+    Detailed { version: Option<String>, path: Option<String>, abi: Option<String>, source: Option<String>, registry: Option<String> },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DependencySourcePreference {
+    Auto,
+    Workspace,
+    Registry,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +46,12 @@ pub struct BuildTargetSpec {
     pub exclude_directories: Vec<String>,
     #[serde(default)]
     pub exclude_files: Vec<String>,
+    /// 发布格式过滤（如 `mini-game` / `mini-program` / `web-app`）。
+    #[serde(default)]
+    pub publish: Vec<String>,
+    /// CLR Runtime Async V2（.NET 11+ await-only）；默认 state machine PE。
+    #[serde(default)]
+    pub runtime_async: bool,
 }
 
 impl Default for BuildTargetSpec {
@@ -51,6 +64,8 @@ impl Default for BuildTargetSpec {
             wat: false,
             exclude_directories: Vec::new(),
             exclude_files: Vec::new(),
+            publish: Vec::new(),
+            runtime_async: false,
         }
     }
 }
@@ -59,18 +74,44 @@ impl Default for BuildTargetSpec {
 pub struct PublishTargetSpec {
     #[serde(default = "default_canonical_target")]
     pub target: CanonicalTarget,
+    /// Registry (`npm` / `jsr`) or artifact publish format (`web-app`, …).
     #[serde(rename = "type", default)]
-    pub publish_format: Option<PublishFormat>,
+    pub channel_type: Option<String>,
     #[serde(default)]
     pub package_id: Option<String>,
     #[serde(default)]
     pub version: Option<String>,
 }
 
+impl PublishTargetSpec {
+    /// When `type` names an artifact publish format, return the parsed enum.
+    pub fn artifact_publish_format(&self) -> Option<PublishFormat> {
+        self.channel_type.as_deref().and_then(|value| value.parse::<PublishFormat>().ok())
+    }
+}
+
 impl Default for PublishTargetSpec {
     fn default() -> Self {
-        Self { target: default_canonical_target(), publish_format: None, package_id: None, version: None }
+        Self { target: default_canonical_target(), channel_type: None, package_id: None, version: None }
     }
+}
+
+/// 第三方构建器插件配置（如 Unity 工程导出）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct BuildPluginSpec {
+    pub kind: String,
+    #[serde(default)]
+    pub sdk: Option<String>,
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(rename = "input_directory", default)]
+    pub input_directory: Option<String>,
+    #[serde(rename = "output_directory", default)]
+    pub output_directory: Option<String>,
+    #[serde(rename = "next_step", default)]
+    pub next_step: Option<String>,
+    #[serde(rename = "export_routes", default)]
+    pub export_routes: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -138,6 +179,8 @@ pub struct ProjectManifest {
     pub publish: Vec<PublishTargetSpec>,
     #[serde(rename = "sdk-vendor", default)]
     pub sdk_vendor: Option<SdkVendorConfig>,
+    #[serde(rename = "build_plugin", default)]
+    pub build_plugin: Option<BuildPluginSpec>,
 }
 
 #[derive(Debug)]
@@ -193,6 +236,35 @@ impl ProjectManifest {
     }
 }
 
+impl DependencySpec {
+    pub fn source_preference(&self) -> DependencySourcePreference {
+        match self {
+            Self::Disabled => DependencySourcePreference::Auto,
+            Self::Workspace => DependencySourcePreference::Workspace,
+            Self::Detailed { source, .. } => match source.as_deref().map(|value| value.trim().to_ascii_lowercase()) {
+                Some(value) if value == "workspace" => DependencySourcePreference::Workspace,
+                Some(value) if value == "registry" => DependencySourcePreference::Registry,
+                _ => DependencySourcePreference::Auto,
+            },
+        }
+    }
+
+    pub fn version_hint(&self) -> Option<&str> {
+        match self {
+            Self::Detailed { version: Some(version), .. } => Some(version.as_str()),
+            Self::Workspace => Some("workspace"),
+            _ => None,
+        }
+    }
+
+    pub fn registry_hint(&self) -> Option<&str> {
+        match self {
+            Self::Detailed { registry: Some(registry), .. } => Some(registry.as_str()),
+            _ => None,
+        }
+    }
+}
+
 impl Serialize for DependencySpec {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -201,10 +273,19 @@ impl Serialize for DependencySpec {
         match self {
             Self::Disabled => false.serialize(serializer),
             Self::Workspace => true.serialize(serializer),
-            Self::Detailed { version, path, abi } if path.is_none() && abi.is_none() => version.serialize(serializer),
-            Self::Detailed { version, path, abi } => {
-                DetailedDependencySpec { version: version.clone(), path: path.clone(), abi: abi.clone() }.serialize(serializer)
+            Self::Detailed { version, path, abi, source, registry }
+                if path.is_none() && abi.is_none() && source.is_none() && registry.is_none() =>
+            {
+                version.serialize(serializer)
             }
+            Self::Detailed { version, path, abi, source, registry } => DetailedDependencySpec {
+                version: version.clone(),
+                path: path.clone(),
+                abi: abi.clone(),
+                source: source.clone(),
+                registry: registry.clone(),
+            }
+            .serialize(serializer),
         }
     }
 }
@@ -217,8 +298,12 @@ impl<'de> Deserialize<'de> for DependencySpec {
         match DependencySpecDef::deserialize(deserializer)? {
             DependencySpecDef::Bool(false) => Ok(Self::Disabled),
             DependencySpecDef::Bool(true) => Ok(Self::Workspace),
-            DependencySpecDef::String(version) => Ok(Self::Detailed { version: Some(version), path: None, abi: None }),
-            DependencySpecDef::Detailed(value) => Ok(Self::Detailed { version: value.version, path: value.path, abi: value.abi }),
+            DependencySpecDef::String(version) => {
+                Ok(Self::Detailed { version: Some(version), path: None, abi: None, source: None, registry: None })
+            }
+            DependencySpecDef::Detailed(value) => {
+                Ok(Self::Detailed { version: value.version, path: value.path, abi: value.abi, source: value.source, registry: value.registry })
+            }
         }
     }
 }
@@ -231,6 +316,10 @@ struct DetailedDependencySpec {
     path: Option<String>,
     #[serde(default)]
     abi: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    registry: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

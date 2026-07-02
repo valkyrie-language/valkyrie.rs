@@ -2,20 +2,18 @@
 
 pub mod clr;
 pub mod jvm;
-pub mod op_codes;
+pub mod native;
 pub mod pe_dump;
-pub mod pe_parser;
-pub mod table_sizes;
 pub mod wasm;
 
 use clap::{Args, Subcommand, ValueEnum};
-use miette::{miette, Result};
+use miette::{Result, miette};
 use std::process::ExitCode;
 
 /// spy 子命令的选项集合。
 #[derive(Debug, Clone, Args)]
 pub struct SpyOptions {
-    /// 诊断模式：`wasm` / `jvm` / `clr` / `lir` / `mir` / `verify`。
+    /// 诊断模式：`wasm` / `jvm` / `clr` / `native` / `lir` / `mir` / `verify`。
     #[command(subcommand)]
     pub mode: SpyMode,
 }
@@ -29,6 +27,8 @@ pub enum SpyMode {
     Jvm(SpyTargetOptions),
     /// dump CLR / MSIL。
     Clr(SpyTargetOptions),
+    /// 反汇编 Native x86-64 PE/ELF 或 X64Instruction JSON dump。
+    Native(SpyTargetOptions),
     /// dump 指定函数的 LIR。
     Lir(SpyTargetOptions),
     /// dump 指定函数的 MIR。
@@ -42,7 +42,7 @@ pub enum SpyMode {
 pub struct SpyTargetOptions {
     /// 目标文件路径（wasm/jvm/clr 模式）或项目名（lir/mir/verify 模式）。
     pub input: Option<String>,
-    /// 函数索引或函数名（wasm/lir/mir 模式）。
+    /// 函数索引或函数名（wasm/lir/mir 模式）；JVM jar 模式下过滤 class 内部名/二进制名片段。
     #[arg(long, short = 'f')]
     pub func: Option<String>,
     /// 方法名（jvm/clr 模式）。
@@ -66,6 +66,15 @@ pub struct SpyTargetOptions {
     /// 是否 dump 函数体原始字节（wasm 模式，配合 `--func` 使用）。
     #[arg(long)]
     pub hex: bool,
+    /// 是否结构化解析 Type 段（wasm 模式，列出每个 type 条目的索引/种类/内容）。
+    #[arg(long)]
+    pub types: bool,
+    /// 审计 wasm-gc struct/array 类型覆盖（wasm 模式，读取 nyar.wasm.gc_layouts）。
+    #[arg(long = "gc-audit")]
+    pub gc_audit: bool,
+    /// 审计 Node JS-glue 契约：`cli_get_*` 导入与 `help`/`version`/`build`/`main` 导出是否匹配。
+    #[arg(long = "glue-audit")]
+    pub glue_audit: bool,
 }
 
 /// 可选的编译目标。
@@ -83,6 +92,7 @@ impl SpyOptions {
             SpyMode::Wasm(options) => ("wasm", options),
             SpyMode::Jvm(options) => ("jvm", options),
             SpyMode::Clr(options) => ("clr", options),
+            SpyMode::Native(options) => ("native", options),
             SpyMode::Lir(options) => ("lir", options),
             SpyMode::Mir(options) => ("mir", options),
             SpyMode::Verify(options) => ("verify", options),
@@ -98,9 +108,10 @@ pub fn run(options: &SpyOptions) -> Result<ExitCode> {
         SpyMode::Clr(_) => clr::run(options),
         SpyMode::Wasm(_) => wasm::run(options),
         SpyMode::Jvm(_) => jvm::run(options),
+        SpyMode::Native(_) => native::run(options),
         SpyMode::Lir(_) | SpyMode::Mir(_) | SpyMode::Verify(_) => {
             let (mode, _) = options.split();
-            Err(miette!("spy 模式 '{}' 尚未实现，当前只支持 `clr`、`wasm` 和 `jvm`", mode))
+            Err(miette!("spy 模式 '{}' 尚未实现，当前只支持 `clr`、`wasm`、`jvm` 和 `native`", mode))
         }
     }
 }

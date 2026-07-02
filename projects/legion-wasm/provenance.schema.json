@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valkyrie-language.dev/schemas/legion-node-provenance.schema.json",
+  "title": "Legion Node seed provenance",
+  "type": "object",
+  "required": [
+    "package",
+    "version",
+    "target",
+    "rust_commit",
+    "stage",
+    "bootstrap_claim",
+    "artifacts"
+  ],
+  "properties": {
+    "package": { "const": "@valkyrie-language/legion" },
+    "version": { "type": "string" },
+    "target": { "const": "wasm32-node-unknown-wasm" },
+    "rust_repo": { "type": "string" },
+    "rust_commit": { "type": "string", "minLength": 7 },
+    "valkyrie_v_commit": { "type": ["string", "null"] },
+    "valkyrie_2020": { "type": ["string", "null"] },
+    "toolchain": {
+      "type": "object",
+      "properties": {
+        "rustc": { "type": "string" },
+        "cargo": { "type": "string" },
+        "node": { "type": "string" }
+      }
+    },
+    "build": {
+      "type": "object",
+      "properties": {
+        "from": { "type": "string" },
+        "locked": { "type": "boolean" },
+        "assembled_at": { "type": "string" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "stage": { "const": "rust-seed" },
+    "bootstrap_claim": { "const": "source-bootstrap-not-proven" }
+  },
+  "additionalProperties": true
+}

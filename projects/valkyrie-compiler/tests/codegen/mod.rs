@@ -1,1 +1,0 @@
-mod renamed_inheritance;

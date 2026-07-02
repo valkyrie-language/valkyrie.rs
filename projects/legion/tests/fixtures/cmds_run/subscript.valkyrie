@@ -1,0 +1,10 @@
+[main]
+micro main(args: [utf16]): i64 {
+    if length(args) > 0 {
+        let first: utf16 = args[0];
+        let copied: utf16 = first;
+        let _ = copied;
+    }
+
+    return 0;
+}

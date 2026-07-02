@@ -8,7 +8,7 @@ Valkyrie 是一门现代函数式编程语言，本项目包含了该语言的�
 
 - **[类型系统与错误处理](./projects/valkyrie-types)**: 内置类型定义、类型检查与统一的错误报告
 - **[编译器](./projects/valkyrie-compiler)**: 基于 Chomsky 的现代编译器框架
-- **[运行时](./projects/valkyrie-interpreter)**: 高性能字节码执行引擎
+- **[运行时](projects/nyar-runner)**: 高性能字节码执行引擎
 - **[集成工具](./projects/valkyrie)**: 整合编译器与运行时的入口
 - **[命令行工具 (Legion)](./projects/legion)**: 编译器与包管理工具
 - **[WASM/WASI 支持](./projects/valkyrie-wasm32-wasi)**: 针对 WebAssembly 平台的后端实现

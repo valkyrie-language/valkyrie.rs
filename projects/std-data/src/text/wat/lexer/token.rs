@@ -1,0 +1,24 @@
+//! WIT 词法记号。
+
+use std::ops::Range;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenKind {
+    LParen,
+    RParen,
+    Identifier,
+    StringLiteral,
+    Eof,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Range<usize>,
+}
+
+impl Token {
+    pub(crate) fn eof(offset: usize) -> Self {
+        Self { kind: TokenKind::Eof, span: offset..offset }
+    }
+}

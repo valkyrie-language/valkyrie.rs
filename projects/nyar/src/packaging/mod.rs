@@ -19,6 +19,8 @@ pub enum TargetLane {
     Native,
     /// `CPU/VM`
     Vm,
+    /// `GPU / Shader`
+    Gpu,
 }
 
 /// 单个产物描述。
