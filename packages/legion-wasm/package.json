@@ -1,19 +1,18 @@
 {
   "name": "@valkyrie-language/legion",
-  "version": "0.1.4",
+  "version": "0.0.5",
   "description": "Legion compiler CLI for Node.js (WebAssembly).",
   "type": "module",
-  "license": "MIT",
+  "license": "MPL-2.0",
   "bin": {
-    "legion": "bin/legion.mjs"
+    "legion": "./legion.mjs"
   },
   "exports": {
-    ".": "./bin/legion.mjs",
+    ".": "./legion.mjs",
     "./package.json": "./package.json"
   },
   "files": [
-    "bin/",
-    "lib/",
+    "legion.mjs",
     "legion.wasm",
     "run-contracts.txt",
     "provenance.json",

@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 /**
- * Minimal Node CLI seed wasm for @valkyrie-language/legion package smoke tests.
+ * NOT A PUBLISH PATH.
+ *
+ * Minimal ~67B stub wasm for local package-glue experiments only.
+ * Official seed must come from:
+ *   cargo build -p legion --locked
+ *   legion build <legion.tools> --target node -o <out>
+ *   node scripts/assemble-legion-wasm.mjs --from <out>
+ * assemble-legion-wasm rejects this stub (size + placeholder contracts).
  */
 
 import { writeFileSync, mkdirSync } from "node:fs";

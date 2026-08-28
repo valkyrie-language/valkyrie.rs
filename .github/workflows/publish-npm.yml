@@ -1,0 +1,139 @@
+# Trusted Publisher contract (sole npm trusted workflow — keep this filename):
+#   file = publish-npm.yml
+#   repo = valkyrie-language/valkyrie.rs
+#   env  = NPM_PUBLISH
+#
+# Triggers:
+#   - push tag v0.0.5   (fixed seed version for this release line)
+#   - workflow_dispatch (must pass version=0.0.5)
+# Do not register Trusted Publisher on any other workflow file.
+# No NPM_TOKEN — OIDC only.
+
+name: Publish npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without v prefix (must be 0.0.5 for this seed line)'
+        required: true
+        type: string
+        default: '0.0.5'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @valkyrie-language/legion
+    runs-on: ubuntu-latest
+    environment: NPM_PUBLISH
+    steps:
+      - name: Checkout valkyrie.rs
+        uses: actions/checkout@v4
+
+      - name: Checkout valkyrie.v
+        uses: actions/checkout@v4
+        with:
+          repository: valkyrie-language/valkyrie.v
+          ref: dev
+          path: valkyrie.v
+          token: ${{ github.token }}
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="${{ inputs.version }}"
+            v="${v#v}"
+          else
+            ref="${GITHUB_REF#refs/tags/}"
+            v="${ref#v}"
+          fi
+          if [[ "$v" != "0.0.5" ]]; then
+            echo "refusing publish: only 0.0.5 is allowed on this seed line (got $v)" >&2
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "resolved version=$v"
+
+      - name: Record valkyrie.v commit
+        id: vcommit
+        working-directory: valkyrie.v
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "valkyrie.v=$sha"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          # Do NOT set registry-url: it writes _authToken into npmrc and blocks OIDC.
+
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Install Wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          github_token: ${{ github.token }}
+
+      - name: Build legion CLI
+        run: cargo build -p legion --release
+
+      - name: Build legion.tools for Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="valkyrie.v/projects/legion._/projects/legion.tools"
+          out="dist/legion-node"
+          mkdir -p "$out"
+          ./target/release/legion build "$tools" --target node -o "$out"
+
+      - name: Assemble npm package
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/assemble-legion-wasm.mjs \
+            --from dist/legion-node \
+            --v-commit "${{ steps.vcommit.outputs.sha }}"
+          test -f packages/legion-wasm/legion.wasm
+          test -f packages/legion-wasm/legion.mjs
+          bytes="$(wc -c < packages/legion-wasm/legion.wasm)"
+          if [[ "$bytes" -lt 1024 ]]; then
+            echo "refusing publish: legion.wasm is ${bytes} bytes" >&2
+            exit 1
+          fi
+          grep -q 'physical_entry: "legion.mjs"' packages/legion-wasm/run-contracts.txt
+
+      - name: Strip token-style npmrc (OIDC only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset NODE_AUTH_TOKEN NPM_TOKEN || true
+          for f in "${HOME}/.npmrc" "${NPM_CONFIG_USERCONFIG:-}" "${RUNNER_TEMP:-}/.npmrc"; do
+            [[ -n "${f}" && -f "${f}" ]] || continue
+            if grep -q '_authToken' "${f}"; then
+              grep -v '_authToken' "${f}" > "${f}.oidc" && mv "${f}.oidc" "${f}"
+              echo "stripped _authToken from ${f}"
+            fi
+          done
+
+      - name: Publish @valkyrie-language/legion
+        env:
+          GITHUB_REF: refs/tags/v${{ steps.ver.outputs.version }}
+        run: node scripts/ci/publish-npm.mjs --version=${{ steps.ver.outputs.version }}

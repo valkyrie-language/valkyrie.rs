@@ -81,6 +81,11 @@ pub fn assemble_fragment(
     eprintln!(
         "[seed-debug] fragment-layout-plan index={} layouts={} tuple_block_ref={}",
         partition_index,
+        mir.aggregate_layouts.layouts.len(),
+        mir.aggregate_layouts
+            .layouts
+            .iter()
+            .any(|layout| layout.name == "__tuple_ExecutableBlockRef_ExecutableBlockRef")
     );
     let singleton_names = hir_module.singletons.iter().map(|singleton| singleton.name.as_str()).collect::<Vec<_>>();
     let mut mir_seed_operations = fragment.exported_operations.clone();
@@ -93,6 +98,7 @@ pub fn assemble_fragment(
     // 已经按 `{Type}.{method}` 约定降级为独立函数，但它们不会被 entry 可达闭包
     // 扫到（调用点走 witness 符号，不走 `{Type}.{method}` 直接 Call）。这里把它们
     // 作为种子加入，确保后端能拿到真实的 Valkyrie 方法体，而不是退回到 Rust mock。
+    for table in &fragment.witness_tables {
         for method in &table.methods {
             let seed = QualifiedName::new(vec![Identifier::new(&table.type_name), Identifier::new(&method.method_name)]);
             if !mir_seed_operations.iter().any(|operation| operation == &seed) {
@@ -114,6 +120,7 @@ pub fn assemble_fragment(
     // CLR helpers linked into a Node ArtifactSet). Recomputing from consumer HIR
     // alone drops those and triggers SMIR006 on SumNew — same class of bug as
     // aggregate_layouts, which already reuse MIR-final plans.
+    let mut sum_types = mir.sum_types.clone();
     let (hir_sum_types, flags_types) = compute_nominal_layouts(hir_module);
     for sum in hir_sum_types {
         if !sum_types.iter().any(|existing| existing.name == sum.name) {
@@ -127,15 +134,25 @@ pub fn assemble_fragment(
         fragment_id: fragment.id.clone(),
         exported_operations: fragment.exported_operations.clone(),
         required_capabilities: fragment.required_capabilities.clone(),
+        theory_bundle: TheoryBundle {
+            shared: build_output.neutral_plan().rewrite_theory.clone(),
+            fragment: fragment.rewrite_theory.clone(),
+        },
         entry_operation: fragment.entry_operation.clone(),
         external_import_links,
         external_call_edges: fragment.external_call_edges.clone(),
         internal_call_edges: fragment.internal_call_edges.clone(),
+        operation_literal_returns: fragment.operation_literal_returns.clone(),
+        operation_void_returns: fragment.operation_void_returns.clone(),
+        witness_tables: fragment.witness_tables.clone(),
+        witness_calls: fragment.witness_calls.clone(),
         control_flow,
         suspend_runtime,
+        aggregate_layouts: mir.aggregate_layouts.clone(),
         sum_types,
         flags_types,
         executable_functions,
+        singleton_instances: collect_singleton_instance_plans(hir_module),
     })
 }
 

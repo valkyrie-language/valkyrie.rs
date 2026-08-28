@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * Publish @valkyrie-language/legion from packages/legion-wasm.
+ * EMERGENCY LOCAL PUBLISH ONLY — not the official release path.
+ *
+ * Official: git tag v0.0.5 && git push origin v0.0.5
+ *   → .github/workflows/publish-npm.yml (OIDC Trusted Publisher, env NPM_PUBLISH)
  *
  * Auth (never commit secrets):
  *   - valkyrie.rs/.env.placeholder.local  (NPM_TOTP_SECRET / NPM_TOKEN / NPM_OTP)
- *   - or vos-language/.env.placeholder.local when VALKYRIE_NPM_ENV is unset
  *
  * Usage:
  *   node scripts/publish-legion-wasm.mjs
@@ -168,10 +170,20 @@ function main() {
     fail(`missing ${PACKAGE_DIR}/package.json`);
   }
   if (!fs.existsSync(path.join(PACKAGE_DIR, "legion.wasm"))) {
-    fail("missing legion.wasm — run generate-seed-wasm + assemble-legion-wasm first");
+    fail("missing legion.wasm — run legion build --target node + assemble-legion-wasm first");
+  }
+  if (!fs.existsSync(path.join(PACKAGE_DIR, "legion.mjs"))) {
+    fail("missing legion.mjs — assemble must copy emitter launcher");
   }
 
   const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGE_DIR, "package.json"), "utf8"));
+  if (pkg.version !== "0.0.5") {
+    fail(`refusing publish: package version must be 0.0.5 (found ${pkg.version})`);
+  }
+  const wasmSize = fs.statSync(path.join(PACKAGE_DIR, "legion.wasm")).size;
+  if (wasmSize < 1024) {
+    fail(`refusing publish: legion.wasm is ${wasmSize} bytes (placeholder)`);
+  }
   process.stdout.write(`publish ${pkg.name}@${pkg.version} (env: ${envFile})\n`);
 
   const view = runNpm(["view", `${pkg.name}@${pkg.version}`, "version"], token);
