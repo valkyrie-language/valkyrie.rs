@@ -1,12 +1,12 @@
 mod support;
 
-use nyar_emitter::{
-    BackendBoundaryError, BackendDispatchKind, BackendInputShape, BackendRoute, testing::compile_lowered_backend_input, validate_backend_input,
-    validate_dispatch_for_route,
-};
 use nyar::{
     BackendInputKind, BinaryArch, BinaryFlavor, BinaryTarget, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement,
     TargetFamily, TargetLane,
+};
+use nyar_emitter::{
+    BackendBoundaryError, BackendDispatchKind, BackendInputShape, BackendRoute, testing::compile_lowered_backend_input, validate_backend_input,
+    validate_dispatch_for_route,
 };
 use std::process::Command;
 use tempfile::tempdir;

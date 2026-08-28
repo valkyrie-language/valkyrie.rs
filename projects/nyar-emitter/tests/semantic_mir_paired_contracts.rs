@@ -1637,15 +1637,18 @@ fn formal_backend_entries_reject_the_same_physical_contract_gap() {
         nyar_emitter::testing::PhysicalContractTarget::WasmJsGlue,
         nyar_emitter::testing::PhysicalContractTarget::WasiComponent,
     ] {
-        assert_eq!(nyar_emitter::testing::physical_contract_observation(&submission, "wide_scalar", target), "wide_scalar|reject|BPHYS001|function");
+        assert_eq!(
+            nyar_emitter::testing::physical_contract_observation(&submission, "wide_scalar", target),
+            "wide_scalar|reject|BPHYS001|function"
+        );
     }
 
-    let clr =
-        nyar_emitter::testing::lower_fragment_to_clr_msil(&submission).expect_err("CLR must reject an unmapped physical scalar before preparation");
+    let clr = nyar_emitter::testing::lower_fragment_to_clr_msil(&submission)
+        .expect_err("CLR must reject an unmapped physical scalar before preparation");
     assert!(clr.to_string().contains("BPHYS001"), "{clr}");
 
-    let jvm =
-        nyar_emitter::testing::lower_fragment_to_jvm_class(&submission).expect_err("JVM must reject an unmapped physical scalar before preparation");
+    let jvm = nyar_emitter::testing::lower_fragment_to_jvm_class(&submission)
+        .expect_err("JVM must reject an unmapped physical scalar before preparation");
     assert!(jvm.to_string().contains("BPHYS001"), "{jvm}");
 
     for boundary in [nyar::HostProjectionBoundary::WasmJsGlue, nyar::HostProjectionBoundary::WasiComponent] {

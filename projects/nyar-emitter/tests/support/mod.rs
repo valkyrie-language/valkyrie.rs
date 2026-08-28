@@ -1,13 +1,13 @@
 use std::path::Path;
 
+use nyar::{
+    BackendInputKind, BinaryTarget, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement, TargetLane,
+    backends::CompilationOptions,
+};
 use nyar_emitter::{
     LoweredBackendInput,
     nyar_backend_jvm::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodSignature, JvmTypeDescriptor},
     nyar_backend_wasi::WasmBinaryModule,
-};
-use nyar::{
-    BackendInputKind, BinaryTarget, HostProjectionBoundary, PartitionBackendRequirement, ReferenceManagement, TargetLane,
-    backends::CompilationOptions,
 };
 
 fn encode_uleb128(mut value: u32, out: &mut Vec<u8>) {

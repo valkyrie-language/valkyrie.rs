@@ -35,11 +35,7 @@ pub struct StructuredDiagnosticSet {
 impl StructuredDiagnosticSet {
     /// Construct from one or more records. Empty sets are not allowed for `Err`.
     pub fn from_records(records: Vec<DiagnosticRecord>) -> Option<Self> {
-        if records.is_empty() {
-            None
-        } else {
-            Some(Self { records })
-        }
+        if records.is_empty() { None } else { Some(Self { records }) }
     }
 }
 
@@ -185,14 +181,8 @@ mod tests {
     fn canonical_program_is_success_only() {
         let mut linked = LinkedSemanticProgram::default();
         linked.module_name = "demo".into();
-        linked.item_instances.insert(
-            ItemInstanceId::from_index(0).unwrap(),
-            ItemInstanceRecord { symbol: "main".into(), substitution: None },
-        );
-        let program = CanonicalProgram {
-            linked,
-            mir: CanonicalSemanticMir { module_name: "demo".into(), function_count: 1 },
-        };
+        linked.item_instances.insert(ItemInstanceId::from_index(0).unwrap(), ItemInstanceRecord { symbol: "main".into(), substitution: None });
+        let program = CanonicalProgram { linked, mir: CanonicalSemanticMir { module_name: "demo".into(), function_count: 1 } };
         assert_eq!(program.mir.function_count, 1);
     }
 

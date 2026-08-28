@@ -3,31 +3,32 @@
 //! Minimal shared types used by the current Rust bootstrap path.
 
 pub use self::{
-    errors::{NyarError, NyarErrorKind},
     canonical_program::{
         CanonicalProgram, CanonicalSemanticMir, CompileStage, DiagnosticRecord, EvidenceRecord, ItemInstanceRecord, LinkedSemanticProgram,
         NominalInstanceRecord, StageResult, StructuredDiagnosticSet, TypeRecord, pipeline,
     },
+    errors::{NyarError, NyarErrorKind},
     executable::{
-        Block, BlockRef, CarrierTable, CaseArm, CaseChain, Constant, Continuation, Diagnostic, EffectKind, ExecutableFunction,
-        FrameLayout, FrameSlot, Instruction, InstructionKind, Operand, SuspendLoweringPlan, SuspendPoint, SuspendState, Terminator, Value, ValueOrigin, ValueRef,
+        Block, BlockRef, CarrierTable, CaseArm, CaseChain, Constant, Continuation, Diagnostic, EffectKind, ExecutableFunction, FrameLayout,
+        FrameSlot, Instruction, InstructionKind, Operand, SuspendLoweringPlan, SuspendPoint, SuspendState, Terminator, Value, ValueOrigin,
+        ValueRef,
     },
     external_import::{ExternalCallArgument, ExternalCallEdge, ExternalImportLink, InternalCallEdge},
     layout::{
-        AggregateLayout, AggregateLayoutPlan, FieldLayout, FlagsLayout, LayoutId, SINGLETON_CONSTRUCTOR_NAME, SINGLETON_EAGER_ACCESSOR,
-        SINGLETON_FINALIZER_NAME, SINGLETON_INSTANCE_FIELD, SINGLETON_LAZY_ACCESSOR, SINGLETON_UNLOAD_ACCESSOR, SingletonInstancePlan,
-        StorageKind, SumTypeLayout, SumVariantLayout, NominalInstanceKey, RepresentationId, layout_id_for_nyar_type, layout_key_for_nyar_type, nyar_type_layout_key_component,
-        sum_representation_key,
-    },
-    semantic_ids::{
-        EffectEdgeId, EffectSiteId, EvidenceId, FieldId, GenericFunctionId, InstructionId, ItemInstanceId, MirValueDefinition, MirValueId,
-        NominalInstanceId, ProvenanceId, SubstitutionId, TypeId, VariantId, layout_choice,
+        AggregateLayout, AggregateLayoutPlan, FieldLayout, FlagsLayout, LayoutId, NominalInstanceKey, RepresentationId,
+        SINGLETON_CONSTRUCTOR_NAME, SINGLETON_EAGER_ACCESSOR, SINGLETON_FINALIZER_NAME, SINGLETON_INSTANCE_FIELD, SINGLETON_LAZY_ACCESSOR,
+        SINGLETON_UNLOAD_ACCESSOR, SingletonInstancePlan, StorageKind, SumTypeLayout, SumVariantLayout, layout_id_for_nyar_type,
+        layout_key_for_nyar_type, nyar_type_layout_key_component, sum_representation_key,
     },
     neutral_contract::{
         ArtifactContract, BootstrapStage, EvidencePackage, EvidenceStatus, PrimitiveDefinition, PrimitiveRegistry, Provenance,
         SemanticObservation, SemanticPackageInterface,
     },
     nullable::{FragmentNullableBoolProfile, FragmentNullableIntrinsicKind, FragmentNullableIntrinsicUse, FragmentNullableTryCall},
+    semantic_ids::{
+        EffectEdgeId, EffectSiteId, EvidenceId, FieldId, GenericFunctionId, InstructionId, ItemInstanceId, MirValueDefinition, MirValueId,
+        NominalInstanceId, ProvenanceId, SubstitutionId, TypeId, VariantId, layout_choice,
+    },
     source::{Location, Position, SourceID, SourceSpan},
     symbols::{Identifier, NamePath, QualifiedName, SymbolIdentity},
     ty::{NyarFunctionType, NyarType, WitnessObject},
@@ -43,12 +44,12 @@ pub mod executable;
 mod external_import;
 /// Aggregate / singleton layout contracts for executable lowering.
 pub mod layout;
-/// Parametric MIR semantic identities and sparse RepresentationPlan.
-pub mod semantic_ids;
 /// Neutral, auditable contracts shared by frontends, planners, emitters and runtimes.
 pub mod neutral_contract;
 /// Nullable intrinsic profiles shared by language assembly and backends.
 pub mod nullable;
+/// Parametric MIR semantic identities and sparse RepresentationPlan.
+pub mod semantic_ids;
 mod source;
 mod symbols;
 mod ty;

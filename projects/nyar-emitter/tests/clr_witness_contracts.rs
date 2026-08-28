@@ -1,3 +1,4 @@
+use nyar::{CapabilityTag, Identifier, RewriteTheory, TheoryBundle, WitnessCallEdge, WitnessMethodSlotSubmission, WitnessSubmission};
 use nyar_emitter::{
     FragmentSubmission,
     nyar_backend_clr::{
@@ -6,7 +7,6 @@ use nyar_emitter::{
     },
     testing::augment_msil_with_witness,
 };
-use nyar::{CapabilityTag, Identifier, RewriteTheory, TheoryBundle, WitnessCallEdge, WitnessMethodSlotSubmission, WitnessSubmission};
 
 #[test]
 fn emits_witness_entry_call_and_console_write() {

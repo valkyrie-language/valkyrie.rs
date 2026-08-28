@@ -1,12 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use nyar::{ExternalImportLink, Identifier, QualifiedName};
 use nyar_emitter::{
     FragmentSubmission,
     executable_provider::{ExecutableFunction, MirFunctionMapProvider},
     nyar_backend_clr::{MsilInstructionOperand, MsilOpcode, MsilType},
     testing::{lower_fragment_to_clr_msil, lower_mir_to_clr_method},
 };
-use nyar::{ExternalImportLink, Identifier, QualifiedName};
 use nyar_language::{
     AggregateLayout, AggregateLayoutPlan, FieldLayout, MirBlock, MirBlockRef, MirDispatchKind, MirFunction, MirInstruction, MirInstructionKind,
     MirLowerer, MirOperand, MirStorageKind, MirTerminator, MirValue, MirValueOrigin, MirValueRef, SingletonInstancePlan, ValkyrieCompiler,

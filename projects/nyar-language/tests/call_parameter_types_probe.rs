@@ -1,4 +1,4 @@
-use nyar_language::{MirOperation, MirLowerer, MirOperand, ValkyrieCompiler, types::SourceID};
+use nyar_language::{MirLowerer, MirOperand, MirOperation, ValkyrieCompiler, types::SourceID};
 
 #[test]
 fn literal_u32_call_attaches_parameter_types() {

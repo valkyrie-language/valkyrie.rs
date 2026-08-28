@@ -1,9 +1,9 @@
-use nyar_emitter::{LoweredBackendInput, NyarVmBackendInput, testing::compile_lowered_backend_input};
 use nyar::{
     BackendInputKind, BinaryArch, BinaryFlavor, HostProjectionBoundary, Identifier, PartitionBackendRequirement, QualifiedName,
     ReferenceManagement, SuspendRuntimeFunctionArtifact, SuspendRuntimePayload, SuspendStateArtifact, TargetFamily, TargetLane,
     backends::CompilationOptions,
 };
+use nyar_emitter::{LoweredBackendInput, NyarVmBackendInput, testing::compile_lowered_backend_input};
 use std_data::binary::nyar_ir::{NyarConstant, NyarFunction, NyarModuleData};
 use tempfile::tempdir;
 

@@ -3,12 +3,12 @@
 //! 本模块覆盖 Task 7.2：验证 `if let` / `case if` / `while let` / extractor
 //! pattern 能正确 lowering 到 CLR MSIL。
 
+use nyar::backends::projection_policy_for_target_profile;
 use nyar_emitter::{
     bundled_backend_registry,
     nyar_backend_clr::{MsilInstruction, MsilInstructionOperand, MsilMethodBody, MsilModule, MsilOpcode},
     testing::lower_fragment_to_clr_msil,
 };
-use nyar::backends::projection_policy_for_target_profile;
 use nyar_language::{
     CanonicalTarget, ValkyrieCompiler, assemble_fragment_submission, nyar::ClrSuspendStrategy, plan_artifacts_from_build_output,
     types::SourceID,

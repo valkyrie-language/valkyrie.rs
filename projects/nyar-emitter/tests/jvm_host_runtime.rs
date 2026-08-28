@@ -6,14 +6,14 @@ mod support;
 
 use std::process::Command;
 
+use nyar::{
+    BinaryArch, BinaryFlavor, BinaryTarget, CapabilityTag, ExternalCallArgument, ExternalCallEdge, ExternalImportLink, Identifier,
+    QualifiedName, RewriteTheory, TargetFamily, TheoryBundle,
+};
 use nyar_emitter::{
     FragmentSubmission, LoweredBackendInput,
     nyar_backend_jvm::{JvmBinaryBackendInput, JvmInstruction, JvmJarPackage, decode_instructions},
     testing::{compile_lowered_backend_input, lower_fragment_to_jvm_class},
-};
-use nyar::{
-    BinaryArch, BinaryFlavor, BinaryTarget, CapabilityTag, ExternalCallArgument, ExternalCallEdge, ExternalImportLink, Identifier,
-    QualifiedName, RewriteTheory, TargetFamily, TheoryBundle,
 };
 use tempfile::tempdir;
 

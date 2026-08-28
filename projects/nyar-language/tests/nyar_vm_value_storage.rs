@@ -5,8 +5,8 @@
 
 use std::sync::Arc;
 
-use nyar::Identifier;
 use emitter::{FragmentSubmission, executable_provider::MirFunctionMapProvider, testing};
+use nyar::Identifier;
 use nyar_language::{MirLowerer, ValkyrieCompiler, mir_function_to_executable, types::SourceID};
 
 /// 检查 module 的常量池中是否存在指定的 native call 名称字符串。

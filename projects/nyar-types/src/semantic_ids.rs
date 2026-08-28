@@ -7,7 +7,6 @@
 
 use std::{fmt, num::NonZeroU32};
 
-
 macro_rules! opaque_u32_id {
     ($(#[$meta:meta])* $name:ident) => {
         $(#[$meta])*
@@ -103,7 +102,8 @@ impl EvidenceId {
     pub fn from_parts(trait_id: &str, implementing_type: &str, operation: &str) -> Self {
         if operation.is_empty() {
             Self(format!("evidence:{trait_id}@{implementing_type}"))
-        } else {
+        }
+        else {
             Self(format!("evidence:{trait_id}@{implementing_type}#{operation}"))
         }
     }

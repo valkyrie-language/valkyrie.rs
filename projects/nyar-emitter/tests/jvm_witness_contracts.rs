@@ -1,9 +1,9 @@
+use nyar::{CapabilityTag, Identifier, RewriteTheory, TheoryBundle, WitnessCallEdge, WitnessMethodSlotSubmission, WitnessSubmission};
 use nyar_emitter::{
     FragmentSubmission,
     nyar_backend_jvm::{JvmClassFile, JvmInstruction},
     testing::append_jvm_witness_methods,
 };
-use nyar::{CapabilityTag, Identifier, RewriteTheory, TheoryBundle, WitnessCallEdge, WitnessMethodSlotSubmission, WitnessSubmission};
 
 #[test]
 fn emits_witness_main_and_impl_stub() {

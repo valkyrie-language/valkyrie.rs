@@ -1,4 +1,4 @@
-use nyar_language::{MirOperation, MirLowerer, MirOperand, MirTerminator, SourceID, ValkyrieCompiler, valkyrie::mir::ssa::MirFunction};
+use nyar_language::{MirLowerer, MirOperand, MirOperation, MirTerminator, SourceID, ValkyrieCompiler, valkyrie::mir::ssa::MirFunction};
 
 fn compile_mir(source: &str) -> nyar_language::valkyrie::mir::MirModule {
     let hir = ValkyrieCompiler::new(SourceID { version_id: 9400 }).compile_source(source).expect("compile");

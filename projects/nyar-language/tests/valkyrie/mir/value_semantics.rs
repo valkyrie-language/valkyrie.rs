@@ -1,5 +1,5 @@
 use nyar_language::{
-    MirOperation, MirLowerer, MirStorageKind, ReceiverPassingKind, ValkyrieCompiler, compute_aggregate_layout_plan, layout_key_for_type,
+    MirLowerer, MirOperation, MirStorageKind, ReceiverPassingKind, ValkyrieCompiler, compute_aggregate_layout_plan, layout_key_for_type,
     storage_kind_for_type,
     types::{Identifier, SourceID, hir::ValkyrieType},
 };

@@ -90,7 +90,6 @@ pub enum Constant {
     Unit,
 }
 
-
 /// Instruction / terminator operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operand {
@@ -101,7 +100,6 @@ pub enum Operand {
     /// Named symbol path.
     Symbol(NamePath),
 }
-
 
 /// Effect terminator category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

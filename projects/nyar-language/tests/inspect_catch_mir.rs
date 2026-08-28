@@ -25,8 +25,7 @@ micro main() -> ExitCode {
         out.push_str(&format!("Return type: {:?}\n", function.return_type));
         for (i, block) in function.blocks.iter().enumerate() {
             out.push_str(&format!("  Block {} (id={:?}, label={}):\n", i, block.id, block.label));
-            for instr in &block.instructions {
-            }
+            for instr in &block.instructions {}
             out.push_str(&format!("    Terminator: {:?}\n", block.terminator));
             out.push_str(&format!("    Parameters: {:?}\n", block.parameters));
         }

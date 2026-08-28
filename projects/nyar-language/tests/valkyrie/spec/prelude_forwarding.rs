@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use nyar_language::{MirFunction, MirOperation, MirModule, MirOperand, ValkyrieCompiler, types::hir::HirModule};
+use nyar_language::{MirFunction, MirModule, MirOperand, MirOperation, ValkyrieCompiler, types::hir::HirModule};
 
 /// 返回 `valkyrie.v/projects/` 目录的绝对路径。
 fn projects_dir() -> PathBuf {

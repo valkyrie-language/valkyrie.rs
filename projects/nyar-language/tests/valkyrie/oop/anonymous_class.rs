@@ -1,5 +1,5 @@
 use nyar_language::{
-    MirOperation, MirLowerer, ValkyrieCompiler,
+    MirLowerer, MirOperation, ValkyrieCompiler,
     types::{SourceID, hir::HirExprKind},
 };
 

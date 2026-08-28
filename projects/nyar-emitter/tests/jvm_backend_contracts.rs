@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
+use nyar::{
+    CapabilityTag, ControlFlowPayload, ExternalCallArgument, ExternalCallEdge, ExternalImportLink, Identifier, QualifiedName, RewriteTheory,
+    SuspendFunctionArtifact, SuspendStateArtifact, TheoryBundle,
+};
 use nyar_emitter::{
     FragmentSubmission,
     nyar_backend_jvm::{JvmInstruction, JvmTypeDescriptor},
     testing::lower_fragment_to_jvm_class,
-};
-use nyar::{
-    CapabilityTag, ControlFlowPayload, ExternalCallArgument, ExternalCallEdge, ExternalImportLink, Identifier, QualifiedName, RewriteTheory,
-    SuspendFunctionArtifact, SuspendStateArtifact, TheoryBundle,
 };
 
 #[test]

@@ -1,8 +1,8 @@
-use nyar_emitter::testing::{serialize_control_flow_sidecar, serialize_suspend_runtime_sidecar};
 use nyar::{
     ControlFlowPayload, Identifier, QualifiedName, SuspendContinuationArtifact, SuspendFunctionArtifact, SuspendRuntimeFunctionArtifact,
     SuspendRuntimePayload, SuspendStateArtifact, SuspendWitnessBinding,
 };
+use nyar_emitter::testing::{serialize_control_flow_sidecar, serialize_suspend_runtime_sidecar};
 use serde_json::Value;
 
 #[test]

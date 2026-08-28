@@ -6,7 +6,7 @@ mod early_return;
 mod value_semantics;
 
 use nyar_language::{
-// DELETED-GOD:     MirConstant, MirDispatchKind, MirEffectKind, MirInstructionKind, MirOperand, MirTerminator, MirValueOrigin, ValkyrieCompiler,
+    // DELETED-GOD:     MirConstant, MirDispatchKind, MirEffectKind, MirInstructionKind, MirOperand, MirTerminator, MirValueOrigin, ValkyrieCompiler,
     mir::ssa::test_support::{TestMirBuilder, block, expr, lower_test_function, lower_test_literal, lower_test_module, span},
     types::{
         Identifier, NamePath,
@@ -1035,7 +1035,7 @@ fn lowers_awake_into_async_spawn_with_empty_resume_parameters() {
         )
         .expect("mir ok");
 
-// DELETED-GOD:     let plan = mir.functions[0].suspend_plan.as_ref().expect("suspend plan");
+    // DELETED-GOD:     let plan = mir.functions[0].suspend_plan.as_ref().expect("suspend plan");
     let awake_state = plan.states.iter().find(|state| state.effect == MirEffectKind::AsyncSpawn).expect("expected awake async-spawn state");
     assert_eq!(awake_state.resume_parameter_count, 0);
 
@@ -1442,11 +1442,11 @@ fn lowers_range_pattern_into_compare_chain_without_fallback() {
             .flat_map(|b| &b.instructions)
             .filter(|instruction| {
                 matches!(
-                    &instruction.kind,
-                    MirInstructionKind::Call {                        callee: MirOperand::Symbol(path),
-                        ..,
-} if path.parts().last().is_some_and(|name| name.as_str().starts_with("__") && name.as_str().ends_with("_lt"))
-                )
+                                    &instruction.kind,
+                                    MirInstructionKind::Call {                        callee: MirOperand::Symbol(path),
+                                        ..,
+                } if path.parts().last().is_some_and(|name| name.as_str().starts_with("__") && name.as_str().ends_with("_lt"))
+                                )
             })
             .count()
             >= 2

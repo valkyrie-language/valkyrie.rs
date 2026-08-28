@@ -1,5 +1,5 @@
 use nyar_language::{
-    MirOperation, MirOperand, MirTerminator, ValkyrieCompiler,
+    MirOperand, MirOperation, MirTerminator, ValkyrieCompiler,
     types::{
         SourceID,
         hir::{HirExprKind, HirExtractorPattern, HirLiteral, HirPattern, HirStatementKind},
@@ -574,11 +574,11 @@ micro main(opt: Option) -> i64 {
         .flat_map(|block| block.instructions.iter())
         .filter(|instruction| {
             matches!(
-                &instruction.kind,
-                MirInstructionKind::Call {                    callee: MirOperand::Symbol(path),
-                    ..,
-} if path.parts().last().is_some_and(|part| part.as_str() == "extractor")
-            )
+                            &instruction.kind,
+                            MirInstructionKind::Call {                    callee: MirOperand::Symbol(path),
+                                ..,
+            } if path.parts().last().is_some_and(|part| part.as_str() == "extractor")
+                        )
         })
         .count();
 

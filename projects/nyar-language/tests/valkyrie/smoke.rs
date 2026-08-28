@@ -1,5 +1,5 @@
 use nyar_language::{
-    MirOperation, MirOperand, MirTerminator, ValkyrieCompiler,
+    MirOperand, MirOperation, MirTerminator, ValkyrieCompiler,
     types::{Identifier, hir::ValkyrieType},
 };
 

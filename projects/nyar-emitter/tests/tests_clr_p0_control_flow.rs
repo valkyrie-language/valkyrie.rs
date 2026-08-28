@@ -6,13 +6,13 @@
 
 use std::{collections::BTreeMap, path::Path};
 
-use nyar_emitter::{
-    FragmentSubmission, LoweredBackendInput, build_state_machine_suspend_payload,
-    executable_provider::{ExecutableFunction, MirFunctionMapProvider},
-};
 use nyar::{
     CapabilityTag, ClrSuspendStrategy, HostProjectionBoundary, Identifier, QualifiedName, TargetBackendFamily, TargetLane, VmSuspendStrategy,
     WitnessMethodSlotSubmission, WitnessSubmission,
+};
+use nyar_emitter::{
+    FragmentSubmission, LoweredBackendInput, build_state_machine_suspend_payload,
+    executable_provider::{ExecutableFunction, MirFunctionMapProvider},
 };
 use nyar_language::MirLowerer;
 use std::sync::Arc;

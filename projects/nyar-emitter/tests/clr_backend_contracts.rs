@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
+use nyar::{Identifier, QualifiedName};
 use nyar_emitter::{
     FragmentSubmission, bundled_backend_registry,
     testing::{augment_msil_with_singletons, augment_msil_with_witness, lower_fragment_to_clr_msil},
 };
-use nyar::{Identifier, QualifiedName};
 use nyar_language::{assemble_fragment_submission, plan_artifacts_from_build_output};
 
 #[test]
@@ -81,8 +81,8 @@ micro enums_flags_parse() -> unit {}
 fn feature_matrix_test_bundle_clr_types_have_unique_names() {
     use std::path::PathBuf;
 
-    use nyar_emitter::nyar_backend_clr::{PeWriter, PeWriterOptions};
     use nyar::backends::{clr::ClrImageKind, projection_policy_for_target_profile};
+    use nyar_emitter::nyar_backend_clr::{PeWriter, PeWriterOptions};
     use nyar_language::{CanonicalTarget, ValkyrieCompiler, nyar::ClrSuspendStrategy, types::SourceID};
 
     let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../valkyrie.v/examples/feature-matrix/test");
@@ -138,8 +138,8 @@ fn feature_matrix_test_bundle_clr_pe_writes() {
 fn debug_singleton_clr_pipeline_dumps_msil() {
     use std::env;
 
-    use nyar_emitter::nyar_backend_clr::{PeWriter, PeWriterOptions};
     use nyar::backends::{clr::ClrImageKind, projection_policy_for_target_profile};
+    use nyar_emitter::nyar_backend_clr::{PeWriter, PeWriterOptions};
     use nyar_language::{CanonicalTarget, ValkyrieCompiler, nyar::ClrSuspendStrategy, types::SourceID};
 
     let source = r#"

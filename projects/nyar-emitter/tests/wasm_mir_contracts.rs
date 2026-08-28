@@ -1,7 +1,7 @@
 //! Wasm MIR contract tests. Included bodies construct [`ExecutableFunction`] directly.
 
-pub use nyar_emitter::FragmentSubmission;
 pub use nyar::{Identifier, QualifiedName};
+pub use nyar_emitter::FragmentSubmission;
 
 pub mod contracts {
     pub use nyar_emitter::contracts::*;
@@ -15,7 +15,10 @@ pub mod testing {
     pub use nyar_emitter::testing::*;
 }
 
-pub fn lower_fragment_mir_to_wasm_module(submission: &FragmentSubmission, export_name: &str) -> nyar_emitter::nyar_backend_wasi::WasmBinaryModule {
+pub fn lower_fragment_mir_to_wasm_module(
+    submission: &FragmentSubmission,
+    export_name: &str,
+) -> nyar_emitter::nyar_backend_wasi::WasmBinaryModule {
     testing::lower_fragment_to_wasm_mir_module(submission, export_name)
 }
 

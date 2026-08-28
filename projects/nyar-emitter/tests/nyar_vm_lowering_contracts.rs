@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use nyar_emitter::{FragmentSubmission, testing::lower_fragment_to_nyar_module};
 use nyar::{Identifier, QualifiedName, RewriteTheory, TheoryBundle};
+use nyar_emitter::{FragmentSubmission, testing::lower_fragment_to_nyar_module};
 use std_data::binary::nyar_ir::encode_module;
 
 #[test]
