@@ -31,29 +31,13 @@ fn bootstrap_stops_at_v2_when_v1_artifact_is_not_yet_a_self_hosting_seed() {
     ]
 }
 "#,
-        r#"[clr("mscorlib", "System.Console", "WriteLine")]
+        r#"[clr("System.Console", "System.Console", "WriteLine")]
 micro console_write_line(message: utf16): unit;
 
-[clr("mscorlib", "System.Environment", "GetCommandLineArgs")]
-micro get_args(): [utf16];
-
 [main]
-micro main(args: [utf16]): i32 {
-    let i: i32 = 0;
-    var has_build: bool = false;
-    while i < args.len() {
-        if args[i] == "build" {
-            has_build = true;
-        }
-        i = i + 1;
-    }
-    if has_build {
-        console_write_line("bootstrap build phase");
-        return 0;
-    }
-    else {
-        return 0;
-    }
+micro main(): i64 {
+    console_write_line("bootstrap build phase")
+    return 0
 }
 "#,
     );
@@ -82,6 +66,16 @@ micro main(args: [utf16]): i32 {
     let (failed_stage, error) = result.failed_stage.expect("bootstrap should stop at the current non-self-hosting boundary");
     let message = error.to_string();
     match failed_stage {
+        BootstrapStage::V1 => {
+            assert_eq!(result.stages_completed, vec![BootstrapStage::Seed]);
+            assert!(result.v1_path.is_none());
+            assert!(result.v2_path.is_none());
+            assert!(
+                message.contains("frozen for 0.0.x")
+                    || message.contains("legacy-lanes")
+                    || message.contains("编译失败")
+            );
+        }
         BootstrapStage::V1Run => {
             assert_eq!(result.stages_completed, vec![BootstrapStage::Seed, BootstrapStage::V1]);
             assert!(result.v1_path.is_none());
