@@ -52,14 +52,14 @@ pub fn render_sections(sections: &mut [DocSection], doc_output_dir: &Path, verbo
                 "sections": sidebar,
                 "__current_path": relative,
             });
-            let page_shell = render_awsl_static(embedded_doc_page_awsl(), "DocPage", "doc-page.awsl", &page_data);
+            let page_shell = render_awsl_static(embedded_doc_page_awsl(), "doc-page", "doc-page.awsl", &page_data);
             let page_body = page_shell.html.replace("<p>LEGION_DOC_SLOT</p>", &format!("<div class=\"vp-article-inner\">{body_html}</div>"));
 
             let layout_data = json!({
                 "site_title": section.sidebar_title,
                 "home_href": format!("{link_prefix}index.html"),
             });
-            let rendered = render_awsl_static(embedded_layout_awsl(), "DocLayout", "layout.awsl", &layout_data);
+            let rendered = render_awsl_static(embedded_layout_awsl(), "layout", "layout.awsl", &layout_data);
             let fragment_html = rendered.html.replace("<p>LEGION_DOC_SLOT</p>", &page_body);
             merged_component_css.push_str(&rendered.css);
             merged_component_css.push_str(&page_shell.css);
@@ -109,7 +109,7 @@ pub fn render_doc_index(sections: &[DocSection], doc_output_dir: &Path) -> Resul
         "site_title": "用户文档",
         "home_href": "index.html",
     });
-    let rendered = render_awsl_static(embedded_layout_awsl(), "DocLayout", "layout.awsl", &layout_data);
+    let rendered = render_awsl_static(embedded_layout_awsl(), "layout", "layout.awsl", &layout_data);
     let fragment_html = rendered.html.replace("<p>LEGION_DOC_SLOT</p>", &body);
     let page_result = asgard::codegen::StaticRenderResult { html: fragment_html, css: rendered.css, scope: rendered.scope };
     let mut html = generate_static_page("用户文档", &[page_result], embedded_base_css());
@@ -125,7 +125,7 @@ pub fn render_root_hub(output_dir: &Path, has_doc: bool) -> Result<()> {
         "doc_href": if has_doc { "doc/index.html" } else { "#" },
         "doc_desc": "语言参考、用户指南、工具链与维护者文档",
     });
-    let rendered = render_awsl_static(embedded_hub_awsl(), "DocHub", "hub.awsl", &data);
+    let rendered = render_awsl_static(embedded_hub_awsl(), "hub", "hub.awsl", &data);
     let mut html = generate_static_page("文档", &[rendered], "");
     inject_stylesheet_link(&mut html, "legion-document.css");
     fs::write(output_dir.join("index.html"), html).into_diagnostic()?;

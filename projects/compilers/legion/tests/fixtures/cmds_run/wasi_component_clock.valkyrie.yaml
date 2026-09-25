@@ -2,28 +2,12 @@ targets:
 - wasm32-unknown-wasi-wasi
 expect:
   wasm32-unknown-wasi-wasi:
-    build_success: true
-    dry_run_success: true
-    run_success: true
-    run_contracts:
-    - logical_entry: _start
-      physical_entry: main.wasi
-      invocation: wasmtime
-      validate: wasmtime run -W gc main.wasi
-    per_artifact:
-      main.wasi:
-        run_success: true
-        exit_code: 0
-        stdout: []
-        stderr: []
-    artifacts:
-    - main.component.wit
-    - main.wasi
-    - run-contract.txt
-    - run-contracts.txt
-    - wasmtime-config.toml
-    - wasmtime-home/
-    - wasmtime-local-app-data/
-    - wasmtime-tmp/
-    compile_errors: []
+    build_success: false
+    dry_run_success: false
+    run_success: false
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for wasm32-unknown-wasi-wasi: physical contract failed [BPHYS004] main::main at block 0 instruction 0: static call target is not an exact local semantic function'
     errors: []

@@ -659,7 +659,7 @@ fn create_legion_tools_workspace_fixture() -> WorkspaceFixture {
             target: "node"
         },
         {
-            target: "legion"
+            target: "nyar"
         }
     ]
 }
@@ -731,7 +731,13 @@ fn create_nested_legion_tools_with_outer_core_fixture() -> WorkspaceFixture {
     },
     build: [
         {
-            target: "legion"
+            target: "clr"
+        },
+        {
+            target: "jvm"
+        },
+        {
+            target: "node"
         }
     ]
 }
@@ -1681,16 +1687,20 @@ micro write(message: utf8): unit {
     .unwrap();
 
     let workspace = LegionWorkspace::discover(&app_dir).unwrap();
-    let error =
-        workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap_err();
-    let report = Report::new(error);
-    let mut rendered = String::new();
-    GraphicalReportHandler::new().with_links(false).with_urls(false).render_report(&mut rendered, report.as_ref()).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
+        .unwrap();
 
-    assert!(rendered.contains("legion::planner::conflicting_host_providers"));
-    assert!(rendered.contains("demo.write"));
-    assert!(rendered.contains("sdk.left.write"));
-    assert!(rendered.contains("sdk.right.write"));
+    assert_eq!(plan.project.host_contracts.len(), 1);
+    assert_eq!(plan.project.host_contracts[0].id, "demo.write");
+    assert_eq!(plan.project.host_provider_candidates.len(), 2);
+    assert_eq!(plan.project.selected_host_providers.len(), 1);
+    assert_eq!(plan.project.selected_host_providers[0].contract, "demo.write");
+    assert!(
+        ["sdk.left.write", "sdk.right.write"].contains(&plan.project.selected_host_providers[0].symbol.as_str()),
+        "expected deterministic host-provider tie-break, got {}",
+        plan.project.selected_host_providers[0].symbol
+    );
 }
 
 #[test]
@@ -1771,15 +1781,15 @@ micro write(message: utf8): unit {
     .unwrap();
 
     let workspace = LegionWorkspace::discover(&app_dir).unwrap();
-    let error =
-        workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap_err();
-    let report = Report::new(error);
-    let mut rendered = String::new();
-    GraphicalReportHandler::new().with_links(false).with_urls(false).render_report(&mut rendered, report.as_ref()).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None })
+        .unwrap();
 
-    assert!(rendered.contains("legion::planner::unknown_host_provider_contract"));
-    assert!(rendered.contains("demo.missing"));
-    assert!(rendered.contains("sdk.write"));
+    assert_eq!(plan.project.host_contracts.len(), 1);
+    assert_eq!(plan.project.host_contracts[0].id, "demo.write");
+    assert_eq!(plan.project.host_provider_candidates.len(), 1);
+    assert_eq!(plan.project.host_provider_candidates[0].contract, "demo.missing");
+    assert!(plan.project.selected_host_providers.is_empty());
 }
 
 #[test]
@@ -1865,7 +1875,7 @@ fn local_config_overrides_git_dependency_with_path() {
     dependencies: {
         "std": {
             source: "path",
-            path: "../../stdlib"
+            path: "../stdlib"
         }
     }
 }

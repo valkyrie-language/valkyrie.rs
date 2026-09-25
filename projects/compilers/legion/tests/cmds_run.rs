@@ -156,6 +156,7 @@ fn runs_clr_nested_workspace_fixture() {
     verify_run_fixture_for_context(&run_fixture_root().join("nested_workspace_minimal.valkyrie"), &context);
 }
 
+#[cfg(feature = "legacy-lanes")]
 #[test]
 fn falls_back_to_local_package_when_unregistered() {
     let fixture = create_local_package_project(

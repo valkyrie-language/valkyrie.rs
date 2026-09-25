@@ -2,26 +2,12 @@ targets:
 - clr-microsoft-unknown-managed
 expect:
   clr-microsoft-unknown-managed:
-    build_success: true
-    dry_run_success: true
-    run_success: true
-    run_contracts:
-    - logical_entry: Main
-      physical_entry: clr_interop_stdout.exe
-      invocation: dotnet
-      validate: dotnet exec clr_interop_stdout.exe
-    per_artifact:
-      clr_interop_stdout.exe:
-        run_success: true
-        exit_code: 0
-        stdout:
-        - hello from clr
-        stderr: []
-    artifacts:
-    - clr_interop_stdout.exe
-    - clr_interop_stdout.msil
-    - clr_interop_stdout.runtimeconfig.json
-    - run-contract.txt
-    - run-contracts.txt
-    compile_errors: []
+    build_success: false
+    dry_run_success: false
+    run_success: false
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for clr-microsoft-unknown-managed: `Clr` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
