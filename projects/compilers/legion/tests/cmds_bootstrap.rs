@@ -130,17 +130,28 @@ fn bootstrap_smoke_fixture_builds_with_seed() {
     use legion::cmds::build::{BuildArgs, run as build_run};
     use std::process::ExitCode;
 
-    let smoke_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/examples/bootstrap-smoke");
-    if !smoke_dir.join("legion.von").exists() {
-        eprintln!("skip: bootstrap-smoke fixture not found at {}", smoke_dir.display());
-        return;
-    }
+    // 0.0.x 主动交付线为 Node/Wasm；CLR 版 `examples/bootstrap-smoke` 需 `legacy-lanes`。
+    let fixture = create_smoke_project_with_manifest(
+        "legion-bootstrap-smoke-node",
+        r#"{
+    name: "main",
+    version: "0.1.0",
+    build: [
+        { target: "node" }
+    ]
+}"#,
+        r#"[main]
+micro main(): i64 {
+    return 0
+}
+"#,
+    );
 
-    let output_dir = smoke_dir.join("dist").join("bootstrap-smoke-seed-test");
+    let output_dir = fixture.project_dir.join("dist").join("node");
     let _ = std::fs::remove_dir_all(&output_dir);
     let status = build_run(&BuildArgs {
-        project_dir: smoke_dir.clone(),
-        target: CanonicalTarget::clr(),
+        project_dir: fixture.project_dir.clone(),
+        target: CanonicalTarget::parse("node").expect("node target"),
         output_dir: Some(output_dir.clone()),
         workspace: false,
         debug_artifacts: false,
@@ -148,7 +159,7 @@ fn bootstrap_smoke_fixture_builds_with_seed() {
     .unwrap();
 
     assert_eq!(status, ExitCode::SUCCESS);
-    assert!(output_dir.join("main.exe").exists());
-    assert!(output_dir.join("main.msil").exists());
+    assert!(output_dir.join("main.mjs").exists());
+    assert!(output_dir.join("main.wasm").exists());
     assert!(output_dir.join("run-contracts.txt").exists());
 }

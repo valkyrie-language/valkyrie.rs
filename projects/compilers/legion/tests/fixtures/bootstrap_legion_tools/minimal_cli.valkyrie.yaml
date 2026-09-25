@@ -5,52 +5,24 @@ targets:
 - wasm32-unknown-wasi-wasi
 expect:
   clr-microsoft-unknown-managed:
-    build_success: true
-    dry_run_success: true
+    build_success: false
+    dry_run_success: false
     run_success: false
-    run_contracts:
-    - logical_entry: Main
-      physical_entry: legion.exe
-      invocation: dotnet
-      validate: dotnet exec legion.exe
-    per_artifact:
-      legion.exe:
-        run_success: false
-        exit_code: -532462766
-        stdout: []
-        stderr:
-        - 'Unhandled exception. System.InvalidProgramException: <normalized>'
-        - '   at _GlobalMethods.Main(String[] )'
-    artifacts:
-    - legion.exe
-    - legion.runtimeconfig.json
-    - run-contract.txt
-    - run-contracts.txt
-    compile_errors: []
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for clr-microsoft-unknown-managed: `Clr` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   jvm-openjdk-unknown-managed:
-    build_success: true
-    dry_run_success: true
-    run_success: true
-    run_contracts:
-    - logical_entry: main.functions
-      physical_entry: legion.jar
-      invocation: java
-      validate: java -jar legion.jar
-    per_artifact:
-      legion.jar:
-        run_success: true
-        exit_code: 0
-        stdout: []
-        stderr: []
-    artifacts:
-    - ExitCode.class
-    - legion.jar
-    - main/
-    - main/functions.class
-    - run-contract.txt
-    - run-contracts.txt
-    compile_errors: []
+    build_success: false
+    dry_run_success: false
+    run_success: false
+    run_contracts: []
+    per_artifact: {}
+    artifacts: []
+    compile_errors:
+    - 'build failed for jvm-openjdk-unknown-managed: `Jvm` lane is frozen for 0.0.x Node/Wasm delivery; enable Cargo feature `legacy-lanes` to compile CLR/JVM/native/nyar_vm lowering'
     errors: []
   wasm32-node-unknown-wasm:
     build_success: true
