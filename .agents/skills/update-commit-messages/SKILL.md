@@ -11,7 +11,7 @@ description: >-
 本仓 **禁止** 添加或恢复 `scripts/reword.mjs`。批量改历史 message 一律用全局 **
 `git-reword`**（[git-tools](https://github.com/oovm/git-tools)）。
 
-发布说明（release notes）另见 [`update-change-logs`](../update-change-logs/SKILL.md)。
+发布说明（release notes）与 `git-change-logs` 见 [`update-change-logs`](../update-change-logs/SKILL.md)。
 
 ## 提交规范（gitmoji）
 
@@ -22,10 +22,10 @@ description: >-
   emoji。
 - subject **末尾禁止句号** `.`。body 句子正常用句号。
 - 全文禁止 `;` 与 `；`（subject 与 body，改用句号或分行）。
-- **标识符必须反引号**：slug、crate、路径、模块、字段、函数名，如 `` `legion.von` ``、`` `scripts/change-logs.mjs` ``、
+- **标识符必须反引号**：slug、crate、路径、模块、字段、函数名，如 `` `legion.von` ``、`` `git-change-logs` ``、
   `` `nyar-vm.rs` ``。
 - **禁止含糊缩写**：写全称（约定俗成的 `BFS`/`DFS` 可保留；指 TypeScript 时写 `TypeScript`，勿写 bare `TS`）。
-- **版本号不进 subject**（如 `0.0.3`）；改用「patched releases」等表述，或写行为而不写号。
+- **版本号不进 subject**（如 `0.0.3`）；body 也勿枚举 `` `v0.0.x` `` 路径，改用 `` `documentation/maintenance/releases/` `` 等目录表述。
 - **禁止内部计划/里程碑代号**：`Phase 1`、`M0`、`Gate-N` 等一律不进 commit message。
 
 ### 常见 gitmoji
@@ -47,7 +47,7 @@ description: >-
 ```text
 🐛 Fix VCC wasm capability assembly for npm publish
 
-📝 Add `scripts/change-logs.mjs` and maintainer release notes under `documentation/maintenance`
+📝 Add maintainer release notes under `documentation/maintenance`
 
 🔧 Point workspace at `projects/compilers` and `nyar-vm.rs` git deps
 ```
@@ -108,7 +108,7 @@ git-reword export --base <exclusive-base> --ref dev --path reword.pending.json
   "entries": [
     {
       "hash": "14a101902ffabf7315fa8719826f6fccd843837e",
-      "message": "📝 Add `scripts/change-logs.mjs` and maintainer release notes under `documentation/maintenance`\n"
+      "message": "📝 Add maintainer release notes under `documentation/maintenance`\n"
     }
   ]
 }
@@ -137,7 +137,7 @@ git-reword rewrite --base <exclusive-base> --ref dev --path reword.pending.json
 
 | 问题                 | 反例                     | 正例                                                   |
 |----------------------|--------------------------|--------------------------------------------------------|
-| 无 gitmoji           | `add change log`         | `📝 Add \`change-logs\` script`                        |
+| 无 gitmoji           | `add change log`         | `📝 Document release notes workflow`                   |
 | Conventional Commits | `fix: wasm assembly`     | `🐛 Fix wasm capability assembly`                      |
 | 标识符无反引号       | `Fix legion.von parsing` | `` Fix `legion.von` parsing ``                         |
 | PowerShell 乱码      | `? Add script`           | 用 UTF-8 JSON + `git-reword`                           |

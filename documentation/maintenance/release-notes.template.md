@@ -1,7 +1,7 @@
 # 🚀 `@valkyrie-language` vX.Y.Z
 
 <!--
-参考：`pnpm change-logs --version X.Y.Z`（`--write` → `releases/vX.Y.Z.reference.md`，与发布稿同目录、gitignore 临时稿）。
+参考：`git-change-logs --version X.Y.Z`（`--write` → `releases/vX.Y.Z.reference.md`，与发布稿同目录、gitignore 临时稿）。`pnpm change-logs` 为快捷方式。
 每行 `- message (@user)`，仅供对照；须手工筛选、合并为面向最终用户的 `releases/vX.Y.Z.md`，勿直接发布 reference 文件。
 
 只写这个版本在发布时已经完成、并且读者能感知的内容。
