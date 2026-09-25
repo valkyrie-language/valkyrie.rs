@@ -16,6 +16,7 @@
         "publish:dry-run": "node scripts/publish.mjs npm --dry-run",
         "publish:npm": "node scripts/publish.mjs npm",
         "publish:npm:no-legion": "node scripts/publish.mjs npm --skip legion",
+        "change-logs": "node scripts/change-logs.mjs",
         "npm:trust:status": "node scripts/publish.mjs trust status",
         "npm:trust": "node scripts/publish.mjs trust configure"
     },
