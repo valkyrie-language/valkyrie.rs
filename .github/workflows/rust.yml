@@ -69,7 +69,6 @@ jobs:
 
   coverage:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
@@ -86,7 +85,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov -p legion -p vcc-data -p vcc-napi -p vcc-wasm --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
