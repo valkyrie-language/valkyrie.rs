@@ -1082,7 +1082,20 @@ fn default_dist_output_dir(project_dir: &Path, target: &CanonicalTarget) -> Path
 }
 
 fn select_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> Option<BuildTargetSpec> {
-    manifest.build.iter().find(|item| item.target == *target).cloned()
+    manifest
+        .build
+        .iter()
+        .find(|item| item.target == *target)
+        .cloned()
+        .or_else(|| synthesize_cli_build_target(manifest, target))
+}
+
+/// CLI 显式 `--target` 未写入 `legion.von` 时，为 library 工程合成默认 build 项（leetcode 单文件题解等）。
+fn synthesize_cli_build_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> Option<BuildTargetSpec> {
+    if manifest.artifact != crate::manifest::ProjectArtifactKind::Library {
+        return None;
+    }
+    Some(BuildTargetSpec { target: *target, ..BuildTargetSpec::default() })
 }
 
 fn collect_source_files(project_dir: &Path, entry: Option<&str>) -> Result<Vec<PathBuf>, PlannerError> {
