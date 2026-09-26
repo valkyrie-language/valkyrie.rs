@@ -41,7 +41,13 @@ micro main(): i64 {
 }
 "#,
     );
-    let seed_path = PathBuf::from(env!("CARGO_BIN_EXE_legion"));
+    let seed_path = match std::env::var("LEGION_BOOTSTRAP_SEED") {
+        Ok(path) if PathBuf::from(&path).exists() => PathBuf::from(path),
+        _ => {
+            eprintln!("skip bootstrap acceptance: set LEGION_BOOTSTRAP_SEED to a runnable legion host seed");
+            return;
+        }
+    };
     let args = BootstrapArgs {
         project_dir: fixture.project_dir.clone(),
         bootstrap_project: None,

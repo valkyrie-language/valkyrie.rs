@@ -36,5 +36,12 @@ mod tests {
     #[test]
     fn splits_list() {
         assert_eq!(resolve_test_targets(Some("legion,clr")), vec!["legion", "clr"]);
+        assert_eq!(resolve_test_targets(Some("nyar,node")), vec!["nyar", "node"]);
+    }
+
+    #[test]
+    fn legion_alias_parses_to_nyar_target() {
+        let target = parse_target_label("legion").expect("legion");
+        assert_eq!(target.to_string(), "nyar-unknown-unknown-managed");
     }
 }

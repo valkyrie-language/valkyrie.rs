@@ -413,13 +413,6 @@ fn resolve_runner(
         }
     }
 
-    if runner_target == RunnerFamily::NyarVm {
-        return Err(miette!(
-            "target `{}` 产出 `.legion` 产物，工作区未内置解释器；请通过 manifest runner、`--runner legion=...` 或 `LEGION_RUNNER_NYAR_VM` 配置运行命令",
-            canonical_target
-        ));
-    }
-
     Ok(default_template)
 }
 
@@ -595,7 +588,7 @@ fn preferred_extensions(target: RunnerFamily) -> &'static [&'static str] {
         RunnerFamily::Node => &["mjs", "js", "wasm"],
         RunnerFamily::Windows => &["exe"],
         RunnerFamily::Wasi => &["wasi", "wasm"],
-        RunnerFamily::NyarVm => &["legion"],
+        RunnerFamily::NyarVm => &["nyar"],
     }
 }
 
