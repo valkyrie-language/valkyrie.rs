@@ -27,6 +27,7 @@ zip = { workspace = true }
 sha2 = { workspace = true }
 pulldown-cmark = { workspace = true }
 asgard = { workspace = true }
+gag = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
