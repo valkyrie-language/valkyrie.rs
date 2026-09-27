@@ -35,7 +35,7 @@ nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch 
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
-nyar-format = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev", package = "nyar-emitter" }
 
 miette = "7.6.0"

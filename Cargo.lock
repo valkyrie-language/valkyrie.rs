@@ -1180,22 +1180,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "nyar-bytecode"
+version = "0.1.0"
+
+[[package]]
 name = "nyar-emitter"
 version = "0.1.0"
 dependencies = [
  "miette",
  "nyar",
- "nyar-format",
+ "nyar-bytecode",
  "nyar-types",
  "serde",
  "serde_json",
  "vcc-data",
  "zip",
 ]
-
-[[package]]
-name = "nyar-format"
-version = "0.1.0"
 
 [[package]]
 name = "nyar-language"
@@ -1278,7 +1278,7 @@ dependencies = [
 name = "nyar-workspace"
 version = "0.1.0"
 dependencies = [
- "nyar-format",
+ "nyar-bytecode",
  "sha2",
  "thiserror 2.0.20",
 ]
@@ -2430,7 +2430,7 @@ version = "0.0.1"
 dependencies = [
  "miette",
  "nyar",
- "nyar-format",
+ "nyar-bytecode",
  "nyar-language",
  "nyar-types",
  "serde",
