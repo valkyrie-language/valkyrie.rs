@@ -157,6 +157,67 @@ fn runs_clr_nested_workspace_fixture() {
 }
 
 #[test]
+fn runs_cross_file_nyar_vm_project() {
+    let Some(nyar_vm) = resolve_nyar_vm_runner()
+    else {
+        eprintln!("skip runs_cross_file_nyar_vm_project: nyar-vm binary not found (set NYAR_VM or build sibling nyar-vm.rs)");
+        return;
+    };
+
+    let fixture = support::create_smoke_project_with_build(
+        "legion-run-nyar-vm-cross-file",
+        r#"{
+            target: "nyar-vm"
+        }"#,
+        r#"namespace app.smoke;
+
+[main]
+micro main(): i64 {
+    return add_one(41)
+}
+"#,
+    );
+    std::fs::write(
+        fixture.project_dir.join("source").join("helper.v"),
+        r#"namespace app.smoke;
+
+micro add_one(x: i64): i64 {
+    return x + 1
+}
+"#,
+    )
+    .unwrap();
+
+    let output_dir = fixture.project_dir.join("dist").join("run-cross-file-nyar-vm");
+    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    assert_eq!(
+        run_build(&BuildArgs {
+            project_dir: fixture.project_dir.clone(),
+            target,
+            output_dir: Some(output_dir.clone()),
+            workspace: false,
+            debug_artifacts: false,
+        })
+        .unwrap(),
+        ExitCode::SUCCESS
+    );
+    assert_eq!(
+        run_project(&RunArgs {
+            project_dir: fixture.project_dir.clone(),
+            target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+            output_dir: Some(output_dir),
+            workspace: false,
+            runner: vec![format!("nyar-vm={}", nyar_vm.display())],
+            artifact: None,
+            dry_run: false,
+            debug_artifacts: false,
+        })
+        .unwrap(),
+        ExitCode::SUCCESS
+    );
+}
+
+#[test]
 fn runs_minimal_nyar_vm_project() {
     let Some(nyar_vm) = resolve_nyar_vm_runner()
     else {
