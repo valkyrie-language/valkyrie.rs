@@ -19,7 +19,7 @@ use super::{CompilationCache, SemanticCacheEntry, StageCacheEntry, TokenCacheEnt
 
 // Bump whenever HIR semantic contracts or their validation ordering changes.
 // Source hashes alone cannot make an old serialized HIR safe to consume.
-const SEMANTIC_CONTRACT_FINGERPRINT: &str = "semantic-contract-2026-08-08-utf8-scalar-and-content-opcodes";
+const SEMANTIC_CONTRACT_FINGERPRINT: &str = "semantic-contract-2026-09-27-arraylist-length-intrinsic";
 
 /// Result of the frontend cache waterfall.
 #[derive(Debug)]
