@@ -156,6 +156,72 @@ fn runs_clr_nested_workspace_fixture() {
     verify_run_fixture_for_context(&run_fixture_root().join("nested_workspace_minimal.valkyrie"), &context);
 }
 
+#[test]
+fn runs_minimal_nyar_vm_project() {
+    let Some(nyar_vm) = resolve_nyar_vm_runner()
+    else {
+        eprintln!("skip runs_minimal_nyar_vm_project: nyar-vm binary not found (set NYAR_VM or build sibling nyar-vm.rs)");
+        return;
+    };
+
+    let fixture = support::create_smoke_project_with_build(
+        "legion-run-nyar-vm",
+        r#"{
+            target: "nyar-vm"
+        }"#,
+        r#"[main]
+micro main(): i64 {
+    return 0
+}
+"#,
+    );
+    let output_dir = fixture.project_dir.join("dist").join("run-nyar-vm");
+    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+
+    let build_status = run_build(&BuildArgs {
+        project_dir: fixture.project_dir.clone(),
+        target,
+        output_dir: Some(output_dir.clone()),
+        workspace: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+    assert_eq!(build_status, ExitCode::SUCCESS);
+
+    let run_status = run_project(&RunArgs {
+        project_dir: fixture.project_dir.clone(),
+        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        output_dir: Some(output_dir),
+        workspace: false,
+        runner: vec![format!("nyar-vm={}", nyar_vm.display())],
+        artifact: None,
+        dry_run: false,
+        debug_artifacts: false,
+    })
+    .unwrap();
+    assert_eq!(run_status, ExitCode::SUCCESS);
+}
+
+fn resolve_nyar_vm_runner() -> Option<PathBuf> {
+    if let Ok(path) = env::var("NYAR_VM") {
+        let candidate = PathBuf::from(path);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+
+    let legion_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    // projects/compilers/legion → workspace root → sibling nyar-vm.rs
+    let sibling_root = legion_manifest.join("../../../..").join("nyar-vm.rs");
+    for relative in ["target/debug/nyar-vm.exe", "target/debug/nyar-vm", "target/release/nyar-vm.exe", "target/release/nyar-vm"] {
+        let candidate = sibling_root.join(relative);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
 #[cfg(feature = "legacy-lanes-clr-jvm-native")]
 #[test]
 fn falls_back_to_local_package_when_unregistered() {
