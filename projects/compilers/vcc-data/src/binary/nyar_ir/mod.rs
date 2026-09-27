@@ -59,6 +59,13 @@ pub enum NyarHeadCode {
     /// 调用模块导入表项（operand1 = import index，operand2 = argc）。
     /// 热路径只消费下标；链接名留在 imports section。
     CallImport = 0xD2,
+    /// 按 layout_id 分配稠密槽位对象（operand1 = layout index）。
+    /// 热路径不读字段名；布局描述在 layouts section。
+    ObjectNew = 0x50,
+    /// 按字段槽读取（operand1 = field_slot）；栈：`[obj] -> [value]`。
+    FieldGet = 0x51,
+    /// 按字段槽写入（operand1 = field_slot）；栈：`[obj, value] -> [obj]`。
+    FieldSet = 0x52,
 }
 
 impl NyarHeadCode {
@@ -96,6 +103,9 @@ impl NyarHeadCode {
             0x48 => Some(Self::I32GeS),
             0xD0 => Some(Self::CallIntrinsic),
             0xD2 => Some(Self::CallImport),
+            0x50 => Some(Self::ObjectNew),
+            0x51 => Some(Self::FieldGet),
+            0x52 => Some(Self::FieldSet),
             _ => None,
         }
     }
@@ -126,8 +136,11 @@ impl NyarHeadCode {
             | Self::LoadLocal
             | Self::StoreLocal
             | Self::LoadArg
-            | Self::LoadGlobal
-            | Self::StoreGlobal => NyarInstructionForm::Imm1,
+            |             Self::LoadGlobal
+            | Self::StoreGlobal
+            | Self::ObjectNew
+            | Self::FieldGet
+            | Self::FieldSet => NyarInstructionForm::Imm1,
             Self::CallIntrinsic | Self::CallImport => NyarInstructionForm::Imm2,
             Self::Nop
             | Self::Return
@@ -345,6 +358,15 @@ pub enum NyarSectionKind {
     WitnessEntries = 0x06,
     Globals = 0x07,
     InitFunctions = 0x08,
+    /// 稠密布局描述表；`ObjectNew` 的 layout_id 索引此段。
+    Layouts = 0x09,
+}
+
+/// 语言中立的布局描述：仅槽位数，不含字段名。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NyarLayout {
+    /// 字段槽数量（`FieldGet` / `FieldSet` 的 field_slot 上界）。
+    pub field_count: i32,
 }
 
 /// Decoded Nyar module binary view.
@@ -362,6 +384,8 @@ pub struct NyarModuleData {
     pub globals: Vec<NyarGlobal>,
     /// Function indices to run for eager singleton / module initialization.
     pub init_function_indices: Vec<i32>,
+    /// Layout descriptors；`layout_id` 为稠密下标。
+    pub layouts: Vec<NyarLayout>,
 }
 
 /// `.legion` decode error.
@@ -436,6 +460,7 @@ pub fn decode_module(data: &[u8]) -> Result<NyarModuleData, NyarDecodeError> {
         code_bytes: Vec::new(),
         globals: Vec::new(),
         init_function_indices: Vec::new(),
+        layouts: Vec::new(),
     };
 
     for section in sections {
@@ -455,6 +480,7 @@ pub fn decode_module(data: &[u8]) -> Result<NyarModuleData, NyarDecodeError> {
             0x06 => decode_witness_entries(slice, &mut module.witness_entries)?,
             0x07 => decode_globals(slice, &mut module.globals)?,
             0x08 => decode_init_functions(slice, &mut module.init_function_indices)?,
+            0x09 => decode_layouts(slice, &mut module.layouts)?,
             kind => return Err(NyarDecodeError::InvalidSectionKind(kind)),
         }
     }
@@ -654,6 +680,26 @@ fn decode_init_functions(slice: &[u8], out: &mut Vec<i32>) -> Result<(), NyarDec
     Ok(())
 }
 
+fn decode_layouts(slice: &[u8], out: &mut Vec<NyarLayout>) -> Result<(), NyarDecodeError> {
+    if slice.len() < 4 {
+        return Err(NyarDecodeError::TooShort);
+    }
+    let count = i32::from_le_bytes(slice[0..4].try_into().expect("count")) as usize;
+    let mut offset = 4;
+    for _ in 0..count {
+        if offset + 4 > slice.len() {
+            return Err(NyarDecodeError::TooShort);
+        }
+        let field_count = i32::from_le_bytes(slice[offset..offset + 4].try_into().expect("field_count"));
+        if field_count < 0 {
+            return Err(NyarDecodeError::TooShort);
+        }
+        out.push(NyarLayout { field_count });
+        offset += 4;
+    }
+    Ok(())
+}
+
 fn decode_witness_entries(slice: &[u8], out: &mut Vec<NyarWitnessDispatchEntry>) -> Result<(), NyarDecodeError> {
     if slice.len() < 4 {
         return Err(NyarDecodeError::TooShort);
@@ -723,6 +769,9 @@ pub fn encode_module(data: &NyarModuleData) -> Vec<u8> {
     }
     if !data.init_function_indices.is_empty() {
         sections.push((NyarSectionKind::InitFunctions, encode_init_functions(&data.init_function_indices)));
+    }
+    if !data.layouts.is_empty() {
+        sections.push((NyarSectionKind::Layouts, encode_layouts(&data.layouts)));
     }
     if !data.code_bytes.is_empty() {
         sections.push((NyarSectionKind::Code, data.code_bytes.clone()));
@@ -859,8 +908,52 @@ fn encode_init_functions(indices: &[i32]) -> Vec<u8> {
     out
 }
 
+fn encode_layouts(layouts: &[NyarLayout]) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(&(layouts.len() as i32).to_le_bytes());
+    for layout in layouts {
+        out.extend_from_slice(&layout.field_count.to_le_bytes());
+    }
+    out
+}
+
 fn write_string(out: &mut Vec<u8>, value: &str) {
     let bytes = value.as_bytes();
     out.extend_from_slice(&(bytes.len() as i32).to_le_bytes());
     out.extend_from_slice(bytes);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn structural_opcodes_are_imm1() {
+        assert_eq!(NyarHeadCode::ObjectNew.form(), NyarInstructionForm::Imm1);
+        assert_eq!(NyarHeadCode::FieldGet.form(), NyarInstructionForm::Imm1);
+        assert_eq!(NyarHeadCode::FieldSet.form(), NyarInstructionForm::Imm1);
+        assert_eq!(NyarHeadCode::from_u8(0x50), Some(NyarHeadCode::ObjectNew));
+        assert_eq!(NyarHeadCode::from_u8(0x51), Some(NyarHeadCode::FieldGet));
+        assert_eq!(NyarHeadCode::from_u8(0x52), Some(NyarHeadCode::FieldSet));
+    }
+
+    #[test]
+    fn layouts_section_round_trips() {
+        let data = NyarModuleData {
+            version: NYAR_VERSION,
+            name: "layout-test".into(),
+            constants: Vec::new(),
+            functions: Vec::new(),
+            imports: Vec::new(),
+            exports: Vec::new(),
+            witness_entries: Vec::new(),
+            code_bytes: Vec::new(),
+            globals: Vec::new(),
+            init_function_indices: Vec::new(),
+            layouts: vec![NyarLayout { field_count: 2 }, NyarLayout { field_count: 0 }],
+        };
+        let bytes = encode_module(&data);
+        let decoded = decode_module(&bytes).expect("decode");
+        assert_eq!(decoded.layouts, data.layouts);
+    }
 }
