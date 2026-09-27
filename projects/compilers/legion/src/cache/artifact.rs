@@ -65,9 +65,15 @@ impl From<&CachedRunContract> for DriverRunContract {
     }
 }
 
-/// Toolchain id embedded in artifact keys (invalidates cache on legion upgrades).
+/// Toolchain id embedded in artifact keys (invalidates cache on legion upgrades
+/// and on identity / MIR / layout / bytecode contract version bumps).
 pub fn toolchain_fingerprint() -> String {
-    format!("legion={}", env!("CARGO_PKG_VERSION"))
+    format!(
+        "legion={};{};bytecode={}",
+        env!("CARGO_PKG_VERSION"),
+        nyar_types::contract_version_fingerprint(),
+        vcc_data::binary::nyar_ir::BYTECODE_FORMAT_VERSION,
+    )
 }
 
 /// Compute artifact cache hash from sources + target + build flags + toolchain.
