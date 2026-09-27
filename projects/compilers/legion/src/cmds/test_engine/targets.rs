@@ -44,4 +44,10 @@ mod tests {
         let target = parse_target_label("legion").expect("legion");
         assert_eq!(target.to_string(), "nyar-unknown-unknown-managed");
     }
+
+    #[test]
+    fn nyar_vm_alias_parses_to_nyar_target() {
+        let target = parse_target_label("nyar-vm").expect("nyar-vm");
+        assert_eq!(target.to_string(), "nyar-unknown-unknown-managed");
+    }
 }
