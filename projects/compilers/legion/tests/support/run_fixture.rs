@@ -483,6 +483,8 @@ fn run_legion_dry_run(project_dir: &Path, target: RunFixtureTarget, output_dir: 
         artifact: None,
         dry_run: true,
         debug_artifacts: false,
+        workload_json: None,
+        workload_file: None,
     };
 
     run_run(&args)

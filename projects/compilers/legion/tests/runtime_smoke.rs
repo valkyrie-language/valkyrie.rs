@@ -75,6 +75,8 @@ fn assert_build_and_run(project_dir: &Path, output_dir: &Path, target: Canonical
         artifact: None,
         dry_run: false,
         debug_artifacts: false,
+        workload_json: None,
+        workload_file: None,
     })
     .unwrap();
     assert_eq!(run_status, ExitCode::SUCCESS, "run failed for {target_name}");
