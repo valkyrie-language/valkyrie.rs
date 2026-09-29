@@ -185,7 +185,7 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
         if (binding === null) {
             return null;
         }
-        const outcome = binding.legionRunCaptured(['legion', ...argv]);
+        const outcome = binding.legionRunCaptured(['vcc', ...argv]);
         return {
             route: 'native',
             status: outcome.status,
@@ -263,7 +263,7 @@ export function createHostRunner(config: VccHostConfig): VccHostRunner {
     function runCli(argv: string[] = process.argv.slice(2)): never {
         const binding = loadNativeBinding();
         if (binding?.legionRun) {
-            process.exit(binding.legionRun(['legion', ...argv]));
+            process.exit(binding.legionRun(['vcc', ...argv]));
         }
         const outcome = spawnCli(argv);
         process.exit(outcome.status);

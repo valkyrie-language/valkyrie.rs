@@ -181,14 +181,20 @@ export function spawnPackageBin(binPath: string, argv: string[] = []): VccCliSpa
     };
 }
 
-/** 解析本机 Rust seed `legion` 可执行文件（`LEGION_BIN` 优先）。 */
+/**
+ * 解析本机 Rust seed `vcc` 可执行文件。
+ * 优先序：`VCC_BIN` → 兼容别名 `LEGION_BIN` → `target/{release,debug}/vcc[.exe]`。
+ * 铁律：valkyrie.rs 不得产出 `legion.exe`；本函数也不再查找该文件名。
+ */
 export function locateNativeLegionBinary(valkyrieRsRoot?: string): string | null {
-    const override = process.env.LEGION_BIN?.trim();
-    if (override && existsSync(override)) {
-        return override;
+    for (const key of ['VCC_BIN', 'LEGION_BIN'] as const) {
+        const override = process.env[key]?.trim();
+        if (override && existsSync(override)) {
+            return override;
+        }
     }
     const root = defaultValkyrieRsRoot(valkyrieRsRoot);
-    const base = process.platform === 'win32' ? 'legion.exe' : 'legion';
+    const base = process.platform === 'win32' ? 'vcc.exe' : 'vcc';
     for (const profile of ['release', 'debug'] as const) {
         const candidate = join(root, 'target', profile, base);
         if (existsSync(candidate)) {
@@ -198,7 +204,7 @@ export function locateNativeLegionBinary(valkyrieRsRoot?: string): string | null
     return null;
 }
 
-/** 经本机 `legion` 子进程调用 CLI（`nyar` 等需 `legacy-lanes` 的 target 应走此路径）。 */
+/** 经本机 seed `vcc` 子进程调用 CLI（`nyar` 等需 `legacy-lanes` 的 target 应走此路径）。 */
 export function spawnNativeLegion(valkyrieRsRoot: string | undefined, argv: string[]): VccCliSpawnResult {
     const binary = locateNativeLegionBinary(valkyrieRsRoot);
     if (!binary) {
@@ -206,7 +212,7 @@ export function spawnNativeLegion(valkyrieRsRoot: string | undefined, argv: stri
             route: 'native',
             status: 127,
             stdout: '',
-            stderr: 'native legion not found (set LEGION_BIN or build legion in valkyrie.rs)',
+            stderr: 'native vcc not found (set VCC_BIN or cargo build -p legion → target/*/vcc)',
         };
     }
     const result = spawnSync(binary, argv, { encoding: 'utf8' });
