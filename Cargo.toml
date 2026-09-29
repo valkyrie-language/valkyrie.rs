@@ -78,18 +78,3 @@ incremental = false
 # and local builds always compile the tree checkout, not a stale lockfile git revision.
 [patch."https://github.com/valkyrie-language/valkyrie.rs"]
 vcc-data = { path = "projects/compilers/vcc-data" }
-
-# 本机兄弟仓：编译器栈走 `../nyar-vm.rs`，避免 legion 仍链远端 git `dev` 旧修订。
-[patch."https://github.com/nyar-vm/nyar-vm.rs"]
-nyar = { path = "../nyar-vm.rs/projects/compilers/nyar" }
-nyar-analyzer = { path = "../nyar-vm.rs/projects/compilers/nyar-analyzer" }
-nyar-emitter = { path = "../nyar-vm.rs/projects/compilers/nyar-emitter" }
-nyar-language = { path = "../nyar-vm.rs/projects/compilers/nyar-language" }
-nyar-optimizer = { path = "../nyar-vm.rs/projects/compilers/nyar-optimizer" }
-nyar-package-manager = { path = "../nyar-vm.rs/projects/compilers/nyar-package-manager" }
-nyar-package-registry = { path = "../nyar-vm.rs/projects/compilers/nyar-package-registry" }
-nyar-runner = { path = "../nyar-vm.rs/projects/compilers/nyar-runner" }
-nyar-types = { path = "../nyar-vm.rs/projects/compilers/nyar-types" }
-nyar-workspace = { path = "../nyar-vm.rs/projects/compilers/nyar-workspace" }
-nyar-bytecode = { path = "../nyar-vm.rs/projects/formats/nyar-bytecode" }
-emitter = { path = "../nyar-vm.rs/projects/compilers/nyar-emitter" }
