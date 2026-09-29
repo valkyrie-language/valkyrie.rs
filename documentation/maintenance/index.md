@@ -42,7 +42,7 @@ source → AST → HIR → MIR
 - 起草对照：`pnpm change-logs --version X.Y.Z`（`nifty change-logs`；亦可全局 `git-change-logs`）
 - `--write` → `releases/vX.Y.Z.reference.md`（gitignore）。`nifty change-logs lookup --email` 查 GitHub `id` → `author-github.json`
 - 非 GitHub 邮箱 → 贡献者映射：[author-github.json](author-github.json)（`id` 稳定，`login` 可改）
-- 已发布版本：`releases/v0.0.0.md` … `releases/v0.0.3.md`（对应 Git tag `v0.0.x`）
+- 已发布版本：`releases/v0.0.0.md` … `releases/v0.0.4.md`（对应 Git tag `v0.0.x`）
 
 ## 相关入口
 
