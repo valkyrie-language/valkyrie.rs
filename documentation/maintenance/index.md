@@ -34,11 +34,13 @@ source → AST → HIR → MIR
 
 ## npm 发布说明
 
+- Trusted Publisher 一次配置：`pnpm npm:trust`（`@doki-land/nifty` + `nifty.config.ts`；合同见 `.github/workflows/publish-npm.yml`）
+- 本地密钥：`.env.placeholder.local`（nifty）或兼容 `.env.npm-trust.local`（`NPM_TOTP_SECRET`）
 - 发布说明：[`.agents/skills/update-change-logs/SKILL.md`](../../.agents/skills/update-change-logs/SKILL.md)（reference → 发布稿 → `gh release edit`）
 - 提交信息与 `git-reword`：[`.agents/skills/update-commit-messages/SKILL.md`](../../.agents/skills/update-commit-messages/SKILL.md)
 - 模板：[release-notes.template.md](release-notes.template.md)
-- 起草对照：`git-change-logs --version X.Y.Z`（`pnpm change-logs` 为同名快捷方式，须全局安装 `git-change-logs`）
-- `--write` → `releases/vX.Y.Z.reference.md`（gitignore）。`git-change-logs lookup --email` 查 GitHub `id` → `author-github.json`
+- 起草对照：`pnpm change-logs --version X.Y.Z`（`nifty change-logs`；亦可全局 `git-change-logs`）
+- `--write` → `releases/vX.Y.Z.reference.md`（gitignore）。`nifty change-logs lookup --email` 查 GitHub `id` → `author-github.json`
 - 非 GitHub 邮箱 → 贡献者映射：[author-github.json](author-github.json)（`id` 稳定，`login` 可改）
 - 已发布版本：`releases/v0.0.0.md` … `releases/v0.0.3.md`（对应 Git tag `v0.0.x`）
 

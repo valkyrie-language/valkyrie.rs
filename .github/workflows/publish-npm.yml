@@ -3,6 +3,9 @@
 #   repo = valkyrie-language/valkyrie.rs
 #   env  = NPM_PUBLISH
 #
+# Local one-time configure (nifty; see nifty.config.ts + scripts/run-nifty.mjs):
+#   pnpm npm:trust
+#
 # Triggers:
 #   - push tag v*
 #   - workflow_dispatch (version input, default 0.0.1)

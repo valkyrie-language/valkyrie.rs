@@ -19,8 +19,10 @@ documentation/maintenance/releases/*.reference.md
 # Legacy root checkout only. Canonical read-only tree is `projects/valkyrie.v` submodule.
 /valkyrie.v/
 
-# npm Trusted Publisher local cache / secrets
+# npm Trusted Publisher local secrets (nifty + legacy)
+.env.placeholder.local
 .env.npm-trust.local
+scripts/lib/.npm-trust-cache.json
 .npm-trust-cache.json
 
 # Commit reword scratch files
