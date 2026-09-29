@@ -1,6 +1,7 @@
-# 🚀 `@valkyrie-language` vX.Y.Z
-
 <!--
+发布稿正文从 `## ✨ Features` 起笔，**不要**写一级标题。
+GitHub Release 标题用 `vX.Y.Z`（与 tag 一致），页面已展示版本名，正文再写 `# … vX.Y.Z` 或 `@valkyrie-language …` 会重复。
+
 参考：`git-change-logs --version X.Y.Z`（`--write` → `releases/vX.Y.Z.reference.md`，与发布稿同目录、gitignore 临时稿）。`pnpm change-logs` 为快捷方式。
 每行 `- message (@user)`，仅供对照；须手工筛选、合并为面向最终用户的 `releases/vX.Y.Z.md`，勿直接发布 reference 文件。
 
