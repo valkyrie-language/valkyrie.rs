@@ -50,7 +50,8 @@ host.resolveWasmMjs();      // absolute path to legion.mjs in the wasm collect
 import {benchmarkSync, createBenchmarkRunner, WASM_NODE_BENCH_TARGET} from "@valkyrie-language/vcc/benchmark";
 
 const runner = createBenchmarkRunner({
-    valkyrieRsRoot: "E:/victory 胜利女神/valkyrie.rs",
+    // 本机检出根：环境变量或相对路径；禁止写死本机绝对路径
+    valkyrieRsRoot: process.env.VALKYRIE_RS_ROOT ?? process.cwd(),
 });
 
 // TS 侧：benchmarkSync 包裹参考函数
