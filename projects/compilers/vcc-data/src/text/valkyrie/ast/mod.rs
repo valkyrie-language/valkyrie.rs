@@ -669,6 +669,10 @@ pub struct ObjectFieldDeclaration {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ObjectMethodDeclaration {
+    /// 方法声明的结构化泛型参数。
+    pub generic_parameters: Vec<GenericParameterDeclaration>,
+    /// 方法声明的结构化约束，必须保留给语义降低。
+    pub where_constraints: Vec<WhereConstraintDeclaration>,
     /// Method name.
     pub name: IdentifierNode,
     /// Structured annotations attached above the method.

@@ -1,4 +1,35 @@
-use vcc_data::text::valkyrie::{AstParser, ClassLikeKind, RootStatement};
+use vcc_data::text::valkyrie::{AstParser, ClassLikeKind, RootStatement, TypeExpression};
+
+#[test]
+fn preserves_method_generic_parameters_and_where_constraints() {
+    let root = AstParser::parse_root(r#"
+class Collector {
+    micro collect<I, T>(iter: I) -> T where I: Iterator<Item = T> { }
+}
+"#).expect("generic method");
+    let RootStatement::Class(class) = &root.statements[0] else {
+        panic!("expected class");
+    };
+    let method = &class.body.methods[0];
+    assert_eq!(method.generic_parameters.len(), 2);
+    assert_eq!(method.generic_parameters[0].name.as_str(), "I");
+    assert_eq!(method.generic_parameters[1].name.as_str(), "T");
+    assert_eq!(method.where_constraints.len(), 1);
+    assert_eq!(method.where_constraints[0].bounds.len(), 1);
+    let TypeExpression::Path(bound) = &method.where_constraints[0].bounds[0] else {
+        panic!("expected structured trait bound");
+    };
+    assert_eq!(bound.name.parts, vec!["Iterator"]);
+    assert_eq!(bound.arguments.len(), 1);
+    let TypeExpression::Associated { name, ty, .. } = &bound.arguments[0] else {
+        panic!("expected associated type equation");
+    };
+    assert_eq!(name.as_str(), "Item");
+    let TypeExpression::Path(binding) = ty.as_ref() else {
+        panic!("expected associated type binding");
+    };
+    assert_eq!(binding.name.parts, vec!["T"]);
+}
 
 #[test]
 fn parses_soft_keyword_structure_fields() {

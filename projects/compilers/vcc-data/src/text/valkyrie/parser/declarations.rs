@@ -704,6 +704,8 @@ impl<'a> Parser<'a> {
             let body = Some(self.parse_block_body()?);
             let end = self.previous().span.end;
             return Ok(ObjectMethodDeclaration {
+                generic_parameters: Vec::new(),
+                where_constraints: Vec::new(),
                 name: IdentifierNode::new(nyar_types::Identifier::new(&method_name), span(event_start, end)),
                 annotations,
                 signature: format!("on {event_name}"),
@@ -751,7 +753,7 @@ impl<'a> Parser<'a> {
             let parsed_name = self.parse_method_name()?;
             IdentifierNode::new(nyar_types::Identifier::new(&parsed_name), span(start, self.previous().span.end))
         };
-        self.skip_generic_parameter_clause()?;
+        let generic_parameters = self.parse_structured_generic_parameter_clause()?;
         let params = self.parse_parameter_list()?;
         let return_type = if self.match_symbol(TokenKind::Arrow) || self.match_symbol(TokenKind::Colon) {
             Some(self.parse_intersection_type_expression()?)
@@ -760,8 +762,7 @@ impl<'a> Parser<'a> {
             None
         };
 
-        // 解析可选的 `where` 子句，当前仅消费不存储（自举阶段不做类型检查）。
-        let _ = self.parse_where_constraints()?;
+        let where_constraints = self.parse_where_constraints()?;
 
         let signature_end = self.current().span.start;
         let body = if self.check_symbol(TokenKind::LBrace) {
@@ -773,6 +774,8 @@ impl<'a> Parser<'a> {
         };
 
         Ok(ObjectMethodDeclaration {
+            generic_parameters,
+            where_constraints,
             name,
             annotations,
             signature: self.slice(span(start, signature_end)).trim().to_string(),
