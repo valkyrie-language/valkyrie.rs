@@ -1142,22 +1142,45 @@ pub fn project_uses_single_script_layout(project_dir: &Path) -> bool {
 }
 
 /// Apply `build[].exclude_directories` / `exclude_files` relative to `project_dir`.
+#[cfg(test)]
+mod exclusion_contract_tests {
+    use super::*;
+
+    #[test]
+    fn exclusions_use_normalized_project_relative_identity() {
+        let directory = tempfile::tempdir().expect("project directory");
+        fs::create_dir_all(directory.path().join("source/nested/source")).expect("sources");
+        let excluded = directory.path().join("source/skip.v");
+        let retained = directory.path().join("source/nested/source/skip.v");
+        fs::write(&excluded, "").expect("source");
+        fs::write(&retained, "").expect("source");
+        let target = BuildTargetSpec {
+            exclude_files: vec!["source/skip.v".to_owned()],
+            ..BuildTargetSpec::default()
+        };
+        let files = vec![path_for_local_fs(&excluded), path_for_local_fs(&retained)];
+        let result = filter_excluded_sources(files, &canonicalize_lossy(directory.path()), &target);
+        assert_eq!(result, vec![path_for_local_fs(&retained)]);
+    }
+}
+
 fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target: &BuildTargetSpec) -> Vec<PathBuf> {
     if build_target.exclude_directories.is_empty() && build_target.exclude_files.is_empty() {
         return files;
     }
-    let project_dir = canonicalize_lossy(project_dir);
+    let project_dir = path_for_local_fs(&canonicalize_lossy(project_dir));
     files
         .into_iter()
         .filter(|path| {
-            let Ok(relative) = path.strip_prefix(&project_dir)
+            let normalized_path = path_for_local_fs(path);
+            let Ok(relative) = normalized_path.strip_prefix(&project_dir)
             else {
                 return true;
             };
             let relative = relative.to_string_lossy().replace('\\', "/");
             if build_target.exclude_files.iter().any(|item| {
                 let item = item.replace('\\', "/");
-                relative == item || relative.ends_with(item.trim_start_matches("./"))
+                relative == item.trim_start_matches("./")
             }) {
                 return false;
             }
