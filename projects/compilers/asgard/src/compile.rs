@@ -8,9 +8,9 @@ use emitter::{
 };
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
-    ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, PlannedCompilerArtifacts, ValkyrieCompiler, assemble_fragment_submission,
+    ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, ValkyrieCompiler, assemble_fragment_submission,
     nyar::{ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, projection_policy_for_target_profile},
-    plan_compiler_artifacts_from_build_output,
+    plan_artifacts_from_build_output,
 };
 
 use crate::{
@@ -53,11 +53,10 @@ pub fn compile_v_bundle(
     let target_profile = target.to_profile(None);
     let projection_policy = projection_policy_for_target_profile(&target_profile)?;
     let backend_registry = bundled_backend_registry(&build_output.neutral_plan().semantic_fragments, &target_profile, &projection_policy);
-    let planned =
-        plan_compiler_artifacts_from_build_output(&build_output, target.clone(), projection_policy, backend_registry, ClrSuspendStrategy::default())
+    let artifact_plan =
+        plan_artifacts_from_build_output(&build_output, target.clone(), projection_policy, backend_registry, ClrSuspendStrategy::default())
             .map_err(|error| miette::miette!("frontend partition planning failed: {error:?}"))?;
-    let PlannedCompilerArtifacts { compiler, partitions: artifact_plan } = planned;
-    let driver_bundle = VoaFrontendBuildAdapter::new(build_output, compiler, artifact_plan);
+    let driver_bundle = VoaFrontendBuildAdapter::new(build_output, artifact_plan);
 
     fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
 
@@ -213,13 +212,12 @@ fn minimal_test_elf_shared_object() -> Vec<u8> {
 
 struct VoaFrontendBuildAdapter {
     build_output: FrontendBuildOutput,
-    compiler: nyar_language::CompilerArtifact,
     artifact_plan: ArtifactPartitionPlan,
 }
 
 impl VoaFrontendBuildAdapter {
-    fn new(build_output: FrontendBuildOutput, compiler: nyar_language::CompilerArtifact, artifact_plan: ArtifactPartitionPlan) -> Self {
-        Self { build_output, compiler, artifact_plan }
+    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan) -> Self {
+        Self { build_output, artifact_plan }
     }
 }
 
