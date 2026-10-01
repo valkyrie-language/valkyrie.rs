@@ -52,18 +52,7 @@ pub fn compile_semantic_source_groups(
     let mut exports = std::collections::BTreeMap::<String, HirDependencySemanticExport>::new();
     let mut dependency_mirs = Vec::new();
     let mut final_output = None;
-    eprintln!(
-        "[seed-debug] semantic-groups count={} names={}",
-        groups.len(),
-        groups.iter().map(|group| group.name.as_str()).collect::<Vec<_>>().join(",")
-    );
     for group in groups {
-        eprintln!(
-            "[seed-debug] semantic-group-begin name={} deps={} files={}",
-            group.name,
-            group.direct_dependencies.join(","),
-            group.source_files.len()
-        );
         let mut source = String::new();
         let mut source_files = Vec::new();
         let mut staged_parts = Vec::new();
@@ -111,11 +100,6 @@ pub fn compile_semantic_source_groups(
     }
     let mut final_output = final_output.ok_or_else(|| miette!("semantic source group plan is empty"))?;
     if !dependency_mirs.is_empty() {
-        eprintln!(
-            "[seed-debug] dependency-mir-link-start deps={} consumer_functions={}",
-            dependency_mirs.len(),
-            final_output.semantic_mir().functions.len()
-        );
         final_output.link_dependency_mir_modules(&dependency_mirs)
             .map_err(|error| miette!("依赖 MIR 链接失败：{error}"))?;
     }
@@ -156,7 +140,6 @@ pub fn compile_frontend_with_cache(
         all_staging_hit &= hit;
         staged_parts.push(staged);
         if index == 0 || (index + 1) % 25 == 0 || index + 1 == source_files.len() {
-            eprintln!("[seed-debug] frontend-stage-progress {}/{} hit={}", index + 1, source_files.len(), hit);
         }
     }
 
@@ -175,7 +158,6 @@ pub fn compile_frontend_with_cache(
 
     let primary_path = path_key(&source_files[0]);
     let ast_hash = combined_hash(&[&combined_source, SEMANTIC_CONTRACT_FINGERPRINT]);
-    eprintln!("[seed-debug] frontend-staging-done files={} bytes={} all_hit={}", source_files.len(), combined_source.len(), all_staging_hit);
     let compiler = ValkyrieCompiler::default();
 
     if let Some(entry) = cache.try_get_semantics(&primary_path, canonical_triple, &ast_hash) {
@@ -186,7 +168,6 @@ pub fn compile_frontend_with_cache(
             let build_output = FrontendBuildOutput::from_hir_module(hir);
             validate_module(build_output.semantic_mir())
                 .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
-            eprintln!("[seed-debug] frontend-semantics-cache-hit");
             return Ok(CachedFrontendCompile {
                 combined_source,
                 build_output,
@@ -198,11 +179,9 @@ pub fn compile_frontend_with_cache(
     }
 
     let (_tokens, tokens_hit) = load_or_tokenize_combined(cache, source_files, &combined_source)?;
-    eprintln!("[seed-debug] frontend-tokenize-done hit={tokens_hit}");
     let build_output = compiler
         .compile_source_to_build_output(&combined_source)
         .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
-    eprintln!("[seed-debug] frontend-semantic-compile-done");
 
     if let Ok(semantic_data) = serde_json::to_vec(build_output.hir_module()) {
         let _ = cache.put_semantics(
@@ -300,7 +279,6 @@ fn attach_combined_source(error: impl Into<miette::Report>, source: &str, source
     let report = error.into();
     let message = report.to_string();
     let diagnostic = format!("{report:?}");
-    eprintln!("[seed-debug] frontend-compile-error-debug {diagnostic}");
     let location = combined_source_location(&diagnostic, source_files, staged_parts)
         .map(|location| format!("\n\n[combined source location] {location}"))
         .unwrap_or_default();
