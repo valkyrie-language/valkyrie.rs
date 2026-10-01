@@ -17,12 +17,12 @@ use emitter::{
 };
 use miette::{IntoDiagnostic, NamedSource, Report, Result, WrapErr, miette};
 use nyar_language::{
-    ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalSpecification, CanonicalTarget, FrontendBuildOutput,
+    ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalSpecification, CanonicalTarget, FrontendBuildOutput, PlannedCompilerArtifacts,
     assemble_fragment_submission,
     nyar::{
         ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, VmSuspendStrategy, projection_policy_for_target_profile,
     },
-    plan_artifacts_from_build_output,
+    plan_compiler_artifacts_from_build_output,
 };
 use serde::Serialize;
 use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, TgRoot, parse_tgrammar_fragment};
@@ -297,7 +297,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     let projection_policy = projection_policy_for_target_profile(&target_profile)?;
     let backend_registry = bundled_backend_registry(&build_output.neutral_plan().semantic_fragments, &target_profile, &projection_policy);
     let clr_suspend_strategy = ClrSuspendStrategy::from_runtime_async_flag(plan.project.build_target.runtime_async);
-    let artifact_plan = plan_artifacts_from_build_output(
+    let planned = plan_compiler_artifacts_from_build_output(
         &build_output,
         plan.project.build_target.target.clone(),
         projection_policy,
@@ -305,8 +305,9 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         clr_suspend_strategy,
     )
     .map_err(|error| miette!(format!("前端分区规划失败: {error:?}")))?;
+    let PlannedCompilerArtifacts { compiler, partitions: artifact_plan } = planned;
     validate_project_artifact_contract(&build_output, &plan.project.build_target.target, plan.project.artifact_kind)?;
-    let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan, plan.project.artifact_kind);
+    let driver_bundle = LegionFrontendBuildAdapter::new(build_output, compiler, artifact_plan, plan.project.artifact_kind);
 
     if verbose {
         println!("hir functions: {}", driver_bundle.build_output.hir_function_count());
@@ -348,13 +349,14 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
 
 struct LegionFrontendBuildAdapter {
     build_output: FrontendBuildOutput,
+    compiler: nyar_language::CompilerArtifact,
     artifact_plan: ArtifactPartitionPlan,
     artifact_kind: ProjectArtifactKind,
 }
 
 impl LegionFrontendBuildAdapter {
-    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan, artifact_kind: ProjectArtifactKind) -> Self {
-        Self { build_output, artifact_plan, artifact_kind }
+    fn new(build_output: FrontendBuildOutput, compiler: nyar_language::CompilerArtifact, artifact_plan: ArtifactPartitionPlan, artifact_kind: ProjectArtifactKind) -> Self {
+        Self { build_output, compiler, artifact_plan, artifact_kind }
     }
 }
 
