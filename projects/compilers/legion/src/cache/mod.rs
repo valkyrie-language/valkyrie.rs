@@ -13,5 +13,5 @@ pub use artifact::{
     store_cached_build, toolchain_fingerprint, try_restore_cached_build,
 };
 pub use compilation::{CompilationCache, EntrySliceCacheEntry, IrCacheEntry, SemanticCacheEntry, StageCacheEntry, TokenCacheEntry};
-pub use pipeline::{CachedFrontendCompile, compile_frontend_with_cache, compile_semantic_source_groups};
+pub use pipeline::{CachedFrontendCompile, compile_frontend_with_cache, compile_source_snapshot};
 pub use resolve::{cache_root_for, resolve_cache_root, resolve_workspace_root};

@@ -7,11 +7,7 @@ use std::{
 
 use crate::planner::PlannedSemanticSourceGroup;
 use miette::{IntoDiagnostic, NamedSource, Result as MietteResult, miette};
-use nyar_language::{
-    FrontendBuildOutput, Identifier, NamePath, ValkyrieCompiler,
-    mir::validation::validate_module,
-    types::hir::{HirDependencySemanticExport, HirModule},
-};
+use nyar_language::{CompilerSourceGroup, FrontendBuildOutput, ValkyrieCompiler, mir::validation::validate_module, types::hir::HirModule};
 use nyar_workspace::{combined_hash, file_hash};
 use vcc_data::text::valkyrie::lexer::{Lexer, Token, decode_tokens, encode_tokens};
 
@@ -36,89 +32,32 @@ pub struct CachedFrontendCompile {
     pub tokens_hit: bool,
 }
 
-/// Compiles workspace source groups in dependency order. This is intentionally
-/// separate from the legacy text-concatenating cache path: a consumer receives
-/// only direct dependency exports, never their source text or transitive HIR.
-///
-/// After the final consumer group compiles, reachable Valkyrie dependency MIR
-/// bodies are linked into the consumer MIR so Stage1 emit SMIR003 can see them
-/// in the executable registry (not as host stubs).
-pub fn compile_semantic_source_groups(
+/// 将 Resolver 的源码组快照交给 Compiler；Legion 不拥有语义导出或 MIR 链接。
+pub fn compile_source_snapshot(
     groups: &[PlannedSemanticSourceGroup],
     arch: &str,
     preprocess: impl Fn(&str, &str) -> String,
 ) -> MietteResult<FrontendBuildOutput> {
-    let compiler = ValkyrieCompiler::default();
-    let mut exports = std::collections::BTreeMap::<String, HirDependencySemanticExport>::new();
-    let mut dependency_mirs = Vec::new();
-    let mut final_output = None;
+    let mut compiler_groups = Vec::with_capacity(groups.len());
     for group in groups {
         let mut source = String::new();
-        let mut source_files = Vec::new();
-        let mut staged_parts = Vec::new();
         for path in &group.source_files {
             let content =
                 fs::read_to_string(path).into_diagnostic().map_err(|error| error.wrap_err(format!("读取源码失败 {}", path.display())))?;
             let staged = preprocess(content.strip_prefix('\u{FEFF}').unwrap_or(&content), arch);
-            source_files.push(path.clone());
-            staged_parts.push(staged.clone());
             source.push_str(&staged);
             source.push('\n');
         }
-        let dependency_exports = group
-            .direct_dependencies
-            .iter()
-            .map(|name| {
-                exports.get(name).cloned().ok_or_else(|| {
-                    miette!(
-                        "semantic dependency export `{name}` is unavailable for `{}` (have: {})",
-                        group.name,
-                        exports.keys().cloned().collect::<Vec<_>>().join(",")
-                    )
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let output = compiler
-            .compile_source_to_build_output_with_semantic_exports(&source, &dependency_exports)
-            .map_err(|error| attach_combined_source(error, &source, &source_files, &staged_parts))?;
-        let hir = output.hir_module();
-        let export = HirDependencySemanticExport {
-            module: NamePath::new(vec![Identifier::new(&group.name)]),
-            functions: hir.functions.clone(),
-            structs: hir.structs.clone(),
-            enums: hir.enums.clone(),
-            traits: hir.traits.clone(),
-            type_aliases: hir.type_aliases.clone(),
-            impls: hir.impls.clone(),
-        };
-        insert_semantic_export(&mut exports, group.dependency_key.clone(), export, &group.name)?;
-        // Keep prior groups' MIR for Stage1 link; the final consumer replaces
-        // `final_output` and receives linked bodies below.
-        if let Some(previous) = final_output.replace(output) {
-            dependency_mirs.push(previous.semantic_mir().clone());
-        }
+        compiler_groups.push(CompilerSourceGroup {
+            dependency_key: group.dependency_key.clone(),
+            name: group.name.clone(),
+            source,
+            direct_dependencies: group.direct_dependencies.clone(),
+        });
     }
-    let mut final_output = final_output.ok_or_else(|| miette!("semantic source group plan is empty"))?;
-    if !dependency_mirs.is_empty() {
-        final_output.link_dependency_mir_modules(&dependency_mirs)
-            .map_err(|error| miette!("依赖 MIR 链接失败：{error}"))?;
-    }
-    Ok(final_output)
-}
-
-fn insert_semantic_export(
-    exports: &mut std::collections::BTreeMap<String, HirDependencySemanticExport>,
-    key: String,
-    export: HirDependencySemanticExport,
-    owner: &str,
-) -> MietteResult<()> {
-    if exports.contains_key(&key) {
-        return Err(miette!(
-            "semantic dependency export identity collision for `{key}` while registering `{owner}`; refusing ambiguous owner"
-        ));
-    }
-    exports.insert(key, export);
-    Ok(())
+    ValkyrieCompiler::default()
+        .compile_source_groups(&compiler_groups)
+        .map_err(|error| miette!("Compiler semantic snapshot failed: {error}"))
 }
 
 /// Load sources, apply staging/token/semantics caches, return frontend output.

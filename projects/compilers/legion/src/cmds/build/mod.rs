@@ -12,7 +12,7 @@ use std::{
 
 use clap::Args;
 use emitter::{
-    DriverRunContract, FragmentSubmission, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView, bundled_backend_registry,
+    DriverRunContract, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView, bundled_backend_registry,
     compile_frontend_bundle_with_bundled_backends,
 };
 use miette::{IntoDiagnostic, NamedSource, Report, Result, WrapErr, miette};
@@ -29,7 +29,7 @@ use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, TgRoot, 
 
 use crate::{
     cache::{
-        CompilationCache, cache_root_for, collect_build_bundle, compile_frontend_with_cache, compile_semantic_source_groups,
+        CompilationCache, cache_root_for, collect_build_bundle, compile_frontend_with_cache, compile_source_snapshot,
         compute_artifact_hash, store_cached_build, try_restore_cached_build,
     },
     cmds::{
@@ -287,7 +287,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         compile_frontend_with_cache(&cache, &plan.project.source_files, &canonical_triple, arch, preprocess_templates)?.build_output
     }
     else {
-        compile_semantic_source_groups(&plan.project.semantic_source_groups, arch, preprocess_templates)?
+        compile_source_snapshot(&plan.project.semantic_source_groups, arch, preprocess_templates)?
     };
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
