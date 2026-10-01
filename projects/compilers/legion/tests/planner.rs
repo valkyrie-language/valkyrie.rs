@@ -147,15 +147,14 @@ fn resolves_root_manifest_without_workspace_as_script_mode() {
     let workspace = LegionWorkspace::discover_for_project(temp_dir.path()).unwrap();
     assert!(workspace.workspace_manifest.is_none());
 
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
+    let plan = workspace
+        .build_plan(&BuildRequest {
             project_dir: temp_dir.path().to_path_buf(),
             target: CanonicalTarget::clr(),
             output_dir: None,
         })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Script);
     assert_eq!(plan.project.name, "script-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(temp_dir.path()));
     assert!(plan.project.source_files.iter().any(|path| path.ends_with(Path::new("source").join("main.v"))));
@@ -181,15 +180,14 @@ fn resolves_workspace_member_from_nested_source_directory() {
     );
 
     let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
+    let plan = workspace
+        .build_plan(&BuildRequest {
             project_dir: fixture.project_dir.join("source"),
             target: CanonicalTarget::clr(),
             output_dir: None,
         })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "workspace-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -214,15 +212,14 @@ fn resolves_local_package_from_nested_source_directory() {
     );
 
     let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
+    let plan = workspace
+        .build_plan(&BuildRequest {
             project_dir: fixture.project_dir.join("source"),
             target: CanonicalTarget::clr(),
             output_dir: None,
         })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Package);
     assert_eq!(plan.project.name, "package-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -247,15 +244,14 @@ fn keeps_nested_workspace_member_layout_in_workspace_mode() {
     );
 
     let workspace = LegionWorkspace::discover_for_project(fixture.project_dir.join("source")).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
+    let plan = workspace
+        .build_plan(&BuildRequest {
             project_dir: fixture.project_dir.join("source"),
             target: CanonicalTarget::clr(),
             output_dir: None,
         })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "nested-workspace-app");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -282,15 +278,14 @@ fn discovers_nested_workspace_members_from_parent_workspace() {
         fixture.project_dir.parent().and_then(|path| path.parent()).and_then(|path| path.parent()).unwrap().to_path_buf();
 
     let workspace = LegionWorkspace::discover(&outer_workspace_root).unwrap();
-    let (plan, mode) = workspace
-        .build_plan_with_local_fallback(&BuildRequest {
+    let plan = workspace
+        .build_plan(&BuildRequest {
             project_dir: fixture.project_dir.clone(),
             target: CanonicalTarget::clr(),
             output_dir: None,
         })
         .unwrap();
 
-    assert_eq!(mode, ProjectResolutionMode::Workspace);
     assert_eq!(plan.project.name, "nested-member");
     assert_eq!(canonicalize_lossy(&plan.project.manifest_dir), canonicalize_lossy(&fixture.project_dir));
 }
@@ -759,13 +754,7 @@ fn create_nested_legion_tools_with_outer_core_fixture() -> WorkspaceFixture {
     },
     build: [
         {
-            target: "clr"
-        },
-        {
-            target: "jvm"
-        },
-        {
-            target: "node"
+            target: "nyar"
         }
     ]
 }

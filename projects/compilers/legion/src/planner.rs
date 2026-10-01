@@ -38,6 +38,8 @@ pub struct PlannedDependency {
 /// text into this group's parser input.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedSemanticSourceGroup {
+    /// Resolver-assigned dependency identity used for semantic export lookup.
+    pub dependency_key: String,
     pub name: String,
     pub manifest_dir: PathBuf,
     pub source_files: Vec<PathBuf>,
@@ -294,7 +296,13 @@ impl LegionWorkspace {
     pub fn discover_for_project(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         if let Some(workspace_root) = find_workspace_root(start) {
-            return Self::discover(workspace_root);
+            let workspace = Self::discover(workspace_root)?;
+            let project_dir = resolve_project_root(start).unwrap_or_else(|| search_start_dir(start));
+            if workspace.project_manifest(&project_dir).is_some() {
+                return Ok(workspace);
+            }
+            // 当前路径有自己的 manifest 但不是 workspace member；按独立
+            // package 解析，且后续仍只经过同一 build_plan 合同。
         }
 
         if crate::script::is_script_path(start) {
@@ -350,8 +358,18 @@ impl LegionWorkspace {
             return self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request);
         }
 
-        let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
-        let manifest = self.project_manifest(&project_dir).ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?;
+        let project_dir = if self.workspace_manifest.is_none() {
+            self.root_dir.clone()
+        }
+        else {
+            resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir))
+        };
+        let manifest = if self.workspace_manifest.is_none() {
+            self.projects.values().next().ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?
+        }
+        else {
+            self.project_manifest(&project_dir).ok_or_else(|| PlannerError::MissingProjectManifest(project_dir.clone()))?
+        };
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target })?;
 
@@ -387,31 +405,6 @@ impl LegionWorkspace {
                 dependencies,
             },
         })
-    }
-
-    pub fn build_plan_with_local_fallback(&self, request: &BuildRequest) -> Result<(BuildPlan, ProjectResolutionMode), PlannerError> {
-        if let Some(ctx) = &self.single_script {
-            return Ok((self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request)?, ProjectResolutionMode::Script));
-        }
-
-        let project_dir = resolve_project_root(&request.project_dir).unwrap_or_else(|| search_start_dir(&request.project_dir));
-        if let Some(manifest) = self.project_manifest(&project_dir) {
-            let mode = if self.workspace_manifest.is_some() {
-                ProjectResolutionMode::Workspace
-            } else {
-                ProjectResolutionMode::Script
-            };
-            return Ok((self.build_plan_for_manifest(project_dir, manifest, request)?, mode));
-        }
-
-        let manifest_path = project_dir.join("legion.von");
-        if !manifest_path.exists() {
-            return Err(PlannerError::MissingProjectManifest(project_dir));
-        }
-
-        let manifest = ProjectManifest::parse(&fs::read_to_string(&manifest_path)?)?;
-        let mode = if self.workspace_manifest.is_some() { ProjectResolutionMode::Package } else { ProjectResolutionMode::Script };
-        Ok((self.build_plan_for_manifest(project_dir, &manifest, request)?, mode))
     }
 
     /// 构造测试/基准编译计划：始终允许指定 target，并合并 `source/` + `test/` 源文件。
@@ -551,7 +544,7 @@ impl LegionWorkspace {
             )? {
                 ResolvedDependencySource::Local(dep_dir) => {
                     if let Some(dep_manifest) = self.load_project_manifest_from_dir(&dep_dir) {
-                        if !manifest_supports_build_context(&dep_manifest, &build_target.target, &build_target.publish) {
+                        if !dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
                             continue;
                         }
                         let dep_files = self.collect_source_closure(&dep_dir, &dep_manifest, build_target, visited)?;
@@ -562,7 +555,7 @@ impl LegionWorkspace {
                     let install_dir =
                         self.install_registry_dependency(self.root_dir.as_path(), &dep_name, &version, &registry, &manifest.name)?;
                     if let Some(dep_manifest) = self.load_project_manifest_from_dir(&install_dir) {
-                        if manifest_supports_build_context(&dep_manifest, &build_target.target, &build_target.publish) {
+                        if dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
                             let dep_files = self.collect_source_closure(&install_dir, &dep_manifest, build_target, visited)?;
                             all_files.extend(dep_files);
                         }
@@ -589,7 +582,7 @@ impl LegionWorkspace {
     ) -> Result<Vec<PlannedSemanticSourceGroup>, PlannerError> {
         let mut groups = Vec::new();
         let mut visited = BTreeSet::new();
-        self.collect_semantic_source_groups_inner(project_dir, manifest, build_target, &mut visited, &mut groups)?;
+        self.collect_semantic_source_groups_inner(project_dir, manifest, &manifest.name, build_target, &mut visited, &mut groups)?;
         Ok(groups)
     }
 
@@ -597,6 +590,7 @@ impl LegionWorkspace {
         &self,
         project_dir: &Path,
         manifest: &ProjectManifest,
+        dependency_key: &str,
         build_target: &BuildTargetSpec,
         visited: &mut BTreeSet<PathBuf>,
         groups: &mut Vec<PlannedSemanticSourceGroup>,
@@ -610,12 +604,13 @@ impl LegionWorkspace {
             let dependency_manifest = self
                 .load_project_manifest_from_dir(&dependency.manifest_dir)
                 .ok_or_else(|| PlannerError::MissingProjectManifest(dependency.manifest_dir.clone()))?;
-            self.collect_semantic_source_groups_inner(&dependency.manifest_dir, &dependency_manifest, build_target, visited, groups)?;
+            self.collect_semantic_source_groups_inner(&dependency.manifest_dir, &dependency_manifest, &dependency.name, build_target, visited, groups)?;
         }
         let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
         let source_files =
             filter_excluded_sources(collect_source_files(&manifest_dir, manifest.entry.as_deref())?, &manifest_dir, &local_build);
         groups.push(PlannedSemanticSourceGroup {
+            dependency_key: dependency_key.to_string(),
             name: manifest.name.clone(),
             manifest_dir,
             source_files,
@@ -716,7 +711,7 @@ impl LegionWorkspace {
                 ResolvedDependencySource::MissingImplicit => continue,
             };
             if let Some(dependency_manifest) = self.project_manifest(&manifest_dir) {
-                if !manifest_supports_build_context(dependency_manifest, &build_target.target, &build_target.publish) {
+                if !dependency_supports_source_context(&dependency_name, dependency_manifest, &build_target.target, &build_target.publish) {
                     continue;
                 }
             }
@@ -1388,6 +1383,18 @@ fn manifest_supports_build_context(manifest: &ProjectManifest, target: &Canonica
         }
     }
     true
+}
+
+fn dependency_supports_source_context(
+    dependency_name: &str,
+    manifest: &ProjectManifest,
+    target: &CanonicalTarget,
+    requested_publish: &[String],
+) -> bool {
+    // `auto_link.core` 是语言语义依赖，不是一个按目标筛选的产物依赖。
+    // core 的 manifest 只描述 seed 语义构建目标；若用同一过滤器匹配
+    // Node/Wasm 或其他 backend target，会在进入 Compiler 前静默丢失 core。
+    dependency_name == "core" || manifest_supports_build_context(manifest, target, requested_publish)
 }
 
 fn implicit_sdk_dependencies(publish: &[String]) -> Vec<&'static str> {
