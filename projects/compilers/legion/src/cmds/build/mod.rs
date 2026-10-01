@@ -283,18 +283,15 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     else {
         plan.project.build_target.target.arch.as_str()
     };
-    eprintln!("[seed-debug] frontend-compile-start target={} files={} arch={}", canonical_triple, plan.project.source_files.len(), arch);
     let frontend = if plan.project.semantic_source_groups.len() <= 1 {
         compile_frontend_with_cache(&cache, &plan.project.source_files, &canonical_triple, arch, preprocess_templates)?.build_output
     }
     else {
         compile_semantic_source_groups(&plan.project.semantic_source_groups, arch, preprocess_templates)?
     };
-    eprintln!("[seed-debug] frontend-compile-done target={} hir_functions={}", canonical_triple, frontend.hir_function_count());
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
     }
-    eprintln!("[seed-debug] frontend-ready target={} semantic_groups={}", canonical_triple, plan.project.semantic_source_groups.len());
     let build_output = frontend;
     let target_profile = plan.project.build_target.target.to_profile(None);
     let projection_policy = projection_policy_for_target_profile(&target_profile)?;
@@ -308,10 +305,8 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         clr_suspend_strategy,
     )
     .map_err(|error| miette!(format!("前端分区规划失败: {error:?}")))?;
-    eprintln!("[seed-debug] artifact-plan-ready partitions={}", artifact_plan.partitions.len());
     validate_project_artifact_contract(&build_output, &plan.project.build_target.target, plan.project.artifact_kind)?;
     let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan, plan.project.artifact_kind);
-    eprintln!("[seed-debug] driver-bundle-ready");
 
     if verbose {
         println!("hir functions: {}", driver_bundle.build_output.hir_function_count());
@@ -320,7 +315,6 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
 
     fs::create_dir_all(&plan.output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", plan.output_dir.display()))?;
 
-    eprintln!("[seed-debug] bundled-backend-compile-start");
     let report = compile_frontend_bundle_with_bundled_backends(
         &driver_bundle,
         &plan.output_dir,
@@ -412,9 +406,7 @@ impl FrontendBuildBundle for LegionFrontendBuildAdapter {
         output_dir: &Path,
         _lane: TargetLane,
     ) -> Result<LoweredBackendInput> {
-        eprintln!("[seed-debug] partition-input-start index={partition_index} backend={backend_family:?}");
         let fragment = assemble_fragment_submission(&self.build_output, &self.artifact_plan, partition_index)?;
-        eprintln!("[seed-debug] partition-input-fragment-ready index={partition_index}");
         let host_flavor = self.artifact_plan.target.to_profile(None).host_flavor;
         let result = LoweredBackendInput::from_fragment_submission(
             &fragment,
@@ -427,7 +419,6 @@ impl FrontendBuildBundle for LegionFrontendBuildAdapter {
             &host_flavor,
             wasm_package_kind_for_manifest(self.artifact_kind),
         );
-        eprintln!("[seed-debug] partition-input-lowered index={partition_index} ok={}", result.is_ok());
         result
     }
 }
