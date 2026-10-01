@@ -19,7 +19,7 @@ use super::{CompilationCache, SemanticCacheEntry, StageCacheEntry, TokenCacheEnt
 
 // Bump whenever HIR semantic contracts or their validation ordering changes.
 // Source hashes alone cannot make an old serialized HIR safe to consume.
-const SEMANTIC_CONTRACT_FINGERPRINT: &str = "semantic-contract-2026-09-27-arraylist-length-intrinsic";
+const SEMANTIC_CONTRACT_FINGERPRINT: &str = "semantic-contract-2026-09-30-ssa-identity-and-strict-call-abi";
 
 /// Result of the frontend cache waterfall.
 #[derive(Debug)]
@@ -102,14 +102,7 @@ pub fn compile_semantic_source_groups(
             type_aliases: hir.type_aliases.clone(),
             impls: hir.impls.clone(),
         };
-        exports.insert(group.name.clone(), export.clone());
-        // auto_link / dependencies use directory basename (`core`) while
-        // manifest.name may be `valkyrie-core`. Mirror planner's projects_by_name alias.
-        if let Some(basename) = group.manifest_dir.file_name().and_then(|name| name.to_str()) {
-            if basename != group.name {
-                exports.entry(basename.to_string()).or_insert(export);
-            }
-        }
+        insert_semantic_export(&mut exports, group.dependency_key.clone(), export, &group.name)?;
         // Keep prior groups' MIR for Stage1 link; the final consumer replaces
         // `final_output` and receives linked bodies below.
         if let Some(previous) = final_output.replace(output) {
@@ -123,9 +116,25 @@ pub fn compile_semantic_source_groups(
             dependency_mirs.len(),
             final_output.semantic_mir().functions.len()
         );
-        final_output.link_dependency_mir_modules(&dependency_mirs);
+        final_output.link_dependency_mir_modules(&dependency_mirs)
+            .map_err(|error| miette!("依赖 MIR 链接失败：{error}"))?;
     }
     Ok(final_output)
+}
+
+fn insert_semantic_export(
+    exports: &mut std::collections::BTreeMap<String, HirDependencySemanticExport>,
+    key: String,
+    export: HirDependencySemanticExport,
+    owner: &str,
+) -> MietteResult<()> {
+    if exports.contains_key(&key) {
+        return Err(miette!(
+            "semantic dependency export identity collision for `{key}` while registering `{owner}`; refusing ambiguous owner"
+        ));
+    }
+    exports.insert(key, export);
+    Ok(())
 }
 
 /// Load sources, apply staging/token/semantics caches, return frontend output.
@@ -319,6 +328,23 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use vcc_data::text::valkyrie::AstParser;
+
+    #[test]
+    fn semantic_export_identity_collision_fails_closed() {
+        let mut exports = std::collections::BTreeMap::new();
+        let export = HirDependencySemanticExport {
+            module: NamePath::new(vec![Identifier::new("owner")]),
+            functions: Vec::new(),
+            structs: Vec::new(),
+            enums: Vec::new(),
+            traits: Vec::new(),
+            type_aliases: Vec::new(),
+            impls: Vec::new(),
+        };
+        insert_semantic_export(&mut exports, "same".into(), export.clone(), "first").unwrap();
+        let error = insert_semantic_export(&mut exports, "same".into(), export, "second").expect_err("ambiguous export identity must fail");
+        assert!(error.to_string().contains("identity collision"));
+    }
 
     fn write_main(dir: &Path) -> PathBuf {
         let path = dir.join("main.v");

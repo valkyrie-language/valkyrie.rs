@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runAssemble } from './lib/assemble.mjs';
@@ -76,21 +76,20 @@ function findToolsProject(valkyrieV) {
     return null;
 }
 
-function bootstrapFixtureProject() {
-    return join(ROOT, 'projects', 'compilers', 'legion', 'tests', 'fixtures', 'bootstrap_node', 'entry_contract_canonical');
-}
-
 function cmdCapability(argv) {
     const valkyrieVRaw = takeFlag(argv, '--valkyrie-v') ?? 'projects/valkyrie.v';
     const valkyrieV = resolve(ROOT, valkyrieVRaw);
-    const sourceProject = bootstrapFixtureProject();
+    const sourceProject = findToolsProject(valkyrieV);
+    if (!sourceProject) {
+        fail('完整 legion.tools 源项目缺少 legion.von；正式 capability gate 拒绝使用 bootstrap fixture');
+    }
     if (!existsSync(join(sourceProject, 'legion.von'))) {
-        fail(`bootstrap fixture missing legion.von: ${sourceProject}`);
+        fail('legion.tools 源项目缺少 legion.von');
     }
 
-    const outRoot = join(ROOT, 'dist', 'legion-node-capability');
-    mkdirSync(outRoot, { recursive: true });
-    console.log('build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (bootstrap fixture, no native bin)');
+    mkdirSync(join(ROOT, 'dist'), { recursive: true });
+    const outRoot = mkdtempSync(join(ROOT, 'dist', 'legion-node-capability-'));
+    console.log('build capability: cargo test -p legion assemble_vcc_unknown_wasm32_capability (legion.tools source closure)');
     run(
         'cargo',
         [
@@ -107,6 +106,7 @@ function cmdCapability(argv) {
         ],
         {
             LEGION_CAPABILITY_OUT: outRoot,
+            LEGION_CAPABILITY_SOURCE: sourceProject,
         },
     );
 

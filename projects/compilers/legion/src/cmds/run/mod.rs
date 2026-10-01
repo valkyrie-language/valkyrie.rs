@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     cmds::build::{BuildArgs, run as run_build},
     manifest::RunnerBinding,
-    planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
+    planner::{BuildPlan, BuildRequest, LegionWorkspace},
 };
 
 const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
@@ -290,12 +290,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     let workspace =
         if args.workspace { LegionWorkspace::discover(&args.project_dir)? } else { LegionWorkspace::discover_for_project(&args.project_dir)? };
     let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
-    let (plan, resolution_mode) = if args.workspace {
-        (workspace.build_plan(&request)?, ProjectResolutionMode::Workspace)
-    }
-    else {
-        workspace.build_plan_with_local_fallback(&request)?
-    };
+    let plan = workspace.build_plan(&request)?;
 
     let execution_manifest = ensure_execution_manifest(args, &plan)?;
     let mut command = plan_run_command(
@@ -312,17 +307,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", crate::cmds::path_for_cli_log(&plan.output_dir));
-    match resolution_mode {
-        ProjectResolutionMode::Workspace => {
-            println!("mode: workspace");
-        }
-        ProjectResolutionMode::Package => {
-            println!("mode: package");
-        }
-        ProjectResolutionMode::Script => {
-            println!("mode: script");
-        }
-    }
+    println!("mode: workspace");
     println!("artifact: {}", command.artifact.display());
     println!("runner: {}", command.command);
     println!("args: {}", shell_join(&command.args));

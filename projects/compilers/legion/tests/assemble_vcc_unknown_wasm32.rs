@@ -1,15 +1,16 @@
-//! CI：canonical Node bootstrap 夹具 → wasm 产物，供 `scripts/build.mjs capability` 装配。
-//!
-//! 使用仓库内 `tests/fixtures/bootstrap_node/entry_contract_canonical`（与
-//! `bootstrap_node_entry` 同源），不依赖 `valkyrie.v` 的 `legion.tools` 自举完成度。
+//! 正式 capability：完整 legion.tools manifests/source closure → Node/Wasm 产物。
+//! 源项目必须由门禁显式传入，禁止用 bootstrap fixture 替代编译器源码闭包。
 //! 不依赖 native `legion` 二进制；直接调用库内 `legion build` 实现。
 
 use legion::cmds::build::{BuildArgs, run};
 use nyar_language::CanonicalTarget;
 use std::path::{Path, PathBuf};
 
-fn bootstrap_fixture_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/bootstrap_node/entry_contract_canonical")
+fn capability_source_root() -> PathBuf {
+    let root = PathBuf::from(std::env::var("LEGION_CAPABILITY_SOURCE")
+        .expect("正式门禁必须传入 LEGION_CAPABILITY_SOURCE，不允许 fixture fallback"));
+    assert_eq!(root.file_name().and_then(|name| name.to_str()), Some("legion.tools"));
+    root
 }
 
 fn capability_out_root() -> PathBuf {
@@ -28,8 +29,8 @@ fn artifact_dir(out_root: &Path) -> PathBuf {
 
 #[test]
 fn assemble_vcc_unknown_wasm32_capability() {
-    let fixture = bootstrap_fixture_root();
-    assert!(fixture.join("legion.von").is_file(), "missing bootstrap fixture at {}", fixture.display());
+    let fixture = capability_source_root();
+    assert!(fixture.join("legion.von").is_file(), "legion.tools manifest missing");
 
     let out_root = capability_out_root();
     std::fs::create_dir_all(&out_root).expect("create capability output dir");
@@ -41,7 +42,7 @@ fn assemble_vcc_unknown_wasm32_capability() {
         workspace: false,
         debug_artifacts: false,
     })
-    .expect("legion build bootstrap node fixture");
+    .expect("legion build complete compiler source closure");
 
     assert_eq!(status, std::process::ExitCode::SUCCESS);
 

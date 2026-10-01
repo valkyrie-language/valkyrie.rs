@@ -79,15 +79,17 @@ pub fn toolchain_fingerprint() -> String {
 /// Compute artifact cache hash from sources + target + build flags + toolchain.
 pub fn compute_artifact_hash(
     source_files: &[PathBuf],
+    manifest_files: &[PathBuf],
     canonical_triple: &str,
     msil: bool,
     wat: bool,
     runtime_async: bool,
 ) -> Result<String, String> {
     let sources = files_hash(source_files).map_err(|e| e.to_string())?;
+    let manifests = files_hash(manifest_files).map_err(|e| e.to_string())?;
     let flags = format!("{}{}{}", if msil { '1' } else { '0' }, if wat { '1' } else { '0' }, if runtime_async { '1' } else { '0' });
     let toolchain = toolchain_fingerprint();
-    Ok(combined_hash(&[&sources, canonical_triple, &flags, &toolchain]))
+    Ok(combined_hash(&[&sources, &manifests, canonical_triple, &flags, &toolchain]))
 }
 
 /// Collect output directory files into a cacheable bundle.
@@ -156,12 +158,14 @@ pub fn store_cached_build(
 }
 
 /// Load a build bundle from the IR cache.
-pub fn load_cached_build(cache: &CompilationCache, module_name: &str, canonical_triple: &str, ir_hash: &str) -> Option<CachedBuildBundle> {
-    let entry = cache.try_get_ir(module_name, canonical_triple, ir_hash)?;
+pub fn load_cached_build(cache: &CompilationCache, module_name: &str, canonical_triple: &str, ir_hash: &str) -> Result<Option<CachedBuildBundle>, String> {
+    let Some(entry) = cache.try_get_ir(module_name, canonical_triple, ir_hash) else {
+        return Ok(None);
+    };
     if entry.ir_kind != ARTIFACT_KIND {
-        return None;
+        return Err(format!("cached artifact has unexpected kind `{}`", entry.ir_kind));
     }
-    serde_json::from_slice(&entry.ir_data).ok()
+    serde_json::from_slice(&entry.ir_data).map(Some).map_err(|error| format!("cached artifact is invalid: {error}"))
 }
 
 /// Try restore from cache into `output_dir`.
@@ -171,15 +175,30 @@ pub fn try_restore_cached_build(
     canonical_triple: &str,
     ir_hash: &str,
     output_dir: &Path,
-) -> Option<DriverCompileReport> {
-    let payload = load_cached_build(cache, module_name, canonical_triple, ir_hash)?;
-    materialize_build_bundle(output_dir, &payload).ok()
+) -> Result<Option<DriverCompileReport>, String> {
+    let Some(payload) = load_cached_build(cache, module_name, canonical_triple, ir_hash)? else {
+        return Ok(None);
+    };
+    materialize_build_bundle(output_dir, &payload).map(Some)
 }
 
 #[cfg(test)]
 mod tests {
     use super::{CompilationCache, *};
     use tempfile::tempdir;
+
+    #[test]
+    fn artifact_hash_changes_when_manifest_changes() {
+        let dir = tempdir().unwrap();
+        let source = dir.path().join("main.v");
+        let manifest = dir.path().join("legion.von");
+        fs::write(&source, "micro main() -> i64 { return 0 }\n").unwrap();
+        fs::write(&manifest, "target: clr\n").unwrap();
+        let first = compute_artifact_hash(&[source.clone()], &[manifest.clone()], "clr", false, false, false).unwrap();
+        fs::write(&manifest, "target: wasm\n").unwrap();
+        let second = compute_artifact_hash(&[source], &[manifest], "clr", false, false, false).unwrap();
+        assert_ne!(first, second);
+    }
 
     #[test]
     fn artifact_bundle_round_trip() {
@@ -203,7 +222,7 @@ mod tests {
         store_cached_build(&cache, "demo", "clr-microsoft-unknown-managed", "hash1", &bundle).unwrap();
 
         let restored_dir = dir.path().join("restored");
-        let report2 = try_restore_cached_build(&cache, "demo", "clr-microsoft-unknown-managed", "hash1", &restored_dir).expect("hit");
+        let report2 = try_restore_cached_build(&cache, "demo", "clr-microsoft-unknown-managed", "hash1", &restored_dir).expect("restore").expect("hit");
         assert_eq!(report2.entry_symbol.as_deref(), Some("main"));
         assert_eq!(fs::read(restored_dir.join("main.exe")).unwrap(), b"exe-bytes");
         assert_eq!(report2.run_contracts.len(), 1);

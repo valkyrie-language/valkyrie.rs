@@ -38,7 +38,7 @@ use crate::{
         source_hygiene,
     },
     manifest::{ProjectArtifactKind, ProjectManifest},
-    planner::{BuildPlan, BuildRequest, LegionWorkspace, ProjectResolutionMode},
+    planner::{BuildPlan, BuildRequest, LegionWorkspace},
     script, unity_export, write_von_indented,
 };
 
@@ -75,22 +75,10 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     }
 
     let request = BuildRequest { project_dir: project_input, target: args.target.clone(), output_dir: args.output_dir.clone() };
-    let (plan, resolution_mode) = workspace.build_plan_with_local_fallback(&request)?;
+    let plan = workspace.build_plan(&request)?;
 
     println!("workspace: {}", crate::cmds::path_for_cli_log(&plan.workspace_root));
-    match resolution_mode {
-        ProjectResolutionMode::Workspace => {
-            println!("mode: workspace");
-        }
-        ProjectResolutionMode::Package => {
-            println!("mode: package");
-            println!("note: 当前目录存在 `legion.von`，但未注册到 workspace members，已回退到 package 模式");
-        }
-        ProjectResolutionMode::Script => {
-            println!("mode: script");
-            println!("note: 已按内嵌 `# ```legion` 的单脚本 `.v` 解析");
-        }
-    }
+    println!("mode: workspace");
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
     println!("output: {}", crate::cmds::path_for_cli_log(&plan.output_dir));
@@ -257,8 +245,16 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
 
     let cache = CompilationCache::open(cache_root_for(&plan.workspace_root));
     let canonical_triple = plan.project.build_target.target.as_canonical_str();
+    let manifest_files = plan
+        .project
+        .semantic_source_groups
+        .iter()
+        .map(|group| group.manifest_dir.join("legion.von"))
+        .chain(std::iter::once(plan.project.manifest_path.clone()))
+        .collect::<Vec<_>>();
     let ir_hash = compute_artifact_hash(
         &plan.project.source_files,
+        &manifest_files,
         &canonical_triple,
         plan.project.build_target.msil,
         plan.project.build_target.wat,
@@ -266,7 +262,9 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     )
     .map_err(|error| miette!("{error}"))?;
 
-    if let Some(report) = try_restore_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &plan.output_dir) {
+    if let Some(report) = try_restore_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &plan.output_dir)
+        .map_err(|error| miette!("缓存产物无效，停止构建：{error}"))?
+    {
         if verbose {
             println!("cache: hit (artifact-set)");
         }

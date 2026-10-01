@@ -180,7 +180,7 @@ fn second_build_hits_artifact_set_cache() {
 
     let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
-        .build_plan_with_local_fallback(&legion::BuildRequest {
+        .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),
             target: CanonicalTarget::clr(),
             output_dir: Some(output_dir.clone()),
@@ -189,6 +189,7 @@ fn second_build_hits_artifact_set_cache() {
     let triple = plan.project.build_target.target.as_canonical_str();
     let ir_hash = compute_artifact_hash(
         &plan.project.source_files,
+        &[plan.project.manifest_path.clone()],
         &triple,
         plan.project.build_target.msil,
         plan.project.build_target.wat,
@@ -196,7 +197,7 @@ fn second_build_hits_artifact_set_cache() {
     )
     .unwrap();
     let cache = CompilationCache::open(cache_root_for(&plan.workspace_root));
-    let mut bundle = load_cached_build(&cache, &plan.project.name, &triple, &ir_hash).expect("artifact-set stored");
+    let mut bundle = load_cached_build(&cache, &plan.project.name, &triple, &ir_hash).expect("artifact cache readable").expect("artifact-set stored");
     for (name, bytes) in &mut bundle.files {
         if name == "main.exe" {
             *bytes = b"FROM_CACHE".to_vec();
@@ -226,7 +227,7 @@ fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
 
     let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
-        .build_plan_with_local_fallback(&legion::BuildRequest {
+        .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),
             target: CanonicalTarget::clr(),
             output_dir: Some(output_dir.clone()),
@@ -235,6 +236,7 @@ fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
     let triple = plan.project.build_target.target.as_canonical_str();
     let ir_hash = compute_artifact_hash(
         &plan.project.source_files,
+        &[plan.project.manifest_path.clone()],
         &triple,
         plan.project.build_target.msil,
         plan.project.build_target.wat,
@@ -242,7 +244,7 @@ fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
     )
     .unwrap();
     let cache = CompilationCache::open(cache_root_for(&plan.workspace_root));
-    let bundle = load_cached_build(&cache, &plan.project.name, &triple, &ir_hash).expect("artifact-set stored");
+    let bundle = load_cached_build(&cache, &plan.project.name, &triple, &ir_hash).expect("artifact cache readable").expect("artifact-set stored");
     assert!(bundle.files.iter().any(|(name, _)| name == "run-contracts.txt"), "execution manifest should be part of artifact-set bundle");
 
     fs::remove_dir_all(&output_dir).unwrap();
@@ -267,7 +269,7 @@ fn second_build_hits_semantics_when_artifact_set_poisoned() {
 
     let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
-        .build_plan_with_local_fallback(&legion::BuildRequest {
+        .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),
             target: CanonicalTarget::clr(),
             output_dir: Some(output_dir.clone()),
@@ -276,6 +278,7 @@ fn second_build_hits_semantics_when_artifact_set_poisoned() {
     let triple = plan.project.build_target.target.as_canonical_str();
     let ir_hash = compute_artifact_hash(
         &plan.project.source_files,
+        &[plan.project.manifest_path.clone()],
         &triple,
         plan.project.build_target.msil,
         plan.project.build_target.wat,
