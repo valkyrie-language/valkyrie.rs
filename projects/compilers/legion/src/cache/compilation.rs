@@ -5,7 +5,6 @@ use nyar_workspace::{WorkspaceCache, combined_hash};
 const TOKEN_BUCKET: &str = "_tokens";
 const TYPE_TOKEN: &str = "token";
 const TYPE_STAGING: &str = "staging";
-const TYPE_SEMANTICS: &str = "semantics";
 const TYPE_IR: &str = "ir";
 const TYPE_ENTRY_SLICE: &str = "entry-slice";
 
@@ -25,17 +24,6 @@ pub struct StageCacheEntry {
     pub staged_token_data: Vec<u8>,
     /// Source content hash.
     pub content_hash: String,
-    /// Canonical target triple.
-    pub canonical_triple: String,
-}
-
-/// Semantic model cache entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SemanticCacheEntry {
-    /// Serialized semantic model.
-    pub semantic_data: Vec<u8>,
-    /// AST hash.
-    pub ast_hash: String,
     /// Canonical target triple.
     pub canonical_triple: String,
 }
@@ -121,27 +109,6 @@ impl CompilationCache {
         buf.write_string(&entry.canonical_triple);
         buf.write_bytes(&entry.staged_token_data);
         self.store.put(canonical_triple, &key, TYPE_STAGING, &buf.into_inner()).map_err(|e| e.to_string())
-    }
-
-    /// Try get semantics.
-    pub fn try_get_semantics(&self, file_path: &str, canonical_triple: &str, ast_hash: &str) -> Option<SemanticCacheEntry> {
-        let key = combined_hash(&[file_path, canonical_triple, ast_hash]);
-        let data = self.store.get(canonical_triple, &key, TYPE_SEMANTICS).ok().flatten()?;
-        let mut cursor = ByteReader::new(&data);
-        let ast_hash = cursor.read_string().ok()?;
-        let canonical_triple = cursor.read_string().ok()?;
-        let semantic_data = cursor.read_bytes().ok()?;
-        Some(SemanticCacheEntry { semantic_data, ast_hash, canonical_triple })
-    }
-
-    /// Put semantics.
-    pub fn put_semantics(&self, file_path: &str, canonical_triple: &str, ast_hash: &str, entry: &SemanticCacheEntry) -> Result<(), String> {
-        let key = combined_hash(&[file_path, canonical_triple, ast_hash]);
-        let mut buf = ByteWriter::new();
-        buf.write_string(&entry.ast_hash);
-        buf.write_string(&entry.canonical_triple);
-        buf.write_bytes(&entry.semantic_data);
-        self.store.put(canonical_triple, &key, TYPE_SEMANTICS, &buf.into_inner()).map_err(|e| e.to_string())
     }
 
     /// Try get IR / artifact-set.

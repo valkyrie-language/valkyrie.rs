@@ -7,15 +7,11 @@ use std::{
 
 use crate::planner::PlannedSemanticSourceGroup;
 use miette::{IntoDiagnostic, NamedSource, Result as MietteResult, miette};
-use nyar_language::{CompilerSourceGroup, FrontendBuildOutput, ValkyrieCompiler, mir::validation::validate_module, types::hir::HirModule};
+use nyar_language::{CompilerSourceGroup, FrontendBuildOutput, ValkyrieCompiler};
 use nyar_workspace::{combined_hash, file_hash};
 use vcc_data::text::valkyrie::lexer::{Lexer, Token, decode_tokens, encode_tokens};
 
-use super::{CompilationCache, SemanticCacheEntry, StageCacheEntry, TokenCacheEntry};
-
-// Bump whenever HIR semantic contracts or their validation ordering changes.
-// Source hashes alone cannot make an old serialized HIR safe to consume.
-const SEMANTIC_CONTRACT_FINGERPRINT: &str = "semantic-contract-2026-09-30-ssa-identity-and-strict-call-abi";
+use super::{CompilationCache, StageCacheEntry, TokenCacheEntry};
 
 /// Result of the frontend cache waterfall.
 #[derive(Debug)]
@@ -24,8 +20,6 @@ pub struct CachedFrontendCompile {
     pub combined_source: String,
     /// Frontend bundle ready for backend planning.
     pub build_output: FrontendBuildOutput,
-    /// Whether semantics were restored from cache.
-    pub semantics_hit: bool,
     /// Whether every per-file staging entry was restored.
     pub staging_hit: bool,
     /// Whether tokens for the parse input were restored.
@@ -60,7 +54,7 @@ pub fn compile_source_snapshot(
         .map_err(|error| miette!("Compiler semantic snapshot failed: {error}"))
 }
 
-/// Load sources, apply staging/token/semantics caches, return frontend output.
+/// Load sources, apply only source-derived staging/token caches, return frontend output.
 pub fn compile_frontend_with_cache(
     cache: &CompilationCache,
     source_files: &[PathBuf],
@@ -95,42 +89,14 @@ pub fn compile_frontend_with_cache(
     let _ = fs::write("target/source-offsets.txt", &debug_map);
     let _ = fs::write("target/preprocessed-source.v", &combined_source);
 
-    let primary_path = path_key(&source_files[0]);
-    let ast_hash = combined_hash(&[&combined_source, SEMANTIC_CONTRACT_FINGERPRINT]);
     let compiler = ValkyrieCompiler::default();
-
-    if let Some(entry) = cache.try_get_semantics(&primary_path, canonical_triple, &ast_hash) {
-        if let Ok(hir) = serde_json::from_slice::<HirModule>(&entry.semantic_data) {
-            compiler
-                .validate_hir_semantic_contract(&hir)
-                .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
-            let build_output = FrontendBuildOutput::from_hir_module(hir);
-            validate_module(build_output.semantic_mir())
-                .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
-            return Ok(CachedFrontendCompile {
-                combined_source,
-                build_output,
-                semantics_hit: true,
-                staging_hit: all_staging_hit,
-                tokens_hit: false,
-            });
-        }
-    }
 
     let (_tokens, tokens_hit) = load_or_tokenize_combined(cache, source_files, &combined_source)?;
     let build_output = compiler
         .compile_source_to_build_output(&combined_source)
         .map_err(|error| attach_combined_source(error, &combined_source, source_files, &staged_parts))?;
 
-    if let Ok(semantic_data) = serde_json::to_vec(build_output.hir_module()) {
-        let _ = cache.put_semantics(
-            &primary_path,
-            canonical_triple,
-            &ast_hash,
-            &SemanticCacheEntry { semantic_data, ast_hash: ast_hash.clone(), canonical_triple: canonical_triple.to_string() },
-        );
-    }
-    Ok(CachedFrontendCompile { combined_source, build_output, semantics_hit: false, staging_hit: all_staging_hit, tokens_hit })
+    Ok(CachedFrontendCompile { combined_source, build_output, staging_hit: all_staging_hit, tokens_hit })
 }
 
 fn stage_source_file(
@@ -244,25 +210,6 @@ fn combined_source_location(message: &str, source_files: &[PathBuf], staged_part
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use vcc_data::text::valkyrie::AstParser;
-
-    #[test]
-    fn semantic_export_identity_collision_fails_closed() {
-        let mut exports = std::collections::BTreeMap::new();
-        let export = HirDependencySemanticExport {
-            module: NamePath::new(vec![Identifier::new("owner")]),
-            functions: Vec::new(),
-            structs: Vec::new(),
-            enums: Vec::new(),
-            traits: Vec::new(),
-            type_aliases: Vec::new(),
-            impls: Vec::new(),
-        };
-        insert_semantic_export(&mut exports, "same".into(), export.clone(), "first").unwrap();
-        let error = insert_semantic_export(&mut exports, "same".into(), export, "second").expect_err("ambiguous export identity must fail");
-        assert!(error.to_string().contains("identity collision"));
-    }
-
     fn write_main(dir: &Path) -> PathBuf {
         let path = dir.join("main.v");
         fs::write(
@@ -278,7 +225,7 @@ micro main(): i64 {
     }
 
     #[test]
-    fn frontend_waterfall_hits_semantics_on_second_compile() {
+    fn frontend_waterfall_recompiles_semantics_from_source() {
         let dir = tempdir().unwrap();
         let cache = CompilationCache::open(dir.path().join(".cache"));
         let source_path = write_main(dir.path());
@@ -286,12 +233,11 @@ micro main(): i64 {
         let triple = "clr-microsoft-unknown-managed";
 
         let first = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string()).unwrap();
-        assert!(!first.semantics_hit);
         assert!(!first.tokens_hit);
 
         let second = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string()).unwrap();
-        assert!(second.semantics_hit);
         assert!(second.staging_hit);
+        assert!(second.tokens_hit);
         assert_eq!(second.build_output.hir_function_count(), first.build_output.hir_function_count());
     }
 
@@ -324,55 +270,9 @@ micro main(): i64 {
         let sources = vec![source_path];
         let triple = "clr-microsoft-unknown-managed";
 
-        let first = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string()).unwrap();
-        assert!(!first.semantics_hit);
-
-        // Drop only semantics by overwriting with garbage that fails to deserialize.
-        let primary = path_key(&sources[0]);
-        let ast_hash = combined_hash(&[&first.combined_source, SEMANTIC_CONTRACT_FINGERPRINT]);
-        cache
-            .put_semantics(
-                &primary,
-                triple,
-                &ast_hash,
-                &SemanticCacheEntry { semantic_data: b"not-json".to_vec(), ast_hash: ast_hash.clone(), canonical_triple: triple.into() },
-            )
-            .unwrap();
-
+        let _first = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string()).unwrap();
         let second = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string()).unwrap();
-        assert!(!second.semantics_hit);
         assert!(second.staging_hit);
         assert!(second.tokens_hit);
-    }
-
-    #[test]
-    fn cached_hir_must_pass_the_current_semantic_contract() {
-        let dir = tempdir().unwrap();
-        let cache = CompilationCache::open(dir.path().join(".cache"));
-        let source_path = write_main(dir.path());
-        let sources = vec![source_path];
-        let triple = "clr-microsoft-unknown-managed";
-        let source = fs::read_to_string(&sources[0]).unwrap();
-        let ast_hash = combined_hash(&[&format!("{source}\n"), SEMANTIC_CONTRACT_FINGERPRINT]);
-        let stale_hir = ValkyrieCompiler::default()
-            .lower_root(&AstParser::parse_root("micro main() -> i64 { return absent_call() }").unwrap())
-            .expect("raw HIR construction for stale-cache regression");
-        let primary = path_key(&sources[0]);
-        cache
-            .put_semantics(
-                &primary,
-                triple,
-                &ast_hash,
-                &SemanticCacheEntry {
-                    semantic_data: serde_json::to_vec(&stale_hir).unwrap(),
-                    ast_hash: ast_hash.clone(),
-                    canonical_triple: triple.into(),
-                },
-            )
-            .unwrap();
-
-        let error = compile_frontend_with_cache(&cache, &sources, triple, "clr", |s, _| s.to_string())
-            .expect_err("a stale HIR with an unresolved call must not cross the cache boundary");
-        assert!(error.to_string().contains("SMIR003"), "unexpected cache-contract error: {error}");
     }
 }
