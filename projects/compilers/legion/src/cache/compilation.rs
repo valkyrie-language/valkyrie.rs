@@ -1,33 +1,9 @@
-//! Five-stage compilation cache facade (legion conventions).
+//! Legion 产物缓存存储；不拥有词法分析或源码 staging 路线。
 
 use nyar_workspace::{WorkspaceCache, combined_hash};
 
-const TOKEN_BUCKET: &str = "_tokens";
-const TYPE_TOKEN: &str = "token";
-const TYPE_STAGING: &str = "staging";
 const TYPE_IR: &str = "ir";
 const TYPE_ENTRY_SLICE: &str = "entry-slice";
-
-/// Token stream cache entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TokenCacheEntry {
-    /// Serialized token stream.
-    pub token_data: Vec<u8>,
-    /// Source content hash.
-    pub content_hash: String,
-}
-
-/// Staging (target-specialized) token stream entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StageCacheEntry {
-    /// Specialized token stream bytes.
-    pub staged_token_data: Vec<u8>,
-    /// Source content hash.
-    pub content_hash: String,
-    /// Canonical target triple.
-    pub canonical_triple: String,
-}
-
 /// IR / artifact-set cache entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IrCacheEntry {
@@ -71,45 +47,6 @@ impl CompilationCache {
         &self.store.root
     }
 
-    /// Try get tokenstream.
-    pub fn try_get_tokens(&self, file_path: &str, content_hash: &str) -> Option<TokenCacheEntry> {
-        let key = combined_hash(&[file_path, content_hash]);
-        let data = self.store.get(TOKEN_BUCKET, &key, TYPE_TOKEN).ok().flatten()?;
-        let mut cursor = ByteReader::new(&data);
-        let stored_hash = cursor.read_string().ok()?;
-        let token_data = cursor.read_bytes().ok()?;
-        Some(TokenCacheEntry { token_data, content_hash: stored_hash })
-    }
-
-    /// Put tokenstream.
-    pub fn put_tokens(&self, file_path: &str, content_hash: &str, entry: &TokenCacheEntry) -> Result<(), String> {
-        let key = combined_hash(&[file_path, content_hash]);
-        let mut buf = ByteWriter::new();
-        buf.write_string(&entry.content_hash);
-        buf.write_bytes(&entry.token_data);
-        self.store.put(TOKEN_BUCKET, &key, TYPE_TOKEN, &buf.into_inner()).map_err(|e| e.to_string())
-    }
-
-    /// Try get staging result.
-    pub fn try_get_staging(&self, file_path: &str, canonical_triple: &str, content_hash: &str) -> Option<StageCacheEntry> {
-        let key = combined_hash(&[file_path, canonical_triple, content_hash]);
-        let data = self.store.get(canonical_triple, &key, TYPE_STAGING).ok().flatten()?;
-        let mut cursor = ByteReader::new(&data);
-        let content_hash = cursor.read_string().ok()?;
-        let canonical_triple = cursor.read_string().ok()?;
-        let staged_token_data = cursor.read_bytes().ok()?;
-        Some(StageCacheEntry { staged_token_data, content_hash, canonical_triple })
-    }
-
-    /// Put staging result.
-    pub fn put_staging(&self, file_path: &str, canonical_triple: &str, content_hash: &str, entry: &StageCacheEntry) -> Result<(), String> {
-        let key = combined_hash(&[file_path, canonical_triple, content_hash]);
-        let mut buf = ByteWriter::new();
-        buf.write_string(&entry.content_hash);
-        buf.write_string(&entry.canonical_triple);
-        buf.write_bytes(&entry.staged_token_data);
-        self.store.put(canonical_triple, &key, TYPE_STAGING, &buf.into_inner()).map_err(|e| e.to_string())
-    }
 
     /// Try get IR / artifact-set.
     pub fn try_get_ir(&self, module_name: &str, canonical_triple: &str, ir_hash: &str) -> Option<IrCacheEntry> {
@@ -268,12 +205,9 @@ mod tests {
     }
 
     #[test]
-    fn token_and_entry_slice_round_trip() {
+    fn entry_slice_round_trip() {
         let dir = tempfile::tempdir().unwrap();
         let cache = CompilationCache::open(dir.path().join(".cache"));
-        cache.put_tokens("a.v", "ch", &TokenCacheEntry { token_data: vec![9], content_hash: "ch".into() }).unwrap();
-        assert_eq!(cache.try_get_tokens("a.v", "ch").unwrap().token_data, vec![9]);
-
         let slice = EntrySliceCacheEntry {
             entry_name: "main".into(),
             reachable_functions: vec!["main".into(), "helper".into()],

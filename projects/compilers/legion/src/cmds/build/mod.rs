@@ -15,7 +15,7 @@ use emitter::{
     DriverRunContract, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView,
     compile_frontend_bundle_with_bundled_backends,
 };
-use miette::{IntoDiagnostic, NamedSource, Report, Result, WrapErr, miette};
+use miette::{IntoDiagnostic, Report, Result, WrapErr, miette};
 use nyar_language::{
     ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalSpecification, CanonicalTarget, FrontendBuildOutput,
     assemble_fragment,
@@ -25,12 +25,11 @@ use nyar_language::{
     build_output_surface_counts, plan_artifacts_from_build_output,
 };
 use serde::Serialize;
-use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, TgRoot, parse_tgrammar_fragment};
+use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, parse_tgrammar_fragment};
 
 use crate::{
     cache::{
-        CompilationCache, cache_root_for, collect_build_bundle, compile_frontend_with_cache, compile_source_snapshot,
-        compute_artifact_hash, store_cached_build, try_restore_cached_build,
+        CompilationCache, cache_root_for, collect_build_bundle, compute_artifact_hash, store_cached_build, try_restore_cached_build,
     },
     cmds::{
         project_input::resolve_project_path,
@@ -39,7 +38,9 @@ use crate::{
     },
     manifest::{ProjectArtifactKind, ProjectManifest},
     planner::{BuildPlan, BuildRequest, LegionWorkspace},
-    script, unity_export, write_von_indented,
+    script,
+    source_snapshot::compile_source_snapshot,
+    unity_export, write_von_indented,
 };
 
 /// `legion build` 的命令参数。
@@ -279,12 +280,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     else {
         plan.project.build_target.target.arch.as_str()
     };
-    let frontend = if plan.project.semantic_source_groups.len() <= 1 {
-        compile_frontend_with_cache(&cache, &plan.project.source_files, &canonical_triple, arch, preprocess_templates)?.build_output
-    }
-    else {
-        compile_source_snapshot(&plan.project.semantic_source_groups, arch, preprocess_templates)?
-    };
+    let frontend = compile_source_snapshot(&plan.project.semantic_source_groups, arch, preprocess_templates)?;
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
     }
@@ -445,27 +441,6 @@ impl PlannedArtifactPartitionsView for LegionFrontendBuildAdapter {
     }
 }
 
-pub(super) fn load_combined_source(source_files: &[PathBuf]) -> Result<String> {
-    let mut combined_source = String::new();
-    let mut debug_map = String::new();
-    let mut offset = 0usize;
-    for source_path in source_files {
-        let content = fs::read_to_string(source_path)
-            .into_diagnostic()
-            .map_err(|error| error.wrap_err(format!("读取源码失败 {}", source_path.display())))?;
-        // 去除 UTF-8 BOM（U+FEFF），避免解析器在合并源码时遇到非法字符。
-        let trimmed = content.strip_prefix('\u{FEFF}').unwrap_or(&content);
-        let end = offset + trimmed.len();
-        debug_map.push_str(&format!("{offset}-{end}: {}\n", source_path.display()));
-        combined_source.push_str(trimmed);
-        combined_source.push('\n');
-        offset = combined_source.len();
-    }
-    // 写入调试映射文件，用于定位 parser 错误的字节偏移。
-    let _ = fs::write("target/source-offsets.txt", &debug_map);
-    Ok(combined_source)
-}
-
 pub(super) fn print_artifacts(output_dir: &Path, artifacts: &ArtifactSet) {
     for artifact in &artifacts.artifacts {
         let candidates: &[&str] = match artifact.kind {
@@ -533,10 +508,6 @@ fn write_execution_manifest(plan: &crate::planner::BuildPlan, specs: &[DriverRun
         })
         .collect::<Vec<_>>();
     ExecutionManifest::from_build_plan(plan, &contracts)?.write_to_output_dir(&plan.output_dir)
-}
-
-fn attach_source_to_report(error: impl Into<Report>, source: &str) -> Report {
-    error.into().with_source_code(NamedSource::new("combined-source.v", source.to_string()))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

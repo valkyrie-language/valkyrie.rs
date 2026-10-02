@@ -8,6 +8,7 @@ pub mod forward;
 pub mod manifest;
 pub mod planner;
 pub mod script;
+mod source_snapshot;
 pub mod unity_export;
 
 pub use artifact_formats::{artifact_format_from_extension, artifact_format_slug, artifact_formats_for_publish_format};
