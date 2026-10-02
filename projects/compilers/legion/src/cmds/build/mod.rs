@@ -12,7 +12,7 @@ use std::{
 
 use clap::Args;
 use emitter::{
-    DriverRunContract, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView, bundled_backend_registry,
+    DriverRunContract, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView,
     compile_frontend_bundle_with_bundled_backends,
 };
 use miette::{IntoDiagnostic, NamedSource, Report, Result, WrapErr, miette};
@@ -22,7 +22,7 @@ use nyar_language::{
     nyar::{
         ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, VmSuspendStrategy, projection_policy_for_target_profile,
     },
-    plan_artifacts_from_build_output,
+    backend_registry_for_build_output, build_output_surface_counts, plan_artifacts_from_build_output,
 };
 use serde::Serialize;
 use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, TgRoot, parse_tgrammar_fragment};
@@ -295,7 +295,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     let build_output = frontend;
     let target_profile = plan.project.build_target.target.to_profile(None);
     let projection_policy = projection_policy_for_target_profile(&target_profile)?;
-    let backend_registry = bundled_backend_registry(&build_output.neutral_plan().semantic_fragments, &target_profile, &projection_policy);
+    let backend_registry = backend_registry_for_build_output(&build_output, &target_profile, &projection_policy);
     let clr_suspend_strategy = ClrSuspendStrategy::from_runtime_async_flag(plan.project.build_target.runtime_async);
     let artifact_plan = plan_artifacts_from_build_output(
         &build_output,
@@ -366,15 +366,15 @@ fn validate_project_artifact_contract(
     if target.to_profile(None).backend_family != TargetBackendFamily::Wasm {
         return Ok(());
     }
-    let facts = &build_output.neutral_plan().program_facts;
+    let (export_count, entry_count) = build_output_surface_counts(build_output);
     match artifact_kind {
         ProjectArtifactKind::Library => {
-            if facts.exports.is_empty() {
+            if export_count == 0 {
                 return Err(miette!("`artifact: library` requires at least one `[export]` on a project function (no stub wasm)"));
             }
         }
         ProjectArtifactKind::Binary => {
-            if facts.entries.is_empty() {
+            if entry_count == 0 {
                 return Err(miette!("`artifact: binary` requires a `@main` entry function"));
             }
         }

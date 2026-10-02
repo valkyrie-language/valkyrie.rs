@@ -3,12 +3,13 @@
 use std::{fs, path::Path};
 
 use emitter::{
-    FragmentSubmission, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView, bundled_backend_registry,
+    FragmentSubmission, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView,
     compile_frontend_bundle_with_bundled_backends,
 };
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
     ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, ValkyrieCompiler, assemble_fragment_submission,
+    backend_registry_for_build_output,
     nyar::{ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, projection_policy_for_target_profile},
     plan_artifacts_from_build_output,
 };
@@ -52,7 +53,7 @@ pub fn compile_v_bundle(
     let build_output = compiler.compile_source_to_build_output(combined_v_source).map_err(|error| miette::miette!("{error}"))?;
     let target_profile = target.to_profile(None);
     let projection_policy = projection_policy_for_target_profile(&target_profile)?;
-    let backend_registry = bundled_backend_registry(&build_output.neutral_plan().semantic_fragments, &target_profile, &projection_policy);
+    let backend_registry = backend_registry_for_build_output(&build_output, &target_profile, &projection_policy);
     let artifact_plan =
         plan_artifacts_from_build_output(&build_output, target.clone(), projection_policy, backend_registry, ClrSuspendStrategy::default())
             .map_err(|error| miette::miette!("frontend partition planning failed: {error:?}"))?;
