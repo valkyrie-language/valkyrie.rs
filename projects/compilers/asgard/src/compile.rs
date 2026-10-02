@@ -8,7 +8,7 @@ use emitter::{
 };
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
-    ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, ValkyrieCompiler, assemble_fragment_submission,
+    ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, ValkyrieCompiler, assemble_fragment,
     nyar::{ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane},
     plan_artifacts_from_build_output,
 };
@@ -232,11 +232,11 @@ impl FrontendBuildBundle for VoaFrontendBuildAdapter {
         output_dir: &Path,
         _lane: TargetLane,
     ) -> Result<LoweredBackendInput> {
-        let fragment = assemble_fragment_submission(&self.build_output, &self.artifact_plan, partition_index)
+        let fragment = assemble_fragment(&self.build_output, &self.artifact_plan, partition_index)
             .map_err(|error| miette::miette!("{error}"))?;
         let host_flavor = self.artifact_plan.target.to_profile(None).host_flavor;
-        LoweredBackendInput::from_fragment_submission(
-            &fragment,
+        LoweredBackendInput::from_assembled_fragment(
+            fragment,
             backend_family,
             host_boundary,
             output_dir,

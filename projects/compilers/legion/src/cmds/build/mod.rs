@@ -18,7 +18,7 @@ use emitter::{
 use miette::{IntoDiagnostic, NamedSource, Report, Result, WrapErr, miette};
 use nyar_language::{
     ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalSpecification, CanonicalTarget, FrontendBuildOutput,
-    assemble_fragment_submission,
+    assemble_fragment,
     nyar::{
         ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, VmSuspendStrategy,
     },
@@ -402,10 +402,10 @@ impl FrontendBuildBundle for LegionFrontendBuildAdapter {
         output_dir: &Path,
         _lane: TargetLane,
     ) -> Result<LoweredBackendInput> {
-        let fragment = assemble_fragment_submission(&self.build_output, &self.artifact_plan, partition_index)?;
+        let fragment = assemble_fragment(&self.build_output, &self.artifact_plan, partition_index)?;
         let host_flavor = self.artifact_plan.target.to_profile(None).host_flavor;
-        let result = LoweredBackendInput::from_fragment_submission(
-            &fragment,
+        let result = LoweredBackendInput::from_assembled_fragment(
+            fragment,
             backend_family,
             host_boundary,
             output_dir,
