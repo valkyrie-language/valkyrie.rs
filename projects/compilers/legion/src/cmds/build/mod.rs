@@ -236,11 +236,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     }
 
     // Source hygiene runs on every build (including cache hits): size + encoding.
-    // Node/Wasm soft-isolates oversized frozen CLR/JVM legacy files (VSRC001 only).
-    let hygiene = source_hygiene::scan_build_sources_with_policy(
-        &plan.project.source_files,
-        source_hygiene::HygienePolicy::for_target(&plan.project.build_target.target),
-    )?;
+    let hygiene = source_hygiene::scan_build_sources(&plan.project.source_files)?;
     source_hygiene::require_clean(&hygiene)?;
 
     let cache = CompilationCache::open(cache_root_for(&plan.workspace_root));
