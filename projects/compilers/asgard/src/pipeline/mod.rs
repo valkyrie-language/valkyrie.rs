@@ -114,14 +114,8 @@ pub fn compile_voa_project(options: &CompileOptions) -> Result<CompileReport> {
         let project_v = partition::combine_v_sources(&sources, "")?;
         let combined_v = combine_wasm_sources(&project_v, &awsl_v);
         let target = options.target.clone().unwrap_or_else(|| parse_target(&config.target));
-        let report = match compile_wasm_bundle(&combined_v, &output_dir, &module_name, &target) {
-            Ok(report) => report,
-            Err(first_error) => {
-                eprintln!("asgard: wasm compile with project .v failed: {first_error}");
-                compile_wasm_bundle(&awsl_v, &output_dir, &module_name, &target)
-                    .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?
-            }
-        };
+        let report = compile_wasm_bundle(&combined_v, &output_dir, &module_name, &target)
+            .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?;
         copy_wasm_artifacts_to_dist(&output_dir, &report)?;
         true
     }
