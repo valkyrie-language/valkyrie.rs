@@ -11,10 +11,10 @@ use std::{
 };
 
 use clap::Args;
-use emitter::{DriverRunContract, compile_frontend_bundle_with_bundled_backends};
+use emitter::DriverRunContract;
 use miette::{IntoDiagnostic, Report, Result, WrapErr, miette};
 use nyar_language::{
-    ArtifactKind, ArtifactSet, CanonicalSpecification, CanonicalTarget, CompilerBuildBundle, compile_source_groups_to_backend_bundle,
+    ArtifactKind, ArtifactSet, CanonicalSpecification, CanonicalTarget, compile_source_groups_to_artifacts,
     nyar::ClrSuspendStrategy,
 };
 use serde::Serialize;
@@ -266,31 +266,23 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     let target_profile = plan.project.build_target.target.to_profile(None);
     let clr_suspend_strategy = ClrSuspendStrategy::from_runtime_async_flag(plan.project.build_target.runtime_async);
     let wasm_package_kind = wasm_package_kind_for_manifest(plan.project.artifact_kind);
-    let driver_bundle = compile_source_groups_to_backend_bundle(
+    fs::create_dir_all(&plan.output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", plan.output_dir.display()))?;
+    let report = compile_source_groups_to_artifacts(
         &nyar_language::ValkyrieCompiler::default(),
         &source_groups,
         arch,
         plan.project.build_target.target.clone(),
         clr_suspend_strategy,
         wasm_package_kind,
-    )?;
-    validate_project_artifact_contract(&driver_bundle, &plan.project.build_target.target, plan.project.artifact_kind)?;
-
-    if verbose {
-        println!("compiler bundle: ready");
-        println!("partitions: {}", driver_bundle.partition_count());
-    }
-
-    fs::create_dir_all(&plan.output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", plan.output_dir.display()))?;
-
-    let report = compile_frontend_bundle_with_bundled_backends(
-        &driver_bundle,
         &plan.output_dir,
         &plan.project.name,
         plan.project.build_target.msil,
         plan.project.build_target.wat,
         target_profile.artifact_policy.generate_runtime_config,
     )?;
+    if verbose {
+        println!("compiler: canonical artifact set ready");
+    }
 
     // Write execution manifest before collecting the artifact-set so restore can run.
     if !report.run_contracts.is_empty() {
@@ -312,30 +304,6 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     }
 
     Ok(report)
-}
-
-fn validate_project_artifact_contract(
-    build_bundle: &CompilerBuildBundle,
-    target: &CanonicalTarget,
-    artifact_kind: ProjectArtifactKind,
-) -> Result<()> {
-    if target.to_profile(None).backend_family != nyar_language::nyar::TargetBackendFamily::Wasm {
-        return Ok(());
-    }
-    let (export_count, entry_count) = build_bundle.surface_counts();
-    match artifact_kind {
-        ProjectArtifactKind::Library => {
-            if export_count == 0 {
-                return Err(miette!("`artifact: library` requires at least one `[export]` on a project function (no stub wasm)"));
-            }
-        }
-        ProjectArtifactKind::Binary => {
-            if entry_count == 0 {
-                return Err(miette!("`artifact: binary` requires a `@main` entry function"));
-            }
-        }
-    }
-    Ok(())
 }
 
 fn wasm_package_kind_for_manifest(artifact_kind: ProjectArtifactKind) -> emitter::nyar_backend_wasi::WasmPackageKind {

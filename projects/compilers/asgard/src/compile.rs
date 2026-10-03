@@ -2,10 +2,9 @@
 
 use std::{fs, path::Path};
 
-use emitter::compile_frontend_bundle_with_bundled_backends;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
-    CompilerSourceGroup, CanonicalTarget, compile_source_groups_to_backend_bundle,
+    CompilerSourceGroup, CanonicalTarget, compile_source_groups_to_artifacts,
 };
 
 use crate::{
@@ -50,19 +49,14 @@ pub fn compile_v_bundle(
         direct_dependencies: Vec::new(),
     }];
     let target_profile = target.to_profile(None);
-    let driver_bundle = compile_source_groups_to_backend_bundle(
+    fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
+    let _report = compile_source_groups_to_artifacts(
         &compiler,
         &source_groups,
         target.arch.as_str(),
         target.clone(),
         nyar_language::nyar::ClrSuspendStrategy::default(),
         emitter::nyar_backend_wasi::WasmPackageKind::Binary,
-    )?;
-
-    fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
-
-    let _report = compile_frontend_bundle_with_bundled_backends(
-        &driver_bundle,
         output_dir,
         module_name,
         false,
