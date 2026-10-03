@@ -17,7 +17,7 @@ use clap::Args;
 use emitter::DriverRunContract;
 use miette::{IntoDiagnostic, Report, Result, WrapErr, miette};
 use nyar_language::{
-    ArtifactKind, ArtifactSet, CanonicalSpecification, CanonicalTarget, compile_source_groups_to_artifacts,
+    ArtifactSet, CanonicalSpecification, CanonicalTarget, compile_source_groups_to_artifacts,
     nyar::ClrSuspendStrategy,
 };
 use serde::Serialize;
@@ -99,8 +99,6 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
         println!("entry: {}", entry_symbol);
     }
     print_artifacts(&plan.output_dir, &report.artifacts);
-    materialize_node_bootstrap_aliases(&plan.output_dir, &plan.project.build_target.target)?;
-
     let manifest_source = if script::is_script_path(&plan.project.manifest_path) {
         let script_source = fs::read_to_string(&plan.project.manifest_path)
             .into_diagnostic()
@@ -315,58 +313,13 @@ fn wasm_package_kind_for_manifest(artifact_kind: ProjectArtifactKind) -> emitter
 
 pub(super) fn print_artifacts(output_dir: &Path, artifacts: &ArtifactSet) {
     for artifact in &artifacts.artifacts {
-        let candidates: &[&str] = match artifact.kind {
-            ArtifactKind::Executable => &["exe", "wasm"],
-            ArtifactKind::DynamicLibrary => &["dll"],
-            ArtifactKind::Object => &["obj"],
-            ArtifactKind::AssemblyListing => &["mjs", "msil", "wit"],
-        };
-
-        for extension in candidates {
-            let artifact_path = output_dir.join(format!("{}.{}", artifact.name, extension));
-            if artifact_path.exists() {
-                println!("artifact: {}", artifact_path.display());
-                break;
-            }
-        }
-    }
-}
-
-/// 为 Node 自举写出规范入口别名（`legion.mjs` / `legion.wasm`）。
-///
-/// 多 partition 时物理名可能是 `legion__main_legion.*`；bootstrap / npm 契约要求规范名。
-fn materialize_node_bootstrap_aliases(output_dir: &Path, target: &nyar_language::CanonicalTarget) -> Result<()> {
-    let profile = target.to_profile(None);
-    if !matches!(profile.host_kind, nyar_language::TargetHostKind::JavaScript) {
-        return Ok(());
-    }
-
-    let entries = fs::read_dir(output_dir).into_diagnostic().wrap_err_with(|| format!("读取产物目录失败：{}", output_dir.display()))?;
-    for entry in entries {
-        let entry = entry.into_diagnostic()?;
-        let path = entry.path();
-        let Some(file_name) = path.file_name().and_then(|name| name.to_str())
-        else {
+        let artifact_path = output_dir.join(&artifact.path);
+        if !artifact_path.is_file() {
+            println!("artifact: missing {}", artifact.path);
             continue;
-        };
-        for alias in crate::bootstrap_entry_aliases(file_name) {
-            let dest = output_dir.join(alias);
-            if file_name.ends_with(".mjs") {
-                let content = fs::read_to_string(&path).into_diagnostic().wrap_err_with(|| format!("读取启动壳失败：{}", path.display()))?;
-                let stem = file_name.trim_end_matches(".mjs");
-                let alias_stem = alias.trim_end_matches(".mjs");
-                let rewritten = content.replace(&format!("./{stem}.wasm"), &format!("./{alias_stem}.wasm"));
-                fs::write(&dest, rewritten).into_diagnostic().wrap_err_with(|| format!("写入入口别名失败：{}", dest.display()))?;
-            }
-            else {
-                fs::copy(&path, &dest)
-                    .into_diagnostic()
-                    .wrap_err_with(|| format!("复制入口别名失败：{} -> {}", path.display(), dest.display()))?;
-            }
-            println!("alias: {file_name} -> {alias}");
         }
+        println!("artifact: {}", artifact_path.display());
     }
-    Ok(())
 }
 
 fn write_execution_manifest(plan: &legion_workspace::planner::BuildPlan, specs: &[DriverRunContract]) -> Result<()> {

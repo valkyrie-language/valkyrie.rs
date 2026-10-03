@@ -94,8 +94,22 @@ pub fn compute_artifact_hash(
 
 /// Collect output directory files into a cacheable bundle.
 pub fn collect_build_bundle(output_dir: &Path, report: &DriverCompileReport) -> Result<CachedBuildBundle, String> {
-    let mut files = Vec::new();
-    collect_files_dir(output_dir, output_dir, &mut files)?;
+    let mut paths = report.artifacts.artifacts.iter().map(|artifact| artifact.path.clone()).collect::<Vec<_>>();
+    paths.extend(report.run_contracts.iter().map(|contract| contract.physical_entry.clone()));
+    paths.sort();
+    paths.dedup();
+    let mut files = Vec::with_capacity(paths.len());
+    for relative in paths {
+        let path = Path::new(&relative);
+        if relative.is_empty() || path.components().any(|component| !matches!(component, std::path::Component::Normal(_))) {
+            return Err(format!("编译器报告包含非法产物路径：{relative}"));
+        }
+        let absolute = output_dir.join(path);
+        if !absolute.is_file() {
+            return Err(format!("编译器报告声明的产物不存在：{relative}"));
+        }
+        files.push((relative, fs::read(&absolute).map_err(|error| error.to_string())?));
+    }
     Ok(CachedBuildBundle {
         artifacts: report.artifacts.clone(),
         entry_symbol: report.entry_symbol.clone(),
@@ -104,24 +118,6 @@ pub fn collect_build_bundle(output_dir: &Path, report: &DriverCompileReport) -> 
     })
 }
 
-fn collect_files_dir(root: &Path, current: &Path, out: &mut Vec<(String, Vec<u8>)>) -> Result<(), String> {
-    if !current.exists() {
-        return Ok(());
-    }
-    for entry in fs::read_dir(current).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        if path.is_dir() {
-            collect_files_dir(root, &path, out)?;
-        }
-        else if path.is_file() {
-            let rel = path.strip_prefix(root).map_err(|e| e.to_string())?.to_string_lossy().replace('\\', "/");
-            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
-            out.push((rel, bytes));
-        }
-    }
-    Ok(())
-}
 
 /// Persist a build bundle under the IR cache key.
 pub fn store_cached_build(
@@ -167,6 +163,14 @@ mod tests {
         fs::write(&manifest, "target: wasm\n").unwrap();
         let second = compute_artifact_hash(&[source], &[manifest], "clr", false, false, false).unwrap();
         assert_ne!(first, second);
+    }
+
+    #[test]
+    fn cache_ignores_unreported_output_files() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("old.mjs"), "stale").unwrap();
+        let bundle = collect_build_bundle(dir.path(), &DriverCompileReport::default()).unwrap();
+        assert!(bundle.files.is_empty());
     }
 
 }
