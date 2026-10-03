@@ -297,7 +297,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan, plan.project.artifact_kind);
 
     if verbose {
-        println!("hir functions: {}", driver_bundle.build_output.compiled_program().canonical().mir.functions.len());
+        println!("canonical functions: {}", driver_bundle.build_output.compiled_program().canonical().mir.functions.len());
         println!("partitions: {}", driver_bundle.artifact_plan.partitions.len());
     }
 
