@@ -74,7 +74,7 @@ pnpm fmt:check          # 检查格式
 Wasm capability、assemble 和发布流程使用专门脚本：
 
 ```bash
-pnpm build:capability
+pnpm build:capability --valkyrie-v ../valkyrie.v
 pnpm build:assemble
 pnpm publish:dry-run
 ```

@@ -13,6 +13,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFile
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runAssemble } from './lib/assemble.mjs';
+import { capabilitySourceProject } from './lib/capability-source.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_ROOT = join(ROOT, 'projects', 'packages');
@@ -68,23 +69,17 @@ function gitRev(cwd) {
     return r.status === 0 ? String(r.stdout).trim() : null;
 }
 
-function findToolsProject(valkyrieV) {
-    const candidates = [join(valkyrieV, 'projects/legion._/projects/legion.tools'), join(valkyrieV, 'projects/legion.tools')];
-    for (const p of candidates) {
-        if (existsSync(join(p, 'legion.von'))) return p;
-    }
-    return null;
-}
-
 function cmdCapability(argv) {
-    const valkyrieVRaw = takeFlag(argv, '--valkyrie-v') ?? 'projects/valkyrie.v';
-    const valkyrieV = resolve(ROOT, valkyrieVRaw);
-    const sourceProject = findToolsProject(valkyrieV);
-    if (!sourceProject) {
-        fail('完整 legion.tools 源项目缺少 legion.von；正式 capability gate 拒绝使用 bootstrap fixture');
+    const valkyrieVRaw = takeFlag(argv, '--valkyrie-v');
+    if (!valkyrieVRaw) {
+        fail('capability 必须显式提供 valkyrie.v 源码根：--valkyrie-v <dir>');
     }
-    if (!existsSync(join(sourceProject, 'legion.von'))) {
-        fail('legion.tools 源项目缺少 legion.von');
+    const valkyrieV = resolve(ROOT, valkyrieVRaw);
+    let sourceProject;
+    try {
+        sourceProject = capabilitySourceProject(valkyrieV);
+    } catch (error) {
+        fail(error.message);
     }
 
     mkdirSync(join(ROOT, 'dist'), { recursive: true });
