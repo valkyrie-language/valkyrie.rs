@@ -15,7 +15,7 @@ use nyar_language::{CanonicalTarget, RunnerFamily};
 use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 
 use crate::{
-    cmds::{build::compile_plan, report::TestResultEntry},
+    cmds::{build::compile_plan, report::TestResultEntry, run::{ExecutionManifest, RunContract}},
 };
 
 use super::{
@@ -35,12 +35,10 @@ pub struct RunOutcome {
 pub struct ExternalTestSession {
     pub target: String,
     pub output_dir: PathBuf,
-    pub artifact_paths: BTreeMap<String, PathBuf>,
-    /// 仅存在于 suspend_runtime sidecar、未编入 `.legion` 的测试名（legion target）。
-    suspend_only_tests: BTreeMap<String, ()>,
+    pub run_contracts: Vec<RunContract>,
 }
 
-/// 编译 target 测试会话（含 legion）。
+/// 编译 target 测试会话。
 pub fn compile_external_test_session(
     workspace: &WorkspaceResolver,
     project_dir: &Path,
@@ -51,25 +49,16 @@ pub fn compile_external_test_session(
     let request = BuildRequest { project_dir: project_dir.to_path_buf(), target, output_dir: Some(output_dir.clone()) };
     let (plan, _) = workspace.build_test_plan(&request).map_err(|e| e.to_string())?;
     compile_plan(&plan, false).map_err(|e| e.to_string())?;
-
-    let mut artifact_paths = BTreeMap::new();
-    collect_artifacts_recursive(&output_dir, &output_dir, &mut artifact_paths);
-    let suspend_only_tests =
-        if target_label.eq_ignore_ascii_case("legion") { collect_suspend_only_test_names(&output_dir) } else { BTreeMap::new() };
-    Ok(ExternalTestSession { target: target_label.to_string(), output_dir, artifact_paths, suspend_only_tests })
-}
-
-/// legion target：工作区无 `.legion` 默认解释器，编译通过即视为该 target 的门禁。
-pub fn run_legion_compile_gate_test(session: &ExternalTestSession, function_name: &str) -> RunOutcome {
-    if session.suspend_only_tests.contains_key(function_name) {
-        return RunOutcome {
-            success: false,
-            is_compile_error: false,
-            error: Some("suspend runtime 测试需在 clr/jvm/node/wasi target 上运行".into()),
-        };
+    let manifest = ExecutionManifest::read_from_output_dir(&output_dir)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "compiler did not produce an execution manifest".to_string())?;
+    if !manifest.is_fresh_for_plan(&plan).map_err(|e| e.to_string())? {
+        return Err("compiler produced a stale execution manifest".into());
     }
-
-    RunOutcome { success: true, is_compile_error: false, error: None }
+    if manifest.run_contracts.is_empty() {
+        return Err("compiler produced no runtime execution contracts".into());
+    }
+    Ok(ExternalTestSession { target: target_label.to_string(), output_dir, run_contracts: manifest.run_contracts })
 }
 
 /// 在外部会话中执行单个测试函数。
@@ -80,10 +69,6 @@ pub fn run_external_test_in_session(
     cli_runners: &[String],
     verbose: bool,
 ) -> RunOutcome {
-    if session.target.eq_ignore_ascii_case("legion") {
-        return run_legion_compile_gate_test(session, function_name);
-    }
-
     let Some(artifact) = resolve_external_test_artifact_path(session, function_name)
     else {
         return RunOutcome {
@@ -215,7 +200,6 @@ pub fn run_tests_for_project(
             print!("    {} ... ", tf.name);
 
             let outcome = match &session {
-                Ok(session) if target.eq_ignore_ascii_case("legion") => run_legion_compile_gate_test(session, &tf.name),
                 Ok(session) => run_external_test_in_session(workspace, session, &tf.name, cli_runners, verbose),
                 Err(error) => RunOutcome { success: false, is_compile_error: true, error: Some(error.clone()) },
             };
@@ -283,12 +267,6 @@ pub fn bench_project(
                     continue;
                 };
 
-                if target.eq_ignore_ascii_case("legion") {
-                    compile_times.push(compile_ms);
-                    runtime_times.push(0.0);
-                    continue;
-                }
-
                 let runtime_start = Instant::now();
                 let outcome = run_external_test_in_session(workspace, &session, &tf.name, &[], verbose);
                 let runtime_ms = runtime_start.elapsed().as_secs_f64() * 1000.0;
@@ -319,134 +297,29 @@ pub fn bench_project(
     results
 }
 
-fn collect_suspend_only_test_names(output_dir: &Path) -> BTreeMap<String, ()> {
-    let mut names = BTreeMap::new();
-    let Ok(entries) = fs::read_dir(output_dir)
-    else {
-        return names;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "json")
-            && path.file_name().is_some_and(|name| name.to_string_lossy().contains(".suspend_runtime."))
-        {
-            if let Ok(body) = fs::read_to_string(&path) {
-                extract_suspend_symbols(&body, &mut names);
-            }
-        }
-    }
-    names
-}
-
-fn extract_suspend_symbols(body: &str, names: &mut BTreeMap<String, ()>) {
-    for segment in body.split("\"symbol\":\"").skip(1) {
-        let Some(end) = segment.find('"')
-        else {
-            continue;
-        };
-        let symbol = &segment[..end];
-        if let Some(short) = symbol.rsplit("::").next() {
-            names.insert(short.to_string(), ());
-        }
-    }
-}
-
-fn collect_artifacts_recursive(root: &Path, dir: &Path, map: &mut BTreeMap<String, PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir)
-    else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            collect_artifacts_recursive(root, &path, map);
-            continue;
-        }
-        if let Ok(rel) = path.strip_prefix(root) {
-            let key = rel.to_string_lossy().replace('\\', "/");
-            map.insert(key, path.clone());
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                map.insert(name.to_string(), path);
-            }
-        }
-    }
-}
-
-fn runnable_extensions(target: &str) -> &'static [&'static str] {
-    match target.to_ascii_lowercase().as_str() {
-        "clr" => &[".exe"],
-        "jvm" => &[".jar"],
-        "node" => &[".mjs", ".js"],
-        "legion" => &[".legion"],
-        _ => &[],
-    }
-}
-
-/// 解析外部测试产物路径。
+/// 只消费当前 Compiler 给出的精确测试运行合同。
 pub fn resolve_external_test_artifact_path(session: &ExternalTestSession, function_name: &str) -> Option<PathBuf> {
-    let extensions = runnable_extensions(&session.target);
-    let runnable: Vec<_> = session
-        .artifact_paths
-        .iter()
-        .filter(|(key, _)| extensions.iter().any(|ext| key.to_ascii_lowercase().ends_with(ext)))
-        .map(|(_, path)| path.clone())
-        .collect::<std::collections::BTreeSet<_>>()
-        .into_iter()
-        .collect();
-
-    if runnable.len() == 1 {
-        return runnable.into_iter().next();
+    let mut contracts = session.run_contracts.iter().filter(|contract| contract.logical_entry == function_name);
+    let contract = contracts.next()?;
+    if contracts.next().is_some() {
+        return None;
     }
-
-    let short = get_short_function_name(function_name);
-    let base = sanitize_test_artifact_name(&short);
-    for extension in extensions {
-        let file_name = format!("{base}{extension}");
-        if let Some(path) = session.artifact_paths.get(&file_name) {
-            return Some(path.clone());
-        }
+    let relative = Path::new(&contract.physical_entry);
+    if relative.as_os_str().is_empty()
+        || relative.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return None;
     }
-
-    for extension in extensions {
-        let suffix = format!("{base}__suspend{extension}");
-        if let Some(path) = session.artifact_paths.get(&suffix) {
-            return Some(path.clone());
-        }
-    }
-
-    for (key, path) in &session.artifact_paths {
-        if extensions.iter().any(|ext| key.to_ascii_lowercase().ends_with(ext)) && key.to_ascii_lowercase().contains(&base.to_ascii_lowercase())
-        {
-            return Some(path.clone());
-        }
-    }
-
-    for (key, path) in &session.artifact_paths {
-        if extensions.iter().any(|ext| key.to_ascii_lowercase().ends_with(ext)) && key.contains("__functions") {
-            return Some(path.clone());
-        }
-    }
-
-    None
+    let root = fs::canonicalize(&session.output_dir).ok()?;
+    let artifact = fs::canonicalize(root.join(relative)).ok()?;
+    (artifact.starts_with(&root) && artifact.is_file()).then_some(artifact)
 }
 
 fn describe_runnable_artifacts(session: &ExternalTestSession) -> String {
-    let extensions = runnable_extensions(&session.target);
-    let names: Vec<_> =
-        session.artifact_paths.keys().filter(|key| extensions.iter().any(|ext| key.to_ascii_lowercase().ends_with(ext))).cloned().collect();
-    if names.is_empty() { "无可执行产物".into() } else { format!("可执行产物：{}", names.join(", ")) }
-}
-
-fn get_short_function_name(function_name: &str) -> String {
-    function_name.rsplit('.').next().unwrap_or(function_name).to_string()
-}
-
-fn sanitize_test_artifact_name(name: &str) -> String {
-    if name.trim().is_empty() {
-        return "Module".into();
-    }
-    let chars: String = name.chars().map(|ch| if ch.is_ascii_alphanumeric() || ch == '_' { ch } else { '_' }).collect();
-    if chars.chars().next().is_some_and(|c| c.is_ascii_digit()) { format!("M_{chars}") } else { chars }
+    let names = session.run_contracts.iter()
+        .map(|contract| format!("{} → {}", contract.logical_entry, contract.physical_entry))
+        .collect::<Vec<_>>();
+    format!("Compiler 运行合同：{}", names.join(", "))
 }
 
 #[derive(Debug, Clone)]
@@ -550,20 +423,3 @@ fn expand_placeholders(template: &str, placeholders: &BTreeMap<&'static str, Str
     placeholders.iter().fold(template.to_string(), |current, (key, value)| current.replace(&format!("{{{key}}}"), value))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sanitize_artifact_name() {
-        assert_eq!(sanitize_test_artifact_name("add_two"), "add_two");
-        assert_eq!(sanitize_test_artifact_name("1bad"), "M_1bad");
-        assert_eq!(sanitize_test_artifact_name("a-b"), "a_b");
-    }
-
-    #[test]
-    fn short_function_name() {
-        assert_eq!(get_short_function_name("mod.add"), "add");
-        assert_eq!(get_short_function_name("add"), "add");
-    }
-}
