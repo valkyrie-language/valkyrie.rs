@@ -29,7 +29,7 @@ use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, parse_tg
 
 use crate::{
     cache::{
-        CompilationCache, cache_root_for, collect_build_bundle, compute_artifact_hash, store_cached_build, try_restore_cached_build,
+        CompilationCache, cache_root_for, collect_build_bundle, compute_artifact_hash, store_cached_build,
     },
     cmds::{
         project_input::resolve_project_path,
@@ -258,19 +258,6 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         plan.project.build_target.runtime_async,
     )
     .map_err(|error| miette!("{error}"))?;
-
-    if let Some(report) = try_restore_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &plan.output_dir)
-        .map_err(|error| miette!("缓存产物无效，停止构建：{error}"))?
-    {
-        if verbose {
-            println!("cache: hit (artifact-set)");
-        }
-        // Ensure execution manifest exists for restore paths that predate bundling it.
-        if !report.run_contracts.is_empty() {
-            let _ = write_execution_manifest(plan, &report.run_contracts);
-        }
-        return Ok(report);
-    }
 
     // WASI 与 Node 同为 wasm32，但宿主不同：Node 走 `env.*`，WASI 走 guest/host_contract。
     // 模板 `<% match arch %>` 因此对 WASI 使用伪架构键 `"wasi"`，避免误选 wasm32/Node 分支。

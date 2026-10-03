@@ -123,23 +123,6 @@ fn collect_files_dir(root: &Path, current: &Path, out: &mut Vec<(String, Vec<u8>
     Ok(())
 }
 
-/// Write cached files back and reconstruct a driver report.
-pub fn materialize_build_bundle(output_dir: &Path, payload: &CachedBuildBundle) -> Result<DriverCompileReport, String> {
-    fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
-    for (rel, bytes) in &payload.files {
-        let path = output_dir.join(rel);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        fs::write(&path, bytes).map_err(|e| e.to_string())?;
-    }
-    Ok(DriverCompileReport {
-        artifacts: payload.artifacts.clone(),
-        entry_symbol: payload.entry_symbol.clone(),
-        run_contracts: payload.run_contracts.iter().map(DriverRunContract::from).collect(),
-    })
-}
-
 /// Persist a build bundle under the IR cache key.
 pub fn store_cached_build(
     cache: &CompilationCache,
@@ -157,7 +140,7 @@ pub fn store_cached_build(
     )
 }
 
-/// Load a build bundle from the IR cache.
+/// 读取缓存元数据；读取结果不能直接成为构建成功载荷。
 pub fn load_cached_build(cache: &CompilationCache, module_name: &str, canonical_triple: &str, ir_hash: &str) -> Result<Option<CachedBuildBundle>, String> {
     let Some(entry) = cache.try_get_ir(module_name, canonical_triple, ir_hash) else {
         return Ok(None);
@@ -166,20 +149,6 @@ pub fn load_cached_build(cache: &CompilationCache, module_name: &str, canonical_
         return Err(format!("cached artifact has unexpected kind `{}`", entry.ir_kind));
     }
     serde_json::from_slice(&entry.ir_data).map(Some).map_err(|error| format!("cached artifact is invalid: {error}"))
-}
-
-/// Try restore from cache into `output_dir`.
-pub fn try_restore_cached_build(
-    cache: &CompilationCache,
-    module_name: &str,
-    canonical_triple: &str,
-    ir_hash: &str,
-    output_dir: &Path,
-) -> Result<Option<DriverCompileReport>, String> {
-    let Some(payload) = load_cached_build(cache, module_name, canonical_triple, ir_hash)? else {
-        return Ok(None);
-    };
-    materialize_build_bundle(output_dir, &payload).map(Some)
 }
 
 #[cfg(test)]
@@ -200,31 +169,4 @@ mod tests {
         assert_ne!(first, second);
     }
 
-    #[test]
-    fn artifact_bundle_round_trip() {
-        let dir = tempdir().unwrap();
-        let cache = CompilationCache::open(dir.path().join(".cache"));
-        let out_dir = dir.path().join("out");
-        fs::create_dir_all(&out_dir).unwrap();
-        fs::write(out_dir.join("main.exe"), b"exe-bytes").unwrap();
-
-        let report = DriverCompileReport {
-            artifacts: ArtifactSet::default(),
-            entry_symbol: Some("main".into()),
-            run_contracts: vec![DriverRunContract {
-                logical_entry: "main".into(),
-                physical_entry: "main.exe".into(),
-                invocation: "dotnet".into(),
-                validate: "true".into(),
-            }],
-        };
-        let bundle = collect_build_bundle(&out_dir, &report).unwrap();
-        store_cached_build(&cache, "demo", "clr-microsoft-unknown-managed", "hash1", &bundle).unwrap();
-
-        let restored_dir = dir.path().join("restored");
-        let report2 = try_restore_cached_build(&cache, "demo", "clr-microsoft-unknown-managed", "hash1", &restored_dir).expect("restore").expect("hit");
-        assert_eq!(report2.entry_symbol.as_deref(), Some("main"));
-        assert_eq!(fs::read(restored_dir.join("main.exe")).unwrap(), b"exe-bytes");
-        assert_eq!(report2.run_contracts.len(), 1);
-    }
 }
