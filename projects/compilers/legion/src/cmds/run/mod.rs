@@ -21,7 +21,6 @@ use crate::{
 };
 
 const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
-const LEGACY_RUN_CONTRACT_FILE_NAME: &str = "run-contract.txt";
 const HOST_SELECTION_FILE_NAME: &str = "host-selection.txt";
 /// 编译计划快照文件名，由构建流程写入，不属于交付产物。
 const COMPILE_PLAN_SNAPSHOT_FILE_NAME: &str = "compile-plan.txt";
@@ -115,13 +114,6 @@ impl ExecutionManifest {
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("写入 execution manifest 失败 {}", manifest_path.display())))?;
 
-        if let Some(primary_contract) = self.run_contracts.first() {
-            primary_contract.write_legacy_to_output_dir(output_dir)?;
-        }
-        else {
-            RunContract::remove_legacy_from_output_dir(output_dir)?;
-        }
-
         Ok(())
     }
 
@@ -151,7 +143,6 @@ impl ExecutionManifest {
                 .into_diagnostic()
                 .map_err(|error| error.wrap_err(format!("删除 execution manifest 失败 {}", manifest_path.display())))?;
         }
-        RunContract::remove_legacy_from_output_dir(output_dir)?;
         Ok(())
     }
 
@@ -218,11 +209,7 @@ impl RunContract {
 
     /// 从输出目录读取运行契约列表。
     pub fn read_all_from_output_dir(output_dir: &Path) -> Result<Vec<Self>> {
-        if let Some(manifest) = ExecutionManifest::read_from_output_dir(output_dir)? {
-            return Ok(manifest.run_contracts);
-        }
-
-        Ok(Self::read_legacy_from_output_dir(output_dir)?.into_iter().collect())
+        Ok(ExecutionManifest::read_from_output_dir(output_dir)?.map_or_else(Vec::new, |manifest| manifest.run_contracts))
     }
 
     fn matches_artifact(&self, artifact: &Path) -> bool {
@@ -236,38 +223,6 @@ impl RunContract {
         crate::bootstrap_entry_aliases(&self.physical_entry).iter().any(|alias| file_name.eq_ignore_ascii_case(alias))
     }
 
-    fn write_legacy_to_output_dir(&self, output_dir: &Path) -> Result<()> {
-        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
-        let content = crate::write_von_indented(self).wrap_err_with(|| format!("序列化运行契约失败 {}", contract_path.display()))?;
-        fs::write(&contract_path, content)
-            .into_diagnostic()
-            .map_err(|error| error.wrap_err(format!("写入运行契约失败 {}", contract_path.display())))
-    }
-
-    fn read_legacy_from_output_dir(output_dir: &Path) -> Result<Option<Self>> {
-        Self::read_legacy_from_path(&output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME))
-    }
-
-    fn read_legacy_from_path(path: &Path) -> Result<Option<Self>> {
-        if !path.exists() {
-            return Ok(None);
-        }
-
-        let source = fs::read_to_string(path)
-            .into_diagnostic()
-            .map_err(|error| error.wrap_err(format!("failed to read run contract '{}'", path.display())))?;
-        crate::parse_von::<Self>(&source).map(Some).map_err(|error| miette!("failed to parse run contract '{}': {}", path.display(), error))
-    }
-
-    fn remove_legacy_from_output_dir(output_dir: &Path) -> Result<()> {
-        let contract_path = output_dir.join(LEGACY_RUN_CONTRACT_FILE_NAME);
-        if contract_path.exists() {
-            fs::remove_file(&contract_path)
-                .into_diagnostic()
-                .map_err(|error| error.wrap_err(format!("删除运行契约失败 {}", contract_path.display())))?;
-        }
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -754,7 +709,6 @@ fn collect_execution_artifact_digests(output_dir: &Path) -> Result<Vec<Execution
 fn is_execution_metadata_file(path: &Path) -> bool {
     path.file_name().and_then(|value| value.to_str()).is_some_and(|value| {
         value.eq_ignore_ascii_case(EXECUTION_MANIFEST_FILE_NAME)
-            || value.eq_ignore_ascii_case(LEGACY_RUN_CONTRACT_FILE_NAME)
             || value.eq_ignore_ascii_case(HOST_SELECTION_FILE_NAME)
             || value.eq_ignore_ascii_case(COMPILE_PLAN_SNAPSHOT_FILE_NAME)
             || value.eq_ignore_ascii_case(BACKEND_REQUEST_SNAPSHOT_FILE_NAME)

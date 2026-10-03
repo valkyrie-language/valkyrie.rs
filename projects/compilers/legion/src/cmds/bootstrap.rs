@@ -790,22 +790,16 @@ fn resolve_wasi_cli_artifact(output_dir: &Path, project_dir: &Path) -> Result<Pa
         return Ok(named);
     }
 
-    for contract_name in ["run-contracts.txt", "run-contract.txt"] {
-        let contract_path = output_dir.join(contract_name);
-        if let Ok(text) = fs::read_to_string(&contract_path) {
-            for line in text.lines() {
-                let trimmed = line.trim();
-                if let Some(value) = trimmed
-                    .strip_prefix("physical_entry:")
-                    .or_else(|| trimmed.strip_prefix("physicalEntry:"))
-                    .or_else(|| trimmed.strip_prefix("entry:"))
-                {
-                    let physical = value.trim().trim_matches('"');
-                    if physical.ends_with(".wasi") {
-                        let path = output_dir.join(physical);
-                        if path.exists() {
-                            return Ok(path);
-                        }
+    let contract_path = output_dir.join("run-contracts.txt");
+    if let Ok(text) = fs::read_to_string(&contract_path) {
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if let Some(value) = trimmed.strip_prefix("physical_entry:") {
+                let physical = value.trim().trim_matches('"');
+                if physical.ends_with(".wasi") {
+                    let path = output_dir.join(physical);
+                    if path.exists() {
+                        return Ok(path);
                     }
                 }
             }
