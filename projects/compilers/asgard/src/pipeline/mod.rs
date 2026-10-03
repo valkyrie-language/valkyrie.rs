@@ -113,7 +113,10 @@ pub fn compile_voa_project(options: &CompileOptions) -> Result<CompileReport> {
         };
         let project_v = partition::combine_v_sources(&sources, "")?;
         let combined_v = combine_wasm_sources(&project_v, &awsl_v);
-        let target = options.target.clone().unwrap_or_else(|| parse_target(&config.target));
+        let target = match options.target.clone() {
+            Some(target) => target,
+            None => parse_target(&config.target)?,
+        };
         let report = compile_wasm_bundle(&combined_v, &output_dir, &module_name, &target)
             .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?;
         copy_wasm_artifacts_to_dist(&output_dir, &report)?;
@@ -332,12 +335,10 @@ fn android_aarch64_target() -> CanonicalTarget {
     CanonicalTarget::new(CanonicalArch::AArch64, CanonicalVendor::Android, CanonicalSpecification::Android, Some(CanonicalAbi::Aapcs64))
 }
 
-fn parse_target(target: &str) -> CanonicalTarget {
+fn parse_target(target: &str) -> Result<CanonicalTarget> {
     match target {
-        "wasm" | "wasm32-unknown-browser-wasm" | "wasm32-unknown-miniprogram-wasm" | "wechat-miniprogram-host" => CanonicalTarget::wasm(),
-        "aarch64-linux-android" => android_aarch64_target(),
-        "jvm-android-android-managed" | "jvm-android-android-dex" => android_aarch64_target(),
-        other => CanonicalTarget::parse(other).unwrap_or_else(|_| CanonicalTarget::wasm()),
+        "jvm-android-android-managed" | "jvm-android-android-dex" => Ok(android_aarch64_target()),
+        other => CanonicalTarget::parse(other).map_err(|error| miette::miette!("无法解析 target `{other}`: {error}")),
     }
 }
 
@@ -353,7 +354,10 @@ fn compile_host_logic(
     let awsl_v = build_awsl_host_source(components);
     let project_v = partition::combine_v_sources(sources, "").wrap_err_with(|| format!("合并 V 源失败 (platform={})", config.platform))?;
     let combined_v = combine_wasm_sources(&project_v, &awsl_v);
-    let target = options.target.clone().unwrap_or_else(|| parse_target(&config.target));
+    let target = match options.target.clone() {
+        Some(target) => target,
+        None => parse_target(&config.target)?,
+    };
     let target_str = format!("{target:?}");
     let backend_name = format!("{backend:?}");
     let scratch = output_dir.join(".asgard-build");
@@ -372,6 +376,32 @@ fn compile_host_logic(
 mod tests {
     use super::*;
     use crate::codegen::{HOST_NATIVE_MAGIC, UI_BIN_MAGIC};
+
+    #[test]
+    fn unknown_config_target_fails_instead_of_selecting_wasm() {
+        let error = parse_target("unknown-target").expect_err("未知 target 必须直接失败");
+        assert!(error.to_string().contains("无法解析 target `unknown-target`"), "{error}");
+    }
+
+    #[test]
+    fn config_target_preserves_the_canonical_architecture() {
+        for spelling in ["node", "wasm", "jvm", "aarch64-android-android-aapcs64"] {
+            let expected = CanonicalTarget::parse(spelling).expect("目标必须由共享解析器接受");
+            assert_eq!(parse_target(spelling).expect("配置目标必须保持共享合同"), expected);
+        }
+        assert_eq!(parse_target("jvm-android-android-managed").expect("产品别名必须保留").vendor, CanonicalVendor::Android);
+    }
+
+    #[test]
+    fn private_target_spellings_do_not_select_another_backend() {
+        for spelling in ["wechat-miniprogram-host", "wasm32-unknown-miniprogram-wasm", "aarch64-linux-android"] {
+            let expected = CanonicalTarget::parse(spelling);
+            match expected {
+                Ok(target) => assert_eq!(parse_target(spelling).expect("共享解析结果必须保持"), target),
+                Err(_) => assert!(parse_target(spelling).is_err(), "非法目标不能换入口: {spelling}"),
+            }
+        }
+    }
 
     #[test]
     fn compile_test_blog() {
