@@ -212,17 +212,6 @@ impl RunContract {
         Ok(ExecutionManifest::read_from_output_dir(output_dir)?.map_or_else(Vec::new, |manifest| manifest.run_contracts))
     }
 
-    fn matches_artifact(&self, artifact: &Path) -> bool {
-        let Some(file_name) = artifact.file_name().and_then(|value| value.to_str())
-        else {
-            return false;
-        };
-        if file_name.eq_ignore_ascii_case(&self.physical_entry) {
-            return true;
-        }
-        crate::bootstrap_entry_aliases(&self.physical_entry).iter().any(|alias| file_name.eq_ignore_ascii_case(alias))
-    }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -251,7 +240,6 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     let mut command = plan_run_command(
         &workspace,
         &plan.output_dir,
-        &plan.project.name,
         &plan.project.build_target.target,
         &args.runner,
         &execution_manifest.run_contracts,
@@ -352,25 +340,15 @@ mod workload_forward_tests {
 fn plan_run_command(
     workspace: &WorkspaceResolver,
     output_dir: &Path,
-    project_name: &str,
     canonical_target: &CanonicalTarget,
     cli_runner_overrides: &[String],
     run_contracts: &[RunContract],
     artifact_override: Option<&Path>,
 ) -> Result<RunCommand> {
     let runner_target = runner_target_for(canonical_target);
-    let artifact = match artifact_override {
-        Some(path) => path.to_path_buf(),
-        None => discover_artifact(output_dir, project_name, runner_target, run_contracts.first())?,
-    };
-
-    if !artifact.exists() {
-        return Err(miette!("artifact does not exist: {}", artifact.display()));
-    }
-
-    let run_contract = run_contracts.iter().find(|contract| contract.matches_artifact(&artifact)).or_else(|| run_contracts.first());
-    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, run_contract)?;
-    let placeholders = build_placeholders(output_dir, &artifact, runner_target, run_contract)?;
+    let (artifact, run_contract) = select_execution_artifact(output_dir, run_contracts, artifact_override)?;
+    let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, Some(run_contract))?;
+    let placeholders = build_placeholders(output_dir, &artifact, runner_target, Some(run_contract))?;
     let command = expand_placeholders(&runner.command, &placeholders);
     let args = expand_runner_args(&runner.args, &placeholders);
 
@@ -556,35 +534,39 @@ fn expand_placeholders(template: &str, placeholders: &BTreeMap<&'static str, Str
     placeholders.iter().fold(template.to_string(), |current, (key, value)| current.replace(&format!("{{{}}}", key), value))
 }
 
-fn discover_artifact(
+fn select_execution_artifact<'contract>(
     output_dir: &Path,
-    project_name: &str,
-    runner_target: RunnerFamily,
-    run_contract: Option<&RunContract>,
-) -> Result<PathBuf> {
-    let mut files = collect_files(output_dir)?;
-    files.sort();
-
-    if let Some(contract) = run_contract {
-        if let Some(path) = find_contract_artifact(&files, &contract.physical_entry) {
-            return Ok(path);
+    contracts: &'contract [RunContract],
+    artifact_override: Option<&Path>,
+) -> Result<(PathBuf, &'contract RunContract)> {
+    if contracts.is_empty() {
+        return Err(miette!("execution manifest has no run contracts"));
+    }
+    if artifact_override.is_none() && contracts.len() != 1 {
+        return Err(miette!("execution manifest has multiple run contracts; select one with --artifact"));
+    }
+    let root = fs::canonicalize(output_dir).into_diagnostic()?;
+    let requested = artifact_override.map(|path| fs::canonicalize(path).into_diagnostic()).transpose()?;
+    let mut selected = None;
+    for contract in contracts {
+        let relative = Path::new(&contract.physical_entry);
+        if relative.as_os_str().is_empty()
+            || relative.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
+        {
+            return Err(miette!("execution manifest has an invalid artifact path: '{}'", contract.physical_entry));
+        }
+        let artifact = fs::canonicalize(root.join(relative)).into_diagnostic()?;
+        if !artifact.starts_with(&root) || !artifact.is_file() {
+            return Err(miette!("execution manifest artifact is not a file inside the output directory"));
+        }
+        if requested.as_ref().is_none_or(|path| path == &artifact) {
+            if selected.is_some() {
+                return Err(miette!("artifact has multiple run contracts"));
+            }
+            selected = Some((artifact, contract));
         }
     }
-
-    let preferred = preferred_extensions(runner_target);
-    for extension in preferred {
-        if let Some(path) = files.iter().find(|path| has_extension(path, extension) && matches_project_name(path, project_name)).cloned() {
-            return Ok(path);
-        }
-    }
-
-    for extension in preferred {
-        if let Some(path) = files.iter().find(|path| has_extension(path, extension)).cloned() {
-            return Ok(path);
-        }
-    }
-
-    Err(miette!("no runnable artifact found in '{}' for target '{}'", output_dir.display(), runner_target))
+    selected.ok_or_else(|| miette!("explicit artifact is not listed by the current execution manifest"))
 }
 
 fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -601,48 +583,6 @@ fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
         }
     }
     Ok(files)
-}
-
-fn find_contract_artifact(files: &[PathBuf], physical_entry: &str) -> Option<PathBuf> {
-    if physical_entry.is_empty() {
-        return None;
-    }
-
-    for candidate in crate::bootstrap_entry_aliases(physical_entry).iter().chain(std::iter::once(&physical_entry)) {
-        if let Some(path) = files.iter().find_map(|path| {
-            let file_name = path.file_name()?.to_str()?;
-            let stem = path.file_stem()?.to_str()?;
-            if file_name.eq_ignore_ascii_case(candidate) || stem.eq_ignore_ascii_case(candidate) { Some(path.clone()) } else { None }
-        }) {
-            return Some(path);
-        }
-    }
-    None
-}
-
-fn preferred_extensions(target: RunnerFamily) -> &'static [&'static str] {
-    match target {
-        RunnerFamily::Clr => &["dll", "exe"],
-        RunnerFamily::Jvm => &["jar", "class"],
-        RunnerFamily::Node => &["mjs", "js", "wasm"],
-        RunnerFamily::Windows => &["exe"],
-        RunnerFamily::Wasi => &["wasi", "wasm"],
-        RunnerFamily::NyarVm => &["nyar"],
-    }
-}
-
-fn matches_project_name(path: &Path, project_name: &str) -> bool {
-    let Some(stem) = path.file_stem().and_then(|value| value.to_str())
-    else {
-        return false;
-    };
-    stem.eq_ignore_ascii_case(project_name)
-        || stem.replace('_', ".").eq_ignore_ascii_case(project_name)
-        || stem.replace('.', "_").eq_ignore_ascii_case(project_name)
-}
-
-fn has_extension(path: &Path, expected: &str) -> bool {
-    path.extension().and_then(|value| value.to_str()).is_some_and(|value| value.eq_ignore_ascii_case(expected))
 }
 
 fn shell_join(args: &[String]) -> String {
