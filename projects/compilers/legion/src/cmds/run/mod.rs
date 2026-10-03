@@ -20,6 +20,9 @@ use crate::{
     cmds::build::{BuildArgs, run as run_build},
 };
 
+mod artifact_selection;
+pub(crate) use artifact_selection::select_artifact;
+
 const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
 const HOST_SELECTION_FILE_NAME: &str = "host-selection.txt";
 /// 编译计划快照文件名，由构建流程写入，不属于交付产物。
@@ -211,7 +214,6 @@ impl RunContract {
     pub fn read_all_from_output_dir(output_dir: &Path) -> Result<Vec<Self>> {
         Ok(ExecutionManifest::read_from_output_dir(output_dir)?.map_or_else(Vec::new, |manifest| manifest.run_contracts))
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -346,7 +348,13 @@ fn plan_run_command(
     artifact_override: Option<&Path>,
 ) -> Result<RunCommand> {
     let runner_target = runner_target_for(canonical_target);
-    let (artifact, run_contract) = select_execution_artifact(output_dir, run_contracts, artifact_override)?;
+    let (artifact, contract_index) = select_artifact(
+        output_dir,
+        run_contracts.iter().map(|contract| contract.physical_entry.as_str()),
+        artifact_override,
+    )
+    .map_err(|error| miette!("{error}"))?;
+    let run_contract = &run_contracts[contract_index];
     let runner = resolve_runner(workspace, canonical_target, runner_target, cli_runner_overrides, Some(run_contract))?;
     let placeholders = build_placeholders(output_dir, &artifact, runner_target, Some(run_contract))?;
     let command = expand_placeholders(&runner.command, &placeholders);
@@ -532,41 +540,6 @@ fn expand_runner_args(args: &[String], placeholders: &BTreeMap<&'static str, Str
 
 fn expand_placeholders(template: &str, placeholders: &BTreeMap<&'static str, String>) -> String {
     placeholders.iter().fold(template.to_string(), |current, (key, value)| current.replace(&format!("{{{}}}", key), value))
-}
-
-fn select_execution_artifact<'contract>(
-    output_dir: &Path,
-    contracts: &'contract [RunContract],
-    artifact_override: Option<&Path>,
-) -> Result<(PathBuf, &'contract RunContract)> {
-    if contracts.is_empty() {
-        return Err(miette!("execution manifest has no run contracts"));
-    }
-    if artifact_override.is_none() && contracts.len() != 1 {
-        return Err(miette!("execution manifest has multiple run contracts; select one with --artifact"));
-    }
-    let root = fs::canonicalize(output_dir).into_diagnostic()?;
-    let requested = artifact_override.map(|path| fs::canonicalize(path).into_diagnostic()).transpose()?;
-    let mut selected = None;
-    for contract in contracts {
-        let relative = Path::new(&contract.physical_entry);
-        if relative.as_os_str().is_empty()
-            || relative.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
-        {
-            return Err(miette!("execution manifest has an invalid artifact path: '{}'", contract.physical_entry));
-        }
-        let artifact = fs::canonicalize(root.join(relative)).into_diagnostic()?;
-        if !artifact.starts_with(&root) || !artifact.is_file() {
-            return Err(miette!("execution manifest artifact is not a file inside the output directory"));
-        }
-        if requested.as_ref().is_none_or(|path| path == &artifact) {
-            if selected.is_some() {
-                return Err(miette!("artifact has multiple run contracts"));
-            }
-            selected = Some((artifact, contract));
-        }
-    }
-    selected.ok_or_else(|| miette!("explicit artifact is not listed by the current execution manifest"))
 }
 
 fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {

@@ -2,7 +2,6 @@
 
 use std::{
     collections::BTreeMap,
-    fs,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::Instant,
@@ -15,7 +14,7 @@ use nyar_language::{CanonicalTarget, RunnerFamily};
 use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 
 use crate::{
-    cmds::{build::compile_plan, report::TestResultEntry, run::{ExecutionManifest, RunContract}},
+    cmds::{build::compile_plan, report::TestResultEntry, run::{select_artifact, ExecutionManifest, RunContract}},
 };
 
 use super::{
@@ -304,15 +303,7 @@ pub fn resolve_external_test_artifact_path(session: &ExternalTestSession, functi
     if contracts.next().is_some() {
         return None;
     }
-    let relative = Path::new(&contract.physical_entry);
-    if relative.as_os_str().is_empty()
-        || relative.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
-    {
-        return None;
-    }
-    let root = fs::canonicalize(&session.output_dir).ok()?;
-    let artifact = fs::canonicalize(root.join(relative)).ok()?;
-    (artifact.starts_with(&root) && artifact.is_file()).then_some(artifact)
+    select_artifact(&session.output_dir, std::iter::once(contract.physical_entry.as_str()), None).ok().map(|(artifact, _)| artifact)
 }
 
 fn describe_runnable_artifacts(session: &ExternalTestSession) -> String {
