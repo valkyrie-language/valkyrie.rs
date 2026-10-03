@@ -2,15 +2,10 @@
 
 use std::{fs, path::Path};
 
-use emitter::{
-    FragmentSubmission, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView,
-    compile_frontend_bundle_with_bundled_backends,
-};
+use emitter::compile_frontend_bundle_with_bundled_backends;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
-    ArtifactPartitionPlan, CanonicalTarget, FrontendBuildOutput, ValkyrieCompiler, assemble_fragment,
-    nyar::{ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane},
-    plan_artifacts_from_build_output,
+    CompilerSourceGroup, CanonicalTarget, compile_source_groups_to_backend_bundle,
 };
 
 use crate::{
@@ -28,7 +23,6 @@ pub enum HostArtifactKind {
     /// Native executable.
     NativeExecutable,
 }
-
 /// Host compile report.
 #[derive(Debug, Clone)]
 pub struct HostCompileReport {
@@ -48,13 +42,22 @@ pub fn compile_v_bundle(
     target: &CanonicalTarget,
     backend: HostBackend,
 ) -> Result<HostCompileReport> {
-    let compiler = ValkyrieCompiler::default();
-    let build_output = compiler.compile_source_to_build_output(combined_v_source).map_err(|error| miette::miette!("{error}"))?;
+    let compiler = nyar_language::ValkyrieCompiler::default();
+    let source_groups = [CompilerSourceGroup {
+        dependency_key: module_name.to_owned(),
+        name: module_name.to_owned(),
+        source: combined_v_source.to_owned(),
+        direct_dependencies: Vec::new(),
+    }];
     let target_profile = target.to_profile(None);
-    let artifact_plan =
-        plan_artifacts_from_build_output(&build_output, target.clone(), ClrSuspendStrategy::default())
-            .map_err(|error| miette::miette!("frontend partition planning failed: {error:?}"))?;
-    let driver_bundle = VoaFrontendBuildAdapter::new(build_output, artifact_plan);
+    let driver_bundle = compile_source_groups_to_backend_bundle(
+        &compiler,
+        &source_groups,
+        target.arch.as_str(),
+        target.clone(),
+        nyar_language::nyar::ClrSuspendStrategy::default(),
+        emitter::nyar_backend_wasi::WasmPackageKind::Binary,
+    )?;
 
     fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
 
@@ -206,69 +209,4 @@ fn minimal_test_elf_shared_object() -> Vec<u8> {
         bytes[19] = 0;
         bytes
     })
-}
-
-struct VoaFrontendBuildAdapter {
-    build_output: FrontendBuildOutput,
-    artifact_plan: ArtifactPartitionPlan,
-}
-
-impl VoaFrontendBuildAdapter {
-    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan) -> Self {
-        Self { build_output, artifact_plan }
-    }
-}
-
-impl FrontendBuildBundle for VoaFrontendBuildAdapter {
-    fn planned_partitions(&self) -> &dyn PlannedArtifactPartitionsView {
-        self
-    }
-
-    fn submit_backend_input_for_partition(
-        &self,
-        partition_index: usize,
-        backend_family: TargetBackendFamily,
-        host_boundary: HostProjectionBoundary,
-        output_dir: &Path,
-        _lane: TargetLane,
-    ) -> Result<LoweredBackendInput> {
-        let fragment = assemble_fragment(&self.build_output, &self.artifact_plan, partition_index)
-            .map_err(|error| miette::miette!("{error}"))?;
-        let host_flavor = self.artifact_plan.target.to_profile(None).host_flavor;
-        LoweredBackendInput::from_assembled_fragment(
-            fragment,
-            backend_family,
-            host_boundary,
-            output_dir,
-            self.artifact_plan.partitions.get(partition_index).map(|partition| partition.lane).unwrap_or(TargetLane::Wasm),
-            self.artifact_plan.partitions.get(partition_index).map(|partition| partition.clr_suspend_strategy).unwrap_or_default(),
-            nyar::VmSuspendStrategy::default(),
-            &host_flavor,
-            emitter::nyar_backend_wasi::WasmPackageKind::Binary,
-        )
-        .map_err(|error| miette::miette!("{error}"))
-    }
-}
-
-impl PlannedArtifactPartitionsView for VoaFrontendBuildAdapter {
-    fn primary_partition_name(&self) -> Option<String> {
-        self.artifact_plan
-            .partitions
-            .iter()
-            .find(|partition| partition.name.ends_with("::functions"))
-            .map(|partition| partition.name.clone())
-            .or_else(|| self.artifact_plan.partitions.first().map(|partition| partition.name.clone()))
-    }
-
-    fn partition_count(&self) -> usize {
-        self.artifact_plan.partitions.len()
-    }
-
-    fn partition(&self, partition_index: usize) -> Option<&emitter::ArtifactPartition> {
-        self.artifact_plan.partitions.get(partition_index)
-    }
-
-    fn backend_requirement(&self, partition_index: usize) -> Option<nyar_language::nyar::PartitionBackendRequirement> {
-        self.artifact_plan.backend_requirement(partition_index)
-    }
 }

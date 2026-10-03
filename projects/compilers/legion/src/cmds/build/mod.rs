@@ -11,21 +11,13 @@ use std::{
 };
 
 use clap::Args;
-use emitter::{
-    DriverRunContract, FrontendBuildBundle, LoweredBackendInput, PlannedArtifactPartitionsView,
-    compile_frontend_bundle_with_bundled_backends,
-};
+use emitter::{DriverRunContract, compile_frontend_bundle_with_bundled_backends};
 use miette::{IntoDiagnostic, Report, Result, WrapErr, miette};
 use nyar_language::{
-    ArtifactKind, ArtifactPartitionPlan, ArtifactSet, CanonicalSpecification, CanonicalTarget, FrontendBuildOutput,
-    assemble_fragment,
-    nyar::{
-        ClrSuspendStrategy, HostProjectionBoundary, TargetBackendFamily, TargetLane, VmSuspendStrategy,
-    },
-    build_output_surface_counts, plan_artifacts_from_build_output,
+    ArtifactKind, ArtifactSet, CanonicalSpecification, CanonicalTarget, CompilerBuildBundle, compile_source_groups_to_backend_bundle,
+    nyar::ClrSuspendStrategy,
 };
 use serde::Serialize;
-use vcc_data::text::valkyrie::tgrammar::{TgIf, TgLoop, TgMatch, TgNode, parse_tgrammar_fragment};
 
 use crate::{
     cache::{
@@ -267,25 +259,26 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     else {
         plan.project.build_target.target.arch.as_str()
     };
-    let frontend = compile_source_snapshot(&plan.project.semantic_source_groups, arch, preprocess_templates)?;
+    let source_groups = compile_source_snapshot(&plan.project.semantic_source_groups)?;
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
     }
-    let build_output = frontend;
     let target_profile = plan.project.build_target.target.to_profile(None);
     let clr_suspend_strategy = ClrSuspendStrategy::from_runtime_async_flag(plan.project.build_target.runtime_async);
-    let artifact_plan = plan_artifacts_from_build_output(
-        &build_output,
+    let wasm_package_kind = wasm_package_kind_for_manifest(plan.project.artifact_kind);
+    let driver_bundle = compile_source_groups_to_backend_bundle(
+        &nyar_language::ValkyrieCompiler::default(),
+        &source_groups,
+        arch,
         plan.project.build_target.target.clone(),
         clr_suspend_strategy,
-    )
-    .map_err(|error| miette!(format!("前端分区规划失败: {error:?}")))?;
-    validate_project_artifact_contract(&build_output, &plan.project.build_target.target, plan.project.artifact_kind)?;
-    let driver_bundle = LegionFrontendBuildAdapter::new(build_output, artifact_plan, plan.project.artifact_kind);
+        wasm_package_kind,
+    )?;
+    validate_project_artifact_contract(&driver_bundle, &plan.project.build_target.target, plan.project.artifact_kind)?;
 
     if verbose {
-        println!("canonical functions: {}", driver_bundle.build_output.compiled_program().canonical().mir.functions.len());
-        println!("partitions: {}", driver_bundle.artifact_plan.partitions.len());
+        println!("compiler bundle: ready");
+        println!("partitions: {}", driver_bundle.partition_count());
     }
 
     fs::create_dir_all(&plan.output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", plan.output_dir.display()))?;
@@ -321,27 +314,15 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     Ok(report)
 }
 
-struct LegionFrontendBuildAdapter {
-    build_output: FrontendBuildOutput,
-    artifact_plan: ArtifactPartitionPlan,
-    artifact_kind: ProjectArtifactKind,
-}
-
-impl LegionFrontendBuildAdapter {
-    fn new(build_output: FrontendBuildOutput, artifact_plan: ArtifactPartitionPlan, artifact_kind: ProjectArtifactKind) -> Self {
-        Self { build_output, artifact_plan, artifact_kind }
-    }
-}
-
 fn validate_project_artifact_contract(
-    build_output: &FrontendBuildOutput,
+    build_bundle: &CompilerBuildBundle,
     target: &CanonicalTarget,
     artifact_kind: ProjectArtifactKind,
 ) -> Result<()> {
-    if target.to_profile(None).backend_family != TargetBackendFamily::Wasm {
+    if target.to_profile(None).backend_family != nyar_language::nyar::TargetBackendFamily::Wasm {
         return Ok(());
     }
-    let (export_count, entry_count) = build_output_surface_counts(build_output);
+    let (export_count, entry_count) = build_bundle.surface_counts();
     match artifact_kind {
         ProjectArtifactKind::Library => {
             if export_count == 0 {
@@ -361,70 +342,6 @@ fn wasm_package_kind_for_manifest(artifact_kind: ProjectArtifactKind) -> emitter
     match artifact_kind {
         ProjectArtifactKind::Library => emitter::nyar_backend_wasi::WasmPackageKind::Library,
         ProjectArtifactKind::Binary => emitter::nyar_backend_wasi::WasmPackageKind::Binary,
-    }
-}
-
-impl FrontendBuildBundle for LegionFrontendBuildAdapter {
-    fn planned_partitions(&self) -> &dyn PlannedArtifactPartitionsView {
-        self
-    }
-
-    fn wasm_package_kind(&self) -> emitter::nyar_backend_wasi::WasmPackageKind {
-        wasm_package_kind_for_manifest(self.artifact_kind)
-    }
-
-    fn submit_backend_input_for_partition(
-        &self,
-        partition_index: usize,
-        backend_family: TargetBackendFamily,
-        host_boundary: HostProjectionBoundary,
-        output_dir: &Path,
-        _lane: TargetLane,
-    ) -> Result<LoweredBackendInput> {
-        let fragment = assemble_fragment(&self.build_output, &self.artifact_plan, partition_index)?;
-        let host_flavor = self.artifact_plan.target.to_profile(None).host_flavor;
-        let result = LoweredBackendInput::from_assembled_fragment(
-            fragment,
-            backend_family,
-            host_boundary,
-            output_dir,
-            self.artifact_plan.partitions.get(partition_index).map(|partition| partition.lane).unwrap_or(TargetLane::Clr),
-            self.artifact_plan.partitions.get(partition_index).map(|partition| partition.clr_suspend_strategy).unwrap_or_default(),
-            VmSuspendStrategy::default(),
-            &host_flavor,
-            wasm_package_kind_for_manifest(self.artifact_kind),
-        );
-        result
-    }
-}
-
-impl PlannedArtifactPartitionsView for LegionFrontendBuildAdapter {
-    fn primary_partition_name(&self) -> Option<String> {
-        self.artifact_plan
-            .partitions
-            .iter()
-            .find(|partition| partition.entry_operation.is_some())
-            .map(|partition| partition.name.clone())
-            .or_else(|| {
-                self.artifact_plan
-                    .partitions
-                    .iter()
-                    .find(|partition| partition.name.ends_with("::functions"))
-                    .map(|partition| partition.name.clone())
-            })
-            .or_else(|| self.artifact_plan.partitions.first().map(|partition| partition.name.clone()))
-    }
-
-    fn partition_count(&self) -> usize {
-        self.artifact_plan.partitions.len()
-    }
-
-    fn partition(&self, partition_index: usize) -> Option<&emitter::ArtifactPartition> {
-        self.artifact_plan.partitions.get(partition_index)
-    }
-
-    fn backend_requirement(&self, partition_index: usize) -> Option<nyar_language::nyar::PartitionBackendRequirement> {
-        self.artifact_plan.backend_requirement(partition_index)
     }
 }
 
@@ -533,78 +450,6 @@ fn remove_host_selection_spec(output_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// 预处理源码中的模板指令，根据目标架构选择正确的分支。
-///
-/// 处理 `<% match arch %>` … `<% end %>` 块：用 T-Grammar 解析后按目标架构
-/// 选择 `<% case "xxx" %>` 或 `<% else %>` 分支，递归展开嵌套块。
-pub(crate) fn preprocess_templates(source: &str, arch: &str) -> String {
-    let mut result = String::with_capacity(source.len());
-    let mut pos = 0;
-
-    while pos < source.len() {
-        let Some(rel) = source[pos..].find("<% match ")
-        else {
-            result.push_str(&source[pos..]);
-            break;
-        };
-        let abs = pos + rel;
-        result.push_str(&source[pos..abs]);
-
-        match parse_tgrammar_fragment(&source[abs..]) {
-            Ok((nodes, consumed)) if nodes.len() == 1 => {
-                let fragment = &source[abs..abs + consumed];
-                if let TgNode::Match(match_node) = &nodes[0]
-                    && match_node.scrutinee.trim() == "arch"
-                {
-                    let selected = select_arch_match_body(match_node, arch);
-                    result.push_str(&preprocess_templates(&tg_root_to_source(selected, fragment), arch));
-                }
-                else {
-                    result.push_str(fragment);
-                }
-                pos = abs + consumed;
-            }
-            _ => {
-                result.push_str(&source[abs..abs + "<%".len()]);
-                pos = abs + "<%".len();
-            }
-        }
-    }
-
-    result
-}
-
-fn select_arch_match_body<'a>(match_node: &'a TgMatch, arch: &str) -> &'a [TgNode] {
-    for arm in &match_node.arms {
-        if arm.pattern.as_deref().map(normalize_case_pattern).as_deref() == Some(arch) {
-            return &arm.body;
-        }
-    }
-    match_node.arms.iter().find(|arm| arm.pattern.is_none()).map(|arm| arm.body.as_slice()).unwrap_or(&[])
-}
-
-fn normalize_case_pattern(pattern: &str) -> String {
-    let pattern = pattern.trim();
-    if (pattern.starts_with('"') && pattern.ends_with('"')) || (pattern.starts_with('\'') && pattern.ends_with('\'')) {
-        pattern[1..pattern.len().saturating_sub(1)].to_string()
-    }
-    else {
-        pattern.to_string()
-    }
-}
-
-fn tg_root_to_source(nodes: &[TgNode], fragment: &str) -> String {
-    nodes.iter().map(|node| node_to_source(node, fragment)).collect()
-}
-
-fn node_to_source(node: &TgNode, fragment: &str) -> String {
-    let span = match node {
-        TgNode::Text { span, .. } | TgNode::Stmt { span, .. } | TgNode::Comment { span, .. } => span.clone(),
-        TgNode::If(TgIf { span, .. }) | TgNode::Loop(TgLoop { span, .. }) | TgNode::Match(TgMatch { span, .. }) => span.clone(),
-    };
-    fragment[span].to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -665,40 +510,6 @@ mod tests {
             capabilities: Vec::new(),
             runtime_requirements: Vec::new(),
         }
-    }
-
-    #[test]
-    fn preprocess_templates_selects_arch_branch_with_unified_end() {
-        let source = r#"
-<% match arch %>
-<% case "clr" %>
-clr_body()
-<% case "jvm" %>
-jvm_body()
-<% else %>
-default_body()
-<% end %>
-"#;
-        assert!(preprocess_templates(source, "clr").contains("clr_body()"));
-        assert!(!preprocess_templates(source, "clr").contains("jvm_body()"));
-        assert!(preprocess_templates(source, "wasm").contains("default_body()"));
-    }
-
-    #[test]
-    fn preprocess_templates_accepts_end_match_label() {
-        let source = r#"
-<% match arch %>
-<% case "clr" %>
-<% case "wasm" %>
-wasm_body()
-<% else %>
-fallback()
-<% end match %>
-"#;
-        let expanded = preprocess_templates(source, "wasm");
-        assert!(expanded.contains("wasm_body()"));
-        assert!(!expanded.contains("<%"));
-        assert!(!expanded.contains("fallback()"));
     }
 
     #[test]
