@@ -5,10 +5,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use legion::{
-    CanonicalTarget,
-    legion_workspace::planner::{BuildRequest, WorkspaceResolver, ProjectResolutionMode, canonical_target},
-};
+use legion::CanonicalTarget;
+use legion_workspace::planner::{BuildRequest, WorkspaceResolver, ProjectResolutionMode, canonical_target};
 use miette::{GraphicalReportHandler, Report};
 use support::{
     create_local_package_project_with_manifest, create_nested_workspace_member_project_with_manifest, create_smoke_project_with_build,
@@ -113,7 +111,7 @@ fn renders_pretty_report_for_missing_workspace() {
 
     GraphicalReportHandler::new().with_links(false).with_urls(false).render_report(&mut rendered, report.as_ref()).unwrap();
 
-    assert!(rendered.contains("legion_workspace::planner::missing_workspace"));
+    assert!(rendered.contains("legion::planner::missing_workspace"));
     assert!(rendered.contains("cannot locate `legions.von`"));
     assert!(rendered.contains("请在工作区根目录放置 `legions.von`"));
 }
@@ -398,7 +396,7 @@ fn reports_registry_dependency_without_version() {
     let report = Report::new(error);
     let mut rendered = String::new();
     GraphicalReportHandler::new().with_links(false).with_urls(false).render_report(&mut rendered, report.as_ref()).unwrap();
-    assert!(rendered.contains("legion_workspace::planner::registry_dependency_missing_version"));
+    assert!(rendered.contains("legion::planner::registry_dependency_missing_version"));
 }
 
 #[test]
@@ -443,7 +441,7 @@ fn reports_forced_workspace_dependency_missing() {
     let report = Report::new(error);
     let mut rendered = String::new();
     GraphicalReportHandler::new().with_links(false).with_urls(false).render_report(&mut rendered, report.as_ref()).unwrap();
-    assert!(rendered.contains("legion_workspace::planner::forced_workspace_dependency_missing"));
+    assert!(rendered.contains("legion::planner::forced_workspace_dependency_missing"));
 }
 
 #[test]
