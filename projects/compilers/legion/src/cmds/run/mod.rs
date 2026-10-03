@@ -1,3 +1,5 @@
+use legion_workspace::manifest::RunnerBinding;
+use legion_workspace::planner::{BuildPlan, BuildRequest, WorkspaceResolver};
 use std::{
     collections::BTreeMap,
     ffi::OsString,
@@ -16,8 +18,6 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     cmds::build::{BuildArgs, run as run_build},
-    manifest::RunnerBinding,
-    planner::{BuildPlan, BuildRequest, LegionWorkspace},
 };
 
 const EXECUTION_MANIFEST_FILE_NAME: &str = "run-contracts.txt";
@@ -243,7 +243,7 @@ struct RunCommand {
 /// 执行 `legion run`。
 pub fn run(args: &RunArgs) -> Result<ExitCode> {
     let workspace =
-        if args.workspace { LegionWorkspace::discover(&args.project_dir)? } else { LegionWorkspace::discover_for_project(&args.project_dir)? };
+        if args.workspace { WorkspaceResolver::discover(&args.project_dir)? } else { WorkspaceResolver::discover_for_project(&args.project_dir)? };
     let request = BuildRequest { project_dir: args.project_dir.clone(), target: args.target.clone(), output_dir: args.output_dir.clone() };
     let plan = workspace.build_plan(&request)?;
 
@@ -350,7 +350,7 @@ mod workload_forward_tests {
 }
 
 fn plan_run_command(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     output_dir: &Path,
     project_name: &str,
     canonical_target: &CanonicalTarget,
@@ -410,7 +410,7 @@ fn ensure_execution_manifest(args: &RunArgs, plan: &BuildPlan) -> Result<Executi
 }
 
 fn resolve_runner(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     canonical_target: &CanonicalTarget,
     runner_target: RunnerFamily,
     cli_runner_overrides: &[String],

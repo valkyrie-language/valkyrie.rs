@@ -16,7 +16,8 @@ use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde_json::json;
 
-use crate::{cmds::project_input::resolve_project_path, planner::LegionWorkspace, script};
+use crate::cmds::project_input::resolve_project_path;
+use legion_workspace::{planner::WorkspaceResolver, script};
 
 pub use discover::discover_sections;
 
@@ -40,7 +41,7 @@ pub struct DocArgs {
 /// 执行 `legion doc`。
 pub fn run(args: &DocArgs) -> Result<ExitCode> {
     let output_dir = if args.workspace {
-        let workspace = LegionWorkspace::discover(&args.project_dir)?;
+        let workspace = WorkspaceResolver::discover(&args.project_dir)?;
         let output_dir = args.output_dir.clone().unwrap_or_else(|| workspace.root_dir.join("dist/legion-document"));
         run_workspace_doc(&workspace, &output_dir, args.verbose)?;
         output_dir
@@ -62,7 +63,7 @@ pub fn run(args: &DocArgs) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_workspace_doc(workspace: &LegionWorkspace, output_dir: &Path, verbose: bool) -> Result<()> {
+fn run_workspace_doc(workspace: &WorkspaceResolver, output_dir: &Path, verbose: bool) -> Result<()> {
     let members = workspace.member_manifest_dirs();
     if members.is_empty() {
         return Err(miette::miette!("workspace 中无成员项目"));

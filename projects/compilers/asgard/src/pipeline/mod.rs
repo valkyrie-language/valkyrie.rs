@@ -12,10 +12,10 @@ use std::{
 use crate::{
     awsl::{LoweredComponent, LoweringOptions, ThemeRegistryOptions, compile_awsl_source, theme_registry_pass},
     codegen::{
-        IslandPackageOptions, build_awsl_host_source, build_awsl_mp_source, build_awsl_wasm_source, combine_wasm_sources,
+        IslandPackageOptions, build_awsl_host_source, build_awsl_mp_source, build_awsl_wasm_source,
         embed_asgard_ui_section, encode_mobile_ui_package, generate_mp_runtime, maybe_build_tailwind_css, package_browser_islands,
     },
-    compile::{HostArtifactKind, compile_v_bundle},
+    compile::{HostArtifactKind, append_generated_source, compile_v_bundle, resolve_project_source_groups},
     config::{UiConfig, VoaConfig},
     debug_sidecar::{should_emit_render_ir_sidecar, write_render_ir_sidecar},
     host::HostPlatform,
@@ -31,7 +31,7 @@ use crate::{
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{CanonicalAbi, CanonicalArch, CanonicalSpecification, CanonicalTarget, CanonicalVendor};
 
-pub use discover::{DiscoveredAwsFile, DiscoveredAwslFile, DiscoveredSources, DiscoveredVFile, discover_sources};
+pub use discover::{DiscoveredAwsFile, DiscoveredAwslFile, DiscoveredSources, discover_sources};
 pub use island_kind::{IslandKind, awsl_island_kind};
 
 /// 编译选项。
@@ -111,13 +111,13 @@ pub fn compile_voa_project(options: &CompileOptions) -> Result<CompileReport> {
         else {
             build_awsl_wasm_source(&components)
         };
-        let project_v = partition::combine_v_sources(&sources, "")?;
-        let combined_v = combine_wasm_sources(&project_v, &awsl_v);
         let target = match options.target.clone() {
             Some(target) => target,
             None => parse_target(&config.target)?,
         };
-        let report = compile_wasm_bundle(&combined_v, &output_dir, &module_name, &target)
+        let resolved = resolve_project_source_groups(&options.project_dir, &target)?;
+        let source_groups = append_generated_source(&resolved, &awsl_v)?;
+        let report = compile_wasm_bundle(&source_groups, &output_dir, &module_name, &target)
             .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?;
         copy_wasm_artifacts_to_dist(&output_dir, &report)?;
         true
@@ -140,32 +140,32 @@ pub fn compile_voa_project(options: &CompileOptions) -> Result<CompileReport> {
             (count, false, None)
         }
         HostBackend::AndroidCompose => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_android_dist(&components, &output_dir, &module_name, &logic)?;
             (count, true, Some(kind))
         }
         HostBackend::IosSwiftUi => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_ios_dist(&components, &output_dir, &module_name, &logic)?;
             (count, true, Some(kind))
         }
         HostBackend::WindowsNative => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_desktop_dist(&components, &output_dir, &module_name, "windows", &logic)?;
             (count, true, Some(kind))
         }
         HostBackend::LinuxNative => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_desktop_dist(&components, &output_dir, &module_name, "linux", &logic)?;
             (count, true, Some(kind))
         }
         HostBackend::MacOsNative => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_desktop_dist(&components, &output_dir, &module_name, "macos", &logic)?;
             (count, true, Some(kind))
         }
         HostBackend::Terminal => {
-            let (logic, kind) = compile_host_logic(&sources, &components, &config, options, &output_dir, &module_name, backend)?;
+            let (logic, kind) = compile_host_logic(&components, &config, options, &output_dir, &module_name, backend)?;
             let count = package_terminal_dist(&components, &output_dir, &module_name, &logic)?;
             (count, true, Some(kind))
         }
@@ -343,7 +343,6 @@ fn parse_target(target: &str) -> Result<CanonicalTarget> {
 }
 
 fn compile_host_logic(
-    sources: &DiscoveredSources,
     components: &[LoweredComponent],
     config: &VoaConfig,
     options: &CompileOptions,
@@ -352,16 +351,16 @@ fn compile_host_logic(
     backend: HostBackend,
 ) -> Result<(Vec<u8>, HostArtifactKind)> {
     let awsl_v = build_awsl_host_source(components);
-    let project_v = partition::combine_v_sources(sources, "").wrap_err_with(|| format!("合并 V 源失败 (platform={})", config.platform))?;
-    let combined_v = combine_wasm_sources(&project_v, &awsl_v);
     let target = match options.target.clone() {
         Some(target) => target,
         None => parse_target(&config.target)?,
     };
+    let resolved = resolve_project_source_groups(&options.project_dir, &target)?;
+    let source_groups = append_generated_source(&resolved, &awsl_v)?;
     let target_str = format!("{target:?}");
     let backend_name = format!("{backend:?}");
     let scratch = output_dir.join(".asgard-build");
-    let report = compile_v_bundle(&combined_v, &scratch, module_name, &target, backend).wrap_err_with(|| {
+    let report = compile_v_bundle(&source_groups, &scratch, module_name, &target, backend).wrap_err_with(|| {
         format!(
             "宿主编译失败: platform={}, target={}, backend={}. \
              请检查 asgard.config.v target 与 legion.von 对齐，并确认 legion 后端可用。",

@@ -10,6 +10,7 @@ use vcc_data::text::awsl::widget_name_from_stem;
 use crate::{
     awsl::{LoweringOptions, compile_awsl_source},
     codegen::{IslandPackageOptions, asgard_boot_script_tag, asgard_boot_stylesheet_tag, build_awsl_wasm_source, package_browser_islands},
+    compile::{append_generated_source, resolve_project_source_groups},
     ssg::project::{read_project_source, valkyrie_v_roots},
     wasm::{compile_wasm_bundle, copy_wasm_artifacts_to_dist},
 };
@@ -56,21 +57,12 @@ pub fn emit_report_chart_islands(
 
     let wasm_stem = module_stem.replace('.', "-");
     let awsl_v = build_awsl_wasm_source(&components);
-    let wasm_built = match compile_wasm_bundle(&awsl_v, output_dir, module_stem, &CanonicalTarget::wasm()) {
-        Ok(report) => {
-            if let Err(error) = copy_wasm_artifacts_to_dist(output_dir, &report) {
-                eprintln!("asgard report: copy wasm artifacts failed: {error}");
-                false
-            }
-            else {
-                true
-            }
-        }
-        Err(error) => {
-            eprintln!("asgard report: wasm compile deferred ({error}); glue/boot still written");
-            false
-        }
-    };
+    let resolved = resolve_project_source_groups(project_dir, &CanonicalTarget::wasm())?;
+    let source_groups = append_generated_source(&resolved, &awsl_v)?;
+    let report = compile_wasm_bundle(&source_groups, output_dir, module_stem, &CanonicalTarget::wasm())
+        .wrap_err("报告图表岛 WASM 编译失败")?;
+    copy_wasm_artifacts_to_dist(output_dir, &report).wrap_err("报告图表岛 WASM 产物复制失败")?;
+    let wasm_built = true;
 
     let opts = IslandPackageOptions {
         module_stem: module_stem.to_string(),

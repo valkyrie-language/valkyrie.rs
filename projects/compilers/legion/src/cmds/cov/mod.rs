@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
 };
+use legion_workspace::planner::{WorkspaceResolver, collect_project_v_files};
 
 use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr, miette};
@@ -16,7 +17,6 @@ use crate::{
         project_input::resolve_project_path,
         report::{CoverageFeatureEntry, CoverageReport, atomic_write_all_text, finish_standalone_report, render_coverage_report},
     },
-    planner::{LegionWorkspace, collect_project_v_files},
     script,
 };
 
@@ -66,7 +66,7 @@ pub struct CovArgs {
 /// 执行 `legion cov` / `legion coverage`。
 pub fn run(args: &CovArgs) -> Result<ExitCode> {
     let project_input = resolve_project_path(&args.project_dir)?;
-    let workspace = LegionWorkspace::discover_for_project(&project_input).ok();
+    let workspace = WorkspaceResolver::discover_for_project(&project_input).ok();
     let scan_root = if script::is_script_path(&project_input) {
         project_input.parent().map(Path::to_path_buf).unwrap_or_else(|| project_input.clone())
     }

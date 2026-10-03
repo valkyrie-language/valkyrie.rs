@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use miette::{Result, miette};
 
-use crate::script::is_script_path;
+use legion_workspace::script::is_script_path;
 
 /// 接受项目目录、`legion.von` 旁的单脚本目录，或内嵌清单的 `.v` 文件。
 pub fn resolve_project_path(input: &Path) -> Result<PathBuf> {

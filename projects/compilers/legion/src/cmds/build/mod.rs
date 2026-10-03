@@ -9,6 +9,9 @@ use std::{
     sync::{Arc, mpsc},
     thread,
 };
+use legion_workspace::manifest::{ProjectArtifactKind, ProjectManifest};
+use legion_workspace::planner::{BuildPlan, BuildRequest, WorkspaceResolver};
+use legion_workspace::source_snapshot::compile_source_snapshot;
 
 use clap::Args;
 use emitter::DriverRunContract;
@@ -28,10 +31,7 @@ use crate::{
         run::{ExecutionManifest, RunContract},
         source_hygiene,
     },
-    manifest::{ProjectArtifactKind, ProjectManifest},
-    planner::{BuildPlan, BuildRequest, LegionWorkspace},
     script,
-    source_snapshot::compile_source_snapshot,
     unity_export, write_von_indented,
 };
 
@@ -62,7 +62,7 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
     }
 
     let project_input = resolve_project_path(&args.project_dir)?;
-    let workspace = LegionWorkspace::discover_for_project(&project_input)?;
+    let workspace = WorkspaceResolver::discover_for_project(&project_input)?;
     if workspace.is_workspace_only_root(&project_input) {
         return run_workspace_members_in_parallel(args);
     }
@@ -124,7 +124,7 @@ pub fn run(args: &BuildArgs) -> Result<ExitCode> {
 }
 
 fn run_workspace_members_in_parallel(args: &BuildArgs) -> Result<ExitCode> {
-    let workspace = LegionWorkspace::discover(&args.project_dir)?;
+    let workspace = WorkspaceResolver::discover(&args.project_dir)?;
     let requested_target = args.target.clone();
     let members = workspace
         .member_manifest_dirs()
@@ -134,7 +134,7 @@ fn run_workspace_members_in_parallel(args: &BuildArgs) -> Result<ExitCode> {
                 BuildRequest { project_dir: project_dir.clone(), target: requested_target.clone(), output_dir: args.output_dir.clone() };
             match workspace.build_plan(&request) {
                 Ok(_) => true,
-                Err(crate::planner::PlannerError::MissingBuildTarget { .. }) => {
+                Err(legion_workspace::planner::PlannerError::MissingBuildTarget { .. }) => {
                     eprintln!("workspace: skipping {} (target not declared)", project_dir.display());
                     false
                 }
@@ -369,7 +369,7 @@ fn materialize_node_bootstrap_aliases(output_dir: &Path, target: &nyar_language:
     Ok(())
 }
 
-fn write_execution_manifest(plan: &crate::planner::BuildPlan, specs: &[DriverRunContract]) -> Result<()> {
+fn write_execution_manifest(plan: &legion_workspace::planner::BuildPlan, specs: &[DriverRunContract]) -> Result<()> {
     let contracts = specs
         .iter()
         .map(|spec| RunContract {
@@ -390,7 +390,7 @@ struct HostSelectionEntry {
     line: usize,
 }
 
-fn write_host_selection_spec(output_dir: &Path, providers: &[crate::planner::PlannedHostProvider]) -> Result<()> {
+fn write_host_selection_spec(output_dir: &Path, providers: &[legion_workspace::planner::PlannedHostProvider]) -> Result<()> {
     let output_path = output_dir.join("host-selection.txt");
     let entries: Vec<HostSelectionEntry> = providers
         .iter()

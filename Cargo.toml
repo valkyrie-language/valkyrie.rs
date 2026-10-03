@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "projects/compilers/legion",
+    "projects/compilers/legion-workspace",
     "projects/compilers/vcc-data",
     "projects/compilers/vcc-napi",
     "projects/compilers/vcc-wasm",
@@ -35,6 +36,7 @@ nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch 
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
+legion-workspace = { path = "projects/compilers/legion-workspace" }
 nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev", package = "nyar-emitter" }
 

@@ -1,6 +1,8 @@
 //! Unity `build_plugin` 导出：将 MSIL 产物复制到 `build/unity/msil` 并写入 `valkyrie-export.json`。
 
 use std::{fs, path::Path};
+use legion_workspace::manifest::{BuildPluginSpec, ProjectManifest};
+use legion_workspace::planner::BuildPlan;
 
 use emitter::DriverCompileReport;
 use miette::{IntoDiagnostic, Result, WrapErr, miette};
@@ -9,8 +11,6 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    manifest::{BuildPluginSpec, ProjectManifest},
-    planner::BuildPlan,
 };
 
 #[derive(Debug, Serialize)]

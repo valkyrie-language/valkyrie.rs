@@ -14,6 +14,7 @@ legacy-lanes = ["nyar-vm-lane"]
 legacy-lanes-clr-jvm-native = ["nyar-vm-lane", "emitter/legacy-lanes-clr-jvm-native"]
 
 [dependencies]
+legion-workspace = { workspace = true }
 clap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true }

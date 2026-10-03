@@ -376,10 +376,10 @@ fn parses_git_and_path_dependencies() {
     "#;
     let manifest = ProjectManifest::parse(source).unwrap();
     let std = manifest.dependencies.get("std").unwrap();
-    assert_eq!(std.source_preference(), legion::manifest::DependencySourcePreference::Path);
+    assert_eq!(std.source_preference(), legion_workspace::manifest::DependencySourcePreference::Path);
     assert_eq!(std.path_hint(), Some("../valkyrie.v/projects/std"));
     let core = manifest.dependencies.get("core").unwrap();
-    assert_eq!(core.source_preference(), legion::manifest::DependencySourcePreference::Git);
+    assert_eq!(core.source_preference(), legion_workspace::manifest::DependencySourcePreference::Git);
     assert_eq!(core.git_url(), Some("https://github.com/valkyrie-language/valkyrie.v.git"));
     assert_eq!(core.git_ref_hint(), Some("main"));
     assert_eq!(core.path_hint(), Some("projects/core"));

@@ -1,7 +1,7 @@
 mod support;
 
 use legion::{
-    CanonicalTarget, LegionWorkspace,
+    CanonicalTarget, WorkspaceResolver,
     cache::{CompilationCache, cache_root_for, compute_artifact_hash, load_cached_build, store_cached_build},
     cmds::{
         build::{BuildArgs, run},
@@ -178,7 +178,7 @@ fn second_build_hits_artifact_set_cache() {
     assert_eq!(run(&args).unwrap(), ExitCode::SUCCESS);
     assert!(output_dir.join("main.exe").exists());
 
-    let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
         .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),
@@ -225,7 +225,7 @@ fn compile_plan_caches_execution_manifest_in_artifact_bundle() {
     assert_eq!(run(&args).unwrap(), ExitCode::SUCCESS);
     assert!(output_dir.join("run-contracts.txt").exists());
 
-    let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
         .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),
@@ -267,7 +267,7 @@ fn second_build_hits_semantics_when_artifact_set_poisoned() {
     };
     assert_eq!(run(&args).unwrap(), ExitCode::SUCCESS);
 
-    let workspace = LegionWorkspace::discover_for_project(&fixture.project_dir).unwrap();
+    let workspace = WorkspaceResolver::discover_for_project(&fixture.project_dir).unwrap();
     let (plan, _) = workspace
         .build_plan(&legion::BuildRequest {
             project_dir: fixture.project_dir.clone(),

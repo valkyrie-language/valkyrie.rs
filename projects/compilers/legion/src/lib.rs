@@ -5,10 +5,6 @@ pub mod cache;
 pub mod cli;
 pub mod cmds;
 pub mod forward;
-pub mod manifest;
-pub mod planner;
-pub mod script;
-mod source_snapshot;
 pub mod unity_export;
 
 pub use artifact_formats::{artifact_format_from_extension, artifact_format_slug, artifact_formats_for_publish_format};
@@ -16,7 +12,7 @@ pub use cmds::{
     doc::generate_for_project,
     spy::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, run as run_spy},
 };
-pub use manifest::{
+pub use legion_workspace::{
     AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectArtifactKind, ProjectManifest,
     PublishTargetSpec, RunnerBinding, WorkspaceDefaults, WorkspaceManifest,
 };
@@ -52,9 +48,10 @@ pub use nyar_language::{
     EntryPolicy, PublishFormat, RunnerFamily, RunnerSelector, TargetHostKind, TargetMode, TargetProfile, WrapStrategy,
     formatter::{to_string as write_von, to_string_indented as write_von_indented},
 };
-pub use planner::{
-    BuildPlan, BuildRequest, LegionWorkspace, PlannedDependency, PlannedHostContract, PlannedHostProvider, PlannedProject,
-    PlannedSemanticSourceGroup, collect_project_root_v_files, collect_project_v_files, collect_test_build_sources, collect_test_v_files,
-    project_uses_single_script_layout,
+pub use legion_workspace::planner::{
+    BuildPlan, BuildRequest, PlannedDependency, PlannedHostContract, PlannedHostProvider, PlannedProject,
+    PlannedSemanticSourceGroup, WorkspaceResolver, collect_project_root_v_files, collect_project_v_files,
+    collect_test_build_sources, collect_test_v_files, project_uses_single_script_layout,
 };
+pub use legion_workspace::script;
 pub use vcc_data::text::von::{VonError, VonParseError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};

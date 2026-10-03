@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
 };
+use legion_workspace::planner::WorkspaceResolver;
 
 use clap::Args;
 use miette::{Result, miette};
@@ -14,7 +15,6 @@ use crate::{
         report::{TestResultEntry, finish_standalone_report, render_test_report},
         test_engine::{resolve_test_targets, run_tests_for_project},
     },
-    planner::LegionWorkspace,
 };
 
 /// `legion test` 命令参数。
@@ -44,7 +44,7 @@ pub struct TestArgs {
 pub fn run(args: &TestArgs) -> Result<ExitCode> {
     let project_dir = resolve_project_path(&args.project_dir)?;
     let targets = resolve_test_targets(args.target.as_deref());
-    let workspace = LegionWorkspace::discover_for_project(&project_dir)?;
+    let workspace = WorkspaceResolver::discover_for_project(&project_dir)?;
 
     let (passed, failed, skipped, results) = if is_workspace_root(&project_dir, &workspace) {
         run_workspace_tests(&workspace, &project_dir, args.filter.as_deref(), &targets, &args.runner, args.verbose)
@@ -73,7 +73,7 @@ pub fn run(args: &TestArgs) -> Result<ExitCode> {
 }
 
 fn run_workspace_tests(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     workspace_dir: &Path,
     filter: Option<&str>,
     targets: &[String],
@@ -113,7 +113,7 @@ fn run_workspace_tests(
     (total_passed, total_failed, total_skipped, all_results)
 }
 
-fn is_workspace_root(project_dir: &Path, workspace: &LegionWorkspace) -> bool {
+fn is_workspace_root(project_dir: &Path, workspace: &WorkspaceResolver) -> bool {
     workspace.workspace_manifest.is_some() && same_path(project_dir, &workspace.root_dir)
 }
 

@@ -1,0 +1,17 @@
+[package]
+name = "legion-workspace"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+miette = { workspace = true, features = ["fancy"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+vcc-data = { workspace = true }
+nyar-language = { workspace = true, features = ["serde"] }
+nyar-package-manager = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

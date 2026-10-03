@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use miette::Result;
-use nyar_language::CanonicalTarget;
+use nyar_language::{CanonicalTarget, CompilerSourceGroup};
 
 use crate::{
     compile::{HostArtifactKind, compile_v_bundle},
@@ -19,14 +19,14 @@ pub struct WasmCompileReport {
     pub glue_filename: String,
 }
 
-/// 将合并后的 V 源码编译为 WASM + glue。
+/// 将已解析的源码组编译为 WASM + glue。
 pub fn compile_wasm_bundle(
-    combined_v_source: &str,
+    source_groups: &[CompilerSourceGroup],
     output_dir: &Path,
     module_name: &str,
     target: &CanonicalTarget,
 ) -> Result<WasmCompileReport> {
-    let report = compile_v_bundle(combined_v_source, output_dir, module_name, target, HostBackend::BrowserDom)?;
+    let report = compile_v_bundle(source_groups, output_dir, module_name, target, HostBackend::BrowserDom)?;
     if report.kind != HostArtifactKind::Wasm {
         return Err(miette::miette!("预期 WASM 制品"));
     }

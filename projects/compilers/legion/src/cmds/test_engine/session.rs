@@ -7,6 +7,8 @@ use std::{
     process::{Command, Stdio},
     time::Instant,
 };
+use legion_workspace::manifest::RunnerBinding;
+use legion_workspace::planner::{BuildRequest, WorkspaceResolver};
 
 use miette::{Result, miette};
 use nyar_language::{CanonicalTarget, RunnerFamily};
@@ -14,8 +16,6 @@ use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily a
 
 use crate::{
     cmds::{build::compile_plan, report::TestResultEntry},
-    manifest::RunnerBinding,
-    planner::{BuildRequest, LegionWorkspace},
 };
 
 use super::{
@@ -42,7 +42,7 @@ pub struct ExternalTestSession {
 
 /// 编译 target 测试会话（含 legion）。
 pub fn compile_external_test_session(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     project_dir: &Path,
     target_label: &str,
 ) -> Result<ExternalTestSession, String> {
@@ -74,7 +74,7 @@ pub fn run_legion_compile_gate_test(session: &ExternalTestSession, function_name
 
 /// 在外部会话中执行单个测试函数。
 pub fn run_external_test_in_session(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     session: &ExternalTestSession,
     function_name: &str,
     cli_runners: &[String],
@@ -137,7 +137,7 @@ pub fn run_external_test_in_session(
 
 /// 为项目在多 target 上运行全部测试。
 pub fn run_tests_for_project(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     project_dir: &Path,
     filter: Option<&str>,
     targets: &[String],
@@ -254,7 +254,7 @@ pub fn run_tests_for_project(
 
 /// 为项目在多 target 上运行基准测试。
 pub fn bench_project(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     project_dir: &Path,
     project_name: &str,
     runs: usize,
@@ -467,7 +467,7 @@ fn runner_family_for_label(label: &str) -> RunnerFamily {
 }
 
 fn resolve_runner_template(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     canonical_target: &CanonicalTarget,
     runner_target: RunnerFamily,
     cli_runner_overrides: &[String],

@@ -2,10 +2,9 @@
 
 use std::{fs, path::Path};
 
+use legion_workspace::{compile_source_snapshot, planner::{BuildRequest, WorkspaceResolver}};
 use miette::{IntoDiagnostic, Result, WrapErr};
-use nyar_language::{
-    CompilerSourceGroup, CanonicalTarget, compile_source_groups_to_artifacts,
-};
+use nyar_language::{compile_source_groups_to_artifacts, CanonicalTarget, CompilerSourceGroup};
 
 use crate::{
     host_backend::HostBackend,
@@ -33,21 +32,52 @@ pub struct HostCompileReport {
     pub wasm: Option<WasmCompileReport>,
 }
 
-/// Compile V sources to host bytecode.
+/// Resolver 形成的完整源码快照。
+#[derive(Debug, Clone)]
+pub struct ResolvedCompilerSources {
+    /// 应用组身份。
+    pub project_name: String,
+    /// 按依赖顺序排列的源码组。
+    pub groups: Vec<CompilerSourceGroup>,
+}
+
+/// 从 manifest 与当前源码闭包形成 Compiler 输入。
+pub fn resolve_project_source_groups(project_dir: &Path, target: &CanonicalTarget) -> Result<ResolvedCompilerSources> {
+    let resolver = WorkspaceResolver::discover_for_project(project_dir)
+        .map_err(|error| miette::miette!("解析项目工作区失败: {error}"))?;
+    let plan = resolver
+        .build_plan(&BuildRequest { project_dir: project_dir.to_path_buf(), target: target.clone(), output_dir: None })
+        .map_err(|error| miette::miette!("解析项目构建计划失败: {error}"))?;
+    let project_name = plan.project.name.clone();
+    let groups = compile_source_snapshot(&plan.project.semantic_source_groups)
+        .map_err(|error| miette::miette!("读取项目源码快照失败: {error}"))?;
+    Ok(ResolvedCompilerSources { project_name, groups })
+}
+
+/// 将编译器生成的显式源码附着到已解析的应用组。
+pub fn append_generated_source(sources: &ResolvedCompilerSources, generated_source: &str) -> Result<Vec<CompilerSourceGroup>> {
+    let mut groups = sources.groups.clone();
+    let application = groups
+        .iter_mut()
+        .find(|group| group.dependency_key == sources.project_name)
+        .ok_or_else(|| miette::miette!("源码快照缺少应用组 `{}`", sources.project_name))?;
+    if !generated_source.trim().is_empty() {
+        application.source.push('\n');
+        application.source.push_str(generated_source);
+        application.source.push('\n');
+    }
+    Ok(groups)
+}
+
+/// 将已解析的源码组编译为宿主制品。
 pub fn compile_v_bundle(
-    combined_v_source: &str,
+    source_groups: &[CompilerSourceGroup],
     output_dir: &Path,
     module_name: &str,
     target: &CanonicalTarget,
     backend: HostBackend,
 ) -> Result<HostCompileReport> {
     let compiler = nyar_language::ValkyrieCompiler::default();
-    let source_groups = [CompilerSourceGroup {
-        dependency_key: module_name.to_owned(),
-        name: module_name.to_owned(),
-        source: combined_v_source.to_owned(),
-        direct_dependencies: Vec::new(),
-    }];
     let target_profile = target.to_profile(None);
     fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
     let _report = compile_source_groups_to_artifacts(

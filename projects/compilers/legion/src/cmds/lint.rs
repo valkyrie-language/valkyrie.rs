@@ -8,7 +8,8 @@ use clap::Args;
 use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::ValkyrieCompiler;
 
-use crate::{cmds::source_hygiene, planner::LegionWorkspace};
+use crate::cmds::source_hygiene;
+use legion_workspace::planner::WorkspaceResolver;
 
 /// `legion lint` arguments.
 #[derive(Debug, Clone, Args)]
@@ -33,7 +34,7 @@ pub fn run(args: &LintArgs) -> Result<ExitCode> {
 
     let mut files = Vec::new();
     if args.workspace {
-        let workspace = LegionWorkspace::discover(&args.project_dir)?;
+        let workspace = WorkspaceResolver::discover(&args.project_dir)?;
         for member in workspace.member_manifest_dirs() {
             collect_lint_files(&member, lint_awsl, &mut files)?;
         }

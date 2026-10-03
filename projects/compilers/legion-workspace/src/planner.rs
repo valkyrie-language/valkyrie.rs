@@ -93,7 +93,7 @@ pub enum ProjectResolutionMode {
 }
 
 #[derive(Debug)]
-pub struct LegionWorkspace {
+pub struct WorkspaceResolver {
     pub root_dir: PathBuf,
     pub workspace_manifest: Option<WorkspaceManifest>,
     projects: BTreeMap<PathBuf, ProjectManifest>,
@@ -269,7 +269,7 @@ impl From<crate::script::ScriptError> for PlannerError {
     }
 }
 
-impl LegionWorkspace {
+impl WorkspaceResolver {
     pub fn discover(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         let workspace_root = find_workspace_root(start).ok_or_else(|| PlannerError::MissingWorkspace(start.to_path_buf()))?;
@@ -850,7 +850,7 @@ enum ResolvedDependencySource {
 }
 
 fn resolve_dependency_source(
-    workspace: &LegionWorkspace,
+    workspace: &WorkspaceResolver,
     project_manifest_dir: &Path,
     path_base: &Path,
     dependency_spec: Option<&DependencySpec>,
@@ -972,7 +972,7 @@ fn resolve_local_dependency_path(project_manifest_dir: &Path, raw_path: &str) ->
     if candidate.is_absolute() { candidate.to_path_buf() } else { project_manifest_dir.join(candidate) }
 }
 
-impl LegionWorkspace {
+impl WorkspaceResolver {
     fn git_vendor_root(&self, git_url: &str, git_ref: &str) -> PathBuf {
         let slug = git_cache_slug(git_url, git_ref);
         self.root_dir.join("vendors").join("git").join(slug)

@@ -81,6 +81,7 @@ name = "asgard"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "legion-workspace",
  "miette",
  "nyar",
  "nyar-analyzer",
@@ -964,6 +965,7 @@ dependencies = [
  "base64",
  "clap",
  "gag",
+ "legion-workspace",
  "miette",
  "nyar",
  "nyar-analyzer",
@@ -980,6 +982,19 @@ dependencies = [
  "tempfile",
  "vcc-data",
  "zip",
+]
+
+[[package]]
+name = "legion-workspace"
+version = "0.0.1"
+dependencies = [
+ "miette",
+ "nyar-language",
+ "nyar-package-manager",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "vcc-data",
 ]
 
 [[package]]

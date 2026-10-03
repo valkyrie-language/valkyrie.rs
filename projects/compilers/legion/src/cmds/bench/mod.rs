@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
 };
+use legion_workspace::planner::WorkspaceResolver;
 
 use clap::Args;
 use miette::{Result, miette};
@@ -14,7 +15,6 @@ use crate::{
         report::{BenchReport, BenchResultRow, finish_standalone_report, render_bench_report},
         test_engine::{bench_project, resolve_test_targets},
     },
-    planner::LegionWorkspace,
 };
 
 /// `legion bench` 命令参数。
@@ -41,7 +41,7 @@ pub struct BenchArgs {
 pub fn run(args: &BenchArgs) -> Result<ExitCode> {
     let project_dir = resolve_project_path(&args.project_dir)?;
     let targets = resolve_test_targets(args.target.as_deref());
-    let workspace = LegionWorkspace::discover_for_project(&project_dir)?;
+    let workspace = WorkspaceResolver::discover_for_project(&project_dir)?;
 
     let results = if is_workspace_root(&project_dir, &workspace) {
         run_workspace_bench(&workspace, args.runs, &targets, args.verbose)
@@ -70,7 +70,7 @@ pub fn run(args: &BenchArgs) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_workspace_bench(workspace: &LegionWorkspace, runs: usize, targets: &[String], verbose: bool) -> Vec<BenchResultRow> {
+fn run_workspace_bench(workspace: &WorkspaceResolver, runs: usize, targets: &[String], verbose: bool) -> Vec<BenchResultRow> {
     let mut all = Vec::new();
     for member_dir in workspace.member_manifest_dirs() {
         let project_name = member_dir.file_name().and_then(|n| n.to_str()).unwrap_or("member");
@@ -92,7 +92,7 @@ fn print_bench_report(results: &[BenchResultRow], runs: usize) {
     println!("{}", "-".repeat(72));
 }
 
-fn is_workspace_root(project_dir: &Path, workspace: &LegionWorkspace) -> bool {
+fn is_workspace_root(project_dir: &Path, workspace: &WorkspaceResolver) -> bool {
     workspace.workspace_manifest.is_some() && same_path(project_dir, &workspace.root_dir)
 }
 
