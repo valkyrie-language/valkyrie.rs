@@ -2,7 +2,12 @@
 
 
 # IDE
+.vscode/
+.cursor/
 .idea/
+*.iml
+*.log
+*.txt
 
 # Rust
 .cargo/
@@ -12,6 +17,8 @@ target/
 # Node
 node_modules/
 dist/
+*.node
+*.wasm
 
 # Valkyrie
 .cache/
@@ -30,7 +37,6 @@ reword.pending.json
 
 # Assembled wasm collect (generated locally or in CI)
 projects/packages/vcc-unknown-wasm32/legion.mjs
-projects/packages/vcc-unknown-wasm32/legion.wasm
 projects/packages/vcc-unknown-wasm32/provenance.json
 projects/packages/vcc-unknown-wasm32/run-contracts.txt
 projects/packages/vcc-unknown-wasm32/SHA256SUMS

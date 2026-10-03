@@ -26,21 +26,14 @@ pub const LEGION_PROJECT_LAYOUT: nyar_package_manager::ProjectLayout = nyar_pack
     home_dirname: ".valkyrie",
     home_env: "VALKYRIE_HOME",
     token_env_vars: &["VALKYRIE_TOKEN", "LEGION_TOKEN"],
-    entry_aliases: bootstrap_entry_aliases,
+    entry_aliases: no_entry_aliases,
 };
 
 /// 本地依赖覆盖配置（类似 Rust `.cargo/config.toml`），默认位于 `.config/legion/legions.von`。
 pub const LOCAL_LEGION_CONFIG: &str = ".config/legion/legions.von";
 
-/// Node bootstrap / npm publish: `legion.mjs` is canonical.
-///
-/// Accept historical `legion_legion.*` and multi-partition `legion__main_legion.*`.
-pub fn bootstrap_entry_aliases(physical_entry: &str) -> &'static [&'static str] {
-    match physical_entry {
-        "legion_legion.mjs" | "legion__main_legion.mjs" => &["legion.mjs"],
-        "legion_legion.wasm" | "legion__main_legion.wasm" => &["legion.wasm"],
-        _ => &[],
-    }
+fn no_entry_aliases(_: &str) -> &'static [&'static str] {
+    &[]
 }
 
 pub use nyar_language::{

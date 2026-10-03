@@ -10,6 +10,8 @@ use clap::Args;
 use miette::{IntoDiagnostic, Report, Result, miette};
 use nyar_language::CanonicalTarget;
 
+use crate::cmds::run::{ExecutionManifest, select_artifact};
+
 /// `legion bootstrap` 的命令参数。
 #[derive(Debug, Clone, Args)]
 pub struct BootstrapArgs {
@@ -121,7 +123,7 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
     }
 
     // 阶段 3: 运行 v1 验证。
-    let v1_artifact = match resolve_cli_artifact(&v1_output_dir, &project_dir, &target_str) {
+    let v1_artifact = match resolve_manifest_artifact(&v1_output_dir) {
         Ok(path) => path,
         Err(e) => {
             result.failed_stage = Some((BootstrapStage::V1, e));
@@ -156,7 +158,7 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
         }
     }
 
-    let v2_artifact = match resolve_cli_artifact(&v2_output_dir, &project_dir, &target_str) {
+    let v2_artifact = match resolve_manifest_artifact(&v2_output_dir) {
         Ok(path) => path,
         Err(e) => {
             result.failed_stage = Some((BootstrapStage::V2, e));
@@ -173,10 +175,10 @@ pub fn run(args: &BootstrapArgs) -> Result<BootstrapResult> {
             compare_artifacts(&v1_output_path.unwrap(), &v2_output)
         }
         else if is_jvm_target {
-            compare_jvm_contracts(&v1_output_dir, &v2_output_dir, &project_dir)
+            compare_jvm_contracts(&v1_output_dir, &v2_output_dir)
         }
         else {
-            compare_clr_contracts(&v1_output_dir, &v2_output_dir, &project_dir)
+            compare_clr_contracts(&v1_output_dir, &v2_output_dir)
         };
 
         match compare_result {
@@ -318,7 +320,7 @@ stderr: {stderr}"#,
         ));
     }
 
-    match resolve_cli_artifact(output_dir, project_dir, target) {
+    match resolve_manifest_artifact(output_dir) {
         Ok(path) => {
             println!("  {} artifact: {}", stage_name, path.display());
             Ok(())
@@ -463,7 +465,7 @@ stderr: {}"#,
     }
 
     // 验证产物确实被生成了。
-    match resolve_cli_artifact(output_dir, project_dir, target) {
+    match resolve_manifest_artifact(output_dir) {
         Ok(path) => {
             println!("  {} artifact: {}", stage_name, path.display());
             Ok(())
@@ -471,15 +473,12 @@ stderr: {}"#,
         Err(_) => {
             let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
             let stdout = String::from_utf8_lossy(&output.stdout);
-            let expected_name = get_artifact_name(project_dir);
-            let expected_path = output_dir.join(artifact_filename(&expected_name, target));
             Err(miette!(
-                r#"{stage_name} 编译退出码为 0 但未产出产物 {path}
+                r#"{stage_name} 编译退出码为 0 但未产出 execution manifest 声明的产物
 seed（{seed}）可能不具备 `legion build` 命令行能力。
 stdout: {stdout}
 stderr: {stderr}"#,
                 stage_name = stage_name,
-                path = expected_path.display(),
                 seed = seed.display(),
                 stdout = stdout.trim(),
                 stderr = stderr.trim(),
@@ -723,180 +722,25 @@ fn is_managed_clr_artifact(path: &Path) -> bool {
     path.parent().map(|p| p.join(&alt).exists()).unwrap_or(false)
 }
 
-fn resolve_cli_artifact(output_dir: &Path, project_dir: &Path, target: &str) -> Result<PathBuf> {
-    if target.contains("wasi") {
-        return resolve_wasi_cli_artifact(output_dir, project_dir);
-    }
-
-    if target.contains("wasm") {
-        let name = get_artifact_name(project_dir);
-        let path = output_dir.join(artifact_filename(&name, target));
-        if path.exists() {
-            return Ok(path);
-        }
-        return Err(miette!("产物文件不存在: {}", path.display()));
-    }
-
-    if is_jvm_target(target) {
-        return resolve_jvm_cli_artifact(output_dir, project_dir);
-    }
-
-    let project_name = get_artifact_name(project_dir);
-    let candidates = [
-        output_dir.join("legion.exe"),
-        output_dir.join("legion__main_legion.exe"),
-        output_dir.join(format!("{project_name}.exe")),
-        output_dir.join(format!("{project_name}__main_{project_name}.exe")),
-    ];
-
-    for candidate in &candidates {
-        if candidate.exists() {
-            return Ok(candidate.clone());
-        }
-    }
-
-    // Fallback: first `*__main_*.exe` that looks like a CLI partition.
-    if let Ok(entries) = fs::read_dir(output_dir) {
-        let mut found = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("exe") {
-                continue;
-            }
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            if name.contains("__main_") {
-                found.push(path);
-            }
-        }
-        found.sort();
-        if let Some(path) = found.into_iter().next() {
-            return Ok(path);
-        }
-    }
-
-    Err(miette!("产物不存在: {}（或 legion.exe / legion__main_legion.exe）", output_dir.join(format!("{project_name}.exe")).display()))
+fn resolve_manifest_artifact(output_dir: &Path) -> Result<PathBuf> {
+    let manifest = ExecutionManifest::read_from_output_dir(output_dir)?
+        .ok_or_else(|| miette!("缺少 execution manifest：{}", output_dir.join("run-contracts.txt").display()))?;
+    let entries = manifest.run_contracts.iter().map(|contract| contract.physical_entry.as_str()).collect::<Vec<_>>();
+    let (artifact, _) = select_artifact(output_dir, entries.into_iter(), None).map_err(|error| miette!("execution manifest 产物合同无效：{error}"))?;
+    Ok(artifact)
 }
 
-/// 解析 WASI 轨 CLI 入口（优先 `legion.wasi` / `*wasi_run*`，对齐 `resolveWasiEntry`）。
-fn resolve_wasi_cli_artifact(output_dir: &Path, project_dir: &Path) -> Result<PathBuf> {
-    let canonical = output_dir.join("legion.wasi");
-    if canonical.exists() {
-        return Ok(canonical);
-    }
-
-    let project_name = get_artifact_name(project_dir);
-    let named = output_dir.join(format!("{project_name}.wasi"));
-    if named.exists() {
-        return Ok(named);
-    }
-
-    let contract_path = output_dir.join("run-contracts.txt");
-    if let Ok(text) = fs::read_to_string(&contract_path) {
-        for line in text.lines() {
-            let trimmed = line.trim();
-            if let Some(value) = trimmed.strip_prefix("physical_entry:") {
-                let physical = value.trim().trim_matches('"');
-                if physical.ends_with(".wasi") {
-                    let path = output_dir.join(physical);
-                    if path.exists() {
-                        return Ok(path);
-                    }
-                }
-            }
-        }
-    }
-
-    if let Ok(entries) = fs::read_dir(output_dir) {
-        let mut found = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("wasi") {
-                continue;
-            }
-            found.push(path);
-        }
-        found.sort_by(|left, right| {
-            let score = |path: &Path| {
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-                if name.to_ascii_lowercase().contains("wasi_run") {
-                    0
-                }
-                else if name.to_ascii_lowercase().contains("main_legion") {
-                    2
-                }
-                else {
-                    1
-                }
-            };
-            score(left).cmp(&score(right)).then_with(|| left.cmp(right))
-        });
-        if let Some(path) = found.into_iter().next() {
-            return Ok(path);
-        }
-    }
-
-    Err(miette!("产物不存在: {}（或任意 *.wasi / *wasi_run*.wasi）", canonical.display()))
-}
-
-fn resolve_jvm_cli_artifact(output_dir: &Path, project_dir: &Path) -> Result<PathBuf> {
-    let project_name = get_artifact_name(project_dir);
-    let candidates = [
-        output_dir.join("legion.jar"),
-        output_dir.join("legion__main_legion.jar"),
-        output_dir.join(format!("{project_name}.jar")),
-        output_dir.join(format!("{project_name}__main_{project_name}.jar")),
-    ];
-
-    for candidate in &candidates {
-        if candidate.exists() {
-            return Ok(candidate.clone());
-        }
-    }
-
-    if let Ok(entries) = fs::read_dir(output_dir) {
-        let mut found = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()).is_none_or(|ext| !ext.eq_ignore_ascii_case("jar")) {
-                continue;
-            }
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            if name.contains("__main_") || name.eq_ignore_ascii_case("legion.jar") {
-                found.push(path);
-            }
-        }
-        found.sort();
-        if let Some(path) = found.into_iter().next() {
-            return Ok(path);
-        }
-    }
-
-    Err(miette!("产物不存在: {}（或 legion.jar / legion__main_legion.jar）", output_dir.join(format!("{project_name}.jar")).display()))
-}
-
-fn compare_clr_contracts(v1_dir: &Path, v2_dir: &Path, project_dir: &Path) -> Result<()> {
-    let v1_contract = v1_dir.join("run-contract.txt");
-    let v2_contract = v2_dir.join("run-contract.txt");
-    if v1_contract.exists() && v2_contract.exists() {
-        return compare_artifacts(&v1_contract, &v2_contract);
-    }
-    // 无契约文件时回退到 CLI 入口 PE 比对（小项目 smoke）。
-    let v1 = resolve_cli_artifact(v1_dir, project_dir, "clr")?;
-    let v2 = resolve_cli_artifact(v2_dir, project_dir, "clr")?;
+fn compare_clr_contracts(v1_dir: &Path, v2_dir: &Path) -> Result<()> {
+    let v1 = resolve_manifest_artifact(v1_dir)?;
+    let v2 = resolve_manifest_artifact(v2_dir)?;
     compare_artifacts(&v1, &v2)
 }
 
-fn compare_jvm_contracts(v1_dir: &Path, v2_dir: &Path, project_dir: &Path) -> Result<()> {
-    let v1_contract = v1_dir.join("run-contract.txt");
-    let v2_contract = v2_dir.join("run-contract.txt");
-    if v1_contract.exists() && v2_contract.exists() {
-        return compare_artifacts(&v1_contract, &v2_contract);
-    }
-    let v1 = resolve_cli_artifact(v1_dir, project_dir, "jvm")?;
-    let v2 = resolve_cli_artifact(v2_dir, project_dir, "jvm")?;
+fn compare_jvm_contracts(v1_dir: &Path, v2_dir: &Path) -> Result<()> {
+    let v1 = resolve_manifest_artifact(v1_dir)?;
+    let v2 = resolve_manifest_artifact(v2_dir)?;
     compare_artifacts(&v1, &v2)
 }
-
 fn candidate_command_paths(dir: &Path, command: &str, extensions: &[String]) -> Vec<PathBuf> {
     let base = dir.join(command);
     if Path::new(command).extension().is_some() {
@@ -968,46 +812,8 @@ v1 长度: {v1_len}, v2 长度: {v2_len}"#,
     }
 }
 
-/// 根据目标平台返回产物文件名。
-fn artifact_filename(artifact_name: &str, target: &str) -> String {
-    if target.contains("wasi") {
-        format!("{}.wasi", artifact_name)
-    }
-    else if target.contains("wasm") {
-        format!("{}.wasm", artifact_name)
-    }
-    else if is_jvm_target(target) {
-        format!("{}.jar", artifact_name)
-    }
-    else {
-        format!("{}.exe", artifact_name)
-    }
-}
-
 fn wasm_family_extension(target: &str) -> &'static str {
     if target.contains("wasi") { "wasi" } else { "wasm" }
-}
-
-/// 从项目目录或 legion.von 中提取产物名称。
-fn get_artifact_name(project_dir: &Path) -> String {
-    // 尝试从 legion.von 中读取项目名称。
-    let manifest_path = project_dir.join("legion.von");
-    if manifest_path.exists() {
-        if let Ok(content) = fs::read_to_string(&manifest_path) {
-            if let Ok(value) = vcc_data::text::von::from_str::<vcc_data::text::von::VonValue>(&content) {
-                if let Some(object) = value.as_object() {
-                    if let Some(name) = object.get("name") {
-                        if let Some(name_str) = name.as_str() {
-                            return name_str.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 回退到目录名。
-    project_dir.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "unknown".to_string())
 }
 
 /// 获取编译器源文件路径。
