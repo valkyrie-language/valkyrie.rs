@@ -58,7 +58,7 @@ mod tests {
         let directory = tempdir().expect("创建源码目录");
         let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &[]);
         let output = compile_source_snapshot(&[group], "wasm32", |source, _| source.to_owned()).expect("源码进入唯一 Compiler 入口");
-        assert_eq!(output.hir_module().name.to_string(), "application");
+        assert_eq!(output.compiled_program().canonical().linked.module_name, "application");
         assert_eq!(output.compiled_program().canonical().linked.entries.len(), 1);
         assert_eq!(output.compiled_program().canonical().mir.functions.len(), 1);
     }
@@ -70,7 +70,7 @@ mod tests {
         let application = source_group(directory.path(), "application", "micro main() -> i32 { return answer() }", &["library"]);
         let output = compile_source_snapshot(&[dependency, application], "wasm32", |source, _| source.to_owned())
             .expect("当前依赖源码完成 Compiler 链接");
-        assert_eq!(output.hir_module().name.to_string(), "application");
+        assert_eq!(output.compiled_program().canonical().linked.module_name, "application");
         assert_eq!(output.compiled_program().canonical().mir.functions.len(), 2);
         assert_eq!(output.compiled_program().representation().invoke_lowerings.len(), 1);
     }
