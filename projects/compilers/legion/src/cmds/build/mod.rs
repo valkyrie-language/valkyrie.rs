@@ -288,15 +288,11 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         ExecutionManifest::remove_from_output_dir(&plan.output_dir)?;
     }
 
-    if let Ok(bundle) = collect_build_bundle(&plan.output_dir, &report) {
-        if let Err(error) = store_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &bundle) {
-            if verbose {
-                println!("cache: store failed ({error})");
-            }
-        }
-        else if verbose {
-            println!("cache: stored (artifact-set)");
-        }
+    let bundle = collect_build_bundle(&plan.output_dir, &report).map_err(|error| miette!("产物集合不完整：{error}"))?;
+    store_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &bundle)
+        .map_err(|error| miette!("产物缓存写入失败：{error}"))?;
+    if verbose {
+        println!("cache: stored (artifact-set)");
     }
 
     Ok(report)

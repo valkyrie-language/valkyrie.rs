@@ -135,17 +135,6 @@ pub fn store_cached_build(
     )
 }
 
-/// 读取缓存元数据；读取结果不能直接成为构建成功载荷。
-pub fn load_cached_build(cache: &CompilationCache, module_name: &str, canonical_triple: &str, ir_hash: &str) -> Result<Option<CachedBuildBundle>, String> {
-    let Some(entry) = cache.try_get_ir(module_name, canonical_triple, ir_hash) else {
-        return Ok(None);
-    };
-    if entry.ir_kind != ARTIFACT_KIND {
-        return Err(format!("cached artifact has unexpected kind `{}`", entry.ir_kind));
-    }
-    serde_json::from_slice(&entry.ir_data).map(Some).map_err(|error| format!("cached artifact is invalid: {error}"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::{CompilationCache, *};

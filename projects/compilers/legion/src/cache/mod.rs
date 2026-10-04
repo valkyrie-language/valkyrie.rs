@@ -7,7 +7,7 @@ mod compilation;
 mod resolve;
 
 pub use artifact::{
-    BuildBundle, CachedBuildBundle, collect_build_bundle, compute_artifact_hash, load_cached_build,
+    BuildBundle, CachedBuildBundle, collect_build_bundle, compute_artifact_hash,
     store_cached_build, toolchain_fingerprint,
 };
 pub use compilation::{CompilationCache, EntrySliceCacheEntry, IrCacheEntry};
