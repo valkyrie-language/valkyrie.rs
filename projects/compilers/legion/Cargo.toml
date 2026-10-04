@@ -10,8 +10,6 @@ license.workspace = true
 default = ["nyar-vm-lane"]
 nyar-vm-lane = ["emitter/nyar-vm-lane"]
 legacy-lanes = ["nyar-vm-lane"]
-# Frozen CLR / JVM / native delivery; also pulls the Nyar VM lane for shared driver registration.
-legacy-lanes-clr-jvm-native = ["nyar-vm-lane", "emitter/legacy-lanes-clr-jvm-native"]
 
 [dependencies]
 legion-workspace = { workspace = true }

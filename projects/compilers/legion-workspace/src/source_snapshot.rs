@@ -63,7 +63,6 @@ mod tests {
             "application",
             false,
             false,
-            false,
         )
     }
 

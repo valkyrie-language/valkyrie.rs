@@ -274,7 +274,6 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         wasm_package_kind,
         &plan.output_dir,
         &plan.project.name,
-        plan.project.build_target.msil,
         plan.project.build_target.wat,
         target_profile.artifact_policy.generate_runtime_config,
     )?;

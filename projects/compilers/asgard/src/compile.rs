@@ -89,7 +89,6 @@ pub fn compile_v_bundle(
         emitter::nyar_backend_wasi::WasmPackageKind::Binary,
         output_dir,
         module_name,
-        false,
         true,
         target_profile.artifact_policy.generate_runtime_config,
     )?;
