@@ -243,7 +243,6 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         &plan.project.source_files,
         &manifest_files,
         &canonical_triple,
-        plan.project.build_target.msil,
         plan.project.build_target.wat,
         plan.project.build_target.runtime_async,
     )

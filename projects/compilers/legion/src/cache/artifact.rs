@@ -81,13 +81,12 @@ pub fn compute_artifact_hash(
     source_files: &[PathBuf],
     manifest_files: &[PathBuf],
     canonical_triple: &str,
-    msil: bool,
     wat: bool,
     runtime_async: bool,
 ) -> Result<String, String> {
     let sources = files_hash(source_files).map_err(|e| e.to_string())?;
     let manifests = files_hash(manifest_files).map_err(|e| e.to_string())?;
-    let flags = format!("{}{}{}", if msil { '1' } else { '0' }, if wat { '1' } else { '0' }, if runtime_async { '1' } else { '0' });
+    let flags = format!("{}{}", if wat { '1' } else { '0' }, if runtime_async { '1' } else { '0' });
     let toolchain = toolchain_fingerprint();
     Ok(combined_hash(&[&sources, &manifests, canonical_triple, &flags, &toolchain]))
 }

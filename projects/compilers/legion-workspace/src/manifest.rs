@@ -70,8 +70,6 @@ pub struct BuildTargetSpec {
     #[serde(default = "default_canonical_target")]
     pub target: CanonicalTarget,
     #[serde(default)]
-    pub msil: bool,
-    #[serde(default)]
     pub source_map: bool,
     #[serde(default)]
     pub typescript: bool,
@@ -93,7 +91,6 @@ impl Default for BuildTargetSpec {
     fn default() -> Self {
         Self {
             target: default_canonical_target(),
-            msil: false,
             source_map: false,
             typescript: false,
             wat: false,
