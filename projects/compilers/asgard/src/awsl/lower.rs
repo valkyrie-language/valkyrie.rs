@@ -321,13 +321,7 @@ fn take_braced_block(lines: &[&str], start: usize) -> (String, usize) {
 
 /// 从 script 块提取可放入 render 函数体的 `let` / `let mut` 绑定。
 pub fn script_let_prelude(script: Option<&str>) -> String {
-    let bindings = script
-        .map(|source| {
-            let (abi, _) = extract_abi_for_script(source, "script");
-            abi_to_script_bindings(&abi)
-        })
-        .filter(|bindings| !bindings.is_empty())
-        .unwrap_or_else(|| extract_script_bindings_legacy(script));
+    let bindings = script.map(|source| abi_to_script_bindings(&extract_abi_for_script(source, "script").0)).unwrap_or_default();
     bindings.iter().map(ScriptBinding::as_v_let_line).collect::<Vec<_>>().join("\n    ")
 }
 
@@ -718,49 +712,6 @@ fn default_expr_for_type(type_hint: Option<&str>) -> String {
     }
 }
 
-fn extract_script_bindings_legacy(script: Option<&str>) -> Vec<ScriptBinding> {
-    let Some(script) = script
-    else {
-        return Vec::new();
-    };
-    let lines: Vec<&str> = script.lines().collect();
-    let mut out = Vec::new();
-    let mut index = 0usize;
-    while index < lines.len() {
-        let trimmed = lines[index].trim();
-        if trimmed.starts_with("micro ") || trimmed.starts_with("class ") || trimmed.starts_with("trait ") {
-            index = take_braced_block(&lines, index).1;
-            continue;
-        }
-        if let Some(binding) = parse_script_let_line(trimmed) {
-            out.push(binding);
-        }
-        index += 1;
-    }
-    out
-}
-
-fn parse_script_let_line(trimmed: &str) -> Option<ScriptBinding> {
-    let rest = trimmed.strip_prefix("let ")?;
-    let (reactive, after_kw) = if let Some(inner) = rest.strip_prefix("mut ") { (true, inner) } else { (false, rest) };
-    let (name_part, expr) = after_kw.split_once('=')?;
-    let name = name_part.split(':').next().unwrap_or(name_part).trim().to_string();
-    let type_hint = name_part.split(':').nth(1).map(str::trim);
-    if name.is_empty() {
-        return None;
-    }
-    let init_expr = sanitize_script_let_expr(expr.trim().trim_end_matches(';'));
-    let value_type = infer_signal_type(type_hint, &init_expr);
-    Some(ScriptBinding {
-        name,
-        init_expr,
-        kind: if reactive { BindingKind::ReactiveState } else { BindingKind::LocalConst },
-        reactive,
-        sig_var: String::new(),
-        value_type,
-    })
-}
-
 fn infer_signal_type(type_hint: Option<&str>, init_expr: &str) -> SignalValueType {
     if let Some(hint) = type_hint {
         if hint.contains("bool") {
@@ -812,18 +763,6 @@ impl ScriptBinding {
     pub fn sig_id_expr(&self) -> String {
         self.sig_var.clone()
     }
-}
-
-/// 将 AWSL script 表达式规整为当前 V 编译器可接受的子集。
-fn sanitize_script_let_expr(expr: &str) -> String {
-    let trimmed = expr.trim();
-    if trimmed.contains("||") || trimmed.contains("&&") || trimmed.contains("=>") {
-        return "\"\"".into();
-    }
-    if trimmed.contains('[') && trimmed.contains(']') {
-        return "\"\"".into();
-    }
-    trimmed.to_string()
 }
 
 #[cfg(test)]

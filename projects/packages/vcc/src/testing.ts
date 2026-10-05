@@ -111,7 +111,7 @@ export function spawnHostCli(host: VccHostRunner, argv: string[] = []): VccCliSp
     return host.spawnCli(argv);
 }
 
-/** 通过组装 VCC 宿主运行 CLI（native platform collect 优先，否则 wasm collect）。 */
+/** 通过唯一的 Node/Wasm collect 宿主运行 CLI。 */
 export function spawnLegionForIntegration(host: VccHostRunner, argv: string[] = []): VccCliSpawnResult {
     return host.spawnCli(argv);
 }
