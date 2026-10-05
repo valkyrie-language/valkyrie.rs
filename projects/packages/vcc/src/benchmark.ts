@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { VccCliRoute, VccCliSpawnResult, VccHostRunner } from './index.ts';
-import { createHostRunner, locateNativeCollect } from './index.ts';
+import { createHostRunner } from './index.ts';
 
 /** `legion bench` 表格中的一行。 */
 export type LegionBenchRow = {
@@ -281,14 +281,14 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
     }
 
     function ready(): boolean {
-        return wasmCollectReadyFromDir(wasmCollectDir, wasmEntry) || locateNativeCollect() !== null || host !== undefined;
+        return wasmCollectReadyFromDir(wasmCollectDir, wasmEntry) || host !== undefined;
     }
 
     function skipReason(): string | null {
         if (ready()) {
             return null;
         }
-        return 'Valkyrie runner not ready: install a @valkyrie-language/vcc-* platform package (native) or run node scripts/build.mjs capability in valkyrie.rs (wasm collect)';
+        return 'Valkyrie runner not ready: assemble the Node/Wasm collect before running the benchmark';
     }
 
     function spawnLegion(argv: string[] = []): VccCliSpawnResult {

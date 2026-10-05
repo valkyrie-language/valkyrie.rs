@@ -5,16 +5,6 @@ import { dirname, join } from 'node:path';
 import type { VccCliSpawnResult, VccHostRunner } from './index.ts';
 import { resolveWasmMjs } from './index.ts';
 
-function defaultValkyrieRsRoot(configRoot?: string): string {
-    if (configRoot) {
-        return configRoot;
-    }
-    if (process.env.VALKYRIE_RS_ROOT) {
-        return process.env.VALKYRIE_RS_ROOT;
-    }
-    return join(process.cwd(), '..', 'valkyrie.rs');
-}
-
 /** Nyar VM 目标三元组（与 `legion build --target nyar` 对齐）。 */
 export const NYAR_VM_TARGET = 'nyar-unknown-unknown-managed';
 
@@ -142,44 +132,6 @@ export function spawnPackageBin(binPath: string, argv: string[] = []): VccCliSpa
  * 优先序：`VCC_BIN` → 兼容别名 `LEGION_BIN` → `target/{release,debug}/vcc[.exe]`。
  * 铁律：valkyrie.rs 不得产出 `legion.exe`；本函数也不再查找该文件名。
  */
-export function locateNativeLegionBinary(valkyrieRsRoot?: string): string | null {
-    for (const key of ['VCC_BIN', 'LEGION_BIN'] as const) {
-        const override = process.env[key]?.trim();
-        if (override && existsSync(override)) {
-            return override;
-        }
-    }
-    const root = defaultValkyrieRsRoot(valkyrieRsRoot);
-    const base = process.platform === 'win32' ? 'vcc.exe' : 'vcc';
-    for (const profile of ['release', 'debug'] as const) {
-        const candidate = join(root, 'target', profile, base);
-        if (existsSync(candidate)) {
-            return candidate;
-        }
-    }
-    return null;
-}
-
-/** 经本机 seed `vcc` 子进程调用 CLI（`nyar` 等需 `legacy-lanes` 的 target 应走此路径）。 */
-export function spawnNativeLegion(valkyrieRsRoot: string | undefined, argv: string[]): VccCliSpawnResult {
-    const binary = locateNativeLegionBinary(valkyrieRsRoot);
-    if (!binary) {
-        return {
-            route: 'native',
-            status: 127,
-            stdout: '',
-            stderr: 'native vcc not found (set VCC_BIN or cargo build -p legion → target/*/vcc)',
-        };
-    }
-    const result = spawnSync(binary, argv, { encoding: 'utf8' });
-    return {
-        route: 'native',
-        status: result.status ?? 1,
-        stdout: String(result.stdout ?? ''),
-        stderr: String(result.stderr ?? ''),
-    };
-}
-
 /** 运行已构建的 Node Wasm 入口（`node legion.mjs …`）。 */
 export function spawnBuiltNodeEntry(entryMjs: string, argv: string[] = []): VccCliSpawnResult {
     const result = spawnSync(process.execPath, [entryMjs, ...argv], { encoding: 'utf8' });
