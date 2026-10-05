@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import type { VccCliSpawnResult, VccHostRunner } from './index.ts';
-import { locateNativeCollect } from './index.ts';
 import { resolveWasmMjs } from './index.ts';
 
 function defaultValkyrieRsRoot(configRoot?: string): string {
@@ -27,7 +26,6 @@ export type NodeWasmEntry = {
     legionMjs: string;
     legionWasm: string;
     physicalEntry: string;
-    legacy: boolean;
 };
 
 /** 解析后的 Nyar VM 入口产物。 */
@@ -60,27 +58,18 @@ export function skipUnlessWasmCollectReady(wasmCollect: string, wasmEntry: strin
     return `wasm collect not assembled (${wasmCollect}/${wasmEntry}); run pnpm assemble`;
 }
 
-/** 集成测试可用：已装配 wasm collect，或已安装 VCC native platform collect。 */
+/** 集成测试只接受已装配的 Wasm collect。 */
 export function integrationRunnerReady(wasmCollect: string, wasmEntry: string): boolean {
-    return wasmCollectReady(wasmCollect, wasmEntry) || locateNativeCollect() !== null;
+    return wasmCollectReady(wasmCollect, wasmEntry);
 }
 
 /**
  * 解析 `legion build -o` 输出目录。
- * 兼容 `{out}/` 与 `{out}/{targetTriple}/` 两种布局。
+ * 编译产物必须直接位于调用方指定的输出目录。
  */
 export function resolveArtifactDir(outputDir: string, targetTriple = NODE_WASM_TARGET): string {
-    const nested = join(outputDir, targetTriple);
-    return existsSync(nested) ? nested : outputDir;
-}
-
-function readPhysicalEntryFromContract(contractPath: string): string | null {
-    if (!existsSync(contractPath)) {
-        return null;
-    }
-    const text = readFileSync(contractPath, 'utf8');
-    const match = text.match(/physical_entry\s*:\s*"([^"]+)"/);
-    return match?.[1] ?? null;
+    void targetTriple;
+    return outputDir;
 }
 
 function readLogicalEntryFromContract(contractPath: string): string | null {
@@ -94,7 +83,7 @@ function readLogicalEntryFromContract(contractPath: string): string | null {
 
 /**
  * 在 Node 构建产物目录中定位 `legion.mjs` / `legion.wasm`。
- * 解析 Node 构建产物目录中的 `legion.mjs` / `legion.wasm`（含 run-contracts 与 legacy 命名）。
+ * 解析 Node 构建产物目录中的规范 `legion.mjs` / `legion.wasm`。
  */
 export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
     const canonicalMjs = join(targetDir, 'legion.mjs');
@@ -104,30 +93,6 @@ export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
             legionMjs: canonicalMjs,
             legionWasm: canonicalWasm,
             physicalEntry: 'legion.mjs',
-            legacy: false,
-        };
-    }
-
-    for (const contractName of ['run-contracts.txt', 'run-contract.txt']) {
-        const physical = readPhysicalEntryFromContract(join(targetDir, contractName));
-        if (!physical) {
-            continue;
-        }
-        const mjs = join(targetDir, physical);
-        const wasm = join(targetDir, physical.replace(/\.mjs$/i, '.wasm'));
-        if (existsSync(mjs) && existsSync(wasm)) {
-            return { legionMjs: mjs, legionWasm: wasm, physicalEntry: physical, legacy: false };
-        }
-    }
-
-    const legacyMjs = join(targetDir, 'legion_tools.mjs');
-    const legacyWasm = join(targetDir, 'legion_tools.wasm');
-    if (existsSync(legacyMjs) && existsSync(legacyWasm)) {
-        return {
-            legionMjs: legacyMjs,
-            legionWasm: legacyWasm,
-            physicalEntry: 'legion_tools.mjs',
-            legacy: true,
         };
     }
 
@@ -138,26 +103,17 @@ export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
  * 在 Nyar 构建产物目录中定位 `.nyar` 模块与 run-contract 入口。
  */
 export function resolveNyarEntry(targetDir: string): NyarVmEntry | null {
-    for (const contractName of ['run-contracts.txt', 'run-contract.txt']) {
-        const contractPath = join(targetDir, contractName);
-        const physical = readPhysicalEntryFromContract(contractPath);
-        if (!physical?.endsWith('.nyar')) {
-            continue;
-        }
-        const nyarPath = join(targetDir, physical);
-        if (!existsSync(nyarPath)) {
-            continue;
-        }
-        const logicalEntry = readLogicalEntryFromContract(contractPath) ?? 'main';
-        return { nyarPath, physicalEntry: physical, logicalEntry };
+    const contractPath = join(targetDir, 'run-contracts.txt');
+    if (!existsSync(contractPath)) {
+        return null;
     }
-
-    const fallback = join(targetDir, 'legion.nyar');
-    if (existsSync(fallback)) {
-        return { nyarPath: fallback, physicalEntry: 'legion.nyar', logicalEntry: 'main' };
+    const text = readFileSync(contractPath, 'utf8');
+    const physical = text.match(/physical_entry\s*:\s*"([^"]+\.nyar)"/)?.[1];
+    if (!physical) {
+        return null;
     }
-
-    return null;
+    const nyarPath = join(targetDir, physical);
+    return existsSync(nyarPath) ? { nyarPath, physicalEntry: physical, logicalEntry: readLogicalEntryFromContract(contractPath) ?? 'main' } : null;
 }
 
 /** 通过组装宿主运行 CLI（供集成测试使用）。 */
