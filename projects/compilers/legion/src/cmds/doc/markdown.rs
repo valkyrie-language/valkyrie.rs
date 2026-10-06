@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use pulldown_cmark::{Options, Parser, html};
-use vcc_data::text::markdown;
+use nyar_language::transitional::notedown::markdown;
 
 /// 文档页面渲染上下文。
 #[derive(Debug, Clone, Default)]
