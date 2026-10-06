@@ -13,6 +13,7 @@ serde = ["nyar-types/serde"]
 
 [dependencies]
 miette = { workspace = true }
+oak-awsl = { workspace = true }
 nyar = { workspace = true }
 nyar-bytecode = { workspace = true }
 nyar-types = { workspace = true }

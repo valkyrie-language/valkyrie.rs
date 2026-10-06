@@ -19,7 +19,7 @@ pub mod powershell;
 /// `Tcl` 文本格式模型。
 pub mod tcl;
 
-/// AWSL 模板源码的词法、语法与 `AST` facade。
+/// AWSL 模板源码 facade（重导出 `oak-awsl`）。
 pub mod awsl;
 
 /// Notedown 统一文档 IR（Valkyrie 文档语义）。
