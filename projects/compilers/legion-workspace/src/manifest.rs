@@ -1,9 +1,10 @@
 use std::{
     collections::BTreeMap,
     fmt::{Display, Formatter},
+    ops::Range,
 };
 
-use miette::{Diagnostic, Severity};
+use miette::{Diagnostic, LabeledSpan, Severity};
 use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use oak_core::OakError as VonError;
@@ -224,13 +225,20 @@ pub struct ProjectManifest {
 
 #[derive(Debug)]
 pub enum ManifestError {
-    Parse(VonError),
+    Parse { error: VonError, span: Option<Range<usize>> },
+}
+
+impl ManifestError {
+    fn from_von(error: VonError) -> Self {
+        let span = error.source_offset().map(|start| start..start.saturating_add(1));
+        Self::Parse { error, span }
+    }
 }
 
 impl Display for ManifestError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Parse(error) => Display::fmt(error, f),
+            Self::Parse { error, .. } => Display::fmt(error, f),
         }
     }
 }
@@ -250,14 +258,20 @@ impl Diagnostic for ManifestError {
         Some(Box::new("请检查 `legion.von` / `legions.von` 的 `VON` 语法和字段结构"))
     }
 
-    fn diagnostic_source(&self) -> Option<&dyn Diagnostic> {
-        None
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        match self {
+            Self::Parse { span: Some(span), .. } => {
+                let labeled = LabeledSpan::new_with_span(Some("VON 解析失败位置".to_string()), (span.start, span.end.saturating_sub(span.start)));
+                Some(Box::new(std::iter::once(labeled)))
+            }
+            _ => None,
+        }
     }
 }
 
 impl From<VonError> for ManifestError {
     fn from(value: VonError) -> Self {
-        Self::Parse(value)
+        Self::from_von(value)
     }
 }
 
