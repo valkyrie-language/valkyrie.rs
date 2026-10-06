@@ -427,3 +427,24 @@ enum DependencySpecDef {
 fn default_canonical_target() -> CanonicalTarget {
     CanonicalTarget::clr()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use oak_core::OakErrorKind;
+
+    #[test]
+    fn manifest_error_exposes_oak_source_offset_as_label() {
+        let error = ManifestError::from(VonError::new(OakErrorKind::SyntaxError {
+            message: "expected value".to_string(),
+            offset: 12,
+            source_id: None,
+        }));
+        let labels: Vec<_> = Diagnostic::labels(&error).unwrap().collect();
+        assert_eq!(labels.len(), 1);
+        let ManifestError::Parse { span: Some(span), .. } = error else {
+            panic!("expected parse error with span");
+        };
+        assert_eq!(span, 12..13);
+    }
+}
