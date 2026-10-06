@@ -2935,6 +2935,7 @@ dependencies = [
  "nyar-types",
  "oak-awsl",
  "oak-core",
+ "oak-valkyrie",
  "oak-von",
  "serde",
  "zip",

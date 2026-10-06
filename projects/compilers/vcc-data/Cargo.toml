@@ -16,6 +16,7 @@ miette = { workspace = true }
 oak-awsl = { workspace = true }
 oak-core = { workspace = true }
 oak-von = { workspace = true }
+oak-valkyrie = { workspace = true }
 nyar = { workspace = true }
 nyar-bytecode = { workspace = true }
 nyar-types = { workspace = true }

@@ -40,6 +40,7 @@ legion-workspace = { path = "projects/compilers/legion-workspace" }
 oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", branch = "dev" }
 oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", branch = "dev" }
 oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", branch = "dev", features = ["serde"] }
+oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", branch = "dev" }
 nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev", package = "nyar-emitter" }
 

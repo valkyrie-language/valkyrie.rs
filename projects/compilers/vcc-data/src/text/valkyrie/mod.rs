@@ -11,6 +11,8 @@ pub mod lexer;
 pub mod naming;
 /// Layered parser tree text snapshots.
 pub mod parse_dump;
+/// Oak 生产解析 facade（`oak-valkyrie`）。
+pub mod oak;
 /// Source-to-AST parsing entry points.
 pub mod parser;
 /// T-Grammar / `<% %>` meta-level templates (Valkyrie language extension).
