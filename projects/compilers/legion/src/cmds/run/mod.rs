@@ -1,3 +1,4 @@
+use legion_workspace::labeled_report_with_context;
 use legion_workspace::manifest::RunnerBinding;
 use legion_workspace::planner::{BuildPlan, BuildRequest, WorkspaceResolver};
 use std::{
@@ -111,8 +112,13 @@ impl ExecutionManifest {
     /// 将 execution manifest 写入输出目录中的 `run-contracts.txt`。
     pub fn write_to_output_dir(&self, output_dir: &Path) -> Result<()> {
         let manifest_path = output_dir.join(EXECUTION_MANIFEST_FILE_NAME);
-        let content = crate::write_von_indented(self)
-            .map_err(|error| miette!("序列化 execution manifest 失败 {}: {error}", manifest_path.display()))?;
+        let content = crate::write_von_indented(self).map_err(|error| {
+            labeled_report_with_context(
+                error,
+                format!("序列化 execution manifest 失败 {}", manifest_path.display()),
+                "VON 序列化失败位置",
+            )
+        })?;
         fs::write(&manifest_path, content)
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("写入 execution manifest 失败 {}", manifest_path.display())))?;
@@ -133,9 +139,13 @@ impl ExecutionManifest {
         let source = fs::read_to_string(path)
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("failed to read execution manifest '{}'", path.display())))?;
-        crate::parse_von::<Self>(&source)
-            .map(Some)
-            .map_err(|error| miette!("failed to parse execution manifest '{}': {}", path.display(), error))
+        crate::parse_von::<Self>(&source).map(Some).map_err(|error| {
+            labeled_report_with_context(
+                error,
+                format!("failed to parse execution manifest '{}'", path.display()),
+                "VON 解析失败位置",
+            )
+        })
     }
 
     /// 删除输出目录中的 execution manifest。

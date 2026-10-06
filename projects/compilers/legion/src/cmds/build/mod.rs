@@ -9,6 +9,7 @@ use std::{
     sync::{Arc, mpsc},
     thread,
 };
+use legion_workspace::labeled_report_with_context;
 use legion_workspace::manifest::{ProjectArtifactKind, ProjectManifest};
 use legion_workspace::planner::{BuildPlan, BuildRequest, WorkspaceResolver};
 use legion_workspace::source_snapshot::compile_source_snapshot;
@@ -348,8 +349,9 @@ fn write_host_selection_spec(output_dir: &Path, providers: &[legion_workspace::p
             line: item.line,
         })
         .collect();
-    let content = write_von_indented(&entries)
-        .map_err(|error| miette!("序列化 host 选择结果失败 {}: {error}", output_path.display()))?;
+    let content = write_von_indented(&entries).map_err(|error| {
+        labeled_report_with_context(error, format!("序列化 host 选择结果失败 {}", output_path.display()), "VON 序列化失败位置")
+    })?;
     fs::create_dir_all(output_dir).into_diagnostic().map_err(|error| error.wrap_err(format!("创建输出目录失败 {}", output_dir.display())))?;
     fs::write(&output_path, content)
         .into_diagnostic()
