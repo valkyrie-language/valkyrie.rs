@@ -6,7 +6,42 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use nyar_language::formatter::{to_string, to_string_indented};
-use vcc_data::text::von::{VonParser, VonValue, from_str, from_value, to_value};
+use oak_core::OakError;
+use oak_von::language::value::{from_ast, VonValue};
+use oak_von::printer::{PrintOptions, PrintStyle};
+use oak_von::from_str as oak_from_str;
+
+struct VonParser;
+
+impl VonParser {
+    fn parse(source: &str) -> Result<VonValue, OakError> {
+        let trimmed = source.trim();
+        let ast = oak_von::parse(trimmed).map_err(OakError::custom_error)?;
+        Ok(from_ast(&ast))
+    }
+}
+
+fn from_str<T>(source: &str) -> Result<T, OakError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    oak_from_str(source.trim())
+}
+
+fn from_value<T>(value: VonValue) -> Result<T, OakError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let text = oak_von::printer::print_value(&value, PrintStyle::Compact, &PrintOptions::default());
+    oak_von::from_str(&text)
+}
+
+fn to_value<T>(value: &T) -> Result<VonValue, OakError>
+where
+    T: serde::Serialize,
+{
+    VonParser::parse(&to_string(value)?)
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ManifestLike {

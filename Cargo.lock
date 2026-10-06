@@ -2937,7 +2937,6 @@ dependencies = [
  "nyar-bytecode",
  "nyar-language",
  "nyar-types",
- "oak-awsl",
  "oak-core",
  "oak-valkyrie",
  "oak-von",

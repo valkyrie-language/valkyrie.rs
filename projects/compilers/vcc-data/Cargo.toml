@@ -13,9 +13,6 @@ serde = ["nyar-types/serde"]
 
 [dependencies]
 miette = { workspace = true }
-oak-awsl = { workspace = true }
-oak-core = { workspace = true }
-oak-von = { workspace = true }
 oak-valkyrie = { workspace = true }
 nyar = { workspace = true }
 nyar-bytecode = { workspace = true }
@@ -25,3 +22,5 @@ zip = { workspace = true }
 
 [dev-dependencies]
 nyar-language = { workspace = true, features = ["serde"] }
+oak-core = { workspace = true }
+oak-von = { workspace = true, features = ["serde"] }
