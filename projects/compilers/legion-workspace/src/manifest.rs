@@ -5,6 +5,8 @@ use std::{
 };
 
 use miette::{Diagnostic, LabeledSpan, Severity};
+
+use crate::oak::{labeled_span, source_point_span};
 use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use oak_core::OakError as VonError;
@@ -230,7 +232,7 @@ pub enum ManifestError {
 
 impl ManifestError {
     fn from_von(error: VonError) -> Self {
-        let span = error.source_offset().map(|start| start..start.saturating_add(1));
+        let span = source_point_span(&error);
         Self::Parse { error, span }
     }
 }
@@ -261,8 +263,7 @@ impl Diagnostic for ManifestError {
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
         match self {
             Self::Parse { span: Some(span), .. } => {
-                let labeled = LabeledSpan::new_with_span(Some("VON 解析失败位置".to_string()), (span.start, span.end.saturating_sub(span.start)));
-                Some(Box::new(std::iter::once(labeled)))
+                Some(Box::new(std::iter::once(labeled_span("VON 解析失败位置", span))))
             }
             _ => None,
         }

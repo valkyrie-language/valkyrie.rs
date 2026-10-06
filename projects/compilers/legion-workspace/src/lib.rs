@@ -3,6 +3,7 @@
 //! Legion 与 ASGARD 共同使用的 manifest、依赖闭包和源码快照解析层。
 
 pub mod manifest;
+pub mod oak;
 pub mod planner;
 pub mod script;
 pub mod source_snapshot;
@@ -11,6 +12,7 @@ pub use manifest::{
     AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectArtifactKind, ProjectManifest,
     PublishTargetSpec, RunnerBinding, WorkspaceDefaults, WorkspaceManifest,
 };
+pub use oak::{labeled_report, labeled_report_with_context, labeled_span, source_point_span};
 pub use planner::{
     BuildPlan, BuildRequest, PlannedDependency, PlannedHostContract, PlannedHostProvider, PlannedProject,
     PlannedSemanticSourceGroup, ProjectResolutionMode, PlannerError, WorkspaceResolver, canonical_target,
