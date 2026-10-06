@@ -1194,6 +1194,7 @@ dependencies = [
  "miette",
  "nyar",
  "nyar-analyzer",
+ "nyar-bytecode",
  "nyar-emitter",
  "nyar-language",
  "nyar-package-manager",
