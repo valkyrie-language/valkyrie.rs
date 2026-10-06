@@ -9,6 +9,7 @@ description = "Asgard compiler — AWSL frontend, packaging, and WASM delivery"
 
 [dependencies]
 vcc-data = { workspace = true }
+oak-awsl = { workspace = true }
 nyar-language = { workspace = true, features = ["serde"] }
 legion-workspace = { workspace = true }
 nyar-analyzer = { workspace = true }

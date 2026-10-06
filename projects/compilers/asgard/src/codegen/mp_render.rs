@@ -250,7 +250,7 @@ fn escape_attr(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     #[test]
     fn counter_page_wxml_snapshot() {

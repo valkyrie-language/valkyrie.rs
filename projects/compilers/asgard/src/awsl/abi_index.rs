@@ -1,13 +1,13 @@
 //! Project-wide component ABI index and cross-file validation (asgard render IR).
 
-use vcc_data::text::awsl::{
+use oak_awsl::{
     AbiIssue, AbiIssueKind, AbiSeverity, ComponentAbi, awsl_stem_from_component_tag, extract_component_abi_from_script, is_snake_case,
     normalize_event_name, normalize_prop_name,
 };
 
 use super::{LoweredComponent, RenderAttr, RenderIr, RenderModule, RenderNode, render_ir::region_nodes};
 
-pub use vcc_data::text::awsl::ComponentAbiIndex;
+pub use oak_awsl::ComponentAbiIndex;
 
 /// Build an index from lowered components.
 pub fn component_abi_index_from_components(components: &[LoweredComponent]) -> ComponentAbiIndex {
@@ -108,7 +108,7 @@ pub fn refine_component_attr_flags(tag: &str, attr: &mut RenderAttr, index: Opti
     else {
         return;
     };
-    let (is_prop, is_event) = vcc_data::text::awsl::refine_binding_kind(tag, &attr.name, attr.is_event, index);
+    let (is_prop, is_event) = oak_awsl::refine_binding_kind(tag, &attr.name, attr.is_event, index);
     attr.is_prop = is_prop;
     attr.is_event = is_event;
 }

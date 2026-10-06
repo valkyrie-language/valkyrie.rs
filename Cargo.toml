@@ -37,6 +37,7 @@ nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 legion-workspace = { path = "projects/compilers/legion-workspace" }
+oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", branch = "dev" }
 nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev" }
 emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", branch = "dev", package = "nyar-emitter" }
 

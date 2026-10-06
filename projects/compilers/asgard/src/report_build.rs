@@ -5,7 +5,7 @@ use std::{fs, path::Path};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_analyzer::report::{HydratedChartSpec, series_to_init_literal};
 use nyar_language::CanonicalTarget;
-use vcc_data::text::awsl::widget_name_from_stem;
+use oak_awsl::widget_name_from_stem;
 
 use crate::{
     awsl::{LoweringOptions, compile_awsl_source},

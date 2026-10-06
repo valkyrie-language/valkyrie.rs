@@ -3,7 +3,7 @@
 use std::fmt::Write as _;
 
 use serde_json::Value;
-use vcc_data::text::awsl::is_html_void_element;
+use oak_awsl::is_html_void_element;
 
 use crate::{
     awsl::{
@@ -218,7 +218,7 @@ fn escape_attr(text: &str) -> String {
 mod tests {
     use super::*;
     use crate::awsl::{LoweringOptions, lower_component};
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     #[test]
     fn static_render_simple_component() {

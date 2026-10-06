@@ -10,7 +10,7 @@ use asgard::{
         generate_ios_swiftui_runtime, generate_mp_runtime, magic_bytes_literal, resolve_call_export,
     },
 };
-use vcc_data::text::awsl::AwslParser;
+use oak_awsl::AwslParser;
 
 fn counter_awsl() -> &'static str {
     r#"<widget counter>

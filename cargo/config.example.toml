@@ -13,3 +13,8 @@ nyar-package-registry = { path = "../nyar-vm.rs/projects/compilers/nyar-package-
 nyar-runner = { path = "../nyar-vm.rs/projects/compilers/nyar-runner" }
 nyar-types = { path = "../nyar-vm.rs/projects/compilers/nyar-types" }
 nyar-workspace = { path = "../nyar-vm.rs/projects/compilers/nyar-workspace" }
+
+[patch."https://github.com/yggdrasil-language/oak.rs"]
+oak-awsl = { path = "../../dxo 深度学习/oaks/examples/oak-awsl" }
+oak-valkyrie = { path = "../../dxo 深度学习/oaks/examples/oak-valkyrie" }
+oak-core = { path = "../../dxo 深度学习/oaks/projects/oak-core" }

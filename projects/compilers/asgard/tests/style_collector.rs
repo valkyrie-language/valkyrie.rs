@@ -4,7 +4,7 @@ use asgard::{
     awsl::{LoweringOptions, RenderNode, lower_component},
     codegen::build_awsl_wasm_source,
 };
-use vcc_data::text::awsl::AwslParser;
+use oak_awsl::AwslParser;
 
 fn first_element_class_attr(lowered: &asgard::awsl::LoweredComponent) -> Option<&asgard::awsl::RenderAttr> {
     let module = &lowered.render_ir;

@@ -1,6 +1,6 @@
 //! AWSL 单文件组件统一编译入口。
 
-use vcc_data::text::awsl::{AwslParseError, AwslParser, validate_component_contract};
+use oak_awsl::{AwslParseError, AwslParser, validate_component_contract};
 
 use super::{LoweredComponent, LoweringOptions, lower_component};
 

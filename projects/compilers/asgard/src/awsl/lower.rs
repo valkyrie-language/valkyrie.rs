@@ -1,6 +1,6 @@
 //! AWSL 前端降级：AST → synthetic V + RenderIR。
 
-use vcc_data::text::awsl::{
+use oak_awsl::{
     AwslAttributeValue, AwslDirectiveKind, AwslElement, AwslRoot, AwslTemplateNode, AwslTextPart, ComponentAbi, widget_name_from_stem,
 };
 
@@ -46,7 +46,7 @@ pub struct LoweredComponent {
     /// Extracted component ABI.
     pub component_abi: ComponentAbi,
     /// ABI semantic issues from script extraction.
-    pub abi_issues: Vec<vcc_data::text::awsl::AbiIssue>,
+    pub abi_issues: Vec<oak_awsl::AbiIssue>,
     /// island 类型。
     pub island_type: String,
     /// hydrate 策略。
@@ -637,7 +637,7 @@ fn attr_value_expr(value: &AwslAttributeValue) -> String {
     }
 }
 
-fn parse_loop_element_attrs(attrs: &[vcc_data::text::awsl::AwslAttribute]) -> Option<(String, String, Option<String>)> {
+fn parse_loop_element_attrs(attrs: &[oak_awsl::AwslAttribute]) -> Option<(String, String, Option<String>)> {
     let mut items_expr = None::<String>;
     let mut item_var = None::<String>;
     let mut key_expr = None::<String>;
@@ -769,7 +769,7 @@ impl ScriptBinding {
 mod tests {
     use super::*;
     use crate::awsl::is_fragment_root;
-    use vcc_data::text::awsl::AwslParser;
+    use oak_awsl::AwslParser;
 
     fn expect_element<'a>(node: &'a AwslTemplateNode) -> &'a AwslElement {
         match node {
