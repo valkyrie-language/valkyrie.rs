@@ -2935,7 +2935,6 @@ version = "0.0.1"
 dependencies = [
  "miette",
  "nyar",
- "nyar-bytecode",
  "nyar-language",
  "nyar-types",
  "oak-core",

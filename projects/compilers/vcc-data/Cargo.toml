@@ -14,7 +14,6 @@ serde = ["nyar-types/serde"]
 [dependencies]
 miette = { workspace = true }
 nyar = { workspace = true }
-nyar-bytecode = { workspace = true }
 nyar-types = { workspace = true }
 serde = { workspace = true }
 zip = { workspace = true }
