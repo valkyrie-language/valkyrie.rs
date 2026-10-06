@@ -1475,7 +1475,6 @@ dependencies = [
 [[package]]
 name = "nyar"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "miette",
  "nyar-analyzer",
@@ -1489,7 +1488,6 @@ dependencies = [
 [[package]]
 name = "nyar-analyzer"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "nyar-optimizer",
  "nyar-types",
@@ -1499,12 +1497,10 @@ dependencies = [
 [[package]]
 name = "nyar-bytecode"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 
 [[package]]
 name = "nyar-emitter"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "acorn-jvm",
  "acorn-pe",
@@ -1521,7 +1517,6 @@ dependencies = [
 [[package]]
 name = "nyar-language"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "acorn-pe",
  "katex-rs",
@@ -1543,7 +1538,6 @@ dependencies = [
 [[package]]
 name = "nyar-optimizer"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "nyar-types",
  "serde",
@@ -1552,7 +1546,6 @@ dependencies = [
 [[package]]
 name = "nyar-package-manager"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "base64 0.23.1",
  "flate2",
@@ -1572,7 +1565,6 @@ dependencies = [
 [[package]]
 name = "nyar-package-registry"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "base64 0.23.1",
  "ed25519-dalek",
@@ -1590,7 +1582,6 @@ dependencies = [
 [[package]]
 name = "nyar-runner"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "miette",
 ]
@@ -1598,7 +1589,6 @@ dependencies = [
 [[package]]
 name = "nyar-types"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "ordered-float",
  "serde",
@@ -1609,7 +1599,6 @@ dependencies = [
 [[package]]
 name = "nyar-workspace"
 version = "0.1.0"
-source = "git+https://github.com/nyar-vm/nyar-vm.rs?branch=dev#f3cfd9cb83631eedb01092455cd706a762cbc46d"
 dependencies = [
  "nyar-bytecode",
  "sha2 0.11.0",
@@ -1619,17 +1608,15 @@ dependencies = [
 [[package]]
 name = "oak-awsl"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "oak-core",
- "oak-formatter",
+ "oak-formatter 0.0.12",
  "oak-valkyrie",
 ]
 
 [[package]]
 name = "oak-core"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "serde",
  "smallvec",
@@ -1640,7 +1627,6 @@ dependencies = [
 [[package]]
 name = "oak-dejavu"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "arcstr",
  "bigdecimal",
@@ -1656,6 +1642,13 @@ dependencies = [
 [[package]]
 name = "oak-formatter"
 version = "0.0.12"
+dependencies = [
+ "oak-core",
+]
+
+[[package]]
+name = "oak-formatter"
+version = "0.0.12"
 source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "oak-core",
@@ -1664,7 +1657,6 @@ dependencies = [
 [[package]]
 name = "oak-macros"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1674,11 +1666,10 @@ dependencies = [
 [[package]]
 name = "oak-valkyrie"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "oak-core",
  "oak-dejavu",
- "oak-formatter",
+ "oak-formatter 0.0.12",
  "serde",
  "unicode-ident",
 ]
@@ -1689,7 +1680,7 @@ version = "0.0.12"
 source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
 dependencies = [
  "oak-core",
- "oak-formatter",
+ "oak-formatter 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?branch=dev)",
  "serde",
 ]
 

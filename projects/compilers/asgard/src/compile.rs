@@ -51,7 +51,13 @@ pub fn resolve_project_source_groups(project_dir: &Path, target: &CanonicalTarge
         .build_plan(&BuildRequest { project_dir: project_dir.to_path_buf(), target: target.clone(), output_dir: None })
         .map_err(|error| miette::miette!("解析项目构建计划失败: {error}"))?;
     let project_name = plan.project.name.clone();
-    let groups = compile_source_snapshot(&plan.project.semantic_source_groups)
+    let arch = if target.specification == nyar_language::CanonicalSpecification::Wasi {
+        "wasi"
+    }
+    else {
+        target.arch.as_str()
+    };
+    let groups = compile_source_snapshot(&plan.project.semantic_source_groups, arch)
         .map_err(|error| miette::miette!("读取项目源码快照失败: {error}"))?;
     Ok(ResolvedCompilerSources { project_name, groups })
 }

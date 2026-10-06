@@ -9,6 +9,7 @@ use crate::planner::PlannedSemanticSourceGroup;
 
 pub fn compile_source_snapshot(
     groups: &[PlannedSemanticSourceGroup],
+    arch: &str,
 ) -> Result<Vec<CompilerSourceGroup>> {
     if groups.is_empty() {
         return Err(miette!("semantic source group plan is empty"));
@@ -23,6 +24,7 @@ pub fn compile_source_snapshot(
             source.push_str(content.strip_prefix('\u{FEFF}').unwrap_or(&content));
             source.push('\n');
         }
+        source = nyar_language::expand_target_templates_for_arch(&source, arch);
         compiler_groups.push(CompilerSourceGroup {
             dependency_key: group.dependency_key.clone(),
             name: group.name.clone(),
@@ -73,7 +75,7 @@ mod tests {
     fn single_group_keeps_resolver_identity() {
         let directory = tempdir().expect("创建源码目录");
         let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &[]);
-        let groups = compile_source_snapshot(&[group]).expect("Resolver 形成完整源码组");
+        let groups = compile_source_snapshot(&[group], "wasm32").expect("Resolver 形成完整源码组");
         assert_eq!(groups[0].dependency_key, "application");
         assert_eq!(groups[0].name, "application");
         let output = directory.path().join("output");
@@ -88,7 +90,7 @@ mod tests {
         let directory = tempdir().expect("创建源码目录");
         let dependency = source_group(directory.path(), "library", "micro answer() -> i32 { return 1 }", &[]);
         let application = source_group(directory.path(), "application", "[main] micro main() -> i32 { return answer() }", &["library"]);
-        let groups = compile_source_snapshot(&[dependency, application]).expect("Resolver 形成完整源码组");
+        let groups = compile_source_snapshot(&[dependency, application], "wasm32").expect("Resolver 形成完整源码组");
         assert_eq!(groups[1].direct_dependencies, ["library"]);
         assert_eq!(groups[0].dependency_key, "library");
         let output = directory.path().join("output");
@@ -103,10 +105,10 @@ mod tests {
         let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &[]);
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
-        let groups = compile_source_snapshot(std::slice::from_ref(&group)).expect("Resolver 形成完整源码组");
+        let groups = compile_source_snapshot(std::slice::from_ref(&group), "wasm32").expect("Resolver 形成完整源码组");
         compile_snapshot(&groups, &output).expect("首次源码编译成功");
         fs::write(&group.source_files[0], "micro main(").expect("替换为无效源码");
-        let groups = compile_source_snapshot(&[group]).expect("Resolver 读取当前源码");
+        let groups = compile_source_snapshot(&[group], "wasm32").expect("Resolver 读取当前源码");
         compile_snapshot(&groups, &output).expect_err("不得复用已存在的旧产物掩盖当前源码失败");
     }
 
@@ -114,7 +116,7 @@ mod tests {
     fn unresolved_dependency_does_not_flatten_the_source_closure() {
         let directory = tempdir().expect("创建源码目录");
         let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &["missing"]);
-        let groups = compile_source_snapshot(&[group]).expect("Resolver 形成完整源码组");
+        let groups = compile_source_snapshot(&[group], "wasm32").expect("Resolver 形成完整源码组");
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
         let error = compile_snapshot(&groups, &output).expect_err("未解析依赖必须在 Compiler 边界失败");
@@ -126,13 +128,29 @@ mod tests {
         let directory = tempdir().expect("创建源码目录");
         let mut group = source_group(directory.path(), "application", "micro main() -> i32 { return 23 }", &[]);
         group.source_files.push(directory.path().join("missing.v"));
-        let error = compile_source_snapshot(&[group]).expect_err("必须拒绝不完整源码组");
+        let error = compile_source_snapshot(&[group], "wasm32").expect_err("必须拒绝不完整源码组");
         assert!(error.to_string().contains("读取源码失败"), "{error}");
     }
 
     #[test]
     fn empty_snapshot_is_not_a_successful_program() {
-        let error = compile_source_snapshot(&[]).expect_err("必须拒绝空快照");
+        let error = compile_source_snapshot(&[], "wasm32").expect_err("必须拒绝空快照");
         assert!(error.to_string().contains("semantic source group plan is empty"), "{error}");
+    }
+
+    #[test]
+    fn resolver_expands_target_templates_before_compiler() {
+        let directory = tempdir().expect("创建源码目录");
+        let template = r#"<% match arch %>
+<% case "wasm32" %>
+micro main() -> i32 { return 23 }
+<% else %>
+micro main() -> i32 { return 0 }
+<% end match %>"#;
+        let group = source_group(directory.path(), "application", template, &[]);
+        let groups = compile_source_snapshot(&[group], "wasm32").expect("Resolver 展开模板");
+        assert!(!groups[0].source.contains("<% match "));
+        assert!(groups[0].source.contains("return 23"));
+        assert!(!groups[0].source.contains("return 0"));
     }
 }

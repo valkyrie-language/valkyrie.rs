@@ -257,7 +257,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     else {
         plan.project.build_target.target.arch.as_str()
     };
-    let source_groups = compile_source_snapshot(&plan.project.semantic_source_groups)?;
+    let source_groups = compile_source_snapshot(&plan.project.semantic_source_groups, arch)?;
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
     }
