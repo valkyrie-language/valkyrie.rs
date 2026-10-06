@@ -4,7 +4,9 @@ use std::{fs, path::Path};
 
 use legion_workspace::{compile_source_snapshot, planner::{BuildRequest, WorkspaceResolver}};
 use miette::{IntoDiagnostic, Result, WrapErr};
-use nyar_language::{compile_source_groups_to_artifacts, nyar::ArtifactKind, CanonicalTarget, CompilerSourceGroup};
+use nyar_language::{
+    compile_source_groups_to_artifacts, nyar::ArtifactKind, CanonicalTarget, CompilerBuildContext, CompilerSourceGroup,
+};
 
 use crate::{
     host_backend::HostBackend,
@@ -80,13 +82,16 @@ pub fn compile_v_bundle(
     let compiler = nyar_language::ValkyrieCompiler::default();
     let target_profile = target.to_profile(None);
     fs::create_dir_all(output_dir).into_diagnostic().wrap_err("failed to create output directory")?;
-    let report = compile_source_groups_to_artifacts(
-        &compiler,
-        &source_groups,
+    let build_context = CompilerBuildContext::new(
         target.arch.as_str(),
         target.clone(),
         nyar_language::nyar::ClrSuspendStrategy::default(),
         emitter::nyar_backend_wasi::WasmPackageKind::Binary,
+    );
+    let report = compile_source_groups_to_artifacts(
+        &compiler,
+        &source_groups,
+        &build_context,
         output_dir,
         module_name,
         true,

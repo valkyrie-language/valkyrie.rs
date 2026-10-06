@@ -52,13 +52,16 @@ mod tests {
     }
 
     fn compile_snapshot(groups: &[CompilerSourceGroup], output_dir: &Path) -> Result<emitter::DriverCompileReport> {
-        nyar_language::compile_source_groups_to_artifacts(
-            &nyar_language::ValkyrieCompiler::default(),
-            groups,
+        let build_context = nyar_language::CompilerBuildContext::new(
             "wasm32",
             nyar_language::CanonicalTarget::parse("node").expect("正式 Node 目标"),
             nyar_language::nyar::ClrSuspendStrategy::default(),
             emitter::nyar_backend_wasi::WasmPackageKind::Binary,
+        );
+        nyar_language::compile_source_groups_to_artifacts(
+            &nyar_language::ValkyrieCompiler::default(),
+            groups,
+            &build_context,
             output_dir,
             "application",
             false,

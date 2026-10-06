@@ -18,8 +18,8 @@ use clap::Args;
 use emitter::DriverRunContract;
 use miette::{IntoDiagnostic, Report, Result, WrapErr, miette};
 use nyar_language::{
-    ArtifactSet, CanonicalSpecification, CanonicalTarget, compile_source_groups_to_artifacts,
-    nyar::ClrSuspendStrategy,
+    ArtifactSet, CanonicalSpecification, CanonicalTarget, CompilerBuildContext, CompilerHostProviderBinding,
+    compile_source_groups_to_artifacts, nyar::ClrSuspendStrategy,
 };
 use serde::Serialize;
 
@@ -265,13 +265,18 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
     let clr_suspend_strategy = ClrSuspendStrategy::from_runtime_async_flag(plan.project.build_target.runtime_async);
     let wasm_package_kind = wasm_package_kind_for_manifest(plan.project.artifact_kind);
     fs::create_dir_all(&plan.output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", plan.output_dir.display()))?;
+    let build_context = CompilerBuildContext::new(arch, plan.project.build_target.target.clone(), clr_suspend_strategy, wasm_package_kind)
+        .with_selected_host_providers(
+            plan.project
+                .selected_host_providers
+                .iter()
+                .map(|provider| CompilerHostProviderBinding { contract: provider.contract.clone(), symbol: provider.symbol.clone() })
+                .collect(),
+        );
     let report = compile_source_groups_to_artifacts(
         &nyar_language::ValkyrieCompiler::default(),
         &source_groups,
-        arch,
-        plan.project.build_target.target.clone(),
-        clr_suspend_strategy,
-        wasm_package_kind,
+        &build_context,
         &plan.output_dir,
         &plan.project.name,
         plan.project.build_target.wat,
