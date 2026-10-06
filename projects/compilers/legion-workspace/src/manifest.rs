@@ -6,7 +6,8 @@ use std::{
 use miette::{Diagnostic, Severity};
 use nyar_language::{CanonicalTarget, PublishFormat, RunnerSelector};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use vcc_data::text::von::{VonError, from_str};
+use oak_core::OakError as VonError;
+use oak_von::from_str;
 
 /// Consumer package artifact mode (`legion build` target interpretation).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

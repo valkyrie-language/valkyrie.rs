@@ -1,7 +1,8 @@
 //! Parse every nyar.emitter `.v` via `projects/valkyrie.v` submodule:
 //!   projects/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
 use std::{fs, path::PathBuf};
-use vcc_data::text::valkyrie::{AstParser, parser::ParseError};
+
+use oak_valkyrie::printer::parse_source;
 
 #[test]
 fn parse_nyar_emitter_sources() {
@@ -29,21 +30,12 @@ fn parse_nyar_emitter_sources() {
     for path in &files {
         let source = fs::read_to_string(path).unwrap();
         let display = path.strip_prefix(&root).unwrap_or(path);
-        match AstParser::parse_root(&source) {
+        match parse_source(&source) {
             Ok(_) => println!("OK {}", display.display()),
             Err(err) => {
                 failures += 1;
                 println!("ERR {}", display.display());
                 println!("  {err}");
-                if let ParseError::Invalid { span: Some(span), .. } = &err {
-                    let start = span.start.min(source.len());
-                    let end = span.end.min(source.len()).max(start);
-                    let before = source[..start].rfind('\n').map(|i| i + 1).unwrap_or(0);
-                    let after = source[end..].find('\n').map(|i| end + i).unwrap_or(source.len());
-                    let line_no = source[..start].bytes().filter(|b| *b == b'\n').count() + 1;
-                    println!("  line {line_no}: {}", &source[before..after]);
-                    println!("  mark: {}{}", " ".repeat(start.saturating_sub(before)), "^".repeat((end - start).max(1)));
-                }
             }
         }
     }

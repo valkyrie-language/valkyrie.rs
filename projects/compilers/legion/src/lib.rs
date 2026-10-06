@@ -6,6 +6,7 @@ pub mod cli;
 pub mod cmds;
 pub mod forward;
 pub mod unity_export;
+pub mod von;
 
 pub use artifact_formats::{artifact_format_from_extension, artifact_format_slug, artifact_formats_for_publish_format};
 pub use cmds::{
@@ -47,4 +48,4 @@ pub use legion_workspace::planner::{
     collect_test_build_sources, collect_test_v_files, project_uses_single_script_layout,
 };
 pub use legion_workspace::script;
-pub use vcc_data::text::von::{VonError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};
+pub use von::{VonError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};

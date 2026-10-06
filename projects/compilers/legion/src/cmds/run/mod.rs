@@ -10,7 +10,7 @@ use std::{
 };
 
 use clap::Args;
-use miette::{IntoDiagnostic, Result, WrapErr, miette};
+use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::{CanonicalAbi, CanonicalTarget, RunnerFamily};
 use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily as InterpreterRuntimeFamily};
 use serde::{Deserialize, Serialize};
@@ -111,8 +111,8 @@ impl ExecutionManifest {
     /// 将 execution manifest 写入输出目录中的 `run-contracts.txt`。
     pub fn write_to_output_dir(&self, output_dir: &Path) -> Result<()> {
         let manifest_path = output_dir.join(EXECUTION_MANIFEST_FILE_NAME);
-        let content =
-            crate::write_von_indented(self).wrap_err_with(|| format!("序列化 execution manifest 失败 {}", manifest_path.display()))?;
+        let content = crate::write_von_indented(self)
+            .map_err(|error| miette!("序列化 execution manifest 失败 {}: {error}", manifest_path.display()))?;
         fs::write(&manifest_path, content)
             .into_diagnostic()
             .map_err(|error| error.wrap_err(format!("写入 execution manifest 失败 {}", manifest_path.display())))?;

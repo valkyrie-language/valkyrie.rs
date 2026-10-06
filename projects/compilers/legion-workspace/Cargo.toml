@@ -9,7 +9,8 @@ license.workspace = true
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-vcc-data = { workspace = true }
+oak-core = { workspace = true }
+oak-von = { workspace = true, features = ["serde"] }
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-package-manager = { workspace = true }
 

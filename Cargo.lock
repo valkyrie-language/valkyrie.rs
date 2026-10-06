@@ -1200,6 +1200,9 @@ dependencies = [
  "nyar-runner",
  "nyar-types",
  "nyar-workspace",
+ "oak-core",
+ "oak-valkyrie",
+ "oak-von",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -1217,10 +1220,11 @@ dependencies = [
  "nyar-emitter",
  "nyar-language",
  "nyar-package-manager",
+ "oak-core",
+ "oak-von",
  "serde",
  "serde_json",
  "tempfile",
- "vcc-data",
 ]
 
 [[package]]

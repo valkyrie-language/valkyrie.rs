@@ -21,6 +21,9 @@ base64 = { workspace = true }
 emitter = { workspace = true }
 nyar-package-manager = { workspace = true }
 nyar-workspace = { workspace = true }
+oak-core = { workspace = true }
+oak-von = { workspace = true }
+oak-valkyrie = { workspace = true }
 vcc-data = { workspace = true, features = ["serde"] }
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-analyzer = { workspace = true }

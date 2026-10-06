@@ -348,7 +348,8 @@ fn write_host_selection_spec(output_dir: &Path, providers: &[legion_workspace::p
             line: item.line,
         })
         .collect();
-    let content = write_von_indented(&entries).wrap_err_with(|| format!("序列化 host 选择结果失败 {}", output_path.display()))?;
+    let content = write_von_indented(&entries)
+        .map_err(|error| miette!("序列化 host 选择结果失败 {}: {error}", output_path.display()))?;
     fs::create_dir_all(output_dir).into_diagnostic().map_err(|error| error.wrap_err(format!("创建输出目录失败 {}", output_dir.display())))?;
     fs::write(&output_path, content)
         .into_diagnostic()
