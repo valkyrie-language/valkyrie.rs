@@ -2956,6 +2956,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "oak-valkyrie",
  "windows-sys 0.59.0",
 ]
 

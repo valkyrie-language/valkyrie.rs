@@ -23,10 +23,6 @@ pub mod notedown;
 /// Markdown 文档 AST 与 Notedown 桥接。
 pub mod markdown;
 
-/// Valkyrie 源码文本 facade（重导出 `oak-valkyrie`）。
-pub mod valkyrie;
-
 /// `WAT` 文本格式模型。
-pub mod wat;
-/// `WIT` 文本格式模型。
+pub mod wat;/// `WIT` 文本格式模型。
 pub mod wit;

@@ -23,5 +23,8 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_
 [build-dependencies]
 napi-build = { workspace = true }
 
+[dev-dependencies]
+oak-valkyrie = { workspace = true }
+
 [target.'cfg(not(windows))'.dependencies]
 gag = { workspace = true }
