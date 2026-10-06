@@ -256,7 +256,8 @@ impl VoaConfig {
     /// 解析 `asgard.config.v`（Valkyrie script）文本。
     pub fn parse(source: &str) -> Result<Self> {
         let normalized = config_script::normalize_config_source(source)?;
-        let value = from_str::<VonValue>(&normalized).map_err(|error| miette::miette!("{error:?}"))?;
+        let value = from_str::<VonValue>(&normalized)
+            .map_err(|error| legion_workspace::oak::labeled_report(error, "VON 解析失败位置"))?;
         von_to_config(&value)
     }
 

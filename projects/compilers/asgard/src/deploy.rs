@@ -130,7 +130,8 @@ impl DeployProfile {
 
     /// 解析 VON 文本并校验。
     pub fn parse(source: &str) -> Result<DeployPlan> {
-        let value = from_str::<VonValue>(source).map_err(|error| miette!("{error:?}"))?;
+        let value = from_str::<VonValue>(source)
+            .map_err(|error| legion_workspace::oak::labeled_report(error, "VON 解析失败位置"))?;
         let json = von_to_json(&value);
         let profile: DeployProfile = serde_json::from_value(json).into_diagnostic().wrap_err("解析 deploy profile 失败")?;
         let warnings = validate_profile(&profile)?;
