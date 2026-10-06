@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 
 use miette::{IntoDiagnostic, Result, WrapErr, miette};
 use serde::{Deserialize, Serialize};
-use vcc_data::text::von::{VonParser, VonValue};
+use oak_von::language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue};
+use oak_von::from_str;
 
 /// Profile 实现状态。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,7 +130,7 @@ impl DeployProfile {
 
     /// 解析 VON 文本并校验。
     pub fn parse(source: &str) -> Result<DeployPlan> {
-        let value = VonParser::parse(source).map_err(|error| miette!("{error:?}"))?;
+        let value = from_str::<VonValue>(source).map_err(|error| miette!("{error:?}"))?;
         let json = von_to_json(&value);
         let profile: DeployProfile = serde_json::from_value(json).into_diagnostic().wrap_err("解析 deploy profile 失败")?;
         let warnings = validate_profile(&profile)?;
@@ -161,20 +162,29 @@ fn validate_profile(profile: &DeployProfile) -> Result<Vec<DeployProfileWarning>
 
 fn von_to_json(value: &VonValue) -> serde_json::Value {
     match value {
-        VonValue::Null => serde_json::Value::Null,
-        VonValue::Bool(v) => serde_json::Value::Bool(*v),
-        VonValue::Number(v) => serde_json::Value::Number((*v).into()),
+        VonValue::Null | VonValue::Undefined | VonValue::Inf | VonValue::Nan => serde_json::Value::Null,
+        VonValue::Boolean(v) => serde_json::Value::Bool(*v),
+        VonValue::Number(v) => serde_json::Number::from_f64(*v).map(serde_json::Value::Number).unwrap_or(serde_json::Value::Null),
         VonValue::String(v) => serde_json::Value::String(v.clone()),
-        VonValue::Array(items) => serde_json::Value::Array(items.iter().map(von_to_json).collect()),
-        VonValue::Object(map) => {
+        VonValue::Array(VonArray { elements }) => serde_json::Value::Array(elements.iter().map(von_to_json).collect()),
+        VonValue::Tuple(VonTuple { elements }) => serde_json::Value::Array(elements.iter().map(von_to_json).collect()),
+        VonValue::Object(VonObject { fields }) => {
             let mut object = serde_json::Map::new();
-            for (key, item) in map {
+            for field in fields {
                 // topology 常用别名：static → static_host
-                let key = if key == "static" { "static_host".to_string() } else { key.clone() };
-                object.insert(key, von_to_json(item));
+                let key = if field.name == "static" { "static_host".to_string() } else { field.name.clone() };
+                object.insert(key, von_to_json(&field.value));
             }
             serde_json::Value::Object(object)
         }
+        VonValue::Enum(VonEnum { variant, payload }) => match payload {
+            None => serde_json::Value::String(variant.clone()),
+            Some(payload) => {
+                let mut object = serde_json::Map::new();
+                object.insert(variant.clone(), von_to_json(payload));
+                serde_json::Value::Object(object)
+            }
+        },
     }
 }
 

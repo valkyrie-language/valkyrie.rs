@@ -270,7 +270,8 @@ fn assignment_object_to_colon_object(source: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vcc_data::text::von::VonParser;
+    use oak_von::language::value::VonValue;
+    use oak_von::from_str;
 
     #[test]
     fn define_config_block_normalizes_to_object() {
@@ -283,10 +284,9 @@ mod tests {
     }
 }"#;
         let normalized = normalize_config_source(source).expect("normalize");
-        let value = VonParser::parse(&normalized).expect("parse von");
-        let obj = value.as_object().expect("object");
-        assert_eq!(obj.get("project_type").and_then(|v| v.as_str()), Some("application"));
-        let build = obj.get("build").and_then(|v| v.as_object()).expect("build");
+        let value: VonValue = from_str(&normalized).expect("parse von");
+        assert_eq!(value.get("project_type").and_then(|v| v.as_str()), Some("application"));
+        let build = value.get("build").expect("build");
         assert_eq!(build.get("output").and_then(|v| v.as_str()), Some("dist"));
     }
 
@@ -295,7 +295,7 @@ mod tests {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v");
         let source = std::fs::read_to_string(root.join("examples/test.blog/asgard.config.v")).expect("read");
         let normalized = normalize_config_source(&source).expect("normalize");
-        if let Err(error) = VonParser::parse(&normalized) {
+        if let Err(error) = from_str::<VonValue>(&normalized) {
             panic!("parse failed: {error:?}\n---\n{normalized}\n---");
         }
         assert!(normalized.contains("routes"));
