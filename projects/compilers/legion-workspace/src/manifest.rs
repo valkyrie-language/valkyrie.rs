@@ -250,9 +250,7 @@ impl Diagnostic for ManifestError {
     }
 
     fn diagnostic_source(&self) -> Option<&dyn Diagnostic> {
-        match self {
-            ManifestError::Parse(error) => Some(error),
-        }
+        None
     }
 }
 

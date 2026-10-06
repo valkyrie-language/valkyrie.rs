@@ -47,4 +47,4 @@ pub use legion_workspace::planner::{
     collect_test_build_sources, collect_test_v_files, project_uses_single_script_layout,
 };
 pub use legion_workspace::script;
-pub use vcc_data::text::von::{VonError, VonParseError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};
+pub use vcc_data::text::von::{VonError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};
