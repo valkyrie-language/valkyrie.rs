@@ -123,7 +123,7 @@ dependencies = [
  "nyar-emitter",
  "nyar-language",
  "oak-awsl",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
  "serde",
  "serde_json",
  "tempfile",
@@ -629,7 +629,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1203,7 +1203,7 @@ dependencies = [
  "nyar-workspace",
  "oak-core",
  "oak-valkyrie",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -1222,7 +1222,7 @@ dependencies = [
  "nyar-language",
  "nyar-package-manager",
  "oak-core",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
  "serde",
  "serde_json",
  "tempfile",
@@ -1528,7 +1528,7 @@ dependencies = [
  "oak-awsl",
  "oak-core",
  "oak-valkyrie",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e)",
  "ordered-float",
  "serde",
  "serde_json",
@@ -1553,7 +1553,7 @@ dependencies = [
  "nyar-language",
  "nyar-package-registry",
  "oak-core",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e)",
  "reqwest",
  "serde",
  "serde_json",
@@ -1634,7 +1634,7 @@ dependencies = [
  "indexmap",
  "num",
  "oak-core",
- "oak-macros",
+ "oak-macros 0.0.12",
  "serde",
  "unicode-ident",
 ]
@@ -1649,7 +1649,15 @@ dependencies = [
 [[package]]
 name = "oak-formatter"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14#57a56f1424691cfe301a28a1928e4fb083333889"
+dependencies = [
+ "oak-core",
+]
+
+[[package]]
+name = "oak-formatter"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e#5f6db59efaa01dc4f0d64248e50298fb925876a7"
 dependencies = [
  "oak-core",
 ]
@@ -1661,6 +1669,48 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "oak-macros"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14#57a56f1424691cfe301a28a1928e4fb083333889"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "oak-macros"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e#5f6db59efaa01dc4f0d64248e50298fb925876a7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "oak-pretty-print"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14#57a56f1424691cfe301a28a1928e4fb083333889"
+dependencies = [
+ "oak-core",
+ "oak-macros 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oak-pretty-print"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e#5f6db59efaa01dc4f0d64248e50298fb925876a7"
+dependencies = [
+ "oak-core",
+ "oak-macros 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e)",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1677,10 +1727,22 @@ dependencies = [
 [[package]]
 name = "oak-von"
 version = "0.0.12"
-source = "git+https://github.com/yggdrasil-language/oak.rs?branch=dev#f8d72384bc8c5e2a820525a67c55d2e34d71a251"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14#57a56f1424691cfe301a28a1928e4fb083333889"
 dependencies = [
  "oak-core",
- "oak-formatter 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?branch=dev)",
+ "oak-formatter 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
+ "oak-pretty-print 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
+ "serde",
+]
+
+[[package]]
+name = "oak-von"
+version = "0.0.12"
+source = "git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e#5f6db59efaa01dc4f0d64248e50298fb925876a7"
+dependencies = [
+ "oak-core",
+ "oak-formatter 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e)",
+ "oak-pretty-print 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=5f6db59e)",
  "serde",
 ]
 
@@ -1950,7 +2012,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2144,7 +2206,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2201,7 +2263,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2607,7 +2669,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2617,7 +2679,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2941,7 +3003,7 @@ dependencies = [
  "nyar-types",
  "oak-core",
  "oak-valkyrie",
- "oak-von",
+ "oak-von 0.0.12 (git+https://github.com/yggdrasil-language/oak.rs?rev=57a56f14)",
  "serde",
  "zip",
 ]
@@ -3107,7 +3169,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

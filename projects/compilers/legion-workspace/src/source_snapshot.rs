@@ -135,20 +135,20 @@ mod tests {
     }
 
     #[test]
-    fn resolver_does_not_rewrite_target_templates() {
+    fn resolver_keeps_templates_and_compiler_expands_by_arch() {
         let directory = tempdir().expect("创建源码目录");
         let template = r#"<% match arch %>
 <% case "wasm32" %>
-micro main() -> i32 { return 23 }
+[main] micro main() -> i32 { return 23 }
 <% else %>
-micro main() -> i32 { return 0 }
-<% end match %>"#;
+[main] micro main() -> i32 { return 0 }
+<% end %>"#;
         let group = source_group(directory.path(), "application", template, &[]);
         let groups = compile_source_snapshot(&[group]).expect("Resolver 只拼接源码，不展开模板");
         assert!(groups[0].source.contains("<% match "));
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
-        let error = compile_snapshot(&groups, &output).expect_err("未结构化展开的 TGrammar 必须在 Compiler 边界失败");
-        assert!(error.to_string().contains("TGrammar") || error.to_string().contains("未展开"), "{error}");
+        let report = compile_snapshot(&groups, &output).expect("结构化 TGrammar 应由 Compiler 按 arch 展开");
+        assert!(!report.artifacts.artifacts.is_empty(), "编译成功必须具有产物");
     }
 }
