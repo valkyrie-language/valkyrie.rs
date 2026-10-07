@@ -50,12 +50,21 @@ mod tests {
     }
 
     fn compile_snapshot(groups: &[CompilerSourceGroup], output_dir: &Path) -> Result<emitter::DriverCompileReport> {
+        compile_snapshot_with_bindings(groups, output_dir, &[])
+    }
+
+    fn compile_snapshot_with_bindings(
+        groups: &[CompilerSourceGroup],
+        output_dir: &Path,
+        host_bindings: &[nyar_language::CompilerHostProviderBinding],
+    ) -> Result<emitter::DriverCompileReport> {
         let build_context = nyar_language::CompilerBuildContext::new(
             "wasm32",
             nyar_language::CanonicalTarget::parse("node").expect("正式 Node 目标"),
             nyar_language::nyar::ClrSuspendStrategy::default(),
             emitter::nyar_backend_wasi::WasmPackageKind::Binary,
-        );
+        )
+        .with_selected_host_providers(host_bindings.to_vec());
         nyar_language::compile_source_groups_to_artifacts(
             &nyar_language::ValkyrieCompiler::default(),
             groups,
@@ -132,6 +141,37 @@ mod tests {
     fn empty_snapshot_is_not_a_successful_program() {
         let error = compile_source_snapshot(&[]).expect_err("必须拒绝空快照");
         assert!(error.to_string().contains("semantic source group plan is empty"), "{error}");
+    }
+
+    #[test]
+    fn selected_host_provider_rewrites_contract_calls_in_snapshot_closure() {
+        let directory = tempdir().expect("创建源码目录");
+        let adaptor = source_group(
+            directory.path(),
+            "adaptor",
+            "[host_provider(demo.write)] micro write(value: i32) -> i32 { return value }",
+            &[],
+        );
+        let application = source_group(
+            directory.path(),
+            "demo",
+            "[host_contract] micro write(value: i32) -> i32 { } \
+             [main] micro main() -> i32 { return write(1) }",
+            &["adaptor"],
+        );
+        let groups = compile_source_snapshot(&[adaptor, application]).expect("Resolver 形成完整源码组");
+        let output = directory.path().join("output");
+        fs::create_dir_all(&output).expect("创建产物目录");
+        let report = compile_snapshot_with_bindings(
+            &groups,
+            &output,
+            &[nyar_language::CompilerHostProviderBinding {
+                contract: "demo.write".into(),
+                symbol: "adaptor.write".into(),
+            }],
+        )
+        .expect("Resolver 选定的 host provider 必须进入 Compiler 合同");
+        assert!(!report.artifacts.artifacts.is_empty(), "host contract 闭合后必须生成产物");
     }
 
     #[test]
