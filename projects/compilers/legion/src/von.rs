@@ -21,10 +21,6 @@ pub fn from_value<T>(value: VonValue) -> Result<T, VonError>
 where
     T: serde::de::DeserializeOwned,
 {
-    let text = oak_von::printer::print_value(
-        &value,
-        oak_von::printer::PrintStyle::Compact,
-        &oak_von::printer::PrintOptions::default(),
-    );
+    let text = oak_von::printer::print_value(&value, &oak_von::printer::PrintOptions::compact());
     oak_von::from_str(&text)
 }
