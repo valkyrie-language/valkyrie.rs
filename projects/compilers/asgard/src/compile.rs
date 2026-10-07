@@ -88,7 +88,7 @@ pub fn compile_v_bundle(
         nyar_language::nyar::ClrSuspendStrategy::default(),
         emitter::nyar_backend_wasi::WasmPackageKind::Binary,
     );
-    let report = compile_source_groups_to_artifacts(
+    let artifact = compile_source_groups_to_artifacts(
         &compiler,
         &source_groups,
         &build_context,
@@ -97,10 +97,11 @@ pub fn compile_v_bundle(
         true,
         target_profile.artifact_policy.generate_runtime_config,
     )?;
+    let report = &artifact.driver;
 
     match backend {
         HostBackend::BrowserDom => {
-            let artifact_name = primary_artifact_name(&report, ArtifactKind::Executable)?;
+            let artifact_name = primary_artifact_name(report, ArtifactKind::Executable)?;
             let safe_name = artifact_name.replace('.', "-");
             let wasm_report = WasmCompileReport { wasm_filename: format!("{safe_name}.wasm"), glue_filename: format!("{safe_name}.mjs") };
             copy_wasm_artifacts_to_dist(output_dir, &wasm_report)?;

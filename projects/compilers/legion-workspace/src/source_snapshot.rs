@@ -49,7 +49,7 @@ mod tests {
         }
     }
 
-    fn compile_snapshot(groups: &[CompilerSourceGroup], output_dir: &Path) -> Result<emitter::DriverCompileReport> {
+    fn compile_snapshot(groups: &[CompilerSourceGroup], output_dir: &Path) -> Result<nyar_language::CompilerArtifactReport> {
         compile_snapshot_with_bindings(groups, output_dir, &[])
     }
 
@@ -57,7 +57,7 @@ mod tests {
         groups: &[CompilerSourceGroup],
         output_dir: &Path,
         host_bindings: &[nyar_language::CompilerHostProviderBinding],
-    ) -> Result<emitter::DriverCompileReport> {
+    ) -> Result<nyar_language::CompilerArtifactReport> {
         let build_context = nyar_language::CompilerBuildContext::new(
             "wasm32",
             nyar_language::CanonicalTarget::parse("node").expect("正式 Node 目标"),
@@ -86,8 +86,10 @@ mod tests {
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
         let report = compile_snapshot(&groups, &output).expect("当前源码进入正式产物入口");
-        assert!(!report.artifacts.artifacts.is_empty(), "编译成功必须具有产物");
-        assert!(!report.run_contracts.is_empty(), "二进制产物必须具有执行合同");
+        assert!(!report.driver.artifacts.artifacts.is_empty(), "编译成功必须具有产物");
+        assert!(!report.driver.run_contracts.is_empty(), "二进制产物必须具有执行合同");
+        assert!(!report.evidence.semantic_closure_hash.is_empty(), "编译证据必须包含源码闭包摘要");
+        assert!(!report.evidence.canonical_surface_hash.is_empty(), "编译证据必须包含 canonical 表面摘要");
     }
 
     #[test]
@@ -101,7 +103,7 @@ mod tests {
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
         let report = compile_snapshot(&groups, &output).expect("当前依赖源码必须完成正式编译");
-        assert!(!report.artifacts.artifacts.is_empty());
+        assert!(!report.driver.artifacts.artifacts.is_empty());
     }
 
     #[test]
@@ -171,7 +173,8 @@ mod tests {
             }],
         )
         .expect("Resolver 选定的 host provider 必须进入 Compiler 合同");
-        assert!(!report.artifacts.artifacts.is_empty(), "host contract 闭合后必须生成产物");
+        assert!(!report.driver.artifacts.artifacts.is_empty(), "host contract 闭合后必须生成产物");
+        assert!(!report.evidence.host_provider_binding_hash.is_empty(), "host provider 绑定必须进入编译证据");
     }
 
     #[test]
@@ -189,6 +192,6 @@ mod tests {
         let output = directory.path().join("output");
         fs::create_dir_all(&output).expect("创建产物目录");
         let report = compile_snapshot(&groups, &output).expect("结构化 TGrammar 应由 Compiler 按 arch 展开");
-        assert!(!report.artifacts.artifacts.is_empty(), "编译成功必须具有产物");
+        assert!(!report.driver.artifacts.artifacts.is_empty(), "编译成功必须具有产物");
     }
 }

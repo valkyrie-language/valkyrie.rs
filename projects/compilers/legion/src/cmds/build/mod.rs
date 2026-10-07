@@ -273,7 +273,7 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
                 .map(|provider| CompilerHostProviderBinding { contract: provider.contract.clone(), symbol: provider.symbol.clone() })
                 .collect(),
         );
-    let report = compile_source_groups_to_artifacts(
+    let artifact = compile_source_groups_to_artifacts(
         &nyar_language::ValkyrieCompiler::default(),
         &source_groups,
         &build_context,
@@ -282,26 +282,39 @@ pub(crate) fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<emitter::D
         plan.project.build_target.wat,
         target_profile.artifact_policy.generate_runtime_config,
     )?;
+    write_compile_evidence(&plan.output_dir, &artifact.evidence)?;
     if verbose {
         println!("compiler: canonical artifact set ready");
     }
 
     // Write execution manifest before collecting the artifact-set so restore can run.
-    if !report.run_contracts.is_empty() {
-        write_execution_manifest(plan, &report.run_contracts)?;
+    if !artifact.driver.run_contracts.is_empty() {
+        write_execution_manifest(plan, &artifact.driver.run_contracts)?;
     }
     else {
         ExecutionManifest::remove_from_output_dir(&plan.output_dir)?;
     }
 
-    let bundle = collect_build_bundle(&plan.output_dir, &report).map_err(|error| miette!("产物集合不完整：{error}"))?;
+    let bundle = collect_build_bundle(&plan.output_dir, &artifact.driver).map_err(|error| miette!("产物集合不完整：{error}"))?;
     store_cached_build(&cache, &plan.project.name, &canonical_triple, &ir_hash, &bundle)
         .map_err(|error| miette!("产物缓存写入失败：{error}"))?;
     if verbose {
         println!("cache: stored (artifact-set)");
     }
 
-    Ok(report)
+    Ok(artifact.driver)
+}
+
+fn write_compile_evidence(output_dir: &Path, evidence: &nyar_language::CompilerCompileEvidence) -> Result<()> {
+    let output_path = output_dir.join("compile-evidence.txt");
+    let content = crate::write_von_indented(evidence).map_err(|error| {
+        labeled_report_with_context(error, format!("序列化 compile evidence 失败 {}", output_path.display()), "VON 序列化失败位置")
+    })?;
+    fs::create_dir_all(output_dir).into_diagnostic().wrap_err_with(|| format!("创建输出目录失败 {}", output_dir.display()))?;
+    fs::write(&output_path, content)
+        .into_diagnostic()
+        .wrap_err_with(|| format!("写入 compile evidence 失败 {}", output_path.display()))?;
+    Ok(())
 }
 
 fn wasm_package_kind_for_manifest(artifact_kind: ProjectArtifactKind) -> emitter::nyar_backend_wasi::WasmPackageKind {
