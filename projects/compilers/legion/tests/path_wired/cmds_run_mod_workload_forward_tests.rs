@@ -66,6 +66,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         manifest_dir: root.to_path_buf(),
         source_files: vec![source_path.clone()],
         direct_dependencies: Vec::new(),
+        is_entry: true,
     };
     let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
     let plan = BuildPlan {
@@ -158,6 +159,7 @@ fn sample_freshness_plan() -> (tempfile::TempDir, BuildPlan, PathBuf) {
         manifest_dir: root.to_path_buf(),
         source_files: vec![source_path.clone()],
         direct_dependencies: Vec::new(),
+        is_entry: true,
     };
     let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
     let plan = BuildPlan {

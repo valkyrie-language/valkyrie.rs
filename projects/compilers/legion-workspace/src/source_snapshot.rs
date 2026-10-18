@@ -5,6 +5,8 @@ use std::fs;
 use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::{CompilerSourceFile, CompilerSourceGroup};
 
+use nyar_language::plan_semantic_groups;
+
 use crate::planner::PlannedSemanticSourceGroup;
 
 /// 单个语义源码组允许纳入的最大字节数。
@@ -16,7 +18,8 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
     if groups.is_empty() {
         return Err(miette!("semantic source group plan is empty"));
     }
-    let mut compiler_groups = Vec::with_capacity(groups.len());
+
+    let mut staged_sources = Vec::with_capacity(groups.len());
     let mut total_bytes = 0usize;
     for group in groups {
         let manifest_dir = fs::canonicalize(&group.manifest_dir).into_diagnostic()?;
@@ -50,12 +53,35 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
             }
             sources.push(CompilerSourceFile { path: logical_path, source: normalized.to_owned() });
         }
+        staged_sources.push((group, sources));
+    }
+
+    let plan_input = staged_sources
+        .iter()
+        .map(|(group, sources)| {
+            let files = sources
+                .iter()
+                .map(|file| (file.path.clone(), file.source.clone()))
+                .collect::<Vec<_>>();
+            (group.dependency_key.as_str(), group.is_entry, files)
+        })
+        .collect::<Vec<_>>();
+    let plan_input_refs = plan_input
+        .iter()
+        .map(|(dependency_key, is_entry, files)| (*dependency_key, *is_entry, files.as_slice()))
+        .collect::<Vec<_>>();
+    let closure_plans = plan_semantic_groups(&plan_input_refs);
+
+    let mut compiler_groups = Vec::with_capacity(groups.len());
+    for ((group, sources), closure_plan) in staged_sources.into_iter().zip(closure_plans) {
         compiler_groups.push(CompilerSourceGroup {
             dependency_key: group.dependency_key.clone(),
             name: group.name.clone(),
             source: String::new(),
             sources,
             direct_dependencies: group.direct_dependencies.clone(),
+            tolerate_inventory_parse_failures: closure_plan.tolerate_inventory_parse_failures,
+            body_lowering_source_paths: closure_plan.body_lowering_source_paths,
         });
     }
     Ok(compiler_groups)

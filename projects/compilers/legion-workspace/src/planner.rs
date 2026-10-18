@@ -44,6 +44,8 @@ pub struct PlannedSemanticSourceGroup {
     pub manifest_dir: PathBuf,
     pub source_files: Vec<PathBuf>,
     pub direct_dependencies: Vec<String>,
+    /// 当前构建入口工程组；依赖包 inventory 可容忍不可达文件的 parse 失败。
+    pub is_entry: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -695,6 +697,7 @@ impl WorkspaceResolver {
             manifest_dir,
             source_files,
             direct_dependencies: dependencies.into_iter().map(|dependency| dependency.name).collect(),
+            is_entry: depth == 0,
         });
         Ok(())
     }
