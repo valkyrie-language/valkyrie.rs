@@ -12,5 +12,5 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-legion = { path = "../legion" }
+legion = { workspace = true }
 asgard = { workspace = true }

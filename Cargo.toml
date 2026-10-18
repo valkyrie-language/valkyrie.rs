@@ -47,7 +47,9 @@ nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "f82eed3
 nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "f82eed39677f0f3e1ccfc9b37dd1624e639027e7" }
 
 asgard = { path = "projects/compilers/asgard" }
+legion = { path = "projects/compilers/legion" }
 legion-workspace = { path = "projects/compilers/legion-workspace" }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console"] }
 
 
 

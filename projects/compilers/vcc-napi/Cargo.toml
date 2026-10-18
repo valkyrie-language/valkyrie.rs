@@ -12,13 +12,13 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-legion = { path = "../legion" }
+legion = { workspace = true }
 asgard = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 clap = { workspace = true }
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console"] }
+windows-sys = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

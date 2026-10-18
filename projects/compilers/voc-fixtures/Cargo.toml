@@ -1,7 +1,9 @@
 [package]
 name = "voc-fixtures"
-version = "0.0.1"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 publish = false
 
 [dev-dependencies]
