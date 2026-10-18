@@ -7,7 +7,9 @@ use legion_workspace::{
     planner::{BuildRequest, WorkspaceResolver},
 };
 use miette::{IntoDiagnostic, Result, WrapErr};
-use nyar_language::{CanonicalTarget, CompilerBuildContext, CompilerSourceGroup, compile_source_groups_to_artifacts, nyar::ArtifactKind};
+use nyar_language::{
+    CanonicalTarget, CompilerBuildContext, CompilerSourceFile, CompilerSourceGroup, compile_source_groups_to_artifacts, nyar::ArtifactKind,
+};
 
 use crate::{
     host_backend::HostBackend,
@@ -64,9 +66,10 @@ pub fn append_generated_source(sources: &ResolvedCompilerSources, generated_sour
         .find(|group| group.dependency_key == sources.project_name)
         .ok_or_else(|| miette::miette!("源码快照缺少应用组 `{}`", sources.project_name))?;
     if !generated_source.trim().is_empty() {
-        application.source.push('\n');
-        application.source.push_str(generated_source);
-        application.source.push('\n');
+        application.sources.push(CompilerSourceFile {
+            path: "generated/awsl.v".into(),
+            source: format!("{generated_source}\n"),
+        });
     }
     Ok(groups)
 }

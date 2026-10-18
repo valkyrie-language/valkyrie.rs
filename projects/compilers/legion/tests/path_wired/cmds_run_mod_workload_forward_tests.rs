@@ -33,13 +33,7 @@ fn appends_workload_json_for_nyar_vm() {
 
 #[test]
 fn resolver_compile_evidence_matches_compiler_helpers() {
-    let groups = vec![nyar_language::CompilerSourceGroup {
-        dependency_key: "app".into(),
-        name: "app".into(),
-        source: "[main] micro main() -> i32 { return 1 }".into(),
-        sources: Vec::new(),
-        direct_dependencies: Vec::new(),
-    }];
+    let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
     let digest = expected_resolver_compile_evidence_from_groups(&groups, &[]);
     assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups));
     assert_eq!(digest.host_provider_binding_hash, nyar_language::host_provider_binding_hash_for_bindings(&[]));
@@ -262,13 +256,7 @@ fn is_fresh_rejects_mismatched_compile_evidence_sidecar() {
 
 #[test]
 fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
-    let groups = vec![nyar_language::CompilerSourceGroup {
-        dependency_key: "app".into(),
-        name: "app".into(),
-        source: "[main] micro main() -> i32 { return 1 }".into(),
-        sources: Vec::new(),
-        direct_dependencies: Vec::new(),
-    }];
+    let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
     let first = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::write".into() };
     let second = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::print".into() };
     let without = expected_resolver_compile_evidence_from_groups(&groups, &[]);
