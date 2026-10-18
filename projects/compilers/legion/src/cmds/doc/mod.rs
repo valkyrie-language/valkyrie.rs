@@ -143,19 +143,6 @@ pub fn generate_for_project(project_dir: &Path, output_dir: &Path) -> Result<()>
     let mut sections = discover::discover_sections(project_dir);
     emit_documentation(&mut sections, output_dir, false)
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hub_template_renders() {
-        let data = json!({
-            "title": "文档",
-            "doc_href": "doc/index.html",
-            "doc_desc": "测试",
-        });
-        let result = asgard::ssg::render_awsl_static(assets::embedded_hub_awsl(), "hub", "hub.awsl", &data);
-        assert!(result.html.contains("doc/index.html"));
-    }
-}
+#[path = "../../../tests/path_wired/cmds_doc_mod.rs"]
+mod cmds_doc_mod_tests;

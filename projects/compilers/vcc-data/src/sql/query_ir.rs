@@ -127,20 +127,6 @@ fn baseline_sql_type(ty: &ColumnType) -> String {
         ColumnType::Custom(s) => s.clone(),
     }
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lower_select_star() {
-        let ir = QueryIr::Select(SelectIr { columns: vec![], from: "users".into(), where_eq: None, limit: Some(10) });
-        match lower(&ir) {
-            SqlStatement::Select(s) => {
-                assert_eq!(s.columns, vec![SelectItem::Star]);
-                assert_eq!(s.limit, Some(10));
-            }
-            other => panic!("expected select, got {other:?}"),
-        }
-    }
-}
+#[path = "../../tests/path_wired/sql_query_ir.rs"]
+mod sql_query_ir_tests;

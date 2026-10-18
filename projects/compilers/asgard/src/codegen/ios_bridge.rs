@@ -15,15 +15,6 @@ void asgard_patch_native_swift(const char *key, const char *value);
 "#
     .to_string()
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ios_bridge_declares_patch_callback() {
-        let src = generate_ios_bridge();
-        assert!(src.contains("asgard_patch_native"));
-        assert!(src.contains("asgard_patch_native_swift"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_ios_bridge.rs"]
+mod codegen_ios_bridge_tests;

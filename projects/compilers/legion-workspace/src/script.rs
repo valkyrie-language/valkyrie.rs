@@ -165,26 +165,3 @@ fn strip_leading_comment(line: &str) -> &str {
     let trimmed = line.trim_start();
     if let Some(rest) = trimmed.strip_prefix('#') { rest.strip_prefix(' ').unwrap_or(rest) } else { line }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn extracts_embedded_manifest_from_comment_fence() {
-        let source = r#"#!/usr/bin/env legion run
-# ```legion
-# {
-#     name: "demo",
-#     build: [{ target: "node" }]
-# }
-# ```
-
-namespace demo;
-"#;
-        let manifest = extract_embedded_manifest(source, Path::new("demo.v")).unwrap().unwrap();
-        assert!(manifest.contains("name: \"demo\""));
-        let parsed = ProjectManifest::parse(&manifest).unwrap();
-        assert_eq!(parsed.name, "demo");
-    }
-}

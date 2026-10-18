@@ -383,25 +383,6 @@ object AsgardHostBridge {
     .replace("__UI_MAGIC__", &ui_magic)
     .replace("__NATIVE_MAGIC__", &native_magic)
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn runtime_contains_compose_mount_patch() {
-        let rt = generate_android_compose_runtime();
-        assert!(rt.contains("AsgardComposeRuntime"));
-        assert!(rt.contains("fun mount("));
-        assert!(rt.contains("fun patch("));
-        assert!(rt.contains("fun on_event("));
-        assert!(rt.contains("System.load"));
-        assert!(rt.contains("findAsgardNativeSection"));
-        assert!(rt.contains("resolveCallExport"));
-        assert!(rt.contains("decodeAsgardUi"));
-        assert!(rt.contains("patchFromNative"));
-        assert!(rt.contains("\"Row\""));
-        assert!(rt.contains("evalLoopCount"));
-        assert!(rt.contains("mutableStateMapOf"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_android_compose_runtime.rs"]
+mod codegen_android_compose_runtime_tests;

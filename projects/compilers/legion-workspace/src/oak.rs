@@ -36,15 +36,3 @@ pub fn labeled_report_with_context(error: OakError, context: impl Display, label
         miette::miette!("{context}: {error}")
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use oak_core::OakErrorKind;
-
-    #[test]
-    fn source_point_span_preserves_oak_offset() {
-        let error = OakError::new(OakErrorKind::SyntaxError { message: "expected field".to_string(), offset: 7, source_id: None });
-        assert_eq!(source_point_span(&error), Some(7..8));
-    }
-}

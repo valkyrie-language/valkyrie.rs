@@ -23,15 +23,6 @@ ASGARD_EXPORT void asgard_patch_native(const char *key, const char *value) {
 "#
     .to_string()
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn win_bridge_exports_symbols() {
-        let src = generate_desktop_win_bridge();
-        assert!(src.contains("asgard_invoke_export"));
-        assert!(src.contains("asgard_patch_native"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_desktop_win_bridge.rs"]
+mod codegen_desktop_win_bridge_tests;

@@ -419,28 +419,6 @@ struct AsgardApp: App {
 
 const DESKTOP_APP_ENTRY: &str = r#"// Desktop: no main entry — host loads product bytes via loadFromProduct(exeData).
 "#;
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn runtime_contains_swiftui_mount_patch() {
-        let rt = generate_ios_swiftui_runtime();
-        assert!(rt.contains("AsgardSwiftUiRuntime"));
-        assert!(rt.contains("func mount("));
-        assert!(rt.contains("func patch("));
-        assert!(rt.contains("func on_event("));
-        assert!(rt.contains("decodeAsgardUi"));
-        assert!(rt.contains("findAsgardNativeSection"));
-        assert!(rt.contains("loadNativeFromExecutable"));
-        assert!(rt.contains("dlopen"));
-    }
-
-    #[test]
-    fn desktop_profile_has_no_main() {
-        let rt = generate_swiftui_runtime(SwiftUiProfile::Desktop);
-        assert!(!rt.contains("@main"));
-        assert!(rt.contains("loadFromProduct"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_ios_swiftui_runtime.rs"]
+mod codegen_ios_swiftui_runtime_tests;

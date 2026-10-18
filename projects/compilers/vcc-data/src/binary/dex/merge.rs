@@ -109,18 +109,6 @@ fn read_u32(buf: &[u8], off: usize) -> Result<u32> {
     let bytes = buf.get(off..off + 4).ok_or_else(|| miette!("u32 越界"))?;
     Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::binary::class::JvmClassFile;
-
-    #[test]
-    fn merge_two_minimal_dex() {
-        let a_bytes = JvmClassFile::new("com/foo/A").to_bytes().unwrap();
-        let b_bytes = JvmClassFile::new("com/bar/B").to_bytes().unwrap();
-        let merged = merge_class_sets(&[&[("com/foo/A".to_string(), a_bytes)], &[("com/bar/B".to_string(), b_bytes)]]).unwrap();
-        assert!(merged.starts_with(b"dex\n035"));
-        assert!(super::super::reader::dex_contains_strings(&merged, &["com/foo/A", "com/bar/B"]).unwrap());
-    }
-}
+#[path = "../../../tests/path_wired/binary_dex_merge.rs"]
+mod binary_dex_merge_tests;

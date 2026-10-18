@@ -13,15 +13,6 @@ void asgard_patch_native(const char *key, const char *value) {
 "#
     .to_string()
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn linux_bridge_forwards_patch() {
-        let src = generate_desktop_linux_bridge();
-        assert!(src.contains("asgard_patch_native"));
-        assert!(src.contains("asgard_linux_patch"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_desktop_linux_bridge.rs"]
+mod codegen_desktop_linux_bridge_tests;

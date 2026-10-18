@@ -1168,7 +1168,7 @@ fn synthesize_cli_build_target(manifest: &ProjectManifest, target: &CanonicalTar
     Some(BuildTargetSpec { target: *target, ..BuildTargetSpec::default() })
 }
 
-fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
+pub fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let project_dir = path_for_local_fs(project_dir);
     let source_dir = project_dir.join("source");
     // 标准包：`source/` 下全部 `.v`；可执行/导出入口由源码 `[main]` / `[export]` 标记。
@@ -1204,34 +1204,8 @@ pub fn project_uses_single_script_layout(project_dir: &Path) -> bool {
 }
 
 /// Apply `build[].exclude_directories` / `exclude_files` relative to `project_dir`.
-#[cfg(test)]
-mod exclusion_contract_tests {
-    use super::*;
 
-    #[test]
-    fn collect_source_files_includes_root_v_without_manifest_entry() {
-        let directory = tempfile::tempdir().expect("project directory");
-        fs::write(directory.path().join("solution.v"), "[export] micro solve() -> unit {}").expect("solution");
-        let files = collect_source_files(directory.path()).expect("collect root sources");
-        assert_eq!(files, vec![directory.path().join("solution.v")]);
-    }
-
-    #[test]
-    fn exclusions_use_normalized_project_relative_identity() {
-        let directory = tempfile::tempdir().expect("project directory");
-        fs::create_dir_all(directory.path().join("source/nested/source")).expect("sources");
-        let excluded = directory.path().join("source/skip.v");
-        let retained = directory.path().join("source/nested/source/skip.v");
-        fs::write(&excluded, "").expect("source");
-        fs::write(&retained, "").expect("source");
-        let target = BuildTargetSpec { exclude_files: vec!["source/skip.v".to_owned()], ..BuildTargetSpec::default() };
-        let files = vec![path_for_local_fs(&excluded), path_for_local_fs(&retained)];
-        let result = filter_excluded_sources(files, &canonicalize_lossy(directory.path()), &target);
-        assert_eq!(result, vec![path_for_local_fs(&retained)]);
-    }
-}
-
-fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target: &BuildTargetSpec) -> Vec<PathBuf> {
+pub fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target: &BuildTargetSpec) -> Vec<PathBuf> {
     if build_target.exclude_directories.is_empty() && build_target.exclude_files.is_empty() {
         return files;
     }
@@ -1351,12 +1325,12 @@ fn find_workspace_root(start: &Path) -> Option<PathBuf> {
     outermost
 }
 
-fn canonicalize_lossy(path: &Path) -> PathBuf {
+pub fn canonicalize_lossy(path: &Path) -> PathBuf {
     fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 /// Windows `canonicalize` 常返回 `\\?\` 扩展路径；部分 `read_dir` 调用方无法枚举，需还原为常规路径。
-fn path_for_local_fs(path: &Path) -> PathBuf {
+pub fn path_for_local_fs(path: &Path) -> PathBuf {
     let raw = path.to_string_lossy();
     if let Some(stripped) = raw.strip_prefix(r"\\?\") { PathBuf::from(stripped) } else { path.to_path_buf() }
 }

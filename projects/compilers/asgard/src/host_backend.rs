@@ -41,13 +41,6 @@ impl HostBackend {
         }
     }
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn terminal_maps_to_terminal_backend() {
-        assert_eq!(HostBackend::from_platform(HostPlatform::Terminal), Ok(HostBackend::Terminal));
-    }
-}
+#[path = "../tests/path_wired/host_backend.rs"]
+mod host_backend_tests;

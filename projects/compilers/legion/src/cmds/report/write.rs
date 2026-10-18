@@ -20,17 +20,6 @@ pub fn atomic_write_all_text(file_path: &Path, content: &str) -> Result<()> {
         .wrap_err_with(|| format!("原子重命名失败 {} -> {}", temp_path.display(), file_path.display()))?;
     Ok(())
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn atomic_write_creates_file() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("nested").join("index.html");
-        atomic_write_all_text(&path, "<html></html>").unwrap();
-        assert_eq!(fs::read_to_string(&path).unwrap(), "<html></html>");
-    }
-}
+#[path = "../../../tests/path_wired/cmds_report_write.rs"]
+mod cmds_report_write_tests;

@@ -81,23 +81,10 @@ fn resolve_companion_executable(name: &str) -> Option<PathBuf> {
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn builtin_subcommands_are_not_forwarded() {
-        let argv = vec![OsString::from("legion"), OsString::from("build")];
-        assert!(try_forward_companion(&argv).is_none());
-    }
-
-    #[test]
-    fn unity_is_delegated_to_legion_unity_companion() {
-        assert!(!is_builtin_subcommand("unity"));
-    }
-}
-
 /// 是否为 `legion` 内建子命令（非内建命令会尝试转发到 `legion-{name}`）。
 pub fn is_builtin_subcommand(name: &str) -> bool {
     BUILTIN_SUBCOMMANDS.iter().any(|item| *item == name)
 }
+#[cfg(test)]
+#[path = "../tests/path_wired/forward.rs"]
+mod forward_tests;

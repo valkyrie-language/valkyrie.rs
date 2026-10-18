@@ -60,21 +60,6 @@ pub fn find_native_section(container: &[u8]) -> Option<&[u8]> {
 pub fn magic_bytes_literal(magic: &[u8]) -> String {
     magic.iter().map(|b| format!("0x{b:02X}")).collect::<Vec<_>>().join(", ")
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn embed_and_find_roundtrip() {
-        let mut blob = vec![1, 2, 3];
-        embed_ui_section(&mut blob, b"pkg");
-        assert_eq!(find_ui_section(&blob), Some(b"pkg".as_slice()));
-    }
-
-    #[test]
-    fn native_magic_is_eight_bytes() {
-        assert_eq!(HOST_NATIVE_MAGIC.len(), 8);
-        assert_eq!(UI_BIN_MAGIC.len(), 8);
-    }
-}
+#[path = "../../tests/path_wired/codegen_section_framing.rs"]
+mod codegen_section_framing_tests;

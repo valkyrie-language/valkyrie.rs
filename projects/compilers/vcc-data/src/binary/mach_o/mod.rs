@@ -95,14 +95,6 @@ fn pad_to(buf: &mut Vec<u8>, len: usize) {
         buf.push(0);
     }
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mach_o_magic() {
-        let exe = MachOImageBuilder::new().build_executable().unwrap();
-        assert_eq!(&exe[..4], &MH_MAGIC_64.to_le_bytes());
-    }
-}
+#[path = "../../../tests/path_wired/binary_mach_o_mod.rs"]
+mod binary_mach_o_mod_tests;

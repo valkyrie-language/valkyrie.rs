@@ -48,16 +48,6 @@ fn px_to_rpx(source: &str) -> String {
     }
     out
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn converts_px_to_rpx() {
-        let css = ".box { padding: 12px; margin: 8.5px; }";
-        let wxss = px_to_rpx(css);
-        assert!(wxss.contains("24rpx"));
-        assert!(wxss.contains("17rpx"));
-    }
-}
+#[path = "../../tests/path_wired/codegen_mp_style.rs"]
+mod codegen_mp_style_tests;

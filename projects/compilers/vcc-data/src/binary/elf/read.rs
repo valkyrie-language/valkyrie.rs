@@ -55,18 +55,6 @@ pub fn parse_elf64(bytes: &[u8]) -> Result<Elf64Header, Elf64ParseError> {
     let machine = u16::from_le_bytes(bytes[18..20].try_into().expect("slice"));
     Ok(Elf64Header { file_type, machine })
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::binary::elf::{NativeElfImage, NativeElfWriter};
-
-    #[test]
-    fn parses_native_elf_writer_output() {
-        let image = NativeElfImage { text: vec![0x31, 0xC0, 0xC3], rodata: Vec::new(), entry_point: 0 };
-        let bytes = NativeElfWriter::write_executable(&image).expect("write elf");
-        let header = parse_elf64(&bytes).expect("parse elf");
-        assert_eq!(header.file_type, 2);
-        assert_eq!(header.machine, 62);
-    }
-}
+#[path = "../../../tests/path_wired/binary_elf_read.rs"]
+mod binary_elf_read_tests;

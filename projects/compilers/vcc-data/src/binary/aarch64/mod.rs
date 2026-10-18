@@ -28,13 +28,6 @@ pub fn encode_instructions(words: &[u32]) -> Vec<u8> {
     }
     out
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ret_opcode_is_four_bytes() {
-        assert_eq!(ret_bytes(), [0xC0, 0x03, 0x5F, 0xD6]);
-    }
-}
+#[path = "../../../tests/path_wired/binary_aarch64_mod.rs"]
+mod binary_aarch64_mod_tests;

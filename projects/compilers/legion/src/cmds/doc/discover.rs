@@ -82,18 +82,6 @@ fn collect_md_files_inner(dir: &Path, out: &mut Vec<PathBuf>) {
 pub fn has_documentation(project_dir: &Path) -> bool {
     !discover_sections(project_dir).is_empty()
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn discovers_flat_zh_hans_docs() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let fixture = root.join("../../valkyrie.v/projects/legion._/projects/legion.tools");
-        if fixture.join("documentation/pages/zh-hans/workflow.md").is_file() {
-            let sections = discover_sections(&fixture);
-            assert!(!sections.is_empty());
-        }
-    }
-}
+#[path = "../../../tests/path_wired/cmds_doc_discover.rs"]
+mod cmds_doc_discover_tests;
