@@ -5,7 +5,7 @@ use std::fs;
 use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::{CompilerSourceFile, CompilerSourceGroup};
 
-use nyar_language::plan_semantic_groups;
+use nyar_language::plan_semantic_closure;
 
 use crate::planner::PlannedSemanticSourceGroup;
 
@@ -70,18 +70,20 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
         .iter()
         .map(|(dependency_key, is_entry, files)| (*dependency_key, *is_entry, files.as_slice()))
         .collect::<Vec<_>>();
-    let closure_plans = plan_semantic_groups(&plan_input_refs);
+    let semantic_closure = plan_semantic_closure(&plan_input_refs);
+    let closure_digest = semantic_closure.digest.clone();
 
     let mut compiler_groups = Vec::with_capacity(groups.len());
-    for ((group, sources), closure_plan) in staged_sources.into_iter().zip(closure_plans) {
+    for ((group, sources), group_closure) in staged_sources.into_iter().zip(semantic_closure.groups) {
         compiler_groups.push(CompilerSourceGroup {
             dependency_key: group.dependency_key.clone(),
             name: group.name.clone(),
             source: String::new(),
             sources,
             direct_dependencies: group.direct_dependencies.clone(),
-            tolerate_inventory_parse_failures: closure_plan.tolerate_inventory_parse_failures,
-            body_lowering_source_paths: closure_plan.body_lowering_source_paths,
+            tolerate_inventory_parse_failures: group_closure.tolerate_inventory_parse_failures,
+            body_lowering_source_paths: Some(group_closure.body_lowering_source_paths),
+            closure_digest: Some(closure_digest.clone()),
         });
     }
     Ok(compiler_groups)

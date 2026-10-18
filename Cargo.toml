@@ -34,17 +34,17 @@ vcc-data = { path = "projects/compilers/vcc-data" }
 
 # Compiler / VM stack lives in nyar-vm.rs. CI resolves these from the pinned `rev`.
 # Local sibling checkout: copy `.cargo/config.example.toml` to `.cargo/config.toml`.
-nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-language = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-optimizer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
-nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "546b3e36aecd7c86aa2ebc2d05b347f171fbaa39" }
+nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-language = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-optimizer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
+nyar-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "250fab61c577ac13b315a6b70642f616f748c32c" }
 
 asgard = { path = "projects/compilers/asgard" }
 legion = { path = "projects/compilers/legion" }

@@ -18,7 +18,7 @@ pub use planner::{
     PlannerError, ProjectResolutionMode, WorkspaceResolver, canonical_target, collect_project_root_v_files, collect_project_v_files,
     collect_test_build_sources, collect_test_v_files, project_uses_single_script_layout,
 };
-pub use nyar_language::{SemanticGroupPlan, plan_semantic_groups};
+pub use nyar_language::{SemanticClosure, SemanticGroupPlan, plan_semantic_closure, plan_semantic_groups};
 pub use source_snapshot::compile_source_snapshot;
 
 /// On-disk layout for Legion projects.
