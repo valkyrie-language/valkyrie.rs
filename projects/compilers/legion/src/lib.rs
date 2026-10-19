@@ -50,6 +50,6 @@ pub use legion_workspace::{
 pub use nyar_language::{
     ArtifactPolicy, CanonicalAbi, CanonicalArch, CanonicalSpecification, CanonicalTarget, CanonicalTargetParseError, CanonicalVendor,
     EntryPolicy, PublishFormat, RunnerFamily, RunnerSelector, TargetHostKind, TargetMode, TargetProfile, WrapStrategy,
-    formatter::{to_string as write_von, to_string_indented as write_von_indented},
+    printer::{to_string as write_von, to_string_indented as write_von_indented},
 };
 pub use von::{VonError, VonParser, VonValue, from_str as parse_von, from_value as parse_von_value};

@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use nyar_language::formatter::{to_string, to_string_indented};
+use nyar_language::printer::{to_string, to_string_indented};
 use oak_core::OakError;
 use oak_von::{
     from_str as oak_from_str,
