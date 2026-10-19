@@ -1,6 +1,3 @@
-/// `JVM Class` 二进制格式模型。
-pub mod class;
-
 /// `COFF` 二进制格式模型。
 pub mod coff;
 
@@ -17,9 +14,6 @@ pub mod mach_o;
 
 /// x86-64 指令编码。
 pub mod x86_64;
-
-/// `JAR` 二进制格式模型。
-pub mod jar;
 
 /// `PE` 二进制格式模型。
 pub mod pe;

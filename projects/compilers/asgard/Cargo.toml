@@ -9,6 +9,8 @@ description = "Asgard compiler — AWSL frontend, packaging, and WASM delivery"
 
 [dependencies]
 vcc-data = { workspace = true }
+# JVM class 编码由 Acorn 拥有；这里只消费 acorn-jvm，不再走 vcc-data 副本。
+acorn-jvm = { workspace = true }
 oak-awsl = { workspace = true }
 oak-von = { workspace = true }
 nyar-language = { workspace = true, features = ["serde"] }

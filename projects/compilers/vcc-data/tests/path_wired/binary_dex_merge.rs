@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::binary::class::JvmClassFile;
+use acorn_jvm::class::JvmClassFile;
 
 #[test]
 fn merge_two_minimal_dex() {

@@ -12,6 +12,7 @@ default = []
 serde = ["nyar-types/serde"]
 
 [dependencies]
+acorn-jvm = { workspace = true }
 miette = { workspace = true }
 nyar = { workspace = true }
 nyar-types = { workspace = true }

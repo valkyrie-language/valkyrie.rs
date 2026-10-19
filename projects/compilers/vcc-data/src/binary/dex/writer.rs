@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use miette::{Result, miette};
 
-use crate::binary::class::JvmClassFile;
+use acorn_jvm::class::JvmClassFile;
 
 const ENDIAN_TAG: u32 = 0x1234_5678;
 const HEADER_SIZE: u32 = 0x70;
@@ -370,7 +370,7 @@ fn descriptor_to_shorty(descriptor: &str) -> String {
     shorty
 }
 
-fn encode_code_item(code: &crate::binary::class::JvmCodeBody) -> Vec<u8> {
+fn encode_code_item(code: &acorn_jvm::class::JvmCodeBody) -> Vec<u8> {
     let insns = code.instructions.iter().flat_map(|_| [0u8, 0u8]).collect::<Vec<_>>();
     let mut out = Vec::new();
     out.extend_from_slice(&2u16.to_le_bytes());

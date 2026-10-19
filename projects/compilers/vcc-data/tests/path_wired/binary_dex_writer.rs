@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::binary::class::{JvmClassFile, JvmMethodDescriptor, JvmTypeDescriptor};
+use acorn_jvm::class::{JvmClassFile, JvmMethodDescriptor, JvmTypeDescriptor};
 
 #[test]
 fn dex_has_class_defs_and_magic() {

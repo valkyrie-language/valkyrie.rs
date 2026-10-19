@@ -3,10 +3,8 @@
 //! 已由 [`super::android_compose_pack`] 取代；保留供历史对照。
 
 use miette::Result;
-use vcc_data::binary::{
-    class::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodRef, JvmMethodSignature, JvmTypeDescriptor},
-    dex::DexImageBuilder,
-};
+use acorn_jvm::class::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodRef, JvmMethodSignature, JvmTypeDescriptor};
+use vcc_data::binary::dex::DexImageBuilder;
 
 const ACC_PUBLIC: u16 = 0x0001;
 const ACC_SUPER: u16 = 0x0020;

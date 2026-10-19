@@ -1,11 +1,11 @@
 //! `legion spy jvm` 子命令的集成测试。
 //!
-//! 在内存中构造最小 `.class` 与 `.jar` 二进制（经 `vcc-data` 编码），
+//! 在内存中构造最小 `.class` 与 `.jar` 二进制（经 `acorn-jvm` 编码），
 //! 验证 `spy jvm` 的列表、反汇编与 JSON 输出能力，不依赖外部文件。
 
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 use tempfile::TempDir;
-use vcc_data::binary::{
+use acorn_jvm::{
     class::{JvmClassFile, JvmMethodDescriptor, JvmTypeDescriptor},
     jar::JvmJarPackage,
 };

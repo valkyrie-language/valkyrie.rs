@@ -74,7 +74,7 @@ fn find_subslice(hay: &[u8], needle: &[u8]) -> Option<usize> {
 
 fn extract_class_pairs(dex: &[u8]) -> Result<Vec<(String, Vec<u8>)>> {
     use super::reader::dex_core_bytes;
-    use crate::binary::class::JvmClassFile;
+    use acorn_jvm::class::JvmClassFile;
     let stripped = strip_known_tail(dex);
     let core = dex_core_bytes(&stripped);
     if core.len() < 8 || &core[..4] != b"dex\n" {
