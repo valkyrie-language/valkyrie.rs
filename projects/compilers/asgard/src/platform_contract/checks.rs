@@ -76,6 +76,7 @@ pub fn check_android_dist(dex: &[u8]) -> Vec<GateFailure> {
     failures
 }
 
+/// 校验 iOS dist 产物是否带 ASGARDUI 与 ASGARDNT 段。
 pub fn check_ios_dist(host: &[u8]) -> Vec<GateFailure> {
     let mut failures = Vec::new();
     if find_asgard_ui_section(host).is_none() {

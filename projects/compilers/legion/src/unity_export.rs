@@ -39,11 +39,15 @@ struct ValkyrieExportEntry {
     method: String,
 }
 
+/// `valkyrie-export.json` 中的单条 MSIL 分区产物记录。
 #[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct ValkyrieExportArtifact {
+    /// DLL 文件名。
     pub assembly: String,
+    /// 分区名（多分区导出时使用）。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub partition: Option<String>,
+    /// 产物角色：`plugin-runtime` / `plugin-editor` / `partition`。
     pub role: String,
 }
 
@@ -238,19 +242,27 @@ pub fn sync_msil_with_routes(msil_dir: &Path, unity_project_root: &Path, export_
     sync_msil_to_unity_plugins(msil_dir, &plugins_dir)
 }
 
+/// 反序列化后的导出清单（供 status 与同步流程读取）。
 #[derive(Debug, Deserialize)]
 pub struct ParsedExportManifest {
+    /// 清单 schema 版本。
     #[serde(default)]
     pub version: u32,
+    /// 入口程序集与入口方法（v2 清单）。
     pub entry: Option<ParsedExportEntry>,
+    /// 分区产物列表。
     #[serde(default)]
     pub artifacts: Vec<ValkyrieExportArtifact>,
+    /// 入口程序集文件名（v1 清单）。
     pub entry_assembly: Option<String>,
+    /// 入口方法名（v1 清单）。
     pub entry_method: Option<String>,
 }
 
+/// 导出清单中的入口记录。
 #[derive(Debug, Deserialize)]
 pub struct ParsedExportEntry {
+    /// 入口程序集文件名。
     pub assembly: String,
 }
 

@@ -1,9 +1,11 @@
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 //! Legion 与 ASGARD 共同使用的 manifest、依赖闭包和源码快照解析层。
 
+/// `legion.von` / `legions.von` 清单模型与解析错误。
 pub mod manifest;
 pub mod oak;
+/// workspace 发现、依赖解析与构建计划生成。
 pub mod planner;
 pub mod script;
 pub mod source_snapshot;

@@ -20,16 +20,23 @@ use crate::{
     },
 };
 
+/// 单次构建请求：工程目录、目标平台与可选输出目录。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildRequest {
+    /// 请求的工程根目录。
     pub project_dir: PathBuf,
+    /// 目标平台。
     pub target: CanonicalTarget,
+    /// 自定义输出目录；缺省时按目标推导默认 dist 目录。
     pub output_dir: Option<PathBuf>,
 }
 
+/// 构建计划中记录的一项已解析依赖。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedDependency {
+    /// 依赖名称。
     pub name: String,
+    /// 依赖 manifest 所在目录。
     pub manifest_dir: PathBuf,
 }
 
@@ -40,63 +47,98 @@ pub struct PlannedDependency {
 pub struct PlannedSemanticSourceGroup {
     /// Resolver-assigned dependency identity used for semantic export lookup.
     pub dependency_key: String,
+    /// 源码组名称（依赖包名或入口工程名）。
     pub name: String,
+    /// 该源码组 manifest 所在目录。
     pub manifest_dir: PathBuf,
+    /// 属于该源码组的源码文件列表。
     pub source_files: Vec<PathBuf>,
+    /// 该源码组直接依赖的依赖键列表。
     pub direct_dependencies: Vec<String>,
     /// 当前构建入口工程组；依赖包 inventory 可容忍不可达文件的 parse 失败。
     pub is_entry: bool,
 }
 
+/// 计划中的宿主契约：源码声明的宿主接口及其位置。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedHostContract {
+    /// 契约标识。
     pub id: String,
+    /// 声明该契约的源码文件。
     pub source_file: PathBuf,
+    /// 声明所在行号。
     pub line: usize,
 }
 
+/// 计划中的宿主契约提供者候选：把契约绑定到宿主符号。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedHostProvider {
+    /// 被实现的宿主契约标识。
     pub contract: String,
+    /// 宿主侧绑定的符号名。
     pub symbol: String,
+    /// 声明该提供者的源码文件。
     pub source_file: PathBuf,
+    /// 声明所在行号。
     pub line: usize,
 }
 
+/// 单个工程的构建计划：清单位置、源码闭包、语义源码组与宿主契约。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedProject {
+    /// 工程名称。
     pub name: String,
+    /// 工程 manifest 所在目录。
     pub manifest_dir: PathBuf,
+    /// 工程 manifest 文件路径。
     pub manifest_path: PathBuf,
+    /// 该工程完整的源码输入闭包（用于哈希、宿主 inventory 与运行摘要）。
     pub source_files: Vec<PathBuf>,
     /// Dependency-first semantic compilation groups. `source_files` remains
     /// the complete input closure for hashes, host inventory and run digests.
     pub semantic_source_groups: Vec<PlannedSemanticSourceGroup>,
+    /// 工程声明的宿主契约列表。
     pub host_contracts: Vec<PlannedHostContract>,
+    /// 宿主契约提供者候选列表。
     pub host_provider_candidates: Vec<PlannedHostProvider>,
+    /// 已选定的宿主契约提供者。
     pub selected_host_providers: Vec<PlannedHostProvider>,
+    /// 匹配到的构建目标配置。
     pub build_target: BuildTargetSpec,
+    /// 产物类型（binary / library）。
     pub artifact_kind: crate::manifest::ProjectArtifactKind,
+    /// 已解析的依赖列表。
     pub dependencies: Vec<PlannedDependency>,
 }
 
+/// 完整构建计划：workspace 根、目标工程与输出目录。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildPlan {
+    /// workspace 根目录。
     pub workspace_root: PathBuf,
+    /// 目标工程的构建计划。
     pub project: PlannedProject,
+    /// 产物输出目录。
     pub output_dir: PathBuf,
 }
 
+/// 工程解析模式：workspace 成员、独立包或单脚本。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProjectResolutionMode {
+    /// 通过 workspace `legions.von` 解析。
     Workspace,
+    /// 独立包（仅有 `legion.von`）。
     Package,
+    /// 内嵌清单的单脚本 `.v`。
     Script,
 }
 
+/// workspace 解析器：缓存已发现的工程清单与单脚本上下文。
 #[derive(Debug)]
 pub struct WorkspaceResolver {
+    /// workspace 根目录。
     pub root_dir: PathBuf,
+    /// workspace 根清单；独立包模式下为 `None`。
     pub workspace_manifest: Option<WorkspaceManifest>,
     projects: BTreeMap<PathBuf, ProjectManifest>,
     projects_by_name: BTreeMap<String, PathBuf>,
@@ -104,76 +146,132 @@ pub struct WorkspaceResolver {
     pub single_script: Option<crate::script::SingleScriptContext>,
 }
 
+/// planner 在解析 workspace / 依赖并生成构建计划时产生的错误。
 #[derive(Debug)]
 pub enum PlannerError {
+    /// 底层 I/O 错误。
     Io(std::io::Error),
+    /// 清单解析错误。
     Manifest(ManifestError),
+    /// 未能从起始路径定位 `legions.von`。
     MissingWorkspace(PathBuf),
+    /// 未能定位 `legion.von`。
     MissingProjectManifest(PathBuf),
+    /// 工程未声明请求的构建目标。
     MissingBuildTarget {
+        /// 工程名称。
         project: String,
+        /// 请求的目标平台。
         target: CanonicalTarget,
     },
+    /// 无法解析某依赖。
     MissingDependency {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
     },
+    /// 依赖要求使用 workspace 成员，但未找到对应成员。
     ForcedWorkspaceDependencyMissing {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
     },
+    /// registry 依赖缺少版本号。
     RegistryDependencyMissingVersion {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
     },
+    /// registry 依赖安装失败。
     RegistryDependencyInstallFailed {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
+        /// 依赖版本。
         version: String,
+        /// registry 名称。
         registry: String,
+        /// 失败原因。
         reason: String,
     },
+    /// path 依赖缺少路径字段。
     PathDependencyMissingPath {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
     },
+    /// path 依赖目录下找不到 manifest。
     PathDependencyMissingManifest {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
+        /// 依赖 manifest 目录。
         manifest_dir: PathBuf,
     },
+    /// git 依赖缺少仓库地址。
     GitDependencyMissingUrl {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
     },
+    /// git 依赖目录下找不到 manifest。
     GitDependencyMissingManifest {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
+        /// git 仓库地址。
         git_url: String,
+        /// git 引用。
         git_ref: String,
+        /// 检出后的 manifest 目录。
         manifest_dir: PathBuf,
     },
+    /// git 依赖检出失败。
     GitDependencyCheckoutFailed {
+        /// 工程名称。
         project: String,
+        /// 依赖名称。
         dependency: String,
+        /// git 仓库地址。
         git_url: String,
+        /// 失败原因。
         reason: String,
     },
+    /// 宿主契约提供者声明了未知的契约。
     UnknownHostProviderContract {
+        /// 提供者名称。
         provider: String,
+        /// 契约标识。
         contract: String,
+        /// 声明该提供者的源码文件。
         source_file: PathBuf,
+        /// 声明所在行号。
         line: usize,
     },
+    /// 多个提供者实现同一宿主契约，产生冲突。
     ConflictingHostProviders {
+        /// 冲突的契约标识。
         contract: String,
+        /// 冲突的提供者名称列表。
         providers: Vec<String>,
     },
+    /// 单脚本模式错误。
     Script(crate::script::ScriptError),
     /// 防止依赖图或源码闭包失控（死循环 / 指数膨胀 / OOM）。
     ResourceLimitExceeded {
+        /// 触发的上限类别。
         kind: &'static str,
+        /// 允许的上限值。
         limit: usize,
+        /// 实际达到的值。
         actual: usize,
     },
 }
@@ -330,6 +428,7 @@ impl From<crate::script::ScriptError> for PlannerError {
 }
 
 impl WorkspaceResolver {
+    /// 从 `start` 向上查找 workspace 根，并加载其全部成员工程清单。
     pub fn discover(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         let workspace_root = find_workspace_root(start).ok_or_else(|| PlannerError::MissingWorkspace(start.to_path_buf()))?;
@@ -353,6 +452,7 @@ impl WorkspaceResolver {
         Ok(Self { root_dir: project_dir, workspace_manifest: None, projects, projects_by_name, single_script: Some(ctx) })
     }
 
+    /// 解析 `start` 所在工程（workspace 成员、独立包或单脚本）。
     pub fn discover_for_project(start: impl AsRef<Path>) -> Result<Self, PlannerError> {
         let start = start.as_ref();
         if let Some(workspace_root) = find_workspace_root(start) {
@@ -400,6 +500,7 @@ impl WorkspaceResolver {
         Ok(Self { root_dir: project_dir.clone(), workspace_manifest: None, projects, projects_by_name, single_script: None })
     }
 
+    /// 返回指定目录对应的工程清单（按路径等价匹配）。
     pub fn project_manifest(&self, project_dir: &Path) -> Option<&ProjectManifest> {
         self.projects
             .get(project_dir)
@@ -416,6 +517,7 @@ impl WorkspaceResolver {
         self.workspace_manifest.is_some() && same_path(project_dir, &self.root_dir) && !self.root_dir.join("legion.von").exists()
     }
 
+    /// 按请求生成构建计划：解析构建目标、依赖与源码闭包。
     pub fn build_plan(&self, request: &BuildRequest) -> Result<BuildPlan, PlannerError> {
         if let Some(ctx) = &self.single_script {
             return self.build_plan_for_manifest(ctx.project_dir.clone(), &ctx.manifest, request);
@@ -1148,6 +1250,7 @@ fn format_git_failure(program: &OsStr, stderr: &[u8]) -> String {
     if text.is_empty() { format!("`{}` exited with failure", program.to_string_lossy()) } else { text.to_string() }
 }
 
+/// 将字符串解析为规范化目标平台。
 pub fn canonical_target(target: &str) -> Result<CanonicalTarget, nyar_language::CanonicalTargetParseError> {
     target.parse()
 }
@@ -1168,6 +1271,7 @@ fn synthesize_cli_build_target(manifest: &ProjectManifest, target: &CanonicalTar
     Some(BuildTargetSpec { target: *target, ..BuildTargetSpec::default() })
 }
 
+/// 收集工程源码：存在 `source/` 时取其中全部 `.v`，否则取根目录 `.v`。
 pub fn collect_source_files(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let project_dir = path_for_local_fs(project_dir);
     let source_dir = project_dir.join("source");
@@ -1292,6 +1396,7 @@ fn find_workspace_root(start: &Path) -> Option<PathBuf> {
     outermost
 }
 
+/// 尽力规范化路径；`canonicalize` 失败时原样返回。
 pub fn canonicalize_lossy(path: &Path) -> PathBuf {
     fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }

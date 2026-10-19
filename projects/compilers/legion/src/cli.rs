@@ -39,6 +39,7 @@ use crate::{
 #[derive(Debug, Parser)]
 #[command(name = "vcc", version, about = "Valkyrie 工作区命令行入口")]
 pub struct LegionCli {
+    /// 已解析的 Legion 子命令。
     #[command(subcommand)]
     pub command: LegionCommands,
 }

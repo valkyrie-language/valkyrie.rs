@@ -164,6 +164,7 @@ fn primary_artifact_name(report: &nyar_emitter::DriverCompileReport, kind: Artif
         .ok_or_else(|| miette::miette!("编译报告缺少主产物 `{kind:?}`"))
 }
 
+/// 校验 Android 宿主产物为 AArch64 共享库 ELF 且含必需 JNI 符号。
 pub fn validate_elf_shared_object(bytes: &[u8]) -> Result<()> {
     if bytes.len() < 20 || &bytes[0..4] != b"\x7fELF" {
         return Err(miette::miette!("Android host artifact is not ELF (need .so)"));

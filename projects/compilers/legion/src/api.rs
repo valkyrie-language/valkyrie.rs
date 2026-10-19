@@ -12,30 +12,45 @@ use legion_workspace::planner::{BuildRequest, WorkspaceResolver};
 /// `legion plan` 结构化摘要。
 #[derive(Debug, Clone, Serialize)]
 pub struct LegionPlanSummary {
+    /// 项目名。
     pub project: String,
+    /// 编译目标平台字符串。
     pub target: String,
+    /// workspace 根目录路径。
     pub workspace_root: String,
+    /// 产物输出目录路径。
     pub output_dir: String,
+    /// 参与构建的源码文件数。
     pub source_count: usize,
+    /// 语义源码组数量。
     pub semantic_group_count: usize,
+    /// 直接依赖数量。
     pub dependency_count: usize,
+    /// 各语义源码组的摘要列表。
     pub groups: Vec<LegionSemanticGroupSummary>,
 }
 
 /// 语义源码组摘要。
 #[derive(Debug, Clone, Serialize)]
 pub struct LegionSemanticGroupSummary {
+    /// 语义源码组对应的依赖键（`std` / `core` 或依赖名）。
     pub dependency_key: String,
+    /// 该组包含的源码文件数。
     pub file_count: usize,
 }
 
 /// `legion build` 结构化摘要。
 #[derive(Debug, Clone, Serialize)]
 pub struct LegionBuildSummary {
+    /// 项目名。
     pub project: String,
+    /// 编译目标平台字符串。
     pub target: String,
+    /// 产物输出目录路径。
     pub output_dir: String,
+    /// 落盘产物路径列表。
     pub artifacts: Vec<String>,
+    /// 产物入口符号名（可能为空）。
     pub entry_symbol: Option<String>,
 }
 

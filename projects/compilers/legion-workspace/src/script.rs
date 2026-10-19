@@ -29,17 +29,43 @@ const FENCE_CLOSE: &str = "```";
 /// 内嵌清单的单脚本上下文。
 #[derive(Debug, Clone)]
 pub struct SingleScriptContext {
+    /// 脚本文件绝对路径。
     pub script_path: PathBuf,
+    /// 脚本所在目录，作为工程根。
     pub project_dir: PathBuf,
+    /// 从内嵌块解析出的工程清单。
     pub manifest: ProjectManifest,
 }
 
+/// 单脚本模式读取与内嵌清单解析的错误。
 #[derive(Debug)]
 pub enum ScriptError {
-    Io { path: PathBuf, source: std::io::Error },
-    MissingEmbeddedManifest { path: PathBuf },
-    Manifest { path: PathBuf, source: ManifestError },
-    UnclosedFence { path: PathBuf, span: SourceSpan },
+    /// 读取脚本文件失败。
+    Io {
+        /// 出错的脚本路径。
+        path: PathBuf,
+        /// 底层 I/O 错误。
+        source: std::io::Error,
+    },
+    /// 脚本缺少内嵌 ` ```legion ` 清单块。
+    MissingEmbeddedManifest {
+        /// 出错的脚本路径。
+        path: PathBuf,
+    },
+    /// 内嵌清单解析失败。
+    Manifest {
+        /// 出错的脚本路径。
+        path: PathBuf,
+        /// 底层清单解析错误。
+        source: ManifestError,
+    },
+    /// 内嵌清单块未闭合。
+    UnclosedFence {
+        /// 出错的脚本路径。
+        path: PathBuf,
+        /// 未闭合的清单块起始位置。
+        span: SourceSpan,
+    },
 }
 
 impl Display for ScriptError {

@@ -50,12 +50,17 @@ pub struct AsgardPackArgs {
     pub wasm: Option<String>,
 }
 
+/// `asgard pack` 的打包目标参数。
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum AsgardPackTargetArg {
+    /// Android APK。
     Apk,
+    /// iOS IPA。
     Ipa,
+    /// 小程序。
     #[value(name = "mini-program")]
     MiniProgram,
+    /// 小游戏。
     #[value(name = "mini-game")]
     MiniGame,
 }
@@ -98,12 +103,17 @@ pub struct AsgardPublishArgs {
     pub output: Option<PathBuf>,
 }
 
+/// `asgard publish` 的发布目标参数。
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum AsgardPublishTargetArg {
+    /// Android APK。
     Apk,
+    /// iOS IPA。
     Ipa,
+    /// 小程序。
     #[value(name = "mini-program")]
     MiniProgram,
+    /// Web 产物。
     Web,
 }
 

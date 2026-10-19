@@ -7,6 +7,7 @@ use nyar_package_manager::PackageManager;
 /// `legion vendor` arguments.
 #[derive(Debug, Clone, Args)]
 pub struct VendorArgs {
+    /// vendor 子命令。
     #[command(subcommand)]
     pub command: VendorCommand,
 }

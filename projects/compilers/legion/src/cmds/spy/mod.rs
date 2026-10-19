@@ -85,8 +85,11 @@ pub struct SpyTargetOptions {
 /// 可选的编译目标。
 #[derive(Debug, Clone, PartialEq, Eq, ValueEnum)]
 pub enum SpyTargetPlatform {
+    /// WASM 二进制目标。
     Wasm,
+    /// JVM class/JAR 目标。
     Jvm,
+    /// CLR / MSIL 目标。
     Clr,
 }
 

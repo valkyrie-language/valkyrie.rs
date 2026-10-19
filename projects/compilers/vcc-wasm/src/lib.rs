@@ -1,7 +1,7 @@
 //! Wasm GC 绑定层：把 `legion` / `asgard` 编译为 `legion.wasm` / `asgard.wasm` 等产物，
 //! 由 `node scripts/build.mjs assemble` 写入 `packages/vcc-unknown-wasm32`。
 
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 pub use asgard;
 pub use legion;

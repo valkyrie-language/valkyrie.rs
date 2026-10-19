@@ -3,7 +3,7 @@
 //! 用户面对的 `legion` / `asgard` 命令行在 `packages/legion` 与 `packages/asgard`，
 //! 由本 crate 与各 `packages/vcc-*` 平台 collect 组装而成。
 
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 mod host_api;
 mod stdio_capture;
@@ -106,7 +106,7 @@ pub fn legion_spy_run(mode: String, options: SpyTargetRunOptions) -> napi::Resul
     Ok(LegionRunOutcome { status: status as u32, stdout, stderr })
 }
 
-/// 解析 argv 但不执行（供宿主探测 clap 行为）。
+/// 解析 argv 但不执行（仅供 wasm collect / 旧脚本；新宿主请用 `@vmz/commander` + [`legion_plan`] / [`legion_build`]）。
 #[napi]
 pub fn legion_parse(argv: Vec<String>) -> napi::Result<String> {
     use clap::Parser;

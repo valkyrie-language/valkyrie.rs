@@ -7,6 +7,7 @@ use nyar_package_manager::PackageManager;
 /// `legion registry` arguments.
 #[derive(Debug, Clone, Args)]
 pub struct RegistryArgs {
+    /// registry 子命令。
     #[command(subcommand)]
     pub command: RegistryCommand,
 }

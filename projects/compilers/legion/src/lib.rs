@@ -1,4 +1,5 @@
-#![warn(missing_docs)]
+//! Legion 装配层 crate 根：workspace/项目规划、构建缓存与产物装配，以及 `vcc` CLI 入口。
+#![deny(missing_docs)]
 
 pub mod api;
 pub mod artifact_formats;

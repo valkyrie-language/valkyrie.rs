@@ -21,14 +21,17 @@ pub struct RenderBindingId(pub u32);
 pub struct RenderRegionId(pub u32);
 
 impl RenderNodeId {
+    /// 无效节点 id 哨兵值。
     pub const INVALID: Self = Self(u32::MAX);
 }
 
 impl RenderExprId {
+    /// 无效表达式 id 哨兵值。
     pub const INVALID: Self = Self(u32::MAX);
 }
 
 impl RenderRegionId {
+    /// 空区域 id 哨兵值；`region()` 对它返回共享空区域。
     pub const EMPTY: Self = Self(u32::MAX);
 
     /// Whether this region id refers to an allocated region table entry.

@@ -73,18 +73,27 @@ pub struct RunArgs {
     pub workload_file: Option<PathBuf>,
 }
 
+/// 一条可执行运行契约：逻辑入口、物理入口及调用/校验命令模板。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunContract {
+    /// 逻辑入口符号名。
     pub logical_entry: String,
+    /// 物理入口（产物中的文件名或符号）。
     pub physical_entry: String,
+    /// 调用入口的命令模板。
     pub invocation: String,
+    /// 校验入口可用的命令模板。
     pub validate: String,
 }
 
+/// Compiler 成功路径证据摘要（语义闭包 / 规范表面 / 宿主提供者绑定哈希）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompileEvidenceDigest {
+    /// 语义闭包哈希。
     pub semantic_closure_hash: String,
+    /// 规范表面哈希。
     pub canonical_surface_hash: String,
+    /// 宿主提供者绑定哈希。
     pub host_provider_binding_hash: String,
 }
 
@@ -98,8 +107,10 @@ impl From<&nyar_language::CompilerCompileEvidence> for CompileEvidenceDigest {
     }
 }
 
+/// execution manifest：记录构建输入/产物摘要与运行契约，供 `run` 判断产物是否新鲜。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionManifest {
+    /// manifest schema 版本。
     pub schema_version: u32,
     /// 语义 identity 合同版本（旧产物在漂移时失效）。
     pub identity_schema_version: u32,
@@ -109,25 +120,37 @@ pub struct ExecutionManifest {
     pub layout_plan_version: u32,
     /// `.nyar` / `.legion` bytecode 格式版本。
     pub bytecode_format_version: u32,
+    /// 项目名。
     pub project_name: String,
+    /// 编译目标平台。
     pub target: String,
+    /// 参与构建的输入文件摘要。
     pub inputs: Vec<ExecutionInputDigest>,
+    /// 落盘产物摘要。
     pub artifacts: Vec<ExecutionArtifactDigest>,
+    /// 该项目可用的运行契约列表。
     pub run_contracts: Vec<RunContract>,
     /// Compiler 成功路径的可复现证据（schema v3+）。
     pub compile_evidence: Option<CompileEvidenceDigest>,
 }
 
+/// 单个构建输入的摘要（角色 + 相对路径 + 哈希）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionInputDigest {
+    /// 输入角色：`source` / `project-manifest` / `workspace-manifest`。
     pub role: String,
+    /// 相对 workspace 根的归一化路径。
     pub path: String,
+    /// 文件内容 SHA-256。
     pub hash: String,
 }
 
+/// 单个落盘产物的摘要（相对路径 + 哈希）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionArtifactDigest {
+    /// 相对输出目录的路径。
     pub path: String,
+    /// 产物内容 SHA-256。
     pub hash: String,
 }
 

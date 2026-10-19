@@ -6,10 +6,12 @@ use super::{
     surface::TemplateNodeKind,
 };
 
+/// 取某区域内的节点 id 切片（按文档顺序）。
 pub fn region_nodes<'a>(module: &'a RenderModule, region: RenderRegionId) -> &'a [RenderNodeId] {
     &module.region(region).nodes
 }
 
+/// 取节点的子区域 id；文本/条件/循环节点没有单一子区域，返回 `None`。
 pub fn node_children_region(node: &RenderNode) -> Option<RenderRegionId> {
     match node {
         RenderNode::Element(element) => Some(element.children),
@@ -19,6 +21,7 @@ pub fn node_children_region(node: &RenderNode) -> Option<RenderRegionId> {
     }
 }
 
+/// 取节点的模板种类；组件视为 `Component`，其余结构节点返回 `None`。
 pub fn node_kind(node: &RenderNode) -> Option<TemplateNodeKind> {
     match node {
         RenderNode::Element(element) => Some(element.kind),
@@ -27,6 +30,7 @@ pub fn node_kind(node: &RenderNode) -> Option<TemplateNodeKind> {
     }
 }
 
+/// 把属性值拼成源码文本（模板值按片段拼接，不保留分隔）。
 pub fn attr_value_source(module: &RenderModule, value: &RenderAttrValue) -> String {
     match value {
         RenderAttrValue::Static(text) => text.clone(),
@@ -42,6 +46,7 @@ pub fn attr_value_source(module: &RenderModule, value: &RenderAttrValue) -> Stri
     }
 }
 
+/// 把文本片段序列拼成源码文本。
 pub fn text_segments_source(module: &RenderModule, segments: &[RenderTextSegment]) -> String {
     segments
         .iter()
@@ -53,6 +58,7 @@ pub fn text_segments_source(module: &RenderModule, segments: &[RenderTextSegment
         .join("")
 }
 
+/// 深度优先遍历区域内的全部节点及其子区域（含 if 分支与 loop 循环体）。
 pub fn walk_region<F>(module: &RenderModule, region: RenderRegionId, mut visit: F)
 where
     F: FnMut(&RenderModule, RenderNodeId, &RenderNode),

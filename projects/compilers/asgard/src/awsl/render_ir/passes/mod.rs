@@ -11,7 +11,9 @@ pub use theme_registry::{ThemeRegistryOptions, theme_registry_pass};
 
 /// A canonical RenderIR transform pass.
 pub trait RenderPass {
+    /// pass 名称，用于调试与日志。
     fn name(&self) -> &'static str;
+    /// 就地改写 canonical RenderIR。
     fn run(&self, module: &mut RenderModule);
 }
 

@@ -380,14 +380,17 @@ fn type_hint_tag(type_hint: Option<&str>) -> u8 {
     }
 }
 
+/// 把 UI 段嵌入 Android 容器（DEX/ELF）尾部。
 pub fn embed_asgard_ui_section(container: &mut Vec<u8>, ir: &[u8]) {
     crate::codegen::section_framing::embed_ui_section(container, ir);
 }
 
+/// 从容器中查找并返回 UI 段。
 pub fn find_asgard_ui_section(container: &[u8]) -> Option<&[u8]> {
     crate::codegen::section_framing::find_ui_section(container)
 }
 
+/// 从容器中查找并返回 native 段。
 pub fn find_asgard_native_section(container: &[u8]) -> Option<&[u8]> {
     crate::codegen::section_framing::find_native_section(container)
 }

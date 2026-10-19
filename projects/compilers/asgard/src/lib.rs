@@ -3,7 +3,7 @@
 //! **框架名是 Asgard**（`valkyrie.v/projects/asgard`）；本 crate 负责 AWSL 解析、RenderIR 降级、
 //! 按 platform 编译逻辑/UI 二进制并写入 dist。交付组装见 `asgard pack`。
 
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 pub mod awsl;
 pub mod cli;

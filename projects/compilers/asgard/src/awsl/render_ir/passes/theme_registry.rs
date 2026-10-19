@@ -4,12 +4,16 @@ use super::super::{
     surface::TemplateNodeKind,
 };
 
+/// 主题注册表 pass 的配置：单一主题/模式可折叠掉 ThemeSwitcher。
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ThemeRegistryOptions<'a> {
+    /// 固定主题名；为 `None` 时该 pass 直接返回。
     pub single_theme: Option<&'a str>,
+    /// 固定模式名；为 `None` 时该 pass 直接返回。
     pub single_mode: Option<&'a str>,
 }
 
+/// 折叠 ThemeShell/ThemeSwitcher 并把选定的主题与模式固化为 class。
 pub fn theme_registry_pass(module: &mut RenderModule, options: ThemeRegistryOptions<'_>) {
     let ThemeRegistryOptions { single_theme, single_mode } = options;
     if single_theme.is_none() || single_mode.is_none() {
