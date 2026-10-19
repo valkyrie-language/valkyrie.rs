@@ -11,6 +11,8 @@ oak-core = { workspace = true }
 oak-testing = { workspace = true }
 oak-von = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
+# `tests/deserialize.rs` 断言 `nyar-language` 打印出的 VON 文本能被 `oak-von` 读回。
+nyar-language = { workspace = true, features = ["serde"] }
 
 [[test]]
 name = "main"
