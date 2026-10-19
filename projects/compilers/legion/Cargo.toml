@@ -11,7 +11,7 @@ default = ["nyar-vm-lane"]
 nyar-vm-lane = ["nyar-emitter/nyar-vm-lane"]
 legacy-lanes = ["nyar-vm-lane"]
 # `legion spy *` 诊断（Wasm/JVM/CLR/Native 格式解码），不属于 build/run 生产链。
-format-spy = ["dep:vcc-data"]
+format-spy = []
 # `legion bootstrap` 自举验收，不属于 LeetCode 双 target 正式链。
 bootstrap-lane = []
 
@@ -28,7 +28,6 @@ nyar-workspace = { workspace = true }
 oak-core = { workspace = true }
 oak-von = { workspace = true }
 oak-valkyrie = { workspace = true }
-vcc-data = { workspace = true, features = ["serde"], optional = true }
 # WASM 段/指令解码的唯一所有者（`legion spy wasm` 直接消费，不再走 vcc-data 副本）。
 acorn-wasm = { workspace = true }
 # JVM class/JAR 编解码的唯一所有者（`legion spy jvm` 直接消费，不再走 vcc-data 副本）。
