@@ -194,10 +194,6 @@ pub struct BuildTargetSpec {
     pub typescript: bool,
     #[serde(default)]
     pub wat: bool,
-    #[serde(default)]
-    pub exclude_directories: Vec<String>,
-    #[serde(default)]
-    pub exclude_files: Vec<String>,
     /// 发布格式过滤（如 `mini-game` / `mini-program` / `web-app`）。
     #[serde(default)]
     pub publish: Vec<String>,
@@ -213,8 +209,6 @@ impl Default for BuildTargetSpec {
             source_map: false,
             typescript: false,
             wat: false,
-            exclude_directories: Vec::new(),
-            exclude_files: Vec::new(),
             publish: Vec::new(),
             runtime_async: false,
         }

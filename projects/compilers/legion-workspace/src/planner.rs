@@ -562,10 +562,8 @@ impl WorkspaceResolver {
             }
         }
 
-        // 收集当前项目自身的源文件，并应用该项目针对当前 target 的 exclude_*。
+        // 收集当前项目自身的源文件。target 不参与声明是否存在，只选择 adaptor 与 BackendPrivatePlan。
         let mut all_files = collect_source_files(&canonical_dir)?;
-        let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
-        all_files = filter_excluded_sources(all_files, &canonical_dir, &local_build);
 
         // 收集当前项目的依赖名称（auto_link + 显式声明 + 平台隐式 SDK）。
         let mut dep_names = BTreeSet::new();
@@ -689,8 +687,7 @@ impl WorkspaceResolver {
                 depth + 1,
             )?;
         }
-        let local_build = select_build_target(manifest, &build_target.target).unwrap_or_else(|| build_target.clone());
-        let source_files = filter_excluded_sources(collect_source_files(&manifest_dir)?, &manifest_dir, &local_build);
+        let source_files = collect_source_files(&manifest_dir)?;
         groups.push(PlannedSemanticSourceGroup {
             dependency_key: dependency_key.to_string(),
             name: manifest.name.clone(),
@@ -1206,39 +1203,6 @@ pub fn project_uses_single_script_layout(project_dir: &Path) -> bool {
     !project_dir.join("source").exists()
 }
 
-/// Apply `build[].exclude_directories` / `exclude_files` relative to `project_dir`.
-
-pub fn filter_excluded_sources(files: Vec<PathBuf>, project_dir: &Path, build_target: &BuildTargetSpec) -> Vec<PathBuf> {
-    if build_target.exclude_directories.is_empty() && build_target.exclude_files.is_empty() {
-        return files;
-    }
-    let project_dir = path_for_local_fs(&canonicalize_lossy(project_dir));
-    files
-        .into_iter()
-        .filter(|path| {
-            let normalized_path = path_for_local_fs(path);
-            let Ok(relative) = normalized_path.strip_prefix(&project_dir)
-            else {
-                return true;
-            };
-            let relative = relative.to_string_lossy().replace('\\', "/");
-            if build_target.exclude_files.iter().any(|item| {
-                let item = item.replace('\\', "/");
-                relative == item.trim_start_matches("./")
-            }) {
-                return false;
-            }
-            if build_target.exclude_directories.iter().any(|item| {
-                let item = item.replace('\\', "/").trim_end_matches('/').to_string();
-                relative == item || relative.starts_with(&(item.clone() + "/"))
-            }) {
-                return false;
-            }
-            true
-        })
-        .collect()
-}
-
 /// 收集项目 `source/` + `test/` 下的全部 `.v` 文件（测试编译专用）。
 pub fn collect_test_build_sources(project_dir: &Path) -> Result<Vec<PathBuf>, PlannerError> {
     let mut files = collect_source_files(project_dir)?;
@@ -1592,8 +1556,8 @@ fn select_host_providers(
     publish: &[String],
 ) -> Result<Vec<PlannedHostProvider>, PlannerError> {
     let contract_ids: BTreeSet<String> = contracts.iter().map(|item| normalize_contract_reference(&item.id)).collect();
-    // Providers whose contracts were removed by `exclude_files` / arch gating are inert —
-    // skip them instead of failing the whole plan (common on CLR std slices).
+    // 只保留声明了对应 contract 的 provider；contract 本身由 language inventory 与 closure 决定，
+    // 不由 target 侧裁剪。
     let mut providers_by_contract: BTreeMap<String, Vec<&PlannedHostProvider>> = BTreeMap::new();
     for provider in providers {
         let contract = normalize_contract_reference(&provider.contract);
