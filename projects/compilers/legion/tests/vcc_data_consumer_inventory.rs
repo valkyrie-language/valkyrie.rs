@@ -16,9 +16,10 @@ fn workspace_root() -> PathBuf {
 /// 相对 `valkyrie.rs` 根的已冻结消费者路径（正斜杠）。
 ///
 /// 已迁移至 Acorn 并从本清单移除：`legion spy wasm`（`acorn-wasm`）、
-/// `legion spy jvm`（`acorn-jvm`）、`legion spy clr` / `pe_dump`（`acorn-pe`）及其测试。
-/// 仍在清单内的 Legion 侧只剩 `spy native`（等待 x86-64 指令编码的 Acorn owner）；
-/// Asgard 侧剩余条目消费 `dex` / `mach_o` / `host_exe`，同样等待对应 Acorn owner。
+/// `legion spy jvm`（`acorn-jvm`）、`legion spy clr` / `pe_dump`（`acorn-pe`）、
+/// `legion spy native`（`acorn-x64`）及其测试。
+/// 仍在清单内的只剩 Asgard 侧条目：它们消费 `dex` / `mach_o` / `host_exe` /
+/// `aarch64`，等待对应 Acorn owner 的消费者迁移。
 const FROZEN_VCC_DATA_CONSUMERS: &[&str] = &[
     "projects/compilers/asgard/src/codegen/android_compose_pack.rs",
     "projects/compilers/asgard/src/codegen/android_shell.rs",
@@ -29,7 +30,6 @@ const FROZEN_VCC_DATA_CONSUMERS: &[&str] = &[
     "projects/compilers/asgard/src/platform_contract/checks.rs",
     "projects/compilers/asgard/tests/path_wired/codegen_android_compose_pack.rs",
     "projects/compilers/asgard/tests/platform_contract.rs",
-    "projects/compilers/legion/src/cmds/spy/native.rs",
 ];
 
 fn collect_vcc_data_consumers(root: &Path) -> Vec<String> {
