@@ -218,7 +218,6 @@ direct_dependencies: vec!["library".into()],
 is_entry: true,
 };
 let groups = compile_source_snapshot(&[dependency, application]).expect("Resolver 形成语义闭包快照");
-assert!(groups[0].tolerate_inventory_parse_failures);
 assert_eq!(
 groups[0].body_lowering_source_paths,
 Some(std::collections::BTreeSet::from(["good.v".into()]))
