@@ -7,11 +7,11 @@
 
 use std::{fs, path::Path, process::ExitCode};
 
-use miette::{IntoDiagnostic, Result, miette};
 use acorn_jvm::{
     class::{ConstantPool, DecodedJvmOperand, JvmClassFile, JvmFieldRef, JvmMethodRef, decode_instructions},
     jar::JvmJarPackage,
 };
+use miette::{IntoDiagnostic, Result, miette};
 
 use super::{SpyOptions, SpyTargetOptions};
 

@@ -2,8 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use miette::{Result, miette};
 use acorn_jvm::class::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodRef, JvmMethodSignature, JvmTypeDescriptor};
+use miette::{Result, miette};
 use vcc_data::binary::dex::{DexImageBuilder, merge_class_sets};
 
 const ACC_PUBLIC: u16 = 0x0001;

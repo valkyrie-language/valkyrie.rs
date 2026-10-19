@@ -3,12 +3,12 @@
 //! 在内存中构造最小 `.class` 与 `.jar` 二进制（经 `acorn-jvm` 编码），
 //! 验证 `spy jvm` 的列表、反汇编与 JSON 输出能力，不依赖外部文件。
 
-use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
-use tempfile::TempDir;
 use acorn_jvm::{
     class::{JvmClassFile, JvmMethodDescriptor, JvmTypeDescriptor},
     jar::JvmJarPackage,
 };
+use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
+use tempfile::TempDir;
 
 /// 构造一个含两个方法的 `class` 模型并编码为二进制。
 ///

@@ -1,9 +1,9 @@
 //! `PE` 解析入口的行为测试。
 //!
-//! `PE/CLR` 解析逻辑已下沉至 `vcc-data`，本测试直接消费 `vcc_data::binary::pe`，
+//! `PE/CLR` 解析逻辑由 `acorn-pe` 拥有，本测试直接消费 `acorn_pe::pe`，
 //! 验证 `parse_pe` 在边界输入下的错误归类。
 
-use vcc_data::binary::pe::{PeParseError, parse_pe};
+use acorn_pe::pe::{PeParseError, parse_pe};
 
 #[test]
 fn rejects_empty_data() {

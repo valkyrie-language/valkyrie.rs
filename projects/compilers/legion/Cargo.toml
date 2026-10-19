@@ -33,6 +33,8 @@ vcc-data = { workspace = true, features = ["serde"], optional = true }
 acorn-wasm = { workspace = true }
 # JVM class/JAR 编解码的唯一所有者（`legion spy jvm` 直接消费，不再走 vcc-data 副本）。
 acorn-jvm = { workspace = true }
+# PE/COFF 与 MSIL 文本编解码的唯一所有者（`legion spy clr` / `pe_dump` 直接消费，不再走 vcc-data 副本）。
+acorn-pe = { workspace = true }
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }

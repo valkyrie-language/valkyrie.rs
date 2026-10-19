@@ -36,6 +36,7 @@ vcc-data = { path = "projects/compilers/vcc-data" }
 # 诊断链（`legion spy`）直接消费这些解码器，不再使用 vcc-data 里的重复副本。
 acorn-wasm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
 acorn-jvm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
+acorn-pe = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
 
 # Compiler / VM stack lives in nyar-vm.rs. CI resolves these from the pinned `rev`.
 # Local sibling checkout: copy `.cargo/config.example.toml` to `.cargo/config.toml`.
