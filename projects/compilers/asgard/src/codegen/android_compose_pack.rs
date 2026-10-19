@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
+use acorn_dex::dex::{DexImageBuilder, merge_class_sets};
 use acorn_jvm::class::{JvmClassFile, JvmCodeBody, JvmInstruction, JvmMethodDescriptor, JvmMethodRef, JvmMethodSignature, JvmTypeDescriptor};
 use miette::{Result, miette};
-use vcc_data::binary::dex::{DexImageBuilder, merge_class_sets};
 
 const ACC_PUBLIC: u16 = 0x0001;
 const ACC_SUPER: u16 = 0x0020;
@@ -56,7 +56,7 @@ pub fn validate_compose_shell_dex(dex: &[u8]) -> Result<()> {
 }
 
 fn build_bootstrap_compose_dex() -> Result<Vec<u8>> {
-    merge_class_sets(&[&build_androidx_stub_classes(), &build_asgard_runtime_classes()])
+    merge_class_sets(&[&build_androidx_stub_classes(), &build_asgard_runtime_classes()]).map_err(|error| miette!("{error}"))
 }
 
 fn load_vendor_dex(name: &str) -> Option<Vec<u8>> {
@@ -294,7 +294,7 @@ pub fn write_vendor_dex_bootstrap(out_dir: &Path) -> Result<()> {
     std::fs::write(out_dir.join("dex").join(COMPOSE_SHELL_DEX), &shell).map_err(|e| miette!("{e}"))?;
     std::fs::write(out_dir.join("dex/androidx-compose-baseline.dex"), build_androidx_compose_baseline()).map_err(|e| miette!("{e}"))?;
     std::fs::write(out_dir.join("dex/asgard-runtime.dex"), build_asgard_runtime_dex()).map_err(|e| miette!("{e}"))?;
-    let class_defs = vcc_data::binary::dex::dex_class_defs_count(&shell).unwrap_or(0);
+    let class_defs = acorn_dex::dex::dex_class_defs_count(&shell).unwrap_or(0);
     let manifest = format!(
         r#"{{
   "compose": "1.6.0",

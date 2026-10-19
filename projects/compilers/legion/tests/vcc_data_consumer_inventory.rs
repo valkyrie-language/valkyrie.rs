@@ -17,20 +17,11 @@ fn workspace_root() -> PathBuf {
 ///
 /// 已迁移至 Acorn 并从本清单移除：`legion spy wasm`（`acorn-wasm`）、
 /// `legion spy jvm`（`acorn-jvm`）、`legion spy clr` / `pe_dump`（`acorn-pe`）、
-/// `legion spy native`（`acorn-x64`）及其测试。
-/// 仍在清单内的只剩 Asgard 侧条目：它们消费 `dex` / `mach_o` / `host_exe` /
-/// `aarch64`，等待对应 Acorn owner 的消费者迁移。
-const FROZEN_VCC_DATA_CONSUMERS: &[&str] = &[
-    "projects/compilers/asgard/src/codegen/android_compose_pack.rs",
-    "projects/compilers/asgard/src/codegen/android_shell.rs",
-    "projects/compilers/asgard/src/codegen/mobile_ui_binary.rs",
-    "projects/compilers/asgard/src/package/desktop/mod.rs",
-    "projects/compilers/asgard/src/package/ios/project.rs",
-    "projects/compilers/asgard/src/package/terminal/mod.rs",
-    "projects/compilers/asgard/src/platform_contract/checks.rs",
-    "projects/compilers/asgard/tests/path_wired/codegen_android_compose_pack.rs",
-    "projects/compilers/asgard/tests/platform_contract.rs",
-];
+/// `legion spy native`（`acorn-x64`）、Asgard 的 `dex` / `mach_o` / `host_exe` /
+/// `aarch64` / `elf` 消费者（`acorn-dex` / `acorn-mach-o` / `acorn-host` /
+/// `acorn-aarch64` / `acorn-pe`）及其测试。
+/// 清单已清空：`vcc-data` 不再有生产消费者，任何新消费者都必须先停止。
+const FROZEN_VCC_DATA_CONSUMERS: &[&str] = &[];
 
 fn collect_vcc_data_consumers(root: &Path) -> Vec<String> {
     let mut found = Vec::new();

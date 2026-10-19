@@ -393,7 +393,7 @@ pub fn find_asgard_native_section(container: &[u8]) -> Option<&[u8]> {
 
 #[cfg(test)]
 pub fn dex_with_embedded_ui(components: &[LoweredComponent]) -> Vec<u8> {
-    let mut dex_builder = vcc_data::binary::dex::DexImageBuilder::new();
+    let mut dex_builder = acorn_dex::dex::DexImageBuilder::new();
     dex_builder.add_class("asgard/Placeholder", &[0xCA, 0xFE, 0xBA, 0xBE]);
     let mut dex = dex_builder.build().expect("DEX 构建失败");
     embed_asgard_ui_section(&mut dex, &encode_mobile_ui_package(components));
@@ -402,7 +402,7 @@ pub fn dex_with_embedded_ui(components: &[LoweredComponent]) -> Vec<u8> {
 
 #[cfg(test)]
 pub fn host_executable_with_embedded_ui(platform: &str, components: &[LoweredComponent]) -> Vec<u8> {
-    let builder = vcc_data::binary::mach_o::MachOImageBuilder::new();
+    let builder = acorn_mach_o::mach_o::MachOImageBuilder::new();
     let _ = platform;
     let mut out = builder.build_executable().expect("Mach-O 构建失败");
     embed_asgard_ui_section(&mut out, &encode_mobile_ui_package(components));

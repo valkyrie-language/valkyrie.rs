@@ -7,7 +7,7 @@ use crate::{
     },
     package::artifact::PackageArtifact,
 };
-use vcc_data::binary::mach_o::MachOImageBuilder;
+use acorn_mach_o::mach_o::MachOImageBuilder;
 
 /// iOS 打包产物。
 #[derive(Debug, Clone)]

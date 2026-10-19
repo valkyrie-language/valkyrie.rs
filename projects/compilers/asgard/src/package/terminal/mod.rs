@@ -6,7 +6,7 @@
 //! 并生成原生可执行文件骨架（V→native 编译器补全后接入）。
 
 use crate::{awsl::LoweredComponent, codegen::build_awsl_terminal_source, package::artifact::PackageArtifact};
-use vcc_data::binary::host_exe::build_host_executable;
+use acorn_host::host_exe::build_host_executable;
 
 /// 终端打包产物。
 #[derive(Debug, Clone)]

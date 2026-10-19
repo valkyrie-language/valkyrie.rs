@@ -50,7 +50,8 @@ fn gate_android_compose_vendor_rejects_bootstrap_stub() {
 
 #[test]
 fn gate_android_compose_vendor_fixture_passes() {
-    use vcc_data::binary::{class::JvmClassFile, dex::DexImageBuilder};
+    use acorn_dex::dex::DexImageBuilder;
+    use acorn_jvm::class::JvmClassFile;
     let mut builder = DexImageBuilder::new();
     for i in 0..60 {
         let name = format!("com/vendor/fixture/C{i}");
@@ -94,10 +95,8 @@ fn gate_runtime_cip_mount_all_platforms() {
 
 #[test]
 fn gate_jni_sym_on_test_so() {
-    use vcc_data::binary::{
-        aarch64::{emit_jni_glue_module, merge_jni_and_logic, ret_bytes},
-        elf::{SharedElfWriter, SharedObjectExport},
-    };
+    use acorn_aarch64::aarch64::{emit_jni_glue_module, merge_jni_and_logic, ret_bytes};
+    use acorn_pe::elf::{SharedElfWriter, SharedObjectExport};
     let jni = emit_jni_glue_module().expect("jni");
     let (image, exports) =
         merge_jni_and_logic(jni, ret_bytes().to_vec(), vec![SharedObjectExport { name: "asgard_invoke_export".into(), text_offset: 0 }])

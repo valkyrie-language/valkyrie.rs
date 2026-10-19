@@ -2,8 +2,8 @@
 
 use std::path::Path;
 
+use acorn_dex::dex::{dex_class_defs_count, dex_contains_strings};
 use miette::{Result, miette};
-use vcc_data::binary::dex::{dex_class_defs_count, dex_contains_strings};
 
 use crate::{
     codegen::{

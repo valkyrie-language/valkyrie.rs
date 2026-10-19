@@ -8,7 +8,7 @@ use crate::{
     },
     package::artifact::PackageArtifact,
 };
-use vcc_data::binary::host_exe::build_host_executable;
+use acorn_host::host_exe::build_host_executable;
 
 /// 桌面打包产物。
 #[derive(Debug, Clone)]

@@ -2,8 +2,8 @@
 
 use super::*;
 
+use acorn_dex::dex::dex_contains_strings;
 use std::path::PathBuf;
-use vcc_data::binary::dex::dex_contains_strings;
 
 #[test]
 fn compose_dex_has_required_symbols() {
@@ -13,8 +13,7 @@ fn compose_dex_has_required_symbols() {
         assert!(dex_contains_strings(&dex, &[needle]).unwrap(), "missing class symbol {needle}");
     }
     assert!(
-        dex_contains_strings(&dex, &["decodeAsgardUi", "AsgardRoot", "mount", "patch", "on_event", "invokeExport", "patchFromNative"])
-            .unwrap()
+        dex_contains_strings(&dex, &["decodeAsgardUi", "AsgardRoot", "mount", "patch", "on_event", "invokeExport", "patchFromNative"]).unwrap()
     );
     if mode == AndroidComposePackMode::Vendor {
         validate_compose_shell_dex(&dex).expect("vendor shell");
