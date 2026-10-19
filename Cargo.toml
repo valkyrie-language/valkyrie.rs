@@ -32,11 +32,16 @@ oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "05
 
 vcc-data = { path = "projects/compilers/vcc-data" }
 
-# Acorn：外部二进制格式（Wasm / JVM / PE / ELF / MSIL…）编解码的唯一所有者。
+# Acorn：外部二进制格式（Wasm / JVM / PE / ELF / MSIL / DEX / Mach-O…）编解码的唯一所有者。
 # 诊断链（`legion spy`）直接消费这些解码器，不再使用 vcc-data 里的重复副本。
-acorn-wasm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
-acorn-jvm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
-acorn-pe = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "e7ed84a91cb5b5e1771010a1a73e52c2fa807c1d" }
+acorn-wasm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-jvm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-pe = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-x64 = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-aarch64 = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-dex = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-mach-o = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
+acorn-host = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
 
 # Compiler / VM stack lives in nyar-vm.rs. CI resolves these from the pinned `rev`.
 # Local sibling checkout: copy `.cargo/config.example.toml` to `.cargo/config.toml`.
