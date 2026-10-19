@@ -5,7 +5,7 @@
 
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 use nyar_emitter::nyar_backend_wasi::{WasmBinaryModule, WasmSection};
-use vcc_data::binary::wasm::{DecodedOperand, decode_code_body};
+use acorn_wasm::{DecodedOperand, decode_code_body};
 
 /// 构造一个最小的 `WASM` 模块：包含一个导出函数 `main`，返回 `i32` 常量 `42`。
 fn build_minimal_wasm() -> Vec<u8> {

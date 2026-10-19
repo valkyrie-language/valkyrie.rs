@@ -29,6 +29,8 @@ oak-core = { workspace = true }
 oak-von = { workspace = true }
 oak-valkyrie = { workspace = true }
 vcc-data = { workspace = true, features = ["serde"], optional = true }
+# WASM 段/指令解码的唯一所有者（`legion spy wasm` 直接消费，不再走 vcc-data 副本）。
+acorn-wasm = { workspace = true }
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }

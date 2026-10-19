@@ -3,7 +3,7 @@
 use std::{fs, path::Path, process::ExitCode};
 
 use miette::{IntoDiagnostic, Result, miette};
-use vcc_data::binary::wasm::{
+use acorn_wasm::{
     DecodedInstruction, DecodedOperand, SECTION_CUSTOM, WasmBinaryModule, WasmExternalKind, WasmFunctionEntry, WasmImport, WasmTypeEntry,
     WasmTypeKind, decode_code_body, parse_code_section, parse_export_section, parse_import_section, parse_type_section, section_name,
     uleb128_size, wasm_value_type_name,

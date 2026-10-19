@@ -24,8 +24,8 @@ pub mod jar;
 /// `PE` 二进制格式模型。
 pub mod pe;
 
-/// `WASM` 二进制格式模型。
-pub mod wasm;
+// 已删除 `wasm` 模块：Wasm 编解码由 `acorn-wasm` 拥有，这里的副本与
+// `acorn-wasm` 的 `decode` / `section` / `opcode` 重复。
 
 /// TextVM `.tvm` 正则引擎产物格式。
 pub mod tvm;
