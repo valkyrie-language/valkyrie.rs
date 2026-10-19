@@ -36,7 +36,7 @@ jobs:
       - name: Build vcc-napi (cdylib)
         run: cargo build --release -p vcc-napi
       - name: Build workspace crates
-        run: cargo build --release -p legion -p vcc-data -p vcc-wasm -p asgard
+        run: cargo build --release -p legion -p vcc-wasm -p asgard
       - name: Tests (legion)
         run: cargo test --release -p legion --test artifact_formats
 
@@ -97,7 +97,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov -p legion -p vcc-data -p vcc-napi -p vcc-wasm --lcov --output-path lcov.info
+        run: cargo llvm-cov -p legion -p vcc-napi -p vcc-wasm --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

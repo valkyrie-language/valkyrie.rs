@@ -12,7 +12,7 @@ FragmentSubmission (含 MIR)
 ```
 
 - **入口**：`projects/nyar-emitter/src/lowering/backends/jvm/`（`mod.rs`、`mir.rs` 等）。
-- **二进制**：`../../../projects/vcc-data`。
+- **二进制**：`acorn-jvm`（git 依赖）。
 - 栈机：从 MIR 生成操作数栈指令，不做面向寄存器机的 LIR 分配。
 
 ## 硬性约束

@@ -13,8 +13,8 @@ FragmentSubmission (含 MIR)
 ```
 
 - **入口**：`projects/nyar-emitter/src/lowering/backends/clr/`（`mod.rs`、`mir.rs`、`types.rs` 等）。
-- **二进制**：`../../../projects/vcc-data`（`PeWriter`；模块注释明确「不依赖 ilasm」）。
-- **MSIL 文本模型**：`../../../projects/vcc-data`（编码方法体与元数据行，再由 PE writer 落盘）。
+- **二进制**：`acorn-pe`（`PeWriter`；模块注释明确「不依赖 ilasm」）。
+- **MSIL 文本模型**：`acorn-pe::msil`（编码方法体与元数据行，再由 PE writer 落盘）。
 - 栈机后端不做寄存器分配；从 MIR 生成 `ldloc` / `stloc` / `call` 等 CIL，再写入方法体与元数据表。
 
 ## 2. 硬性约束（生成路径）

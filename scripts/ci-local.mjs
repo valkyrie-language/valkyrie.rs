@@ -23,7 +23,7 @@ if (regenerateFixtures) {
     process.env.LEGION_TEST_REGENERATE = '1';
 }
 
-const coveragePackages = legionOnly ? ['legion'] : ['legion', 'vcc-data', 'vcc-napi', 'vcc-wasm'];
+const coveragePackages = legionOnly ? ['legion'] : ['legion', 'vcc-napi', 'vcc-wasm'];
 
 /** @type {{ title: string, cmd: string, args: string[] }[]} */
 const steps =
@@ -39,7 +39,7 @@ const steps =
               {
                   title: 'build release crates',
                   cmd: 'cargo',
-                  args: ['build', '--release', '-p', 'vcc-napi', '-p', 'legion', '-p', 'vcc-data', '-p', 'vcc-wasm', '-p', 'asgard'],
+                  args: ['build', '--release', '-p', 'vcc-napi', '-p', 'legion', '-p', 'vcc-wasm', '-p', 'asgard'],
               },
               {
                   title: 'legion artifact_formats',

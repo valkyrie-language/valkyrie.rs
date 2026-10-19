@@ -20,7 +20,6 @@ Valkyrie 是一个以 Rust 装配层、V 语言源码和 `nyar-vm.rs` 编译器�
 |----------------------------------------------------------------|--------------------------------------------|
 | [`projects/compilers/`](projects/compilers/)                   | Rust 编译器与装配 crate                    |
 | [`projects/compilers/legion/`](projects/compilers/legion/)     | CLI、manifest 解析、工作区规划与构建编排   |
-| [`projects/compilers/vcc-data/`](projects/compilers/vcc-data/) | 二进制与文本格式模型、编解码和产物数据     |
 | [`projects/compilers/vcc-napi/`](projects/compilers/vcc-napi/) | Node-API native host                       |
 | [`projects/compilers/vcc-wasm/`](projects/compilers/vcc-wasm/) | Wasm host 与 Wasm 产物装配                 |
 | [`projects/compilers/asgard/`](projects/compilers/asgard/)     | Asgard CLI 与跨平台应用入口                |

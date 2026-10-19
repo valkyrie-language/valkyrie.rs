@@ -5,9 +5,10 @@
 | Crate | 职责 |
 | --- | --- |
 | `legion` | CLI、工作区与构建编排 |
-| `vcc-data` | 二进制/文本格式模型与编解码 |
 | `vcc-napi` / `vcc-wasm` | 原生与 Wasm 宿主绑定 |
 | `asgard` | 跨平台应用 CLI（可选） |
+
+二进制与文本格式编解码由 Acorn / Oak 拥有（[acorn.rs](https://github.com/yggdrasil-language/acorn.rs) / [oak.rs](https://github.com/yggdrasil-language/oak.rs) git 依赖），本工作区不再保留混合格式包。
 
 语言语义与 `nyar-emitter` 等 crate 来自 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) git 依赖。
 

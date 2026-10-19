@@ -1,4 +1,4 @@
-﻿//! vcc-data ABI index / template / symbols tests.
+﻿//! AWSL 组件 ABI index / template / symbols tests.
 
 use oak_awsl::{
     AwslParser, ComponentAbiIndex, TemplateBindingKind, collect_abi_references, collect_template_bindings, extract_component_abi_from_script,

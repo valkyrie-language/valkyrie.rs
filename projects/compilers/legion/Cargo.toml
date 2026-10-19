@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-# LeetCode / 正式编译链默认只启用 Nyar + Node/Wasm seed；不链接 `vcc-data` 或自举旁路。
+# LeetCode / 正式编译链默认只启用 Nyar + Node/Wasm seed；诊断链与自举旁路不默认开启。
 default = ["nyar-vm-lane"]
 nyar-vm-lane = ["nyar-emitter/nyar-vm-lane"]
 legacy-lanes = ["nyar-vm-lane"]

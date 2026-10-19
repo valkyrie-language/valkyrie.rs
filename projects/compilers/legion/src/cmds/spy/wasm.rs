@@ -288,7 +288,7 @@ fn read_function_body(data: &[u8], func: &WasmFunctionEntry) -> Vec<u8> {
 
 /// 反汇编函数体指令。
 ///
-/// 委托 `vcc-data` 的 `decode_code_body` 完成局部变量跳过与逐条解码，
+/// 委托 `acorn-wasm` 的 `decode_code_body` 完成局部变量跳过与逐条解码，
 /// 再将相对偏移修正为文件绝对偏移，以保持 `spy` 的偏移语义。
 fn disassemble_function_body(data: &[u8], func: &WasmFunctionEntry) -> Vec<DecodedInstruction> {
     let body_start = func.code_offset;

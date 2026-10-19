@@ -9,9 +9,10 @@
 | Crate | 职责 |
 | --- | --- |
 | `legion` | CLI、清单解析、轻量编排 |
-| `vcc-data` | 二进制/文本格式模型与编解码 |
 | `vcc-napi` / `vcc-wasm` | 原生与 Wasm 宿主 cdylib |
 | `asgard` | 跨平台 GUI 应用 CLI（可选） |
+
+二进制与文本格式编解码归 Acorn / Oak 仓；本工作区不再保留混合格式包。
 
 语言语义、`nyar-emitter` 与多数 `nyar-*` crate 来自 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) git 依赖。
 
@@ -21,7 +22,7 @@
 source → AST → HIR → MIR
   → FragmentSubmission / ArtifactPartitionPlan (nyar)
   → nyar-emitter 按目标降低
-  → vcc-data 手写目标二进制
+  → Acorn 编码目标二进制
 ```
 
 细节见 [compiler-architecture.md](compiler-architecture.md)、[backends/index.md](backends/index.md)。

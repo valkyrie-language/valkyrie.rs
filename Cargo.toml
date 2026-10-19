@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "projects/compilers/legion",
     "projects/compilers/legion-workspace",
-    "projects/compilers/vcc-data",
     "projects/compilers/vcc-napi",
     "projects/compilers/vcc-wasm",
     "projects/compilers/asgard",
@@ -30,10 +29,8 @@ oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "054
 oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "054b27ef24f30f9715ad6da0b918291052e136f7", features = ["serde"] }
 oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "054b27ef24f30f9715ad6da0b918291052e136f7" }
 
-vcc-data = { path = "projects/compilers/vcc-data" }
-
-# Acorn：外部二进制格式（Wasm / JVM / PE / ELF / MSIL / DEX / Mach-O…）编解码的唯一所有者。
-# 诊断链（`legion spy`）直接消费这些解码器，不再使用 vcc-data 里的重复副本。
+# Acorn：外部二进制格式（Wasm / JVM / PE / ELF / MSIL / DEX / Mach-O / TVM…）编解码的唯一所有者。
+# 诊断链（`legion spy`）直接消费这些解码器，不再使用任何混合包副本。
 acorn-wasm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
 acorn-jvm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }
 acorn-pe = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80b2d679441c101b273e8aaa7d246df9caeba9f5" }

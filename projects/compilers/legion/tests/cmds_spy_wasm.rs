@@ -181,7 +181,7 @@ fn write_fixture_wasm_for_cli() {
 /// 构造一个含 `0xFB` GC 指令的 `WASM` 模块。
 ///
 /// 函数体包含 `struct.new_default`（`0xFB 0x01`）与 `array.new_fixed`（`0xFB 0x08`），
-/// 用于验证 `spy wasm` 与 `vcc-data` 的 `decode_code_body` 正确解码 GC 前缀指令。
+/// 用于验证 `spy wasm` 与 `acorn-wasm` 的 `decode_code_body` 正确解码 GC 前缀指令。
 fn build_wasm_with_gc_instructions() -> Vec<u8> {
     let mut module = WasmBinaryModule::new();
 

@@ -3,6 +3,6 @@
 #[test]
 fn default_features_exclude_format_spy_and_bootstrap_lane() {
     assert!(cfg!(feature = "nyar-vm-lane"), "正式链默认应启用 nyar-vm-lane");
-    assert!(!cfg!(feature = "format-spy"), "默认 legion 不得链接 vcc-data（format-spy）");
+    assert!(!cfg!(feature = "format-spy"), "默认 legion 不得启用诊断链（format-spy）");
     assert!(!cfg!(feature = "bootstrap-lane"), "默认 legion 不得启用 bootstrap-lane");
 }

@@ -49,9 +49,10 @@ valkyrie.rs/
 
 - `FragmentSubmission` → clr / jvm / wasm / native / … lowering。
 
-### `../../projects/vcc-data`
+### `acorn.rs` / `oak.rs`（git 依赖）
 
-- `binary/pe`、`binary/class`、`binary/wasm`、`text/msil` 等。
+- 二进制格式（`PE` / `COFF` / `ELF` / `Mach-O` / `DEX` / `JVM class` / `Wasm` / `MSIL` / `.tvm`）由 `acorn-*` 拥有；
+  文本格式（Valkyrie / VON / AWSL / MSIL 文本等）由 `oak-*` 拥有。
 
 ### `projects/legion`
 
