@@ -78,12 +78,12 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
         compiler_groups.push(CompilerSourceGroup {
             dependency_key: group.dependency_key.clone(),
             name: group.name.clone(),
-            source: String::new(),
             sources,
             direct_dependencies: group.direct_dependencies.clone(),
             tolerate_inventory_parse_failures: group_closure.tolerate_inventory_parse_failures,
             body_lowering_source_paths: Some(group_closure.body_lowering_source_paths),
             closure_digest: Some(closure_digest.clone()),
+            body_lowering_declaration_keys: Some(group_closure.body_lowering_declarations.iter().map(|key| key.encoded()).collect()),
         });
     }
     Ok(compiler_groups)
