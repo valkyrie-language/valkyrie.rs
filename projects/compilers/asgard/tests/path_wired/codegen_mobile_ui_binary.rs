@@ -30,14 +30,14 @@ micro on_tap() {
     assert!(text.contains("count"));
     assert!(text.contains("on_tap"));
 
-    let decoded = decode_mobile_ui_package(&blob).expect("decode v2");
+    let decoded = decode_mobile_ui_package(&blob).expect("decode v0 baseline");
     assert_eq!(decoded.version, UI_BIN_VERSION_V2);
     assert_eq!(decoded.components.len(), 1);
     assert_eq!(decoded.components[0].name, "counter");
 }
 
 #[test]
-fn decode_v1_package_without_version_byte() {
+fn rejects_package_without_container_tag() {
     let mut blob = Vec::new();
     blob.extend_from_slice(UI_BIN_MAGIC);
     blob.extend_from_slice(&1u32.to_le_bytes());
@@ -45,7 +45,5 @@ fn decode_v1_package_without_version_byte() {
     write_string(&mut blob, "widget");
     write_bindings(&mut blob, &[]);
     write_ir(&mut blob, &RenderModule::empty());
-    let decoded = decode_mobile_ui_package(&blob).expect("decode v1");
-    assert_eq!(decoded.version, 1);
-    assert!(decoded.components[0].abi.properties.is_empty());
+    assert!(decode_mobile_ui_package(&blob).is_err(), "缺失容器标签的负载必须失败");
 }

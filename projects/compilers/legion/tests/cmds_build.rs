@@ -95,7 +95,7 @@ micro add_one(x: i64) -> i64 {
     assert_eq!(status, ExitCode::SUCCESS);
 
     let manifest = ExecutionManifest::read_from_output_dir(&output_dir).expect("read execution manifest").expect("execution manifest present");
-    assert_eq!(manifest.schema_version, 3);
+    assert_eq!(manifest.schema_version, 0);
     let evidence = manifest.compile_evidence.as_ref().expect("compile evidence in manifest");
     assert!(!evidence.semantic_closure_hash.is_empty());
     assert!(!evidence.canonical_surface_hash.is_empty());

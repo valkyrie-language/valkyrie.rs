@@ -30,13 +30,16 @@ pub fn embed_host_native_section(container: &mut Vec<u8>, native: &[u8]) {
     crate::codegen::section_framing::embed_native_section(container, native);
 }
 
-/// Asgard UI wire v2 版本字节（接在 8 字节 `ASGARDUI` 魔数之后）。
+/// Asgard UI wire 版本字节（接在 8 字节 `ASGARDUI` 魔数之后）。
+///
+/// 该字节是**容器标签**而非 schema 版本号：读侧按它区分承载区段，
+/// 因此保留非零值；不保留「无版本字节」的旧负载兼容读取。
 pub const UI_BIN_VERSION_V2: u8 = 0x02;
 
-/// Decoded Asgard UI package (wire v1 or v2).
+/// Decoded Asgard UI package (wire v0 baseline).
 #[derive(Debug, Clone)]
 pub struct DecodedUiPackage {
-    /// Wire version (`1` when magic is immediately followed by component count).
+    /// 负载中的容器标签字节（必须等于 [`UI_BIN_VERSION_V2`]）。
     pub version: u8,
     /// Decoded components.
     pub components: Vec<DecodedComponent>,
@@ -64,7 +67,7 @@ pub enum DecodeError {
     InvalidFormat(String),
 }
 
-/// Decode an Asgard UI binary package (v1: no version byte; v2: `0x02` + ABI section).
+/// Decode an Asgard UI binary package：魔数后必须紧跟容器标签字节与 ABI 段。
 pub fn decode_mobile_ui_package(bytes: &[u8]) -> Result<DecodedUiPackage, DecodeError> {
     if bytes.len() < UI_BIN_MAGIC.len() + 4 {
         return Err(DecodeError::InvalidFormat("buffer too short".into()));
@@ -73,19 +76,17 @@ pub fn decode_mobile_ui_package(bytes: &[u8]) -> Result<DecodedUiPackage, Decode
         return Err(DecodeError::InvalidFormat("bad magic".into()));
     }
     let mut offset = UI_BIN_MAGIC.len();
-    let version = if offset < bytes.len() && bytes[offset] == UI_BIN_VERSION_V2 {
-        offset += 1;
-        UI_BIN_VERSION_V2
+    if bytes.get(offset) != Some(&UI_BIN_VERSION_V2) {
+        return Err(DecodeError::InvalidFormat("missing UI bin container tag".into()));
     }
-    else {
-        1
-    };
+    offset += 1;
+    let version = UI_BIN_VERSION_V2;
     let component_count = read_u32(bytes, &mut offset)? as usize;
     let mut components = Vec::with_capacity(component_count);
     for _ in 0..component_count {
         let route_name = read_string(bytes, &mut offset)?;
         let name = read_string(bytes, &mut offset)?;
-        let abi = if version == UI_BIN_VERSION_V2 { read_abi(bytes, &mut offset)? } else { oak_awsl::ComponentAbi::default() };
+        let abi = read_abi(bytes, &mut offset)?;
         let bindings = read_bindings(bytes, &mut offset)?;
         let render_ir = read_ir(bytes, &mut offset)?;
         components.push(DecodedComponent { route_name, name, abi, bindings, render_ir });

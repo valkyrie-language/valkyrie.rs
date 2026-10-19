@@ -34,7 +34,9 @@ const BACKEND_REQUEST_SNAPSHOT_FILE_NAME: &str = "backend-request.txt";
 /// 后端执行结果快照文件名，由构建流程写入，不属于交付产物。
 const BACKEND_RESULT_SNAPSHOT_FILE_NAME: &str = "backend-result.txt";
 const COMPILE_EVIDENCE_FILE_NAME: &str = "compile-evidence.txt";
-const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 3;
+/// execution manifest 的 schema 版本；未正式发布前统一为 `0`（v0 基线），
+/// 旧 schema 的产物一律判为不新鲜并重建。
+const EXECUTION_MANIFEST_SCHEMA_VERSION: u32 = 0;
 
 /// `legion run` 的命令参数。
 #[derive(Debug, Clone, Args)]
