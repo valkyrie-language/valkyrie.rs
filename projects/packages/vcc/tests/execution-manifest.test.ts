@@ -68,7 +68,7 @@ test('verifyExecutionManifestFresh rejects legacy schema without compile evidenc
     }`);
     assert.ok(manifest);
     const reason = verifyExecutionManifestFresh(manifest!, '/tmp/out', 'wasm32-node-unknown-wasm');
-    assert.match(reason ?? '', /schema 1 </);
+    assert.match(reason ?? '', /schema 1 !=/);
 });
 
 test('isArtifactCacheFresh validates input and artifact digests', () => {

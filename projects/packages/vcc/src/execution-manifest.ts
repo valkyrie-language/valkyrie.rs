@@ -2,8 +2,13 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** 与 Legion `EXECUTION_MANIFEST_SCHEMA_VERSION` 对齐。 */
-export const MIN_EXECUTION_MANIFEST_SCHEMA_VERSION = 3;
+/**
+ * 与 Legion `EXECUTION_MANIFEST_SCHEMA_VERSION` 对齐（未发布前为 v0 基线）。
+ *
+ * 语义是**必须相等**：manifest 的 `schema_version` 不等于该值即判为不新鲜并重建，
+ * 不再保留「最低版本以上都算新」的旧容忍。
+ */
+export const MIN_EXECUTION_MANIFEST_SCHEMA_VERSION = 0;
 
 export const EXECUTION_MANIFEST_FILE = 'run-contracts.txt';
 export const COMPILE_EVIDENCE_FILE = 'compile-evidence.txt';
@@ -222,8 +227,8 @@ function readCompileEvidenceSidecar(artifactDir: string): CompileEvidenceDigest 
 
 /** 校验 manifest 与产物目录仍匹配当前源码闭包与 artifact 摘要。 */
 export function verifyExecutionManifestFresh(manifest: ExecutionManifest, artifactDir: string, expectedTarget?: string): string | null {
-    if (manifest.schema_version < MIN_EXECUTION_MANIFEST_SCHEMA_VERSION) {
-        return `execution manifest schema ${manifest.schema_version} < ${MIN_EXECUTION_MANIFEST_SCHEMA_VERSION}`;
+    if (manifest.schema_version !== MIN_EXECUTION_MANIFEST_SCHEMA_VERSION) {
+        return `execution manifest schema ${manifest.schema_version} != ${MIN_EXECUTION_MANIFEST_SCHEMA_VERSION}`;
     }
     if (!manifest.compile_evidence) {
         return 'execution manifest missing compile_evidence';
