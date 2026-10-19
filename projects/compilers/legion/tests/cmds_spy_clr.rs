@@ -3,6 +3,8 @@
 //! 覆盖两层：
 //! - `MsilParser` 文本解析的单元行为（方法签名抽取、空输入、不闭合块）。
 //! - `spy clr <file>.msil` 的 CLI 行为（`--list` / `--method` / `--json`），通过 `run_spy` 验证。
+#![cfg(feature = "format-spy")]
+
 
 use acorn_pe::msil::MsilParser;
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};

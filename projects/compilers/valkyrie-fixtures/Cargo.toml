@@ -10,27 +10,3 @@ publish = false
 oak-core = { workspace = true }
 oak-testing = { workspace = true }
 oak-valkyrie = { workspace = true }
-
-[[test]]
-name = "main"
-path = "tests/main.rs"
-
-[[test]]
-name = "lexer"
-path = "tests/lexer/mod.rs"
-
-[[test]]
-name = "formatter"
-path = "tests/formatter/mod.rs"
-
-[[test]]
-name = "printer"
-path = "tests/printer/mod.rs"
-
-[[test]]
-name = "parser"
-path = "tests/parser/mod.rs"
-
-[[test]]
-name = "builder"
-path = "tests/builder/mod.rs"

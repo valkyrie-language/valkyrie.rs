@@ -2,6 +2,8 @@
 //!
 //! 这些测试在内存中构造最小 `WASM` 二进制，验证 `spy wasm` 的解析、
 //! 列表、反汇编与偏移定位能力，不依赖外部文件。
+#![cfg(feature = "format-spy")]
+
 
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 use nyar_emitter::nyar_backend_wasi::{WasmBinaryModule, WasmSection};

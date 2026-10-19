@@ -25,9 +25,11 @@ base64 = { workspace = true }
 nyar-emitter = { workspace = true }
 nyar-package-manager = { workspace = true }
 nyar-workspace = { workspace = true }
+
 oak-core = { workspace = true }
 oak-von = { workspace = true }
 oak-valkyrie = { workspace = true }
+
 # WASM 段/指令解码的唯一所有者（`legion spy wasm` 直接消费，不再走 vcc-data 副本）。
 acorn-wasm = { workspace = true }
 # JVM class/JAR 编解码的唯一所有者（`legion spy jvm` 直接消费，不再走 vcc-data 副本）。
@@ -36,6 +38,7 @@ acorn-jvm = { workspace = true }
 acorn-pe = { workspace = true }
 # x86-64 指令编码的唯一所有者（`legion spy native` 直接消费，不再走 vcc-data 副本）。
 acorn-x64 = { workspace = true, features = ["serde"] }
+
 nyar-language = { workspace = true, features = ["serde"] }
 nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }
@@ -52,26 +55,6 @@ gag = { workspace = true }
 tempfile = { workspace = true }
 nyar = { workspace = true }
 zip = { workspace = true }
-
-[[test]]
-name = "cmds_spy_wasm"
-path = "tests/cmds_spy_wasm.rs"
-required-features = ["format-spy"]
-
-[[test]]
-name = "cmds_spy_clr"
-path = "tests/cmds_spy_clr.rs"
-required-features = ["format-spy"]
-
-[[test]]
-name = "cmds_spy_pe_parser"
-path = "tests/cmds_spy_pe_parser.rs"
-required-features = ["format-spy"]
-
-[[test]]
-name = "cmds_spy_jvm"
-path = "tests/cmds_spy_jvm.rs"
-required-features = ["format-spy"]
 
 [[example]]
 name = "dump_sources"

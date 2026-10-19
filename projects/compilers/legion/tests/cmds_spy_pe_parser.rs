@@ -2,6 +2,8 @@
 //!
 //! `PE/CLR` 解析逻辑由 `acorn-pe` 拥有，本测试直接消费 `acorn_pe::pe`，
 //! 验证 `parse_pe` 在边界输入下的错误归类。
+#![cfg(feature = "format-spy")]
+
 
 use acorn_pe::pe::{PeParseError, parse_pe};
 

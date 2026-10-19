@@ -13,19 +13,3 @@ oak-von = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 # `tests/deserialize.rs` 断言 `nyar-language` 打印出的 VON 文本能被 `oak-von` 读回。
 nyar-language = { workspace = true, features = ["serde"] }
-
-[[test]]
-name = "main"
-path = "tests/main.rs"
-
-[[test]]
-name = "lexer"
-path = "tests/lexer/mod.rs"
-
-[[test]]
-name = "formatter"
-path = "tests/formatter/mod.rs"
-
-[[test]]
-name = "printer"
-path = "tests/printer/mod.rs"
