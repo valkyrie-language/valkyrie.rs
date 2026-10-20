@@ -1,10 +1,10 @@
 # @valkyrie-language/vcc
 
-Shared **Valkyrie Compiler Collect (VCC) host runner** for assembled Node.js CLIs.
+Shared **Valkyrie Compiler Collect (VCC)** orthogonal native N-API bindings and wasm spawn helpers.
 
-This package is a small library used by [`@valkyrie-language/legion`](../legion) and [
-`@valkyrie-language/asgard`](../asgard). It resolves platform-specific native artifacts and WebAssembly collect entries,
-then dispatches CLI execution (native first, Wasm fallback).
+This package is a small library used by [`@valkyrie-language/legion`](../legion) and [`@valkyrie-language/asgard`](../asgard).
+It exposes programmatic `planProject` / `buildProject` / `spyRun` (native) and `spawnWasmCollect` (wasm). CLI orchestration
+lives in the product packages via `@vmz/commander`, not here.
 
 ## Install
 
@@ -27,19 +27,25 @@ npm install @valkyrie-language/asgard
 ## Usage
 
 ```js
-import {createHostRunner, NATIVE_PACKAGES} from "@valkyrie-language/vcc";
+import {
+    buildProject,
+    locateNativeCollect,
+    planProject,
+    spawnWasmCollect,
+} from "@valkyrie-language/vcc";
 
-const host = createHostRunner({
-    wasmCollect: "@valkyrie-language/vcc-unknown-wasm32",
-    wasmEntry: "legion.mjs",
-});
+// Native N-API (when a platform collect is installed)
+const plan = planProject("./my-project", "wasm32-node-unknown-wasm");
+const build = buildProject("./my-project", "wasm32-node-unknown-wasm", "./dist");
 
-// Programmatic entry (same routing as the `legion` bin)
-host.runCli(process.argv.slice(2));
+// Wasm collect spawn (orthogonal argv → wasm script)
+const outcome = spawnWasmCollect(
+    "@valkyrie-language/vcc-unknown-wasm32",
+    "legion.mjs",
+    ["build", "./my-project"],
+);
 
-// Inspect routing
-host.locateNativeCollect(); // path to vcc.<platform>.node or null
-host.resolveWasmMjs();      // absolute path to legion.mjs in the wasm collect
+locateNativeCollect(); // path to vcc.<platform>.node or null
 ```
 
 ### Benchmark (`@valkyrie-language/vcc/benchmark`)
@@ -91,17 +97,22 @@ const report = runBenchmarkSuite(runner, catalog.map((p) => ({
 | Export                           | Description                                                    |
 |----------------------------------|----------------------------------------------------------------|
 | `NATIVE_PACKAGES`                | Optional native collect package names (Windows, Linux, macOS). |
-| `locateNativeCollect(packages?)` | Find an installed platform `.node` addon, or `null`.                |
+| `locateNativeCollect(packages?)` | Find an installed platform `.node` addon, or `null`.           |
+| `loadNativeBinding()`            | Load native N-API binding object, or `null`.                   |
+| `planProject` / `buildProject`   | Programmatic Legion plan/build via native N-API.               |
+| `spyRun`                         | Programmatic `legion spy` via native N-API.                    |
+| `spawnWasmCollect`               | Spawn wasm collect entry with argv (no CLI aggregation).       |
 | `resolveWasmMjs(collect, entry)` | Resolve the Wasm host script path inside a collect package.    |
-| `createHostRunner(config)`       | Bind wasm collect settings and return `runCli` helpers.        |
+| `@valkyrie-language/vcc/legion`  | Legion wasm/native spawn routing (product CLI uses this).        |
+| `@valkyrie-language/vcc/asgard`  | Asgard wasm spawn routing (product CLI uses this).             |
 
 ## Related packages
 
 | Package                     | Role                                                |
 |-----------------------------|-----------------------------------------------------|
-| `@valkyrie-language/legion` | Valkyrie compiler & workspace CLI                   |
-| `@valkyrie-language/asgard` | Cross-platform GUI app framework CLI                |
-| `@valkyrie-language/vcc-*`  | Platform collect packages (native / Wasm artifacts) |
+| `@valkyrie-language/legion` | Valkyrie compiler CLI (`@vmz/commander`); depends only on `vcc` |
+| `@valkyrie-language/asgard` | GUI app CLI (`@vmz/commander`); depends only on `vcc`             |
+| `@valkyrie-language/vcc-*`  | Platform collect packages (optional deps of `vcc`, not product CLIs) |
 
 ## License
 

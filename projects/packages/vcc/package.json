@@ -1,15 +1,25 @@
 {
     "name": "@valkyrie-language/vcc",
     "version": "0.0.6",
-    "description": "Valkyrie Compiler Collect shared host runner for assembled Legion and Asgard CLIs.",
+    "description": "Valkyrie compiler collect — orthogonal native N-API bindings and wasm spawn helpers (no CLI aggregation).",
     "type": "module",
     "license": "MPL-2.0",
     "main": "./src/index.ts",
     "exports": {
         ".": "./src/index.ts",
+        "./legion": "./src/products/legion.ts",
+        "./asgard": "./src/products/asgard.ts",
         "./testing": "./src/testing.ts",
         "./execution-manifest": "./src/execution-manifest.ts",
         "./benchmark": "./src/benchmark.ts"
+    },
+    "optionalDependencies": {
+        "@valkyrie-language/vcc-win32-x64": "workspace:*",
+        "@valkyrie-language/vcc-linux-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-x64": "workspace:*",
+        "@valkyrie-language/vcc-darwin-arm64": "workspace:*",
+        "@valkyrie-language/vcc-unknown-wasm32": "workspace:*",
+        "@valkyrie-language/vcc-wasm32-wasi": "workspace:*"
     },
     "files": [
         "src",

@@ -56,8 +56,14 @@ function hashFileSha256(filePath: string): string {
     return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
+/** VON 对象条目分隔符：oak-von 的词法与语法同时接受 `=` 与 `:`。 */
+const FIELD_SEPARATOR = '[:=]';
+
+/** VON 可选值包装：`Some { … }` / `None`；解析时允许 `Some` 前缀。 */
+const OPTIONAL_PREFIX = '(?:Some\\s*)?';
+
 function parseQuotedField(block: string, field: string): string | null {
-    const match = block.match(new RegExp(`${field}\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`));
+    const match = block.match(new RegExp(`${field}\\s*${FIELD_SEPARATOR}\\s*"((?:\\\\.|[^"\\\\])*)"`));
     if (!match?.[1]) {
         return null;
     }
@@ -87,7 +93,7 @@ function parseObjectBlocks(section: string): string[] {
 }
 
 function extractArraySection(source: string, field: string): string | null {
-    const marker = new RegExp(`${field}\\s*:\\s*\\[`);
+    const marker = new RegExp(`${field}\\s*${FIELD_SEPARATOR}\\s*\\[`);
     const match = marker.exec(source);
     if (!match || match.index === undefined) {
         return null;
@@ -109,7 +115,7 @@ function extractArraySection(source: string, field: string): string | null {
 }
 
 function extractObjectSection(source: string, field: string): string | null {
-    const marker = new RegExp(`${field}\\s*:\\s*\\{`);
+    const marker = new RegExp(`${field}\\s*${FIELD_SEPARATOR}\\s*${OPTIONAL_PREFIX}\\{`);
     const match = marker.exec(source);
     if (!match || match.index === undefined) {
         return null;
@@ -179,14 +185,14 @@ function parseCompileEvidence(source: string): CompileEvidenceDigest | null {
     return parseCompileEvidenceRecord(block);
 }
 
-/** 解析 `run-contracts.txt` / `run-contract.txt` 中的 execution manifest 子集。 */
+/** 解析 `run-contracts.txt` / `run-contract.txt` 中的 execution manifest 子集（VON 文本，`=` 与 `:` 均可）。 */
 export function parseExecutionManifest(source: string): ExecutionManifest | null {
-    const schemaMatch = source.match(/schema_version\s*:\s*(\d+)/);
+    const schemaMatch = source.match(new RegExp(`schema_version\\s*${FIELD_SEPARATOR}\\s*(\\d+)`));
     if (!schemaMatch) {
         return null;
     }
-    const target = source.match(/target\s*:\s*"([^"]+)"/)?.[1] ?? '';
-    const project_name = source.match(/project_name\s*:\s*"([^"]+)"/)?.[1] ?? '';
+    const target = source.match(new RegExp(`target\\s*${FIELD_SEPARATOR}\\s*"([^"]+)"`))?.[1] ?? '';
+    const project_name = source.match(new RegExp(`project_name\\s*${FIELD_SEPARATOR}\\s*"([^"]+)"`))?.[1] ?? '';
     const inputs = parseInputDigests(source);
     const artifacts = parseArtifactDigests(source);
     const run_contracts = parseRunContracts(source);

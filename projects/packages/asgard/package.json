@@ -1,7 +1,7 @@
 {
     "name": "@valkyrie-language/asgard",
     "version": "0.0.6",
-    "description": "Asgard - cross-platform GUI app framework CLI (assembled from VCC platform collects).",
+    "description": "Asgard — cross-platform GUI app CLI (@vmz/commander); wasm collect via @valkyrie-language/vcc spawn helpers.",
     "type": "module",
     "license": "MPL-2.0",
     "main": "./src/index.ts",
@@ -20,14 +20,8 @@
         "test": "node --test tests/**/*.test.ts"
     },
     "dependencies": {
-        "@valkyrie-language/vcc": "workspace:*",
-        "@valkyrie-language/vcc-wasm32-wasi": "workspace:*"
-    },
-    "optionalDependencies": {
-        "@valkyrie-language/vcc-win32-x64": "workspace:*",
-        "@valkyrie-language/vcc-linux-x64": "workspace:*",
-        "@valkyrie-language/vcc-darwin-x64": "workspace:*",
-        "@valkyrie-language/vcc-darwin-arm64": "workspace:*"
+        "@vmz/commander": "^0.1.0",
+        "@valkyrie-language/vcc": "workspace:*"
     },
     "engines": {
         "node": ">=20"

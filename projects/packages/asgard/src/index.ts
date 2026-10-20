@@ -1,15 +1,9 @@
-import { createHostRunner, NATIVE_PACKAGES } from '@valkyrie-language/vcc';
+import { runCli } from './cli/cli.ts';
+import { resolveAsgardWasmMjs, spawnCli } from './spawn.ts';
 
-const host = createHostRunner({
-    wasmCollect: '@valkyrie-language/vcc-wasm32-wasi',
-    wasmEntry: 'asgard.mjs',
-});
+export { runCli, spawnCli };
 
-export const WASM_COLLECT = host.config.wasmCollect;
-export const WASM_ENTRY = host.config.wasmEntry;
-export const locateNativeCollect = host.locateNativeCollect;
-export const resolveWasmMjs = host.resolveWasmMjs;
-export const spawnCli = host.spawnCli;
-export const runCli = host.runCli;
-
-export { NATIVE_PACKAGES };
+/** 解析 Asgard wasm 入口绝对路径。 */
+export function resolveWasmMjs(): string {
+    return resolveAsgardWasmMjs();
+}

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
-import { runCli } from '../src/index.ts';
+import { runCli } from '../src/cli/cli.ts';
 
-runCli();
+const code = await runCli();
+process.exit(code);

@@ -2,8 +2,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { VccCliRoute, VccCliSpawnResult, VccHostRunner } from './index.ts';
-import { createHostRunner, locateNativeCollect } from './index.ts';
+import { LEGION_WASM_COLLECT, LEGION_WASM_ENTRY } from './collects.ts';
+import { locateNativeCollect } from './native.ts';
+import { spawnWasmCollect, type VccCliRoute, type VccCliSpawnResult } from './spawn-wasm.ts';
+import type { CliHostRunner } from './types.ts';
 
 /** `legion bench` 表格中的一行。 */
 export type LegionBenchRow = {
@@ -51,8 +53,8 @@ export type VccBenchmarkConfig = {
     wasmCollectDir?: string;
     /** Wasm 入口脚本名，默认 `legion.mjs`。 */
     wasmEntry?: string;
-    /** 可选的 Node/Wasm 宿主。 */
-    host?: VccHostRunner;
+    /** 可选 CLI 路由（如 legion `spawnCli`）；未提供时回退 wasm collect。 */
+    host?: CliHostRunner;
 };
 
 export type LegionBenchProjectOptions = {
@@ -69,7 +71,7 @@ export type LegionBenchProjectResult = {
 export type VccBenchmarkRunner = {
     config: Readonly<
         Required<Pick<VccBenchmarkConfig, 'valkyrieRsRoot' | 'wasmCollectDir' | 'wasmEntry'>> & {
-            host?: VccHostRunner;
+            host?: CliHostRunner;
         }
     >;
     ready: () => boolean;
@@ -110,8 +112,8 @@ export type RunBenchmarkSuiteOptions = LegionBenchProjectOptions & {
     onProgress?: (row: BenchmarkSuiteRow) => void;
 };
 
-const DEFAULT_WASM_ENTRY = 'legion.mjs';
-const DEFAULT_WASM_PACKAGE = '@valkyrie-language/vcc-unknown-wasm32';
+const DEFAULT_WASM_ENTRY = LEGION_WASM_ENTRY;
+const DEFAULT_WASM_PACKAGE = LEGION_WASM_COLLECT;
 
 /**
  * `legion bench --target node`：扫描源码内 `[benchmark]` 函数并计时（valkyrie 工程自测用）。
@@ -270,16 +272,6 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
     const wasmCollectDir = config.wasmCollectDir ?? join(valkyrieRsRoot, 'projects', 'packages', 'vcc-unknown-wasm32');
     const host = config.host;
 
-    function resolveHost(): VccHostRunner {
-        return (
-            host ??
-            createHostRunner({
-                wasmCollect: DEFAULT_WASM_PACKAGE,
-                wasmEntry,
-            })
-        );
-    }
-
     function ready(): boolean {
         return wasmCollectReadyFromDir(wasmCollectDir, wasmEntry) || locateNativeCollect() !== null || host !== undefined;
     }
@@ -303,7 +295,10 @@ export function createBenchmarkRunner(config: VccBenchmarkConfig = {}): VccBench
         if (wasmCollectReadyFromDir(wasmCollectDir, wasmEntry)) {
             return spawnWasmLegionFromDir(wasmCollectDir, wasmEntry, argv);
         }
-        return resolveHost().spawnCli(argv);
+        if (host) {
+            return host.spawnCli(argv);
+        }
+        return spawnWasmCollect(DEFAULT_WASM_PACKAGE, wasmEntry, argv);
     }
 
     function benchProject(projectDir: string, options: LegionBenchProjectOptions = {}): LegionBenchProjectResult {

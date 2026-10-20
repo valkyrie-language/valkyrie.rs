@@ -1,14 +1,11 @@
-import { NATIVE_PACKAGES } from '@valkyrie-language/vcc';
+import { buildProject, planProject, spyRun } from '@valkyrie-language/vcc';
 
-import { host } from './host.ts';
+import { runCli } from './cli/cli.ts';
+import { resolveLegionWasmMjs, spawnCli, spawnSpy } from './spawn.ts';
 
-export const WASM_COLLECT = host.config.wasmCollect;
-export const WASM_ENTRY = host.config.wasmEntry;
-export const locateNativeCollect = host.locateNativeCollect;
-export const resolveWasmMjs = host.resolveWasmMjs;
-export const spawnCli = host.spawnCli;
-export const spawnSpy = host.spawnSpy;
-export const loadNativeBinding = host.loadNativeBinding;
-export const runCli = host.runCli;
+export { buildProject, planProject, runCli, spawnCli, spawnSpy, spyRun };
 
-export { NATIVE_PACKAGES };
+/** 解析 Legion wasm 入口绝对路径。 */
+export function resolveWasmMjs(): string {
+    return resolveLegionWasmMjs();
+}

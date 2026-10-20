@@ -16,15 +16,16 @@ import {
     wasmCollectReady,
 } from '@valkyrie-language/vcc/testing';
 
-import { WASM_COLLECT, WASM_ENTRY } from '../src/index.ts';
-import { host } from '../src/host.ts';
+import { LEGION_WASM_COLLECT, LEGION_WASM_ENTRY } from '@valkyrie-language/vcc/legion';
+
+import { spawnCli } from '../src/index.ts';
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MINIMAL_NODE_FIXTURE = join(PACKAGE_ROOT, 'tests', 'fixtures', 'minimal-node');
 const BUILD_TIMEOUT_MS = 10 * 60 * 1000;
 
 function gateOrSkip(t: test.TestContext): boolean {
-    if (integrationRunnerReady(WASM_COLLECT, WASM_ENTRY)) {
+    if (integrationRunnerReady(LEGION_WASM_COLLECT, LEGION_WASM_ENTRY)) {
         return true;
     }
     if (integrationRequired()) {
@@ -39,7 +40,7 @@ function formatOutcome(label: string, outcome: { status: number; stdout: string;
 }
 
 test('integration gate documents wasm or native runner', () => {
-    const ready = integrationRunnerReady(WASM_COLLECT, WASM_ENTRY);
+    const ready = integrationRunnerReady(LEGION_WASM_COLLECT, LEGION_WASM_ENTRY);
     if (ready) {
         assert.ok(true);
         return;
@@ -52,7 +53,7 @@ test('legion build minimal-node → canonical legion.mjs/wasm → runtime exit 0
 
     const outRoot = mkdtempSync(join(tmpdir(), 'legion-it-build-'));
     try {
-        const build = spawnLegionForIntegration(host, ['build', MINIMAL_NODE_FIXTURE, '--target', 'node', '-o', outRoot]);
+        const build = spawnLegionForIntegration({ spawnCli }, ['build', MINIMAL_NODE_FIXTURE, '--target', 'node', '-o', outRoot]);
         assert.equal(build.status, 0, formatOutcome('legion build', build));
         assert.ok(build.route === 'wasm' || build.route === 'native', 'integration build must route through VCC host');
 
@@ -66,7 +67,7 @@ test('legion build minimal-node → canonical legion.mjs/wasm → runtime exit 0
 
         assert.ok(existsSync(join(artifactDir, 'run-contracts.txt')));
         const contracts = readFileSync(join(artifactDir, 'run-contracts.txt'), 'utf8');
-        assert.match(contracts, /physical_entry:\s*"legion\.mjs"/);
+        assert.match(contracts, /physical_entry\s*[:=]\s*"legion\.mjs"/);
         assert.ok(!existsSync(join(artifactDir, 'legion_tools.mjs')));
 
         const runBuilt = spawnBuiltNodeEntry(entry.legionMjs, []);
@@ -77,11 +78,11 @@ test('legion build minimal-node → canonical legion.mjs/wasm → runtime exit 0
 });
 
 test('wasm collect path: spawnCli --version when assembled', (t) => {
-    if (!wasmCollectReady(WASM_COLLECT, WASM_ENTRY)) {
+    if (!wasmCollectReady(LEGION_WASM_COLLECT, LEGION_WASM_ENTRY)) {
         t.skip('wasm collect not assembled');
         return;
     }
-    const outcome = host.spawnCli(['--version']);
+    const outcome = spawnCli(['--version']);
     assert.equal(outcome.route, 'wasm');
     assert.equal(outcome.status, 0, formatOutcome('legion --version', outcome));
 });

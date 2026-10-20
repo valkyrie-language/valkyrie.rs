@@ -2,8 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import type { VccCliSpawnResult, VccHostRunner } from './index.ts';
-import { locateNativeCollect, resolveWasmMjs } from './index.ts';
+import { locateNativeCollect, resolveWasmMjs } from './native.ts';
+import type { VccCliSpawnResult } from './spawn-wasm.ts';
+import type { CliHostRunner } from './types.ts';
 
 import { MIN_EXECUTION_MANIFEST_SCHEMA_VERSION, readExecutionManifest } from './execution-manifest.ts';
 
@@ -86,7 +87,8 @@ function readLogicalEntryFromContract(contractPath: string): string | null {
         return null;
     }
     const text = readFileSync(contractPath, 'utf8');
-    const match = text.match(/logical_entry\s*:\s*"([^"]+)"/);
+    // oak-von 的对象条目同时接受 `=` 与 `:`；Rust `write_von_indented` 实际写出 `=`。
+    const match = text.match(/logical_entry\s*[:=]\s*"([^"]+)"/);
     return match?.[1] ?? null;
 }
 
@@ -99,7 +101,7 @@ function wasmSiblingPath(physicalMjs: string): string {
  * 只接受 manifest 列出的 physical_entry 与 artifacts，不做目录扫描或 legacy fallback。
  */
 export function resolveNodeEntryFromManifest(manifest: ExecutionManifest | null, targetDir: string): NodeWasmEntry | null {
-    if (!manifest || manifest.schema_version < MIN_EXECUTION_MANIFEST_SCHEMA_VERSION) {
+    if (!manifest || manifest.schema_version !== MIN_EXECUTION_MANIFEST_SCHEMA_VERSION) {
         return null;
     }
     const contract = manifest.run_contracts.find((entry) => entry.physical_entry.endsWith('.mjs'));
@@ -126,7 +128,7 @@ export function resolveNodeEntryFromManifest(manifest: ExecutionManifest | null,
 }
 
 /**
- * 在 Node 构建产物目录中定位 wasm/js 入口（必须存在 schema v3+ execution manifest）。
+ * 在 Node 构建产物目录中定位 wasm/js 入口（必须存在 schema 与当前基线相等的 execution manifest）。
  */
 export function resolveNodeEntry(targetDir: string): NodeWasmEntry | null {
     return resolveNodeEntryFromManifest(readExecutionManifest(targetDir), targetDir);
@@ -154,7 +156,7 @@ export function resolveNyarEntry(targetDir: string): NyarVmEntry | null {
         return null;
     }
     const text = readFileSync(contractPath, 'utf8');
-    const physical = text.match(/physical_entry\s*:\s*"([^"]+\.nyar)"/)?.[1];
+    const physical = text.match(/physical_entry\s*[:=]\s*"([^"]+\.nyar)"/)?.[1];
     if (!physical) {
         return null;
     }
@@ -164,13 +166,13 @@ export function resolveNyarEntry(targetDir: string): NyarVmEntry | null {
         : null;
 }
 
-/** 通过组装宿主运行 CLI（供集成测试使用）。 */
-export function spawnHostCli(host: VccHostRunner, argv: string[] = []): VccCliSpawnResult {
+/** 通过产品宿主运行 CLI（供集成测试使用）。 */
+export function spawnHostCli(host: CliHostRunner, argv: string[] = []): VccCliSpawnResult {
     return host.spawnCli(argv);
 }
 
-/** 通过组装 VCC 宿主运行 CLI（native platform collect 优先，否则 wasm collect）。 */
-export function spawnLegionForIntegration(host: VccHostRunner, argv: string[] = []): VccCliSpawnResult {
+/** 通过 Legion 宿主运行 CLI（native platform collect 优先，否则 wasm collect）。 */
+export function spawnLegionForIntegration(host: CliHostRunner, argv: string[] = []): VccCliSpawnResult {
     return host.spawnCli(argv);
 }
 

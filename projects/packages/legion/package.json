@@ -1,7 +1,7 @@
 {
     "name": "@valkyrie-language/legion",
     "version": "0.0.6",
-    "description": "Legion - Valkyrie compiler and workspace CLI (assembled from VCC platform collects).",
+    "description": "Legion — Valkyrie compiler CLI (@vmz/commander); orthogonal build/plan via @valkyrie-language/vcc N-API.",
     "type": "module",
     "license": "MPL-2.0",
     "main": "./src/index.ts",
@@ -21,14 +21,8 @@
         "test:integration": "node --test tests/**/*.integration.test.ts"
     },
     "dependencies": {
-        "@valkyrie-language/vcc": "workspace:*",
-        "@valkyrie-language/vcc-unknown-wasm32": "workspace:*"
-    },
-    "optionalDependencies": {
-        "@valkyrie-language/vcc-win32-x64": "workspace:*",
-        "@valkyrie-language/vcc-linux-x64": "workspace:*",
-        "@valkyrie-language/vcc-darwin-x64": "workspace:*",
-        "@valkyrie-language/vcc-darwin-arm64": "workspace:*"
+        "@vmz/commander": "^0.1.0",
+        "@valkyrie-language/vcc": "workspace:*"
     },
     "engines": {
         "node": ">=20"
