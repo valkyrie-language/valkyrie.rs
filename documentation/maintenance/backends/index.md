@@ -1,51 +1,30 @@
 # 后端维护指南
 
-本文档说明 `valkyrie.rs` 中各后端的 **现行**职责与入口。愿景级组件（历史文档中的 Chomsky UIR / Project Gaia
-等）若未在本仓库落地，不得写成现行主链。
+backend 只消费已验证的 BackendPrivatePlan。公共 Canonical 语义、RepresentationPlan 与目标私有计划各有所有者，不建立包含全部阶段的统一物理 IR。
 
-## 现行主链（以源码为准）
+## 数据流
 
 ```text
-source
-  -> AST / HIR / MIR          (projects/nyar-language)
-  -> 规划与分区                 (projects/nyar：ArtifactPartitionPlan 等)
-  -> FragmentSubmission
-  -> nyar-emitter 按目标降低
-  -> std-data 手写二进制编解码
+package Semantic MIR → linker / Canonical validation
+  → optimization / sparse RepresentationPlan
+  → BackendLowering.prepare → pre-encode validation
+  → BackendPrivatePlan → format encoding
 ```
 
-- 语言语义在 `HIR`/`MIR` 闭合；emit 层不补语义。
-- 面向寄存器机的 legacy `LIR` 主链已标记废弃过渡；栈机目标（CLR/JVM/WASM）从 MIR 直接生成目标指令。
-- 四目标自举重点： **clr / jvm / wasm / wasi**，与 `valkyrie.v` 同构手写 emitter。
+linker 选择 adaptor/import；表示规划选择 carrier/layout；backend 安排目标私有编号并编码。backend 不能按 import field 猜 ABI、按 callee 尾名决定行为、按类型名找布局或缺 payload 补值。
 
-## 共享约束
+外部 PE/JVM/Wasm 等格式由对应 Acorn crate 编码；Nyar 字节码由 nyar-bytecode 编码。格式校验不能反向改变语言语义。
 
-1. **手写二进制**：CLR→PE/CLI，JVM→class，WASM/WASI→wasm/component sections。禁止把 `ilasm` / `dnlib` / `csc` / `javac` /
-   `wit-component` 等当作正式生成器。
-2. **无语言类型 `string`**：文本必须是 `utf8` 或 `utf16`（及 `Utf8Text` / `Utf16Text`）。
-3. **`void` ≠ `unit`**：`void` ADT 代数 = 0（`NyarType::Bottom`）；`unit` ADT 代数 = 1。ABI 返回位可能都塌成宿主 `void`/`V`
-   ，语义仍须区分。
+## 验收边界
 
-## 后端文档
+支持能力必须有正式入口、实际非空 artifact、export/invoke 与真实用例证据。CLR/JVM/WASI/native 等专题设计不构成当前题目矩阵完成。
 
-| 目标        | 文档                     | 现行实现入口                                                                   |
-|-------------|--------------------------|--------------------------------------------------------------------------------|
-| CLR         | [clr.md](clr.md)         | `nyar-emitter/.../backends/clr` + `std-data/binary/pe`                         |
-| JVM         | [jvm.md](jvm.md)         | `nyar-emitter/.../backends/jvm` + `std-data/binary/class`                      |
-| WASM / WASI | [wasi.md](wasi.md)       | `nyar-emitter/.../backends/wasm` + `std-data/binary/wasm`（WASI 另含 CM/host） |
-| Native      | [native.md](native.md)   | `nyar-emitter/.../backends/native`（现状与愿景见该文）                         |
-| Nyar VM     | [nyar-vm.md](nyar-vm.md) | `nvm` / 相关运行时 crate（见该文「现状 vs 愿景」）                             |
+缺 callable、完整实例、import signature、layout 或 carrier 时，在其所属阶段结构化失败。验证须覆盖全部生产 backend 入口，不能仅验证直接调用 emitter 的测试夹具。
 
-## 设计决策（仍适用）
+## 专题
 
-### 1. 语义与发射分离
-
-优化与语义定界优先在语言主链 / `nyar` 规划层完成；各后端只消费已定界的 `FragmentSubmission`，不重做 trait/row/effect 解析。
-
-### 2. 栈机跳过寄存器分配
-
-对 JVM / CLR / WASM：不经「为寄存器机准备的 LIR 分配」；从 MIR 生成栈指令更自然。
-
-### 3. 目标 FFI 隔离
-
-CLR、JVM、WASM、WASI 的宿主导入与调用约定相互独立，禁止混用垫片。
+- [CLR](clr.md)
+- [JVM](jvm.md)
+- [Wasm/WASI](wasi.md)
+- [Native](native.md)
+- [Nyar VM](nyar-vm.md)

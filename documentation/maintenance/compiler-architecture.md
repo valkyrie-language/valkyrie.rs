@@ -1,98 +1,47 @@
 # Valkyrie 编译器架构
 
-这份文档描述 `valkyrie.rs` 工作区里的编译主链、语义边界与测试策略。目标不是「统一大 IR」，而是把语言语义、优化责任、后端输入和规范测试各自钉死。
+本文固定生产编译协议与事实所有权。接口合同不证明某个 target 已完成；能力须由对应修订的正式构建与真实执行证明。
 
-## 核心判断
+## 生产入口与所有者
 
-- 语言主语义停留在 `HIR / MIR`，不能在 emit 阶段临时补语义。
-- `row`、`trait/imply`、`class`、`sealed class`、`unite`、`algebra effect` 不是同一种语义实体（见下文）。
-- 后端输入按目标分区； **不**共享一份伪统一物理 IR。
-- 四目标 **clr / jvm / wasm / wasi** 的正式产物由 `nyar-emitter` + `std-data` **手写二进制**完成（与 `valkyrie.v` 同构）。
-- 类型约束：无语言 `string`（用 `utf8`/`utf16`）；`void`（ADT=0，`NyarType::Bottom`）≠ `unit`（ADT=1）。
-
-## 编译流水线
-
-```text
-source
-  -> parser / AST
-  -> HIR
-  -> MIR (SSA)
-  -> optimize（演进中；egraph 宿主尚未产品完成态）
-  -> ArtifactPartitionPlan
-  -> FragmentSubmission / backend input
-  -> nyar-emitter 目标降低
-  -> ArtifactSet / 手写二进制
+```mermaid
+flowchart TD
+    Resolver["WorkspaceResolver：manifest / package graph / immutable inventory"]
+    Compiler["Compiler：绑定、需求固定点与语义编译"]
+    Canonical["Linked Canonical Semantic MIR"]
+    Representation["稀疏 RepresentationPlan"]
+    Private["BackendPrivatePlan / pre-encode validation"]
+    Encode["Acorn 外部格式编码 / Nyar 字节码编码"]
+    Store["ArtifactStore：原子提交与证据"]
+    Resolver --> Compiler --> Canonical --> Representation --> Private --> Encode --> Store
 ```
 
-### Crate 对应（现行）
+Legion 只编排 WorkspaceResolver、Compiler、ArtifactStore；不直接构造 AST/HIR/MIR 或语义选择结果。Compiler 不自行读取工程文件。
 
-- `projects/nyar-language`：语言主链（HIR/MIR、语义定界；历史名常称 valkyrie-compiler）。
-- `projects/nyar`：目标路线、规划、`ArtifactPartitionPlan`、后端共享协议。
-- `projects/nyar-emitter`：各目标 lowering。
-- `projects/nyar-types` / `std-data`：平台类型与二进制/文本编解码。
-- `projects/legion`：CLI 与清单编排，不承载语言语义。
+Oak 生产语法树、恢复状态和 syntax diagnostics。Valkyrie frontend 生产名称、类型、泛型替换、trait/imply evidence、调用与 package Semantic MIR；当前实现位于外部 Nyar 仓的 nyar-language。Nyar 框架负责通用验证、优化、表示与降低；Acorn 负责外部格式编解码。
 
-> Legacy `LIR` 仍有过渡资产，但 **不得**再当作跨目标主链；见源码中的 deprecated 标注。
+## 声明绑定与语义需求
 
-## 语义模型
+inventory 是完整来源集合；声明索引提供签名、导出、类型与可见性；语义需求决定物化哪些 body。索引、绑定、类型与实例/evidence 需求协作到固定点，不能先全库 body lowering 再裁剪。
 
-### row
+每个物化 body 都须有入口 export 经声明/实例/evidence 到该 body 的合法需求链。短名恰好唯一不证明可见，文件被选中不证明同文件所有 body 可达。无计划、显式空需求和非空需求未物化分别处理。
 
-- 匿名 `trait` 语法视为 method row requirement。
-- `field` 收敛为 getter/setter 方法面。
-- 无 associated type、默认实现、独立 witness。
+## 调用、类型与表示
 
-### trait / imply
+AST operator 在 HIR 展开为普通 callable。HIR/MIR/LIR 不建立 unary/binary/operator 语义类别；用户函数、std、trait/imply 和展开后的 operator 共用实例解析，Semantic MIR 用 Invoke(callee, arguments)。
 
-- 具名协议；满足结果收敛为具名 witness/evidence。
+ItemInstanceId 关联声明、完整 substitution、签名及 evidence。字段/变体引用所属完整名义实例。同声明不同实参不能混用，Self、Cast 目标及关联类型等全部类型位共用绑定事实。
 
-### class / unite
+linker 选择 target-conditioned adaptor/import；表示规划只选择 carrier/layout。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 BackendPrivatePlan，不能按 callee、field、类型名或 carrier 补语义。
 
-- `class` / `sealed class`：名义层级。
-- `unite`：具名 union；默认抽象类表示；`[tag(...)]` 可选 tagged union。
+## 恢复、诊断与工具
 
-### effect
+Oak 同时返回可用树、recovery/missing/error 与 diagnostics，保留后续有效声明。恢复不能缺 token 补普通值，parser 不检查 place/type，Compiler 按可达语义决定准入。
 
-- handler/evidence 边界；选择与闭合在后端前完成。
+各阶段保留 stage/code/owner/source/span，Compiler 汇总诊断。Lint 不另设语言合法性；工程 check/LSP 共享工程快照。源码 formatter 由 Oak CST/token-gap 生成 edits，Nyar PP document 仅打印模型，不替代源码格式化。
 
-### 文本与单位类型
+## 验收
 
-- `utf8` / `utf16`（及 `Utf8Text` / `Utf16Text`）；禁止语言层 `string`。
-- `void` vs `unit` 见上文；concretize：`ValkyrieType::Void` → `NyarType::Bottom`，`Unit` → `Unit`。
+修复前写清行为、缺事实、唯一生产者、消费接口和失败方式。测试成对覆盖可达/不可达、同名不同 owner/namespace、未声明依赖、跨包调用、实例与 evidence。缺身份必须结构化失败。
 
-## Dispatch 与边界
-
-### HIR
-
-名称解析、类型检查、row 闭合、名义判定、unite 穷尽性；调用归类为 static / witness / effect-handler。
-
-### MIR
-
-显式控制流与调用种类；开放 trait/effect 不得伪装成普通静态调用。
-
-### Optimize / ArtifactPartitionPlan
-
-静态化与见证消除是优化结果；分区决定进入 CLR/JVM/WASM/WASI/native/VM 等路线。
-
-### Backend input
-
-`nyar` 只承接已定界输入；后端不重做 trait/row/effect 解析。
-
-## 后端对齐原则
-
-- CLR/JVM/WASM/WASI 若暂不支持开放 witness/effect，须在进入路线前单态化或失败。
-- FFI 与 text adaptor 按目标隔离。
-- 生成路径禁止 ilasm/dnlib/javac/`wit-component` 等外部工具产盘。
-
-## 规范测试优先
-
-规范测试应落在语言主链测试树（现以 `nyar-language` 及相关 crate 为准；旧文档中的 `valkyrie-compiler/tests` 路径需随 crate
-迁移理解）。
-
-优先分组：`row`、`trait`、`nominal`、`overload`、`associated-types`、`diagnostics`、`backend-boundary`。
-
-允许 `#[ignore]` / known gap，但须先立语义护栏。
-
-## 一句话结论
-
-语义在 `nyar-language` 的 HIR/MIR 钉死；`nyar` 做分区与协议；`nyar-emitter`+`std-data` 按目标手写发射；规范测试防止边界漂移。
+分别记录机制删除、合同成立和真实交付证据。局部测试、错误文本变化、枚举删除和字符串扫描均不替代 artifact/export/invoke 及题意测试。删除须迁移消费者、删除依赖与实现并验证旧生产入口不可达。

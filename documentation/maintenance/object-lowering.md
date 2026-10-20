@@ -1,43 +1,22 @@
-# 降级指南 (Lowering)
+# 语义到目标的降低边界
 
-## 1. 现状：语义到目标
+降低只翻译已经确定的语义，不创造声明、类型、evidence 或调用事实。
 
-现行降低不是「全部进 Chomsky UIR 再由 Gaia 统一发射」，而是：
+## 阶段合同
 
-```text
-AST -> HIR -> MIR
-  -> FragmentSubmission
-  -> 目标专用 lowering (clr / jvm / wasm / …)
-  -> 手写二进制编解码 (std-data)
-```
+Valkyrie frontend 完成名称、类型、place、泛型与 evidence 绑定，将语法糖展开为普通调用或控制流。Semantic MIR 保留普通 Invoke、结构操作与稳定身份。
 
-语言特性（模式匹配、效应、名义类型等）应在 **HIR/MIR** 阶段定界；后端只翻译已闭合的可执行表示。
+linker 选择 adaptor/import，Canonical validation 验证跨包身份和完整实例。优化保留语义；Representation Planner 为稳定语义 ID 选择稀疏 carrier/layout 行。BackendLowering.prepare 生产私有计划，backend 通过 pre-encode validation 后才编码。
 
-## 2. 愿景对照（勿混入现行）
+Acorn 拥有外部二进制格式；Nyar 自有字节码由 nyar-bytecode 拥有。编码器不能通过名称、布局形状或默认值修复上游语义。
 
-| 旧叙述                          | 现行理解                                      |
-|---------------------------------|-----------------------------------------------|
-| Oaks AST → UIR → Gaia           | `nyar-language` → `nyar-emitter` + `std-data` |
-| 后端只需代价模型                | 各目标手写指令与二进制格式                    |
-| 统一 intent 树覆盖 CLR/JVM/WASM | 分后端 MIR lower + 分区规划                   |
+## 特性约束
 
-## 3. 特性降低摘要
+- 模式匹配的类型、穷尽性、FieldId/VariantId 与 owner 在语义阶段确定，后端只实现已定控制流与表示。
+- effect/handler 与 trait evidence 保留结构化事实；支持范围由目标合同校验，不能伪装静态成功。
+- 名义类型的值/引用复制语义由声明生产，不由 layout 反推。
+- utf8/utf16 与 void/unit 的语言区别必须保留，目标 ABI 折叠由显式表示合同说明。
 
-### 模式匹配
+## 验收
 
-- AST→HIR：模式与类型绑定、穷尽性。
-- MIR：分支与提取器；unite payload 等由各后端按约定发射（如 CLR tag+payload）。
-
-### 效应
-
-- HIR/MIR 保留 raise/handler/resume 边界。
-- CLR/JVM/WASM 各自映射 throw / 状态机 / CPS 或 stack-switch（见各后端文档）。
-
-### 文本与单位类型
-
-- 降低时保持 `utf8`/`utf16` 分叉；禁止引入语言 `string`。
-- `void`/`unit` 不得在 lowering 中被 `is_unitish` 类逻辑抹成同一语义（ABI 折叠须显式注释）。
-
-## 4. 自举同构
-
-`valkyrie.v` 中的 `std.data.binary.*` 应与 seed 的 `std-data` 手写路径对齐；禁止改走外部工具生成器。
+同声明不同实例不得混用；缺 field/variant/callable/evidence 在所属阶段拒绝。每项降低同时有合法行为和缺事实失败的验证，不以单个 target 指令输出证明语义正确。

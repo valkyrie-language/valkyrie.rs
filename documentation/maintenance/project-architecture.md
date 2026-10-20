@@ -1,90 +1,28 @@
 # Valkyrie 项目架构与维护指南
 
-描述 `valkyrie.rs` 工作区的 crate 组织、职责边界与维护策略。
+本仓拥有工程输入、CLI/host 装配、缓存和产物提交。语言语义与 Nyar 编译框架通过依赖接入，不能按旧目录图在装配仓重新实现。
 
-## 顶层原则
+## 目录与职责
 
-- `nyar-language` 维护语言主链：`HIR -> MIR -> …`（语义定界）；不把 emit 语义化。
-- `nyar` 维护目标路线、backend input 与打包协议。
-- `nyar-emitter` + `std-data` 负责各目标降低与 **手写**二进制。
-- `legion` 只做命令入口与清单编排（`legion.von` / `legions.von`）。
-- 规范测试与架构文档同级重要。
+- projects/compilers/legion：CLI、manifest/workspace、Compiler 调用与 build/test 编排。
+- projects/compilers/legion-workspace：package graph 与逐文件不可变输入。
+- projects/compilers/vcc-napi、vcc-wasm：宿主接口。
+- projects/compilers/asgard：上层应用构建编排。
+- projects/packages：npm CLI、host wrapper 与平台包。
+- scripts：开发、装配和发布脚本。
 
-## 工作区结构
+成员与依赖以 Cargo.toml 为准。nyar-language、nyar-emitter 及其他编译框架 crate 的实现位于 nyar-vm.rs；Oak 拥有文本格式，Acorn 拥有外部二进制格式。本仓不保留混合格式包或第二份 codec/parser。
 
-根 `Cargo.toml` 成员以源码为准，核心包括：
+## 深模块边界
 
-```text
-valkyrie.rs/
-  Cargo.toml
-  documentation/
-  projects/
-    legion/
-    nyar/
-    nyar-language/
-    nyar-emitter/
-    nyar-types/
-    nyar-analyzer/
-    nyar-optimizer/
-    std-data/
-    nvm/
-    …
-```
+外部接口为 WorkspaceResolver、Compiler、ArtifactStore。Resolver 冻结来源和依赖图；Compiler 内部负责绑定、语义需求及代码生成；ArtifactStore 原子提交完整 ArtifactSet。
 
-### `projects/nyar-language`
-
-- 词法/语法之后的语言主链：名称解析、类型检查、`row / trait / class / sealed class / unite / effect`、HIR/MIR。
-- 最先承接语言侧规范测试。
-
-### `projects/nyar-types`
-
-- 平台层类型（如 `NyarType`：含 `Bottom`/`Unit`/`Utf8`/`Utf16`），不回流前端独有构造。
-
-### `projects/nyar`
-
-- `ArtifactPartitionPlan`、后端注册/选择、打包协议。
-- 不发明统一物理 IR，不补语言级 resolve。
-
-### `projects/nyar-emitter`
-
-- `FragmentSubmission` → clr / jvm / wasm / native / … lowering。
-
-### `acorn.rs` / `oak.rs`（git 依赖）
-
-- 二进制格式（`PE` / `COFF` / `ELF` / `Mach-O` / `DEX` / `JVM class` / `Wasm` / `MSIL` / `.tvm`）由 `acorn-*` 拥有；
-  文本格式（Valkyrie / VON / AWSL / MSIL 文本等）由 `oak-*` 拥有。
-
-### `projects/legion`
-
-- CLI、`.von` 清单、轻量 planner；不持有 HIR/MIR 主结构。
-
-## 语义边界如何映射到 crate
-
-语言级事实须在 `nyar-language` 内定清：
-
-- `row` / `trait` / `class` / `sealed class` / `unite` / `effect`
-- 文本：`utf8`/`utf16`；`void`≠`unit`
-
-进入 `nyar` / emitter 前：row 已闭合；开放 trait/effect 以 witness 表达或已静态化/失败。
+装配层不访问 AST/HIR/MIR、语义 planner 或 target lowering 实现。新增 host/CLI 路由必须记录实际 Compiler/host 来源，不得以 wrapper 成功证明源码编译能力。
 
 ## 维护流程
 
-### 修改语义时
+先定位缺失事实的唯一生产者，再选择仓和接口。每个工作包说明可观察行为、失败条件、正反验收与证据范围；不能用题目名、operator 或当前报错作为特判依据。
 
-1. 更新 `documentation/zh-hans/maintenance/*.md`
-2. 更新规范测试
-3. 再改 HIR/MIR/`nyar` 实现
+缓存复用前重算期望语义与产物身份。inventory provenance 与语义 freshness 分开；本地 patch 与准确依赖 pin 分开记录。删除旧路线必须迁移消费者、依赖和实现并验证旧入口不可达。
 
-### 修改后端路线时
-
-1. 先确认 backend input 契约
-2. 不支持的开放调度须提前失败或静态化
-3. 不把 row/未决 nominal 留给后端
-4. 保持手写二进制与四目标同构约束
-
-### 代码审查重点
-
-- 是否破坏 `nyar-language` 与 `nyar` / emitter 分工
-- 是否偷偷引入跨端统一 IR 或外部生成工具产盘
-- 是否把语义补丁藏进 planner/emit
-- 是否同步文档与测试
+详见 [编译协议](compiler-architecture.md)、[后端边界](backends/index.md)及[诊断](error-handling.md)。

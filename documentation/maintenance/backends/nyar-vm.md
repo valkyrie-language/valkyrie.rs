@@ -1,24 +1,18 @@
-# Nyar VM
+# Nyar VM 执行边界
 
-## 现状（以源码为准）
+Nyar runtime 位于 nyar-vm.rs 的 runtimes 目录，消费 Nyar bytecode，不依赖语言 AST 或工程装配实现。
 
-- 相关 crate：`projects/nvm`、以及工作区中的 `legacy-vm` / `text-vm` 等（以根 `Cargo.toml` 为准）。
-- 优化侧：`projects/nyar-optimizer` 提供 egraph 等 **演进中**宿主；`projects/readme.md` 明确其尚未达到完整 equality
-  saturation 产品态。
-- 四目标 AOT 发射的主路径是 **`nyar-emitter` + `std-data`**，不是外部 `nyar-aot` / `project-gaia` 仓库链接。
-
-## 愿景（历史叙述，勿当现行）
-
-旧文档曾把流水线写成：
+## 正式输入
 
 ```text
-Source -> AST -> HIR -> UIR (Chomsky) -> Optimized UIR -> Gaia / NyarAot / NyarJit
+Compiler → Canonical + RepresentationPlan → BackendPrivatePlan
+  → nyar-bytecode → verify → nyar-vm → export/invoke
 ```
 
-并链到本机路径（如 `e:/普遍优化/ProjectChomsky`）。这些 **不是**当前 `valkyrie.rs` workspace
-成员。维护时不要按其补齐依赖、也不要把四目标产盘写成必须先经「UIR → Gaia」。
+nyar-bytecode 拥有格式和 opcode；nyar-vm 拥有解释执行；nyar-gc 拥有堆和回收；nyar-jit 是可选加速。JIT 不支持能力须返回 Unsupported，不得假成功。
 
-## 与后端文档的关系
+导入按验证后的索引和签名执行，runtime 不按宿主函数名分派语言语义，也不回调 Compiler 修复调用。
 
-需要改 CLR/JVM/WASM/WASI 行为时，请直接阅读 [index.md](index.md) 与各目标文档及对应 `nyar-emitter`/`std-data`
-模块；不要假设必须先经「UIR → Gaia」才能产盘。
+## 验收
+
+加载前验证版本、section、跳转、栈、局部初始化、import 和 layout；运行从本次非空 artifact 调用真实 export。解释器、GC 或 JIT 的局部测试不能替代全量题意结果。完整管线见 [编译器架构](../compiler-architecture.md)。

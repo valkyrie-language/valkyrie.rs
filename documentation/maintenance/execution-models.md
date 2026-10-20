@@ -1,45 +1,21 @@
 # Valkyrie 执行模型
 
-## 1. 概述
+执行从本次正式编译的 artifact 开始。运行时、host wrapper、编译器与语言规范各自有明确边界；运行时不能回调工程编译器补事实。
 
-Valkyrie 支持多种执行面（开发期运行、AOT 产物、托管运行时）。 **文档必须区分现状与愿景。**
-
-## 2. 现状（以源码为准）
+## 编译与执行
 
 ```text
-语言主链 (nyar-language: HIR/MIR)
-  -> 规划 (nyar)
-  -> FragmentSubmission
-  -> nyar-emitter 目标降低
-  -> 手写二进制 (std-data: pe / class / wasm …)
-  -> 由对应宿主执行（dotnet / java / wasmtime / … 仅作运行与验读）
+manifests/source → Compiler → Canonical / frozen plans
+  → artifact + export/import + execution manifest
+  → target runtime/glue → invoke → result
 ```
 
-- 四目标自举焦点： **clr / jvm / wasm / wasi**。
-- 工作区内另有 `nvm`、`legacy-vm`、`text-vm` 等运行时相关 crate，能力以各 crate 为准。
-- `nyar-optimizer` 的 egraph 等能力仍在演进， **不是**「已全面取代一切优化 Pass」的完成态。
+Nyar target 消费验证后的 Nyar 字节码；Wasm target 消费 Wasm 与签名驱动 glue。其他 target 的支持范围以实际构建、导出和执行证据判断。运行时不能按函数短名重建调用、类型或 ABI。
 
-## 3. 愿景（非现行承诺）
+linker 绑定 adaptor/import，表示规划绑定 carrier/layout；backend 和 runtime 只能消费与验证。缺导入、签名、布局或载荷必须结构化失败，不能默认零值、默认签名或复制旧产物。
 
-历史材料描述的「一切先降为 Chomsky UIR，再由 Nyar VM 在 JIT/AOT/解释器间分发，并由 Gaia 发射机器码」属于 **长期方向/旧叙述**
-。在本仓库未以成员依赖形式落地前， **不要**按该图实现或评审现行工作。
+## 证据
 
-```mermaid
-graph TD
-    A[历史愿景: Chomsky UIR] -->|Nyar VM| B{执行模式}
-    B -->|JIT| C[Gaia JIT]
-    B -->|AOT| D[Gaia AOT]
-    B -->|Interpreter| E[意图解释]
-```
+版本输出、CLI 帮助、smoke 和单个 fixture 只证明各自路径。题意结果需要本次 artifact digest、非空 export、真实 invoke、非零且全部通过的 metadata.tests。
 
-上图仅作愿景示意。
-
-## 4. Legacy LIR / SSA 叙述
-
-- 早期「多层 SSA→LIR 再分后端」已不再作为 **推荐跨目标主链**。
-- 现行仍保留 **MIR（SSA 风格）** 作为语言侧主表示之一；legacy `LIR` 有 deprecated 过渡资产。
-- 旧文「已全面废弃 SSA」与现行 MIR 矛盾，以本节为准。
-
-## 5. 共享运行时能力（目标相关）
-
-托管目标使用各自 GC/运行时（CLR / JVM / WASM GC）。确定性资源与效应/延续的完整支持按后端文档与实现进度追踪，不在此重复夸大。
+机制删除、合同测试、真实交付分别记录。本地 patch 或部分入口通过不能证明准确 pin 的全部入口通过。参见 [编译器架构](compiler-architecture.md)。

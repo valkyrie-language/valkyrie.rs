@@ -19,10 +19,10 @@
 ## 编译主链（摘要）
 
 ```text
-source → AST → HIR → MIR
-  → FragmentSubmission / ArtifactPartitionPlan (nyar)
-  → nyar-emitter 按目标降低
-  → Acorn 编码目标二进制
+WorkspaceResolver → immutable inventory / package graph
+  → Compiler：binding / demand fixed point / HIR / Semantic MIR
+  → linker / Canonical → RepresentationPlan → BackendPrivatePlan
+  → Acorn 或 Nyar bytecode 编码 → ArtifactStore
 ```
 
 细节见 [compiler-architecture.md](compiler-architecture.md)、[backends/index.md](backends/index.md)。
