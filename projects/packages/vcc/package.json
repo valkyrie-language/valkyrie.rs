@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/vcc",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Valkyrie compiler collect — orthogonal native N-API bindings and wasm spawn helpers (no CLI aggregation).",
     "type": "module",
     "license": "MPL-2.0",

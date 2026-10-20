@@ -1,6 +1,6 @@
 {
     "name": "@valkyrie-language/asgard",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Asgard — cross-platform GUI app CLI (@vmz/commander); wasm collect via @valkyrie-language/vcc spawn helpers.",
     "type": "module",
     "license": "MPL-2.0",
