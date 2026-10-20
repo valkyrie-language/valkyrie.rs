@@ -34,8 +34,8 @@ fn appends_workload_json_for_nyar_vm() {
 #[test]
 fn resolver_compile_evidence_matches_compiler_helpers() {
     let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
-    let digest = expected_resolver_compile_evidence_from_groups(&groups, &[]);
-    assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups));
+    let digest = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
+    assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups, "nyar"));
     assert_eq!(digest.host_provider_binding_hash, nyar_language::host_provider_binding_hash_for_bindings(&[]));
 }
 
@@ -250,9 +250,9 @@ fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
     let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
     let first = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::write".into() };
     let second = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::print".into() };
-    let without = expected_resolver_compile_evidence_from_groups(&groups, &[]);
-    let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()]);
-    let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second]);
+    let without = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
+    let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()], "nyar");
+    let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second], "nyar");
     assert_eq!(without.semantic_closure_hash, with_first.semantic_closure_hash);
     assert_ne!(with_first.host_provider_binding_hash, without.host_provider_binding_hash);
     assert_ne!(with_first.host_provider_binding_hash, with_second.host_provider_binding_hash);

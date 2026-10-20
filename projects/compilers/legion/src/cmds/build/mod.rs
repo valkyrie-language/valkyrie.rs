@@ -245,12 +245,7 @@ pub fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<nyar_emitter::Dri
 
     // WASI 与 Node 同为 wasm32，但宿主不同：Node 走 `env.*`，WASI 走 guest/host_contract。
     // 模板 `<% match arch %>` 因此对 WASI 使用伪架构键 `"wasi"`，避免误选 wasm32/Node 分支。
-    let arch = if plan.project.build_target.target.specification == CanonicalSpecification::Wasi {
-        "wasi"
-    }
-    else {
-        plan.project.build_target.target.arch.as_str()
-    };
+    let arch = compile_arch(plan);
     let source_groups = compile_source_snapshot(&plan.project.semantic_source_groups)?;
     if verbose {
         println!("frontend: semantic source groups={}", plan.project.semantic_source_groups.len());
@@ -297,6 +292,16 @@ pub fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<nyar_emitter::Dri
     }
 
     Ok(artifact.driver)
+}
+
+/// 编译期架构键：WASI 与 Node 同为 wasm32，但宿主不同，因此使用伪架构键 `"wasi"`。
+pub(crate) fn compile_arch(plan: &BuildPlan) -> &'static str {
+    if plan.project.build_target.target.specification == CanonicalSpecification::Wasi {
+        "wasi"
+    }
+    else {
+        plan.project.build_target.target.arch.as_str()
+    }
 }
 
 fn write_compile_evidence(output_dir: &Path, evidence: &nyar_language::CompilerCompileEvidence) -> Result<()> {

@@ -20,7 +20,7 @@ use nyar_runner::{RuntimeContract as InterpreterRuntimeContract, RuntimeFamily a
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::cmds::build::{BuildArgs, run as run_build};
+use crate::cmds::build::{BuildArgs, compile_arch, run as run_build};
 
 mod artifact_selection;
 pub(crate) use artifact_selection::select_artifact;
@@ -293,15 +293,17 @@ fn expected_resolver_compile_evidence(plan: &BuildPlan) -> Result<CompileEvidenc
         .iter()
         .map(|provider| nyar_language::CompilerHostProviderBinding { contract: provider.contract.clone(), symbol: provider.symbol.clone() })
         .collect::<Vec<_>>();
-    Ok(expected_resolver_compile_evidence_from_groups(&groups, &host_bindings))
+    Ok(expected_resolver_compile_evidence_from_groups(&groups, &host_bindings, compile_arch(plan)))
 }
 
+/// 与 build 阶段共用同一架构键，保证 compile evidence 可比较。
 fn expected_resolver_compile_evidence_from_groups(
     groups: &[nyar_language::CompilerSourceGroup],
     host_bindings: &[nyar_language::CompilerHostProviderBinding],
+    arch: &str,
 ) -> CompileEvidenceDigest {
     CompileEvidenceDigest {
-        semantic_closure_hash: nyar_language::semantic_closure_hash_for_groups(groups),
+        semantic_closure_hash: nyar_language::semantic_closure_hash_for_groups(groups, arch),
         canonical_surface_hash: String::new(),
         host_provider_binding_hash: nyar_language::host_provider_binding_hash_for_bindings(host_bindings),
     }
