@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use miette::{IntoDiagnostic, Result, WrapErr, miette};
 use oak_von::{
-    from_str,
-    language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue},
+    language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue, from_ast},
+    parse as parse_von,
 };
 use serde::{Deserialize, Serialize};
 
@@ -132,7 +132,8 @@ impl DeployProfile {
 
     /// 解析 VON 文本并校验。
     pub fn parse(source: &str) -> Result<DeployPlan> {
-        let value = from_str::<VonValue>(source).map_err(|error| legion_workspace::oak::labeled_report(error, "VON 解析失败位置"))?;
+        let ast = parse_von(source).map_err(|error| miette::miette!("VON 解析失败: {error}"))?;
+        let value = from_ast(&ast);
         let json = von_to_json(&value);
         let profile: DeployProfile = serde_json::from_value(json).into_diagnostic().wrap_err("解析 deploy profile 失败")?;
         let warnings = validate_profile(&profile)?;

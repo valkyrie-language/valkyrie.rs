@@ -66,10 +66,7 @@ pub fn append_generated_source(sources: &ResolvedCompilerSources, generated_sour
         .find(|group| group.dependency_key == sources.project_name)
         .ok_or_else(|| miette::miette!("源码快照缺少应用组 `{}`", sources.project_name))?;
     if !generated_source.trim().is_empty() {
-        application.sources.push(CompilerSourceFile {
-            path: "generated/awsl.v".into(),
-            source: format!("{generated_source}\n"),
-        });
+        application.sources.push(CompilerSourceFile { path: "generated/awsl.v".into(), source: format!("{generated_source}\n") });
     }
     Ok(groups)
 }

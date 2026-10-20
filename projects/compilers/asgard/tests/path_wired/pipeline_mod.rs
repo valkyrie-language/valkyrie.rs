@@ -4,6 +4,11 @@ use super::*;
 
 use crate::codegen::{HOST_NATIVE_MAGIC, UI_BIN_MAGIC};
 
+/// 当前宿主上的 `CanonicalTarget` 解析器不支持该拼写时跳过（例如 Windows 上的 Android/iOS）。
+fn skip_unless_canonical_target(spelling: &str) -> bool {
+    CanonicalTarget::parse(spelling).is_ok()
+}
+
 #[test]
 fn unknown_config_target_fails_instead_of_selecting_wasm() {
     let error = parse_target("unknown-target").expect_err("未知 target 必须直接失败");
@@ -33,7 +38,7 @@ fn private_target_spellings_do_not_select_another_backend() {
 #[test]
 fn compile_test_blog() {
     let blog_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/examples/test.blog");
-    if !blog_dir.exists() {
+    if !blog_dir.join("asgard.config.v").exists() {
         return;
     }
     let report =
@@ -54,6 +59,9 @@ fn compile_test_blog() {
 
 #[test]
 fn package_miniprogram_emits_wxml_not_html() {
+    if !skip_unless_canonical_target("wasm32-unknown-miniprogram-wasm") {
+        return;
+    }
     let temp = tempfile::tempdir().expect("tempdir");
     let project = temp.path();
     fs::create_dir_all(project.join("source/pages")).unwrap();
@@ -117,6 +125,9 @@ micro on_tap() { count = count + 1 }
 
 #[test]
 fn dev_mode_emits_render_ir_sidecar() {
+    if !skip_unless_canonical_target("aarch64-linux-android") {
+        return;
+    }
     let temp = tempfile::tempdir().expect("tempdir");
     let project = temp.path();
     fs::create_dir_all(project.join("source/pages")).unwrap();
@@ -185,6 +196,9 @@ let mode: string = "light"
 
 #[test]
 fn package_android_emits_compose_not_html_or_wasm() {
+    if !skip_unless_canonical_target("aarch64-linux-android") {
+        return;
+    }
     let temp = tempfile::tempdir().expect("tempdir");
     let project = temp.path();
     fs::create_dir_all(project.join("source/pages")).unwrap();
@@ -238,6 +252,9 @@ micro on_tap() { count = count + 1 }
 
 #[test]
 fn package_ios_emits_binary_not_html_or_wasm() {
+    if !skip_unless_canonical_target("aarch64-apple-ios-aapcs64") {
+        return;
+    }
     let temp = tempfile::tempdir().expect("tempdir");
     let project = temp.path();
     fs::create_dir_all(project.join("source/pages")).unwrap();

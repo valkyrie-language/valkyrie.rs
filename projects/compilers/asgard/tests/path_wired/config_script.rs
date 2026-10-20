@@ -2,7 +2,10 @@
 
 use super::*;
 
-use oak_von::{from_str, language::value::VonValue};
+use oak_von::{
+    language::value::{VonValue, from_ast},
+    parse as parse_von,
+};
 
 #[test]
 fn define_config_block_normalizes_to_object() {
@@ -15,7 +18,7 @@ build {
 }
 }"#;
     let normalized = normalize_config_source(source).expect("normalize");
-    let value: VonValue = from_str(&normalized).expect("parse von");
+    let value: VonValue = from_ast(&parse_von(&normalized).expect("parse von"));
     assert_eq!(value.get("project_type").and_then(|v| v.as_str()), Some("application"));
     let build = value.get("build").expect("build");
     assert_eq!(build.get("output").and_then(|v| v.as_str()), Some("dist"));
@@ -26,9 +29,7 @@ fn debug_blog_normalize_shape() {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v");
     let source = std::fs::read_to_string(root.join("examples/test.blog/asgard.config.v")).expect("read");
     let normalized = normalize_config_source(&source).expect("normalize");
-    if let Err(error) = from_str::<VonValue>(&normalized) {
-        panic!("parse failed: {error:?}\n---\n{normalized}\n---");
-    }
+    parse_von(&normalized).expect("parse von");
     assert!(normalized.contains("routes"));
 }
 

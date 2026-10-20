@@ -5,7 +5,6 @@
 //! - `spy clr <file>.msil` 的 CLI 行为（`--list` / `--method` / `--json`），通过 `run_spy` 验证。
 #![cfg(feature = "format-spy")]
 
-
 use acorn_pe::msil::MsilParser;
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 use tempfile::TempDir;

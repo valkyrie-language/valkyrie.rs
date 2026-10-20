@@ -46,14 +46,6 @@ fn assemble_vcc_unknown_wasm32_capability() {
     assert_eq!(status, std::process::ExitCode::SUCCESS);
 
     let artifacts = artifact_dir(&out_root);
-    assert!(
-        artifacts.join("legion.wasm").is_file(),
-        "missing legion.wasm under {}",
-        artifacts.display()
-    );
-    assert!(
-        artifacts.join("run-contracts.txt").is_file(),
-        "missing run-contracts.txt under {}",
-        artifacts.display()
-    );
+    assert!(artifacts.join("legion.wasm").is_file(), "missing legion.wasm under {}", artifacts.display());
+    assert!(artifacts.join("run-contracts.txt").is_file(), "missing run-contracts.txt under {}", artifacts.display());
 }

@@ -35,7 +35,11 @@ fn semantic_source_groups_do_not_depend_on_target() {
 
     let workspace = WorkspaceResolver::discover_for_project(directory.path()).expect("workspace");
     let groups_for = |target: &str| {
-        let request = BuildRequest { project_dir: directory.path().to_path_buf(), target: CanonicalTarget::parse(target).expect("target"), output_dir: None };
+        let request = BuildRequest {
+            project_dir: directory.path().to_path_buf(),
+            target: CanonicalTarget::parse(target).expect("target"),
+            output_dir: None,
+        };
         workspace
             .build_plan(&request)
             .expect("build plan")

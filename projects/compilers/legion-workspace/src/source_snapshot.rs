@@ -5,8 +5,6 @@ use std::fs;
 use miette::{IntoDiagnostic, Result, miette};
 use nyar_language::{CompilerSourceFile, CompilerSourceGroup};
 
-use nyar_language::plan_semantic_closure;
-
 use crate::planner::PlannedSemanticSourceGroup;
 
 /// 单个语义源码组允许纳入的最大字节数。
@@ -14,6 +12,7 @@ const MAX_GROUP_SOURCE_BYTES: usize = 16 * 1024 * 1024;
 /// 全部语义组拼接后的总字节数上限。
 const MAX_TOTAL_SOURCE_BYTES: usize = 64 * 1024 * 1024;
 
+/// 读取并校验 `groups` 中的源码文件，组装为 Compiler 可消费的源码组快照。
 pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<Vec<CompilerSourceGroup>> {
     if groups.is_empty() {
         return Err(miette!("semantic source group plan is empty"));
@@ -56,33 +55,18 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
         staged_sources.push((group, sources));
     }
 
-    let plan_input = staged_sources
-        .iter()
-        .map(|(group, sources)| {
-            let files = sources
-                .iter()
-                .map(|file| (file.path.clone(), file.source.clone()))
-                .collect::<Vec<_>>();
-            (group.dependency_key.as_str(), group.is_entry, files)
-        })
-        .collect::<Vec<_>>();
-    let plan_input_refs = plan_input
-        .iter()
-        .map(|(dependency_key, is_entry, files)| (*dependency_key, *is_entry, files.as_slice()))
-        .collect::<Vec<_>>();
-    let semantic_closure = plan_semantic_closure(&plan_input_refs);
-    let closure_digest = semantic_closure.digest.clone();
+    // 装配层只验证工程入口位置并读取文件；语义索引、选择和摘要属于 Compiler。
+    if groups.iter().filter(|group| group.is_entry).count() != 1 || !groups.last().is_some_and(|group| group.is_entry) {
+        return Err(miette!("源码快照必须按依赖顺序提供，且唯一入口位于最后"));
+    }
 
     let mut compiler_groups = Vec::with_capacity(groups.len());
-    for ((group, sources), group_closure) in staged_sources.into_iter().zip(semantic_closure.groups) {
+    for (group, sources) in staged_sources {
         compiler_groups.push(CompilerSourceGroup {
             dependency_key: group.dependency_key.clone(),
             name: group.name.clone(),
             sources,
             direct_dependencies: group.direct_dependencies.clone(),
-            body_lowering_source_paths: Some(group_closure.body_lowering_source_paths),
-            closure_digest: Some(closure_digest.clone()),
-            body_lowering_declaration_keys: Some(group_closure.body_lowering_declarations.iter().map(|key| key.encoded()).collect()),
         });
     }
     Ok(compiler_groups)

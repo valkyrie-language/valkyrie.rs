@@ -4,7 +4,6 @@
 //! 验证 `spy jvm` 的列表、反汇编与 JSON 输出能力，不依赖外部文件。
 #![cfg(feature = "format-spy")]
 
-
 use acorn_jvm::{
     class::{JvmClassFile, JvmMethodDescriptor, JvmTypeDescriptor},
     jar::JvmJarPackage,

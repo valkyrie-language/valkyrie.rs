@@ -1,9 +1,9 @@
-//! Source hygiene diagnostics shared by `legion build` and `legion lint`.
+//! 独立维护性 lint；不得参与 Compiler 或 build/cache 的成功准入。
 //!
 //! - `VSRC001`: source file too long (warning above soft limit, error above hard limit)
 //! - `VSRC002`: encoding corruption (invalid UTF-8, U+FFFD, mojibake, PS escape residue)
 //!
-//! 所有目标统一执行同一源码卫生合同；编码和尺寸错误不得按目标放宽。
+//! 源码解码失败由输入层报告；这里的行数和疑似乱码检查仅供维护工具使用。
 
 use std::{
     fs,
@@ -37,24 +37,6 @@ impl HygieneReport {
     pub fn has_errors(&self) -> bool {
         self.errors > 0
     }
-}
-
-/// Scan planned build sources; print diagnostics to stderr.
-///
-/// Callers should abort the build when [`HygieneReport::has_errors`] is true.
-pub fn scan_build_sources(source_files: &[PathBuf]) -> Result<HygieneReport> {
-    let mut report = HygieneReport::default();
-    for path in source_files {
-        let Some(ext) = path.extension().and_then(|e| e.to_str())
-        else {
-            continue;
-        };
-        if !(ext.eq_ignore_ascii_case("v") || ext.eq_ignore_ascii_case("vx")) {
-            continue;
-        }
-        report.merge(scan_source_path(path)?);
-    }
-    Ok(report)
 }
 
 /// Read one source path and emit hygiene diagnostics.
@@ -104,21 +86,6 @@ pub fn scan_source_text(path: &Path, source: &str) -> HygieneReport {
     }
 
     HygieneReport { warnings, errors }
-}
-
-/// Fail closed when hygiene errors were found during build.
-pub fn require_clean(report: &HygieneReport) -> Result<()> {
-    if report.has_errors() {
-        return Err(miette!(
-            "source hygiene failed: {} error(s), {} warning(s) (VSRC001 size / VSRC002 encoding)",
-            report.errors,
-            report.warnings
-        ));
-    }
-    if report.warnings > 0 {
-        eprintln!("source hygiene: {} warning(s)", report.warnings);
-    }
-    Ok(())
 }
 
 fn looks_like_encoding_corruption(line: &str) -> bool {

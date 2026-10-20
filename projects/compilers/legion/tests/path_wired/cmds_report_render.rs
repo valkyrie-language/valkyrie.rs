@@ -68,13 +68,7 @@ fn render_bench_report_emits_islands() {
     let dir = tempdir().unwrap();
     let report = BenchReport {
         runs: 3,
-        rows: vec![BenchResultRow {
-            project: "app".into(),
-            test: "fib".into(),
-            target: "legion".into(),
-            compile_ms: 12.5,
-            runtime_ms: 1.2,
-        }],
+        rows: vec![BenchResultRow { project: "app".into(), test: "fib".into(), target: "legion".into(), compile_ms: 12.5, runtime_ms: 1.2 }],
     };
     render_bench_report(dir.path(), &report).unwrap();
     let html = std::fs::read_to_string(dir.path().join("index.html")).unwrap();

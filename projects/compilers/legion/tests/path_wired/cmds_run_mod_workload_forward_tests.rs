@@ -99,10 +99,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         project_name: plan.project.name.clone(),
         target: plan.project.build_target.target.to_string(),
         inputs,
-        artifacts: vec![ExecutionArtifactDigest {
-            path: "app.nyar".into(),
-            hash: hash_file_sha256(&artifact_path).expect("artifact hash"),
-        }],
+        artifacts: vec![ExecutionArtifactDigest { path: "app.nyar".into(), hash: hash_file_sha256(&artifact_path).expect("artifact hash") }],
         run_contracts: vec![RunContract {
             logical_entry: "main".into(),
             physical_entry: "app.nyar".into(),
@@ -115,10 +112,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
             host_provider_binding_hash: "stale-host-provider-hash".into(),
         }),
     };
-    assert!(
-        !manifest.is_fresh_for_plan(&plan).expect("freshness check"),
-        "stale host provider evidence must invalidate execution manifest"
-    );
+    assert!(!manifest.is_fresh_for_plan(&plan).expect("freshness check"), "stale host provider evidence must invalidate execution manifest");
 }
 
 fn write_test_compile_evidence(output_dir: &Path, digest: &CompileEvidenceDigest) {
@@ -211,10 +205,7 @@ fn is_fresh_rejects_stale_semantic_closure_compile_evidence() {
     };
     write_test_compile_evidence(&plan.output_dir, &evidence);
     let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
-    assert!(
-        !manifest.is_fresh_for_plan(&plan).expect("freshness check"),
-        "stale semantic closure evidence must invalidate execution manifest"
-    );
+    assert!(!manifest.is_fresh_for_plan(&plan).expect("freshness check"), "stale semantic closure evidence must invalidate execution manifest");
 }
 
 #[test]

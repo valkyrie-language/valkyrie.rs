@@ -43,8 +43,8 @@ fn rejects_empty_artifacts() {
 
 #[test]
 fn loads_repo_cdn_profile_file() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../valkyrie.v/projects/asgard._/projects/asgard/deploy/profiles/cdn+serverless.von");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/projects/asgard._/projects/asgard/deploy/profiles/cdn+serverless.von");
     let plan = DeployProfile::load(&path).expect("load repo profile");
     assert_eq!(plan.profile.name, "cdn+serverless");
     assert_eq!(plan.profile.artifacts.len(), 2);
@@ -52,8 +52,7 @@ fn loads_repo_cdn_profile_file() {
 
 #[test]
 fn loads_fullstack_cdn_profile() {
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/examples/test.fullstack/deploy/profiles/cdn+serverless.von");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/examples/test.fullstack/deploy/profiles/cdn+serverless.von");
     let plan = DeployProfile::load(&path).expect("load fullstack profile");
     assert_eq!(plan.profile.name, "cdn+serverless");
     assert!(plan.profile.artifacts.iter().any(|a| a.output.contains("apps/shell")));

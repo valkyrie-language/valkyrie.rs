@@ -1,7 +1,9 @@
 mod support;
 
-use legion::cmds::build::{BuildArgs, run};
-use legion::cmds::run::ExecutionManifest;
+use legion::cmds::{
+    build::{BuildArgs, run},
+    run::ExecutionManifest,
+};
 use nyar_language::CanonicalTarget;
 use std::{env, fs, path::Path, process::Command};
 use support::create_smoke_project_with_manifest;
@@ -60,9 +62,7 @@ micro legion(args: [utf8]) -> i32 {
     assert_eq!(status, std::process::ExitCode::SUCCESS);
     assert!(output_dir.join("legion.mjs").exists(), "expected legion.mjs");
     assert!(output_dir.join("legion.wasm").exists(), "expected legion.wasm");
-    let manifest = ExecutionManifest::read_from_output_dir(&output_dir)
-        .expect("read execution manifest")
-        .expect("execution manifest present");
+    let manifest = ExecutionManifest::read_from_output_dir(&output_dir).expect("read execution manifest").expect("execution manifest present");
     assert!(
         manifest.run_contracts.iter().any(|contract| contract.physical_entry == "legion.mjs"),
         "expected legion.mjs physical entry, got {:?}",

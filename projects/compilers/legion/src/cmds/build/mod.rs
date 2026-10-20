@@ -30,7 +30,6 @@ use crate::{
     cmds::{
         project_input::resolve_project_path,
         run::{ExecutionManifest, RunContract},
-        source_hygiene,
     },
     script, unity_export, write_von_indented,
 };
@@ -225,10 +224,6 @@ pub fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<nyar_emitter::Dri
     if plan.project.source_files.is_empty() {
         return Err(miette!("没有找到任何源码文件"));
     }
-
-    // Source hygiene runs on every build (including cache hits): size + encoding.
-    let hygiene = source_hygiene::scan_build_sources(&plan.project.source_files)?;
-    source_hygiene::require_clean(&hygiene)?;
 
     let cache = CompilationCache::open(cache_root_for(&plan.workspace_root));
     let canonical_triple = plan.project.build_target.target.as_canonical_str();

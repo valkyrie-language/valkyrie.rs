@@ -14,13 +14,13 @@ pub use manifest::{
     AutoLinkConfig, BuildPluginSpec, BuildTargetSpec, DependencySpec, LocalLegionConfig, ProjectArtifactKind, ProjectManifest,
     PublishTargetSpec, RunnerBinding, WorkspaceDefaults, WorkspaceManifest,
 };
+pub use nyar_language::{SemanticClosure, plan_semantic_closure};
 pub use oak::{labeled_report, labeled_report_with_context, labeled_span, source_point_span};
 pub use planner::{
     BuildPlan, BuildRequest, PlannedDependency, PlannedHostContract, PlannedHostProvider, PlannedProject, PlannedSemanticSourceGroup,
     PlannerError, ProjectResolutionMode, WorkspaceResolver, canonical_target, collect_project_root_v_files, collect_project_v_files,
     collect_test_build_sources, collect_test_v_files, project_uses_single_script_layout,
 };
-pub use nyar_language::{SemanticClosure, plan_semantic_closure};
 pub use source_snapshot::compile_source_snapshot;
 
 /// On-disk layout for Legion projects.

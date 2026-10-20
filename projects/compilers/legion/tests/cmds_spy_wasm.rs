@@ -4,10 +4,9 @@
 //! 列表、反汇编与偏移定位能力，不依赖外部文件。
 #![cfg(feature = "format-spy")]
 
-
+use acorn_wasm::{DecodedOperand, decode_code_body};
 use legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 use nyar_emitter::nyar_backend_wasi::{WasmBinaryModule, WasmSection};
-use acorn_wasm::{DecodedOperand, decode_code_body};
 
 /// 构造一个最小的 `WASM` 模块：包含一个导出函数 `main`，返回 `i32` 常量 `42`。
 fn build_minimal_wasm() -> Vec<u8> {

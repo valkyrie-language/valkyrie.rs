@@ -7,8 +7,8 @@ use std::path::Path;
 
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oak_von::{
-    from_str,
-    language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue},
+    language::value::{VonArray, VonEnum, VonObject, VonTuple, VonValue, from_ast},
+    parse as parse_von,
 };
 use serde::{Deserialize, Serialize};
 
@@ -258,7 +258,8 @@ impl VoaConfig {
     /// 解析 `asgard.config.v`（Valkyrie script）文本。
     pub fn parse(source: &str) -> Result<Self> {
         let normalized = config_script::normalize_config_source(source)?;
-        let value = from_str::<VonValue>(&normalized).map_err(|error| legion_workspace::oak::labeled_report(error, "VON 解析失败位置"))?;
+        let ast = parse_von(&normalized).map_err(|error| miette::miette!("VON 解析失败: {error}"))?;
+        let value = from_ast(&ast);
         von_to_config(&value)
     }
 

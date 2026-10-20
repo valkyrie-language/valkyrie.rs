@@ -1,28 +1,11 @@
 //! Migrated from `src/script.rs` (`tests`).
 
-
-
-
-
-use legion_workspace::script::*;
-use std::fs;
-use std::path::Path;
-use legion_workspace::manifest::ProjectManifest;
-
-
-
-
-
-
-
-
-
-
-
+use legion_workspace::{manifest::ProjectManifest, script::*};
+use std::{fs, path::Path};
 
 #[test]
 fn extracts_embedded_manifest_from_comment_fence() {
-let source = r#"#!/usr/bin/env legion run
+    let source = r#"#!/usr/bin/env legion run
 # ```legion
 # {
 #     name: "demo",
@@ -32,8 +15,8 @@ let source = r#"#!/usr/bin/env legion run
 
 namespace demo;
 "#;
-let manifest = extract_embedded_manifest(source, Path::new("demo.v")).unwrap().unwrap();
-assert!(manifest.contains("name: \"demo\""));
-let parsed = ProjectManifest::parse(&manifest).unwrap();
-assert_eq!(parsed.name, "demo");
+    let manifest = extract_embedded_manifest(source, Path::new("demo.v")).unwrap().unwrap();
+    assert!(manifest.contains("name: \"demo\""));
+    let parsed = ProjectManifest::parse(&manifest).unwrap();
+    assert_eq!(parsed.name, "demo");
 }

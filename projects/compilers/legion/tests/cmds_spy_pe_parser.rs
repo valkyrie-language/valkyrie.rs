@@ -4,7 +4,6 @@
 //! 验证 `parse_pe` 在边界输入下的错误归类。
 #![cfg(feature = "format-spy")]
 
-
 use acorn_pe::pe::{PeParseError, parse_pe};
 
 #[test]

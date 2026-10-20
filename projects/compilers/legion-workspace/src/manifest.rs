@@ -233,14 +233,7 @@ pub struct BuildTargetSpec {
 
 impl Default for BuildTargetSpec {
     fn default() -> Self {
-        Self {
-            target: default_canonical_target(),
-            source_map: false,
-            typescript: false,
-            wat: false,
-            publish: Vec::new(),
-            runtime_async: false,
-        }
+        Self { target: default_canonical_target(), source_map: false, typescript: false, wat: false, publish: Vec::new(), runtime_async: false }
     }
 }
 
