@@ -664,7 +664,7 @@ impl WorkspaceResolver {
             }
         }
 
-        // 收集当前项目自身的源文件。target 不参与声明是否存在，只选择 adaptor 与 BackendPrivatePlan。
+        // 收集当前项目自身的源文件。target 不参与声明是否存在，只选择 adaptor 与 TargetExecutionPlan。
         let mut all_files = collect_source_files(&canonical_dir)?;
 
         // 收集当前项目的依赖名称（auto_link + 显式声明 + 平台隐式 SDK）。

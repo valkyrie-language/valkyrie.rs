@@ -10,7 +10,7 @@ flowchart TD
     Compiler["Compiler：绑定、需求固定点与语义编译"]
     Canonical["Linked Canonical Semantic MIR"]
     Representation["稀疏 RepresentationPlan"]
-    Private["BackendPrivatePlan / pre-encode validation"]
+    Private["TargetExecutionPlan / pre-encode validation"]
     Encode["Acorn 外部格式编码 / Nyar 字节码编码"]
     Store["ArtifactStore：原子提交与证据"]
     Resolver --> Compiler --> Canonical --> Representation --> Private --> Encode --> Store
@@ -32,7 +32,7 @@ AST operator 在 HIR 展开为普通 callable。HIR/MIR/LIR 不建立 unary/bina
 
 ItemInstanceId 关联声明、完整 substitution、签名及 evidence。字段/变体引用所属完整名义实例。同声明不同实参不能混用，Self、Cast 目标及关联类型等全部类型位共用绑定事实。
 
-linker 选择 target-conditioned adaptor/import；表示规划只选择 carrier/layout。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 BackendPrivatePlan，不能按 callee、field、类型名或 carrier 补语义。
+linker 选择 target-conditioned adaptor/import；表示规划只选择 carrier/layout。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 TargetExecutionPlan，不能按 callee、field、类型名或 carrier 补语义。
 
 ## 恢复、诊断与工具
 

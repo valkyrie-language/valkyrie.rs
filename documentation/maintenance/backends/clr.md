@@ -5,7 +5,7 @@ CLR 专题规定 IL/程序集表示边界，不声明完整语言或自举能力
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → CLR BackendPrivatePlan
+Canonical + RepresentationPlan → CLR TargetExecutionPlan
   → pre-encode validation → acorn-pe → assembly
 ```
 

@@ -5,7 +5,7 @@ Nyar runtime 位于 nyar-vm.rs 的 runtimes 目录，消费 Nyar bytecode，不�
 ## 正式输入
 
 ```text
-Compiler → Canonical + RepresentationPlan → BackendPrivatePlan
+Compiler → Canonical + RepresentationPlan → TargetExecutionPlan
   → nyar-bytecode → verify → nyar-vm → export/invoke
 ```
 

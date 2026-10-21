@@ -1,6 +1,6 @@
 # 后端维护指南
 
-backend 只消费已验证的 BackendPrivatePlan。公共 Canonical 语义、RepresentationPlan 与目标私有计划各有所有者，不建立包含全部阶段的统一物理 IR。
+backend 只消费已验证的 TargetExecutionPlan。公共 Canonical 语义、RepresentationPlan 与目标私有计划各有所有者，不建立包含全部阶段的统一物理 IR。
 
 ## 数据流
 
@@ -8,7 +8,7 @@ backend 只消费已验证的 BackendPrivatePlan。公共 Canonical 语义、Rep
 package Semantic MIR → linker / Canonical validation
   → optimization / sparse RepresentationPlan
   → BackendLowering.prepare → pre-encode validation
-  → BackendPrivatePlan → format encoding
+  → TargetExecutionPlan → format encoding
 ```
 
 linker 选择 adaptor/import；表示规划选择 carrier/layout；backend 安排目标私有编号并编码。backend 不能按 import field 猜 ABI、按 callee 尾名决定行为、按类型名找布局或缺 payload 补值。

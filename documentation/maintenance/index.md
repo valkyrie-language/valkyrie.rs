@@ -21,7 +21,7 @@
 ```text
 WorkspaceResolver → immutable inventory / package graph
   → Compiler：binding / demand fixed point / HIR / Semantic MIR
-  → linker / Canonical → RepresentationPlan → BackendPrivatePlan
+  → linker / Canonical → RepresentationPlan → TargetExecutionPlan
   → Acorn 或 Nyar bytecode 编码 → ArtifactStore
 ```
 

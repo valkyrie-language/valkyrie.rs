@@ -5,7 +5,7 @@ Wasm 模块编码与具体宿主能力分开。Node、浏览器和 WASI 的导�
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → Wasm BackendPrivatePlan
+Canonical + RepresentationPlan → Wasm TargetExecutionPlan
   → pre-encode validation → acorn-wasm → Wasm artifact
   → signature-driven host glue / target runtime
 ```

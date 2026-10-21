@@ -5,7 +5,7 @@ JVM backend 将已绑定语义与表示计划降低为私有 class/方法计划�
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → JVM BackendPrivatePlan
+Canonical + RepresentationPlan → JVM TargetExecutionPlan
   → pre-encode validation → acorn-jvm → class / jar
 ```
 
