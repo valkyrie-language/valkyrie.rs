@@ -203,7 +203,7 @@ fn number_tokens_do_not_consume_range_or_member_punctuation() {
 
 #[test]
 fn attribute_binding_paths_keep_all_segments() {
-    let root = build_source("[host_provider(demo.write)] micro write(value: i32) -> i32 { return value }").expect("属性路径");
+    let root = build_source("[host_provider(demo::write)] micro write(value: i32) -> i32 { return value }").expect("属性路径");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
         panic!("缺少函数")

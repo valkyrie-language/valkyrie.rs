@@ -1660,21 +1660,20 @@ fn select_host_providers(
     providers: &[PlannedHostProvider],
     publish: &[String],
 ) -> Result<Vec<PlannedHostProvider>, PlannerError> {
-    let contract_ids: BTreeSet<String> = contracts.iter().map(|item| normalize_contract_reference(&item.id)).collect();
+    let contract_ids: BTreeSet<String> = contracts.iter().map(|item| item.id.clone()).collect();
     // 只保留声明了对应 contract 的 provider；contract 本身由 language inventory 与 closure 决定，
     // 不由 target 侧裁剪。
     let mut providers_by_contract: BTreeMap<String, Vec<&PlannedHostProvider>> = BTreeMap::new();
     for provider in providers {
-        let contract = normalize_contract_reference(&provider.contract);
-        if !contract_ids.contains(&contract) {
+        if !contract_ids.contains(&provider.contract) {
             continue;
         }
-        providers_by_contract.entry(contract).or_default().push(provider);
+        providers_by_contract.entry(provider.contract.clone()).or_default().push(provider);
     }
 
     let mut selected = Vec::new();
     for contract in contracts {
-        let Some(candidates) = providers_by_contract.get(&normalize_contract_reference(&contract.id))
+        let Some(candidates) = providers_by_contract.get(&contract.id)
         else {
             continue;
         };
@@ -1722,10 +1721,6 @@ fn host_provider_priority(source_file: &Path, publish: &[String]) -> u8 {
         return 2;
     }
     1
-}
-
-fn normalize_contract_reference(contract: &str) -> String {
-    contract.replace("::", ".")
 }
 
 fn parse_namespace(line: &str) -> Option<&str> {
@@ -1815,5 +1810,5 @@ fn qualify_symbol_name(namespace: &str, symbol_name: &str, owner_name: Option<&s
     if namespace.is_empty() {
         return symbol_name.to_string();
     }
-    format!("{}.{}", namespace, symbol_name)
+    format!("{}::{}", namespace, symbol_name)
 }

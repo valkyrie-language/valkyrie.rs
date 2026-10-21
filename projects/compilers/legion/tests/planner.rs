@@ -1161,7 +1161,7 @@ micro main() -> i64 {
         clr_dir.join("source").join("_.v"),
         r#"namespace std.adaptor.clr;
 
-[host_provider(demo.write)]
+[host_provider(demo::write)]
 micro write(message: utf8): unit {
 }
 "#,
@@ -1191,7 +1191,7 @@ micro write(message: utf8): unit {
         wasm_dir.join("source").join("_.v"),
         r#"namespace std.adaptor.wasm;
 
-[host_provider(demo.write)]
+[host_provider(demo::write)]
 micro write(message: utf8): unit {
 }
 "#,
@@ -1208,7 +1208,7 @@ micro write(message: utf8): unit {
     assert_eq!(plan.project.host_contracts.len(), 1);
     assert_eq!(plan.project.host_provider_candidates.len(), 1);
     assert_eq!(plan.project.selected_host_providers.len(), 1);
-    assert_eq!(plan.project.selected_host_providers[0].contract, "demo.write");
+    assert_eq!(plan.project.selected_host_providers[0].contract, "demo::write");
     assert!(plan.project.selected_host_providers[0].source_file.ends_with(Path::new("std.adaptor.clr").join("source").join("_.v")));
 }
 
@@ -1262,7 +1262,7 @@ micro write(message: utf8): unit {
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
-    assert_eq!(plan.project.host_contracts[0].id, "demo.write");
+    assert_eq!(plan.project.host_contracts[0].id, "demo::write");
     assert!(plan.project.host_provider_candidates.is_empty());
     assert!(plan.project.selected_host_providers.is_empty());
 }
@@ -1658,7 +1658,7 @@ micro write(message: utf8): unit
         left_dir.join("source").join("_.v"),
         r#"namespace sdk.left;
 
-[host_provider(demo.write)]
+[host_provider(demo::write)]
 micro write(message: utf8): unit {
 }
 "#,
@@ -1668,7 +1668,7 @@ micro write(message: utf8): unit {
         right_dir.join("source").join("_.v"),
         r#"namespace sdk.right;
 
-[host_provider(demo.write)]
+[host_provider(demo::write)]
 micro write(message: utf8): unit {
 }
 "#,
@@ -1679,12 +1679,12 @@ micro write(message: utf8): unit {
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
-    assert_eq!(plan.project.host_contracts[0].id, "demo.write");
+    assert_eq!(plan.project.host_contracts[0].id, "demo::write");
     assert_eq!(plan.project.host_provider_candidates.len(), 2);
     assert_eq!(plan.project.selected_host_providers.len(), 1);
-    assert_eq!(plan.project.selected_host_providers[0].contract, "demo.write");
+    assert_eq!(plan.project.selected_host_providers[0].contract, "demo::write");
     assert!(
-        ["sdk.left.write", "sdk.right.write"].contains(&plan.project.selected_host_providers[0].symbol.as_str()),
+        ["sdk.left::write", "sdk.right::write"].contains(&plan.project.selected_host_providers[0].symbol.as_str()),
         "expected deterministic host-provider tie-break, got {}",
         plan.project.selected_host_providers[0].symbol
     );
@@ -1771,7 +1771,7 @@ micro write(message: utf8): unit {
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
-    assert_eq!(plan.project.host_contracts[0].id, "demo.write");
+    assert_eq!(plan.project.host_contracts[0].id, "demo::write");
     assert_eq!(plan.project.host_provider_candidates.len(), 1);
     assert_eq!(plan.project.host_provider_candidates[0].contract, "demo.missing");
     assert!(plan.project.selected_host_providers.is_empty());

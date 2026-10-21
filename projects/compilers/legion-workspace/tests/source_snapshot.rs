@@ -147,7 +147,7 @@ fn empty_snapshot_is_not_a_successful_program() {
 fn selected_host_provider_rewrites_contract_calls_in_snapshot_closure() {
     let directory = tempdir().expect("创建源码目录");
     let adaptor =
-        source_group(directory.path(), "adaptor", "[host_provider(demo.write)] micro write(value: bool) -> bool { return value }", &[], false);
+        source_group(directory.path(), "adaptor", "[host_provider(demo::write)] micro write(value: bool) -> bool { return value }", &[], false);
     let application = source_group(
         directory.path(),
         "demo",
@@ -162,7 +162,7 @@ fn selected_host_provider_rewrites_contract_calls_in_snapshot_closure() {
     let report = compile_snapshot_with_bindings(
         &groups,
         &output,
-        &[nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "adaptor.write".into() }],
+        &[nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "adaptor::write".into() }],
     )
     .expect("Resolver 选定的 host provider 必须进入 Compiler 合同");
     assert!(!report.driver.artifacts.artifacts.is_empty(), "host contract 闭合后必须生成产物");

@@ -75,7 +75,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
             host_contracts: Vec::new(),
             host_provider_candidates: Vec::new(),
             selected_host_providers: vec![PlannedHostProvider {
-                contract: "demo.write".into(),
+                contract: "demo::write".into(),
                 symbol: "std::write".into(),
                 source_file: manifest_path.clone(),
                 line: 1,
@@ -253,8 +253,8 @@ fn is_fresh_rejects_mismatched_compile_evidence_sidecar() {
 #[test]
 fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
     let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
-    let first = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::write".into() };
-    let second = nyar_language::CompilerHostProviderBinding { contract: "demo.write".into(), symbol: "std::print".into() };
+    let first = nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "std::write".into() };
+    let second = nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "std::print".into() };
     let without = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
     let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()], "nyar");
     let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second], "nyar");
