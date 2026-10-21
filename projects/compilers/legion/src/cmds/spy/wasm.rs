@@ -134,17 +134,15 @@ fn disassemble_function(module: &WasmBinaryModule, data: &[u8], func_spec: &str,
     let functions = parse_code_section(module);
     let mir_functions = parse_nyar_wasm_functions(module);
 
-    // 按索引、导出名，或 `legion.wasm.functions` MIR 符号（完整路径 / 后缀）查找。
+    // 按索引、导出名，或 `legion.wasm.functions` 中的完整 MIR 符号精确查找。
     let target_func = if let Ok(index) = func_spec.parse::<usize>() {
         functions.iter().find(|f| f.index == index)
     }
     else {
         functions.iter().find(|f| f.name.as_deref() == Some(func_spec)).or_else(|| {
-            mir_functions.iter().find_map(|(index, symbol)| {
-                let matched =
-                    symbol == func_spec || symbol.ends_with(&format!("::{func_spec}")) || symbol.rsplit([':', '.']).next() == Some(func_spec);
-                matched.then(|| functions.iter().find(|f| f.index == *index)).flatten()
-            })
+            mir_functions
+                .iter()
+                .find_map(|(index, symbol)| (symbol == func_spec).then(|| functions.iter().find(|f| f.index == *index)).flatten())
         })
     };
 
