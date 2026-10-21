@@ -9,7 +9,7 @@ use std::{
 };
 
 use miette::{Diagnostic, Severity};
-use nyar_language::CanonicalTarget;
+use nyar_language::{CanonicalTarget, DeclarationKey, DeclarationKind};
 use nyar_package_manager::PackageManager as PackageLegion;
 use serde::{Deserialize, Serialize};
 
@@ -59,11 +59,13 @@ pub struct PlannedSemanticSourceGroup {
     pub is_entry: bool,
 }
 
-/// 计划中的宿主契约：源码声明的宿主接口及其位置。
+/// 计划中的宿主契约：源码声明的宿主接口、冻结声明身份及其位置。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedHostContract {
-    /// 契约标识。
+    /// 契约限定名（`namespace` + 拥有者 + 声明名，统一 `::` 分隔）。
     pub id: String,
+    /// 契约的冻结声明身份；Compiler 只接受结构化身份，不接受限定名字符串。
+    pub key: DeclarationKey,
     /// 声明该契约的源码文件。
     pub source_file: PathBuf,
     /// 声明所在行号。
@@ -73,10 +75,14 @@ pub struct PlannedHostContract {
 /// 计划中的宿主契约提供者候选：把契约绑定到宿主符号。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedHostProvider {
-    /// 被实现的宿主契约标识。
+    /// 被实现的宿主契约标识（保留源码属性中的书写形式）。
     pub contract: String,
-    /// 宿主侧绑定的符号名。
+    /// 被引用契约的冻结声明身份；候选被选中时由 Resolver 填充。
+    pub contract_key: Option<DeclarationKey>,
+    /// 宿主侧绑定的符号名（提供者声明限定名）。
     pub symbol: String,
+    /// 提供者声明的冻结身份。
+    pub key: DeclarationKey,
     /// 声明该提供者的源码文件。
     pub source_file: PathBuf,
     /// 声明所在行号。
@@ -545,8 +551,8 @@ impl WorkspaceResolver {
         // 这是模块系统的核心：让编译器能看到依赖项目定义的 struct/function/type。
         let mut visited = BTreeSet::new();
         let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited)?;
-        let host_inventory = collect_host_inventory(&source_files, &build_target.publish)?;
         let semantic_source_groups = self.collect_semantic_source_groups(&project_dir, manifest, &build_target)?;
+        let host_inventory = collect_host_inventory(&semantic_source_groups, &build_target.publish)?;
 
         Ok(BuildPlan {
             workspace_root: self.root_dir.clone(),
@@ -609,8 +615,8 @@ impl WorkspaceResolver {
         source_files.sort();
         source_files.dedup();
 
-        let host_inventory = collect_host_inventory(&source_files, &build_target.publish)?;
         let semantic_source_groups = self.collect_semantic_source_groups(&project_dir, &manifest, &build_target)?;
+        let host_inventory = collect_host_inventory(&semantic_source_groups, &build_target.publish)?;
 
         Ok((
             BuildPlan {
@@ -815,8 +821,8 @@ impl WorkspaceResolver {
 
         let mut visited = BTreeSet::new();
         let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited)?;
-        let host_inventory = collect_host_inventory(&source_files, &build_target.publish)?;
         let semantic_source_groups = self.collect_semantic_source_groups(&project_dir, manifest, &build_target)?;
+        let host_inventory = collect_host_inventory(&semantic_source_groups, &build_target.publish)?;
 
         Ok(BuildPlan {
             workspace_root: self.root_dir.clone(),
@@ -1551,16 +1557,34 @@ struct HostInventory {
     selected_providers: Vec<PlannedHostProvider>,
 }
 
-fn collect_host_inventory(source_files: &[PathBuf], publish: &[String]) -> Result<HostInventory, PlannerError> {
+fn collect_host_inventory(groups: &[PlannedSemanticSourceGroup], publish: &[String]) -> Result<HostInventory, PlannerError> {
     let mut inventory = HostInventory::default();
-    for source_file in source_files {
-        let source = fs::read_to_string(source_file)?;
-        collect_host_attributes_from_file(source_file, &source, &mut inventory);
+    for group in groups {
+        let manifest_dir = fs::canonicalize(&group.manifest_dir)?;
+        for source_file in &group.source_files {
+            let resolved = fs::canonicalize(source_file)?;
+            // 逻辑路径必须与 `source_snapshot` 送给 Compiler 的路径一致：
+            // 声明身份由（依赖组，manifest 相对路径，namespace，种类，拥有者，短名）共同构成。
+            let source_path = resolved
+                .strip_prefix(&manifest_dir)
+                .map_err(|_| {
+                    PlannerError::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("源码文件 {} 不属于源码组 `{}` 的 manifest 目录", source_file.display(), group.dependency_key),
+                    ))
+                })?
+                .to_string_lossy()
+                .replace('\\', "/");
+            let source = fs::read_to_string(source_file)?;
+            collect_host_attributes_from_file(&group.dependency_key, &source_path, source_file, &source, &mut inventory);
+        }
     }
 
     inventory
         .contracts
         .sort_by(|left, right| left.id.cmp(&right.id).then(left.source_file.cmp(&right.source_file)).then(left.line.cmp(&right.line)));
+    // 模板分支可能重复声明同一身份；声明身份不含行号，重复项必须收敛为同一事实。
+    inventory.contracts.dedup_by(|left, right| left.key == right.key);
     inventory.providers.sort_by(|left, right| {
         left.contract
             .cmp(&right.contract)
@@ -1568,15 +1592,16 @@ fn collect_host_inventory(source_files: &[PathBuf], publish: &[String]) -> Resul
             .then(left.source_file.cmp(&right.source_file))
             .then(left.line.cmp(&right.line))
     });
+    inventory.providers.dedup_by(|left, right| left.key == right.key && left.contract == right.contract);
     inventory.selected_providers = select_host_providers(&inventory.contracts, &inventory.providers, publish)?;
     Ok(inventory)
 }
 
-fn collect_host_attributes_from_file(source_file: &Path, source: &str, inventory: &mut HostInventory) {
-    let mut namespace = String::new();
+fn collect_host_attributes_from_file(dependency_key: &str, source_path: &str, source_file: &Path, source: &str, inventory: &mut HostInventory) {
+    let mut namespace: Vec<String> = Vec::new();
     let mut pending_host_contract: Option<usize> = None;
     let mut pending_host_providers: Vec<(String, usize)> = Vec::new();
-    let mut owner_stack: Vec<(String, usize)> = Vec::new();
+    let mut owner_stack: Vec<(String, usize, DeclarationKind)> = Vec::new();
     let mut brace_depth: usize = 0;
 
     for (index, raw_line) in source.lines().enumerate() {
@@ -1588,10 +1613,10 @@ fn collect_host_attributes_from_file(source_file: &Path, source: &str, inventory
 
         let open_brace_count = line.chars().filter(|ch| *ch == '{').count();
         let close_brace_count = line.chars().filter(|ch| *ch == '}').count();
-        let parsed_owner = parse_owner_name(line).map(str::to_string);
+        let parsed_owner = parse_owner_declaration(line);
 
         if let Some(parsed_namespace) = parse_namespace(line) {
-            namespace = parsed_namespace.to_string();
+            namespace = namespace_segments(parsed_namespace);
             continue;
         }
 
@@ -1612,22 +1637,35 @@ fn collect_host_attributes_from_file(source_file: &Path, source: &str, inventory
         let Some(symbol_name) = parse_symbol_name(line)
         else {
             let next_brace_depth = brace_depth.saturating_add(open_brace_count).saturating_sub(close_brace_count);
-            if let Some(owner_name) = parsed_owner {
+            if let Some((owner_name, owner_kind)) = parsed_owner {
                 if next_brace_depth > brace_depth {
-                    owner_stack.push((owner_name, next_brace_depth));
+                    owner_stack.push((owner_name, next_brace_depth, owner_kind));
                 }
             }
             brace_depth = next_brace_depth;
-            while owner_stack.last().map(|(_, depth)| brace_depth < *depth).unwrap_or(false) {
+            while owner_stack.last().map(|(_, depth, _)| brace_depth < *depth).unwrap_or(false) {
                 owner_stack.pop();
             }
             continue;
         };
-        let qualified_symbol = qualify_symbol_name(&namespace, symbol_name, owner_stack.last().map(|(owner, _)| owner.as_str()));
+        let (owner, kind) = match owner_stack.last() {
+            Some((owner_name, _, owner_kind)) => (Some(owner_name.as_str()), *owner_kind),
+            None => (None, DeclarationKind::Micro),
+        };
+        let qualified_symbol = qualified_declaration_name(&namespace, owner, symbol_name);
+        let key = DeclarationKey {
+            dependency_key: dependency_key.to_string(),
+            source_path: source_path.to_string(),
+            namespace: namespace.clone(),
+            kind,
+            owner: owner.map(str::to_string),
+            name: symbol_name.to_string(),
+        };
 
         if let Some(contract_line) = pending_host_contract.take() {
             inventory.contracts.push(PlannedHostContract {
                 id: qualified_symbol.clone(),
+                key: key.clone(),
                 source_file: source_file.to_path_buf(),
                 line: contract_line,
             });
@@ -1636,20 +1674,22 @@ fn collect_host_attributes_from_file(source_file: &Path, source: &str, inventory
         for (contract, provider_line) in pending_host_providers.drain(..) {
             inventory.providers.push(PlannedHostProvider {
                 contract,
+                contract_key: None,
                 symbol: qualified_symbol.clone(),
+                key: key.clone(),
                 source_file: source_file.to_path_buf(),
                 line: provider_line,
             });
         }
 
         let next_brace_depth = brace_depth.saturating_add(open_brace_count).saturating_sub(close_brace_count);
-        if let Some(owner_name) = parsed_owner {
+        if let Some((owner_name, owner_kind)) = parsed_owner {
             if next_brace_depth > brace_depth {
-                owner_stack.push((owner_name, next_brace_depth));
+                owner_stack.push((owner_name, next_brace_depth, owner_kind));
             }
         }
         brace_depth = next_brace_depth;
-        while owner_stack.last().map(|(_, depth)| brace_depth < *depth).unwrap_or(false) {
+        while owner_stack.last().map(|(_, depth, _)| brace_depth < *depth).unwrap_or(false) {
             owner_stack.pop();
         }
     }
@@ -1660,15 +1700,16 @@ fn select_host_providers(
     providers: &[PlannedHostProvider],
     publish: &[String],
 ) -> Result<Vec<PlannedHostProvider>, PlannerError> {
-    let contract_ids: BTreeSet<String> = contracts.iter().map(|item| item.id.clone()).collect();
     // 只保留声明了对应 contract 的 provider；contract 本身由 language inventory 与 closure 决定，
-    // 不由 target 侧裁剪。
+    // 不由 target 侧裁剪。属性里允许 `.` / `::` 两种书写，匹配前统一为 `::` 分隔的限定名。
+    let contracts_by_id: BTreeMap<&str, &PlannedHostContract> = contracts.iter().map(|item| (item.id.as_str(), item)).collect();
     let mut providers_by_contract: BTreeMap<String, Vec<&PlannedHostProvider>> = BTreeMap::new();
     for provider in providers {
-        if !contract_ids.contains(&provider.contract) {
+        let contract_id = normalized_contract_reference(&provider.contract);
+        if !contracts_by_id.contains_key(contract_id.as_str()) {
             continue;
         }
-        providers_by_contract.entry(provider.contract.clone()).or_default().push(provider);
+        providers_by_contract.entry(contract_id).or_default().push(provider);
     }
 
     let mut selected = Vec::new();
@@ -1693,7 +1734,9 @@ fn select_host_providers(
             })?
         };
 
-        selected.push(chosen.clone());
+        let mut chosen = chosen.clone();
+        chosen.contract_key = Some(contract.key.clone());
+        selected.push(chosen);
     }
 
     selected.sort_by(|left, right| {
@@ -1788,27 +1831,33 @@ fn parse_symbol_name(line: &str) -> Option<&str> {
     Some(&rest[..end])
 }
 
-fn parse_owner_name(line: &str) -> Option<&str> {
-    let rest = line.strip_prefix("imply ").or_else(|| line.strip_prefix("class "))?;
-    let end = rest.find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_' || ch == '.')).unwrap_or(rest.len());
-    if end == 0 {
-        return None;
+/// 解析成员拥有者及其声明种类：`imply` 块产生 `ImplyMethod`，`class`/`structure`/`trait`
+/// 成员产生 `Method`。种类是冻结声明身份的一部分，猜错会导致 Compiler 查不到声明。
+fn parse_owner_declaration(line: &str) -> Option<(String, DeclarationKind)> {
+    let (rest, kind) = if let Some(rest) = line.strip_prefix("imply ") {
+        (rest, DeclarationKind::ImplyMethod)
     }
-    Some(&rest[..end])
+    else if let Some(rest) = line.strip_prefix("class ").or_else(|| line.strip_prefix("structure ")).or_else(|| line.strip_prefix("trait ")) {
+        (rest, DeclarationKind::Method)
+    }
+    else {
+        return None;
+    };
+    let end = rest.find(|ch: char| ch.is_whitespace() || matches!(ch, '{' | '<' | '>' | '(' | ')' | ';' | '=')).unwrap_or(rest.len());
+    let owner = rest[..end].rsplit([':', '.']).find(|segment| !segment.is_empty())?;
+    Some((owner.to_string(), kind))
 }
 
-fn qualify_symbol_name(namespace: &str, symbol_name: &str, owner_name: Option<&str>) -> String {
-    if let Some(owner_name) = owner_name {
-        let owner_basename = owner_name.rsplit('.').next().unwrap_or(owner_name);
-        if namespace.is_empty() {
-            return format!("{}::{}", owner_basename, symbol_name);
-        }
+/// namespace 段：源码允许 `.` / `::` 两种书写，统一拆成段。
+fn namespace_segments(namespace: &str) -> Vec<String> {
+    namespace.split(['.', ':']).map(str::trim).filter(|segment| !segment.is_empty()).map(str::to_string).collect()
+}
 
-        return format!("{}::{}::{}", namespace.replace('.', "::"), owner_basename, symbol_name);
-    }
+fn qualified_declaration_name(namespace: &[String], owner: Option<&str>, symbol_name: &str) -> String {
+    namespace.iter().map(String::as_str).chain(owner).chain(std::iter::once(symbol_name)).collect::<Vec<_>>().join("::")
+}
 
-    if namespace.is_empty() {
-        return symbol_name.to_string();
-    }
-    format!("{}::{}", namespace, symbol_name)
+/// 属性里的契约引用统一为 `::` 分隔的限定名，只用于匹配，不据此反推声明身份。
+fn normalized_contract_reference(reference: &str) -> String {
+    namespace_segments(reference).join("::")
 }

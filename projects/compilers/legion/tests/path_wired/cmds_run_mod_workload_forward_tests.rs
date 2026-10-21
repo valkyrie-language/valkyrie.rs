@@ -76,7 +76,9 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
             host_provider_candidates: Vec::new(),
             selected_host_providers: vec![PlannedHostProvider {
                 contract: "demo::write".into(),
+                contract_key: Some(micro_declaration("demo", "demo.v", "write")),
                 symbol: "std::write".into(),
+                key: micro_declaration("std", "std.v", "write"),
                 source_file: manifest_path.clone(),
                 line: 1,
             }],
@@ -253,8 +255,14 @@ fn is_fresh_rejects_mismatched_compile_evidence_sidecar() {
 #[test]
 fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
     let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
-    let first = nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "std::write".into() };
-    let second = nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "std::print".into() };
+    let first = nyar_language::CompilerHostProviderBinding {
+        contract: micro_declaration("demo", "demo.v", "write"),
+        provider: micro_declaration("std", "std.v", "write"),
+    };
+    let second = nyar_language::CompilerHostProviderBinding {
+        contract: micro_declaration("demo", "demo.v", "write"),
+        provider: micro_declaration("std", "std.v", "print"),
+    };
     let without = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
     let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()], "nyar");
     let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second], "nyar");
@@ -271,4 +279,15 @@ fn rejects_workload_json_for_non_nyar_vm() {
     args.workload_json = Some("{}".into());
     let err = append_nyar_vm_workload_args(&mut command, &args).expect_err("must reject");
     assert!(err.to_string().contains("nyar-vm"));
+}
+
+fn micro_declaration(dependency_key: &str, source_path: &str, name: &str) -> nyar_language::DeclarationKey {
+    nyar_language::DeclarationKey {
+        dependency_key: dependency_key.to_owned(),
+        source_path: source_path.to_owned(),
+        namespace: Vec::new(),
+        kind: nyar_language::DeclarationKind::Micro,
+        owner: None,
+        name: name.to_owned(),
+    }
 }

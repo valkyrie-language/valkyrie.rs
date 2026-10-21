@@ -1446,10 +1446,10 @@ micro clear(): unit {
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
-    assert_eq!(plan.project.host_contracts[0].id, "demo.clear");
+    assert_eq!(plan.project.host_contracts[0].id, "demo::clear");
     assert_eq!(plan.project.host_provider_candidates.len(), 1);
     assert_eq!(plan.project.host_provider_candidates[0].contract, "demo.clear");
-    assert_eq!(plan.project.host_provider_candidates[0].symbol, "sdk.clear");
+    assert_eq!(plan.project.host_provider_candidates[0].symbol, "sdk::clear");
     assert_eq!(plan.project.selected_host_providers.len(), 1);
 }
 
@@ -1534,10 +1534,10 @@ micro clear(): unit {
     let plan = workspace.build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::clr(), output_dir: None }).unwrap();
 
     assert_eq!(plan.project.host_contracts.len(), 1);
-    assert_eq!(plan.project.host_contracts[0].id, "demo.clear");
+    assert_eq!(plan.project.host_contracts[0].id, "demo::clear");
     assert_eq!(plan.project.host_provider_candidates.len(), 1);
     assert_eq!(plan.project.host_provider_candidates[0].contract, "demo.clear");
-    assert_eq!(plan.project.host_provider_candidates[0].symbol, "sdk.clear");
+    assert_eq!(plan.project.host_provider_candidates[0].symbol, "sdk::clear");
     assert_eq!(plan.project.selected_host_providers.len(), 1);
 }
 
@@ -1684,7 +1684,7 @@ micro write(message: utf8): unit {
     assert_eq!(plan.project.selected_host_providers.len(), 1);
     assert_eq!(plan.project.selected_host_providers[0].contract, "demo::write");
     assert!(
-        ["sdk.left::write", "sdk.right::write"].contains(&plan.project.selected_host_providers[0].symbol.as_str()),
+        ["sdk::left::write", "sdk::right::write"].contains(&plan.project.selected_host_providers[0].symbol.as_str()),
         "expected deterministic host-provider tie-break, got {}",
         plan.project.selected_host_providers[0].symbol
     );

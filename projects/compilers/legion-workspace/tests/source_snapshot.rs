@@ -47,6 +47,17 @@ fn source_group(root: &Path, name: &str, source: &str, dependencies: &[&str], is
     }
 }
 
+fn micro_declaration(dependency_key: &str, source_path: &str, name: &str) -> nyar_language::DeclarationKey {
+    nyar_language::DeclarationKey {
+        dependency_key: dependency_key.to_owned(),
+        source_path: source_path.to_owned(),
+        namespace: Vec::new(),
+        kind: nyar_language::DeclarationKind::Micro,
+        owner: None,
+        name: name.to_owned(),
+    }
+}
+
 fn compile_snapshot(groups: &[CompilerSourceGroup], output_dir: &Path) -> Result<nyar_language::CompilerArtifactReport> {
     compile_snapshot_with_bindings(groups, output_dir, &[])
 }
@@ -162,7 +173,10 @@ fn selected_host_provider_rewrites_contract_calls_in_snapshot_closure() {
     let report = compile_snapshot_with_bindings(
         &groups,
         &output,
-        &[nyar_language::CompilerHostProviderBinding { contract: "demo::write".into(), symbol: "adaptor::write".into() }],
+        &[nyar_language::CompilerHostProviderBinding {
+            contract: micro_declaration("demo", "demo.v", "write"),
+            provider: micro_declaration("adaptor", "adaptor.v", "write"),
+        }],
     )
     .expect("Resolver 选定的 host provider 必须进入 Compiler 合同");
     assert!(!report.driver.artifacts.artifacts.is_empty(), "host contract 闭合后必须生成产物");

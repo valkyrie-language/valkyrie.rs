@@ -296,8 +296,12 @@ fn expected_resolver_compile_evidence(plan: &BuildPlan) -> Result<CompileEvidenc
         .project
         .selected_host_providers
         .iter()
-        .map(|provider| nyar_language::CompilerHostProviderBinding { contract: provider.contract.clone(), symbol: provider.symbol.clone() })
-        .collect::<Vec<_>>();
+        .map(|provider| {
+            let contract =
+                provider.contract_key.clone().ok_or_else(|| miette!("选中的 host provider `{}` 缺少契约声明身份", provider.symbol))?;
+            Ok(nyar_language::CompilerHostProviderBinding { contract, provider: provider.key.clone() })
+        })
+        .collect::<Result<Vec<_>>>()?;
     Ok(expected_resolver_compile_evidence_from_groups(&groups, &host_bindings, compile_arch(plan)))
 }
 
