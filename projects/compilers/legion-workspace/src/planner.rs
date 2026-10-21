@@ -518,6 +518,19 @@ impl WorkspaceResolver {
         self.projects.keys().cloned().collect()
     }
 
+    /// 发行版默认携带的 SDK：由 planner 注入当前构建的有效依赖闭包。
+    ///
+    /// 只识别 `sdk_vendor.kind == "distribution-default"` 元数据；不按包名、
+    /// 目录名前缀或 target 名称猜测。`std` 不再反向依赖各 adaptor，adaptor
+    /// 自身显式依赖 `std`，因此依赖方向与可见性一致。
+    fn distribution_default_sdk_names(&self) -> BTreeSet<String> {
+        self.projects
+            .values()
+            .filter(|manifest| manifest.sdk_vendor.as_ref().and_then(|vendor| vendor.kind.as_deref()) == Some("distribution-default"))
+            .map(|manifest| manifest.name.clone())
+            .collect()
+    }
+
     /// 当前路径是否为仅有 `legions.von`、没有 `legion.von` 的 workspace 根目录。
     pub fn is_workspace_only_root(&self, project_dir: &Path) -> bool {
         self.workspace_manifest.is_some() && same_path(project_dir, &self.root_dir) && !self.root_dir.join("legion.von").exists()
@@ -544,13 +557,13 @@ impl WorkspaceResolver {
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target })?;
 
-        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target, true)?;
         let output_dir = request.output_dir.clone().unwrap_or_else(|| default_dist_output_dir(&project_dir, &request.target));
 
         // 收集源码闭包：包含项目自身及其所有依赖（含传递依赖）的源文件。
         // 这是模块系统的核心：让编译器能看到依赖项目定义的 struct/function/type。
         let mut visited = BTreeSet::new();
-        let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited)?;
+        let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited, true)?;
         let semantic_source_groups = self.collect_semantic_source_groups(&project_dir, manifest, &build_target)?;
         let host_inventory = collect_host_inventory(&semantic_source_groups, &build_target.publish)?;
 
@@ -604,12 +617,12 @@ impl WorkspaceResolver {
             .unwrap_or_else(|| BuildTargetSpec { target: request.target.clone(), ..BuildTargetSpec::default() });
         build_target.target = request.target.clone();
 
-        let dependencies = self.collect_dependencies(&project_dir, &manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, &manifest, &build_target, true)?;
         let output_dir =
             request.output_dir.clone().unwrap_or_else(|| project_dir.join(".cache").join("test").join(request.target.as_canonical_str()));
 
         let mut visited = BTreeSet::new();
-        let mut source_files = self.collect_source_closure(&project_dir, &manifest, &build_target, &mut visited)?;
+        let mut source_files = self.collect_source_closure(&project_dir, &manifest, &build_target, &mut visited, true)?;
         let mut test_files = collect_test_v_files(&project_dir)?;
         source_files.append(&mut test_files);
         source_files.sort();
@@ -656,6 +669,7 @@ impl WorkspaceResolver {
         manifest: &ProjectManifest,
         build_target: &BuildTargetSpec,
         visited: &mut BTreeSet<String>,
+        inject_distribution_defaults: bool,
     ) -> Result<Vec<PathBuf>, PlannerError> {
         let canonical_dir = canonicalize_lossy(project_dir);
         let visit_key = project_visit_key(&canonical_dir);
@@ -690,12 +704,14 @@ impl WorkspaceResolver {
         for implicit in &implicit_names {
             dep_names.insert(implicit.clone());
         }
+        let distribution_defaults = if inject_distribution_defaults { self.distribution_default_sdk_names() } else { BTreeSet::new() };
+        add_distribution_default_dependencies(manifest, &distribution_defaults, &mut dep_names);
 
         // 递归收集每个依赖的源文件。
         for dep_name in dep_names {
             let local_manifest_dir = self.projects_by_name.get(&dep_name).cloned();
             let dependency_spec = manifest.dependencies.get(&dep_name);
-            let allow_missing_when_auto = implicit_names.contains(&dep_name);
+            let allow_missing_when_auto = implicit_names.contains(&dep_name) || distribution_defaults.contains(&dep_name);
             let overrides = merged_local_dependency_overrides(project_dir);
             let (effective_spec, path_base) = effective_dependency_spec(&dep_name, dependency_spec, &overrides, project_dir);
             match resolve_dependency_source(
@@ -713,7 +729,7 @@ impl WorkspaceResolver {
                         if !dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
                             continue;
                         }
-                        let dep_files = self.collect_source_closure(&dep_dir, &dep_manifest, build_target, visited)?;
+                        let dep_files = self.collect_source_closure(&dep_dir, &dep_manifest, build_target, visited, false)?;
                         all_files.extend(dep_files);
                     }
                 }
@@ -722,7 +738,7 @@ impl WorkspaceResolver {
                         self.install_registry_dependency(self.root_dir.as_path(), &dep_name, &version, &registry, &manifest.name)?;
                     if let Some(dep_manifest) = self.load_project_manifest_from_dir(&install_dir) {
                         if dependency_supports_source_context(&dep_name, &dep_manifest, &build_target.target, &build_target.publish) {
-                            let dep_files = self.collect_source_closure(&install_dir, &dep_manifest, build_target, visited)?;
+                            let dep_files = self.collect_source_closure(&install_dir, &dep_manifest, build_target, visited, false)?;
                             all_files.extend(dep_files);
                         }
                     }
@@ -780,7 +796,9 @@ impl WorkspaceResolver {
         if !visited.insert(visit_key) {
             return Ok(());
         }
-        let dependencies = self.collect_dependencies(project_dir, manifest, build_target)?;
+        // 发行版默认 SDK 只注入当前构建根的有效依赖闭包；依赖自身不再携带
+        // 反向 adaptor 边，否则 `std` 与其 adaptor 会形成可见性环。
+        let dependencies = self.collect_dependencies(project_dir, manifest, build_target, depth == 0)?;
         for dependency in &dependencies {
             let dependency_manifest = self
                 .load_project_manifest_from_dir(&dependency.manifest_dir)
@@ -816,11 +834,11 @@ impl WorkspaceResolver {
         let build_target = select_build_target(manifest, &request.target)
             .ok_or_else(|| PlannerError::MissingBuildTarget { project: manifest.name.clone(), target: request.target.clone() })?;
 
-        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target)?;
+        let dependencies = self.collect_dependencies(&project_dir, manifest, &build_target, true)?;
         let output_dir = request.output_dir.clone().unwrap_or_else(|| default_dist_output_dir(&project_dir, &request.target));
 
         let mut visited = BTreeSet::new();
-        let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited)?;
+        let source_files = self.collect_source_closure(&project_dir, manifest, &build_target, &mut visited, true)?;
         let semantic_source_groups = self.collect_semantic_source_groups(&project_dir, manifest, &build_target)?;
         let host_inventory = collect_host_inventory(&semantic_source_groups, &build_target.publish)?;
 
@@ -853,6 +871,7 @@ impl WorkspaceResolver {
         project_manifest_dir: &Path,
         manifest: &ProjectManifest,
         build_target: &BuildTargetSpec,
+        inject_distribution_defaults: bool,
     ) -> Result<Vec<PlannedDependency>, PlannerError> {
         let mut planned = Vec::new();
         let mut names = BTreeSet::new();
@@ -874,11 +893,13 @@ impl WorkspaceResolver {
         for implicit in &implicit_names {
             names.insert(implicit.clone());
         }
+        let distribution_defaults = if inject_distribution_defaults { self.distribution_default_sdk_names() } else { BTreeSet::new() };
+        add_distribution_default_dependencies(manifest, &distribution_defaults, &mut names);
 
         for dependency_name in names {
             let local_manifest_dir = self.projects_by_name.get(&dependency_name).cloned();
             let dependency_spec = declared_specs.get(&dependency_name);
-            let allow_missing_when_auto = implicit_names.contains(&dependency_name);
+            let allow_missing_when_auto = implicit_names.contains(&dependency_name) || distribution_defaults.contains(&dependency_name);
             let overrides = merged_local_dependency_overrides(project_manifest_dir);
             let (effective_spec, path_base) = effective_dependency_spec(&dependency_name, dependency_spec, &overrides, project_manifest_dir);
 
@@ -1544,6 +1565,27 @@ fn implicit_sdk_dependencies(publish: &[String]) -> Vec<&'static str> {
         deps.push("unity.engine.sdk");
     }
     deps
+}
+
+/// 把发行版默认 SDK 并入根工程的候选依赖集合。
+///
+/// 排除工程自身（默认 SDK 不应依赖自己），并尊重显式 `Disabled`：显式禁用
+/// 是装配层的收窄事实，不能被默认注入覆盖。是否真正进入闭包仍由后续
+/// target / publish / sdk-vendor 过滤决定。
+fn add_distribution_default_dependencies(
+    manifest: &ProjectManifest,
+    defaults: &BTreeSet<String>,
+    names: &mut BTreeSet<String>,
+) {
+    for default_name in defaults {
+        if default_name == &manifest.name {
+            continue;
+        }
+        if matches!(manifest.dependencies.get(default_name), Some(DependencySpec::Disabled)) {
+            continue;
+        }
+        names.insert(default_name.clone());
+    }
 }
 
 fn manifest_supports_target(manifest: &ProjectManifest, target: &CanonicalTarget) -> bool {

@@ -919,6 +919,140 @@ fn filters_and_injects_sdk_vendor_by_publish_format() {
 }
 
 #[test]
+fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
+    let temp_dir = Builder::new().prefix("legion-distribution-default").tempdir().unwrap();
+    let root = temp_dir.path();
+    let app_dir = root.join("app");
+
+    fs::write(
+        root.join("legions.von"),
+        r#"{
+    name: "distribution-default-workspace",
+    members: [
+        "app",
+        "core",
+        "std",
+        "std.adaptor.demo",
+        "std.adaptor.disabled",
+        "std.adaptor.clr"
+    ]
+}
+"#,
+    )
+    .unwrap();
+
+    write_workspace_project(
+        root,
+        "app",
+        r#"{
+    name: "app",
+    dependencies: {
+        "std": "workspace",
+        "std.adaptor.disabled": false
+    },
+    build: [{ target: "nyar" }]
+}
+"#,
+        &[("source/main.v", "micro main() -> i64 { return 0; }\n")],
+    );
+    write_workspace_project(
+        root,
+        "core",
+        r#"{
+    name: "core",
+    build: [{ target: "nyar" }]
+}
+"#,
+        &[("source/_.v", "namespace core;\n")],
+    );
+    write_workspace_project(
+        root,
+        "std",
+        r#"{
+    name: "std",
+    dependencies: {},
+    build: [{ target: "nyar" }]
+}
+"#,
+        &[("source/_.v", "namespace std;\n")],
+    );
+    write_workspace_project(
+        root,
+        "std.adaptor.demo",
+        r#"{
+    name: "std.adaptor.demo",
+    dependencies: {
+        "core": "workspace",
+        "std": "workspace"
+    },
+    sdk_vendor: {
+        kind: "distribution-default",
+        targets: ["nyar"]
+    },
+    build: [{ target: "nyar" }]
+}
+"#,
+        &[("source/_.v", "namespace std.adaptor.demo;\n")],
+    );
+    write_workspace_project(
+        root,
+        "std.adaptor.disabled",
+        r#"{
+    name: "std.adaptor.disabled",
+    sdk_vendor: {
+        kind: "distribution-default",
+        targets: ["nyar"]
+    },
+    build: [{ target: "nyar" }]
+}
+"#,
+        &[("source/_.v", "namespace std.adaptor.disabled;\n")],
+    );
+    write_workspace_project(
+        root,
+        "std.adaptor.clr",
+        r#"{
+    name: "std.adaptor.clr",
+    sdk_vendor: {
+        kind: "distribution-default",
+        targets: ["clr-microsoft-unknown-managed"]
+    },
+    build: [{ target: "clr-microsoft-unknown-managed" }]
+}
+"#,
+        &[("source/_.v", "namespace std.adaptor.clr;\n")],
+    );
+
+    let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
+    let plan = workspace
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("nyar").unwrap(), output_dir: None })
+        .unwrap();
+
+    let dependency_names = plan.project.dependencies.iter().map(|dependency| dependency.name.as_str()).collect::<Vec<_>>();
+    assert!(dependency_names.contains(&"std.adaptor.demo"), "matching default adaptor must be injected: {dependency_names:?}");
+    assert!(!dependency_names.contains(&"std.adaptor.disabled"), "explicit Disabled must not be overridden: {dependency_names:?}");
+    assert!(!dependency_names.contains(&"std.adaptor.clr"), "non-matching target default must stay out: {dependency_names:?}");
+
+    let group_index = |key: &str| {
+        plan.project
+            .semantic_source_groups
+            .iter()
+            .position(|group| group.dependency_key == key)
+            .unwrap_or_else(|| panic!("missing semantic group `{key}`"))
+    };
+    let std_group = &plan.project.semantic_source_groups[group_index("std")];
+    assert!(
+        !std_group.direct_dependencies.iter().any(|dependency| dependency.starts_with("std.adaptor.")),
+        "std must not depend back on adaptors: {:?}",
+        std_group.direct_dependencies
+    );
+
+    let demo_group = &plan.project.semantic_source_groups[group_index("std.adaptor.demo")];
+    assert!(demo_group.direct_dependencies.contains(&"std".to_string()), "adaptor must declare std visibility: {:?}", demo_group.direct_dependencies);
+    assert!(group_index("std") < group_index("std.adaptor.demo"), "std must be lowered before its adaptor");
+}
+
+#[test]
 fn unity_player_injects_sdk_and_prefers_unity_host_providers() {
     let temp_dir = Builder::new().prefix("legion-unknown-wasm32-player").tempdir().unwrap();
     let root = temp_dir.path();
