@@ -10,7 +10,7 @@ use oak_awsl::widget_name_from_stem;
 use crate::{
     awsl::{LoweringOptions, compile_awsl_source},
     codegen::{IslandPackageOptions, asgard_boot_script_tag, asgard_boot_stylesheet_tag, build_awsl_wasm_source, package_browser_islands},
-    compile::{append_generated_source, resolve_project_source_groups},
+    compile::{GeneratedSource, resolve_project_source_groups},
     ssg::project::{read_project_source, valkyrie_v_roots},
     wasm::{compile_wasm_bundle, copy_wasm_artifacts_to_dist},
 };
@@ -58,8 +58,8 @@ pub fn emit_report_chart_islands(
     let wasm_stem = module_stem.replace('.', "-");
     let awsl_v = build_awsl_wasm_source(&components);
     let resolved = resolve_project_source_groups(project_dir, &CanonicalTarget::wasm())?;
-    let source_groups = append_generated_source(&resolved, &awsl_v)?;
-    let wasm_built = match compile_wasm_bundle(&source_groups, output_dir, module_stem, &CanonicalTarget::wasm()) {
+    let generated = GeneratedSource { producer: "asgard.awsl.report-island", source: &awsl_v };
+    let wasm_built = match compile_wasm_bundle(&resolved.groups, generated, output_dir, module_stem, &CanonicalTarget::wasm()) {
         Ok(report) => {
             copy_wasm_artifacts_to_dist(output_dir, &report).wrap_err("报告图表岛 WASM 产物复制失败")?;
             true

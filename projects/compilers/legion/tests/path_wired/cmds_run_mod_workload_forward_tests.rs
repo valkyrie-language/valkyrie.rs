@@ -110,6 +110,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
             semantic_closure_hash: expected.semantic_closure_hash.clone(),
             canonical_surface_hash: String::new(),
             host_provider_binding_hash: "stale-host-provider-hash".into(),
+            generated_source_hash: String::new(),
         }),
     };
     assert!(!manifest.is_fresh_for_plan(&plan).expect("freshness check"), "stale host provider evidence must invalidate execution manifest");
@@ -122,6 +123,7 @@ fn write_test_compile_evidence(output_dir: &Path, digest: &CompileEvidenceDigest
         semantic_closure_hash: digest.semantic_closure_hash.clone(),
         canonical_surface_hash: digest.canonical_surface_hash.clone(),
         host_provider_binding_hash: digest.host_provider_binding_hash.clone(),
+        generated_source_hash: digest.generated_source_hash.clone(),
     };
     let content = crate::write_von_indented(&evidence).expect("serialize compile evidence");
     fs::write(output_dir.join(COMPILE_EVIDENCE_FILE_NAME), content).expect("write compile evidence");
@@ -202,6 +204,7 @@ fn is_fresh_rejects_stale_semantic_closure_compile_evidence() {
         semantic_closure_hash: "stale-semantic-closure-hash".into(),
         canonical_surface_hash: "canonical-surface-digest".into(),
         host_provider_binding_hash: expected.host_provider_binding_hash,
+        generated_source_hash: String::new(),
     };
     write_test_compile_evidence(&plan.output_dir, &evidence);
     let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
@@ -216,6 +219,7 @@ fn is_fresh_accepts_matching_compile_evidence_sidecar() {
         semantic_closure_hash: expected.semantic_closure_hash,
         canonical_surface_hash: "canonical-surface-digest".into(),
         host_provider_binding_hash: expected.host_provider_binding_hash,
+        generated_source_hash: String::new(),
     };
     write_test_compile_evidence(&plan.output_dir, &evidence);
     let manifest = sample_execution_manifest(&plan, &artifact_path, evidence);
@@ -233,6 +237,7 @@ fn is_fresh_rejects_mismatched_compile_evidence_sidecar() {
         semantic_closure_hash: expected.semantic_closure_hash,
         canonical_surface_hash: "canonical-surface-digest".into(),
         host_provider_binding_hash: expected.host_provider_binding_hash,
+        generated_source_hash: String::new(),
     };
     write_test_compile_evidence(
         &plan.output_dir,

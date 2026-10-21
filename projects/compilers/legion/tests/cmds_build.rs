@@ -64,19 +64,21 @@ fn builds_cross_file_nyar_vm_project_and_prefers_main_entry() {
         r#"{
             target: "nyar-vm"
         }"#,
-        r#"namespace app {
+        // 入口注解必须直接落在 micro 声明上；namespace body 内的 `[main]` 归 namespace，
+        // 不构成声明入口身份，因此这里使用文件级 namespace。
+        r#"namespace app;
+
 [main]
-micro main() -> i64 {
-    return app::add_one(41)
-}
+micro main() -> bool {
+    return app::identity(true)
 }
 "#,
     );
     fs::write(
         fixture.project_dir.join("source").join("helper.v"),
         r#"namespace app {
-micro add_one(x: i64) -> i64 {
-    return x + 1
+micro identity(x: bool) -> bool {
+    return x
 }
 }
 "#,
@@ -106,7 +108,9 @@ micro add_one(x: i64) -> i64 {
     assert_eq!(manifest.bytecode_format_version, nyar_bytecode::BYTECODE_FORMAT_VERSION);
     assert!(
         manifest.run_contracts.iter().any(|contract| {
-            contract.logical_entry == "main" || contract.logical_entry.rsplit_once('.').is_some_and(|(_, tail)| tail == "main")
+            contract.logical_entry == "main"
+                || contract.logical_entry.rsplit("::").next() == Some("main")
+                || contract.logical_entry.rsplit('.').next() == Some("main")
         }),
         "expected main logical entry, got {:?}",
         manifest.run_contracts

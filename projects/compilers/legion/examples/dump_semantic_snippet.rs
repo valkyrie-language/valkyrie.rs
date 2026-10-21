@@ -30,7 +30,8 @@ fn main() {
     else {
         panic!("group index {} out of range (len={})", group_index, groups.len());
     };
-    let source = &group.source;
+    // 源码组由多个文件组成；调试片段按文件顺序拼接，偏移相对拼接结果。
+    let source = group.sources.iter().map(|file| file.source.as_str()).collect::<Vec<_>>().join("\n");
     eprintln!("group {} key={} len={}", group_index, group.dependency_key, source.len());
     if offset >= source.len() {
         panic!("offset {} out of range for group len {}", offset, source.len());
@@ -45,7 +46,7 @@ fn main() {
         let end = source.ceil_char_boundary((probe + 40).min(source.len()));
         eprintln!("--- @{}:\n{}\n", probe, &source[start..end]);
     }
-    match nyar_language::valkyrie::frontend::parse_source(source) {
+    match nyar_language::valkyrie::frontend::parse_source(&source) {
         Ok(root) => eprintln!("parse ok items={}", root.items.len()),
         Err(error) => eprintln!("parse err: {:?}", error),
     }

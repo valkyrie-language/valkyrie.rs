@@ -55,9 +55,10 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
         staged_sources.push((group, sources));
     }
 
-    // 装配层只验证工程入口位置并读取文件；语义索引、选择和摘要属于 Compiler。
-    if groups.iter().filter(|group| group.is_entry).count() != 1 || !groups.last().is_some_and(|group| group.is_entry) {
-        return Err(miette!("源码快照必须按依赖顺序提供，且唯一入口位于最后"));
+    // 装配层只验证存在显式入口组并读取文件；入口数量、依赖拓扑与语义索引属于 Compiler。
+    // 独立生成源码组会在 Asgard 装配层作为显式入口追加，不能被这里限制成「唯一入口且位于最后」。
+    if !groups.iter().any(|group| group.is_entry) {
+        return Err(miette!("源码快照缺少显式入口组"));
     }
 
     let mut compiler_groups = Vec::with_capacity(groups.len());
@@ -67,6 +68,7 @@ pub fn compile_source_snapshot(groups: &[PlannedSemanticSourceGroup]) -> Result<
             name: group.name.clone(),
             sources,
             direct_dependencies: group.direct_dependencies.clone(),
+            is_entry: group.is_entry,
         });
     }
     Ok(compiler_groups)

@@ -6,7 +6,7 @@ use miette::Result;
 use nyar_language::{CanonicalTarget, CompilerSourceGroup};
 
 use crate::{
-    compile::{HostArtifactKind, compile_v_bundle},
+    compile::{GeneratedSource, HostArtifactKind, compile_v_bundle},
     host_backend::HostBackend,
 };
 
@@ -19,14 +19,15 @@ pub struct WasmCompileReport {
     pub glue_filename: String,
 }
 
-/// 将已解析的源码组编译为 WASM + glue。
+/// 将已解析的源码组与独立生成源码编译为 WASM + glue。
 pub fn compile_wasm_bundle(
     source_groups: &[CompilerSourceGroup],
+    generated: GeneratedSource<'_>,
     output_dir: &Path,
     module_name: &str,
     target: &CanonicalTarget,
 ) -> Result<WasmCompileReport> {
-    let report = compile_v_bundle(source_groups, output_dir, module_name, target, HostBackend::BrowserDom)?;
+    let report = compile_v_bundle(source_groups, generated, output_dir, module_name, target, HostBackend::BrowserDom)?;
     if report.kind != HostArtifactKind::Wasm {
         return Err(miette::miette!("预期 WASM 制品"));
     }

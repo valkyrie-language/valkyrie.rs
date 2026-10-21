@@ -395,6 +395,7 @@ pub fn find_asgard_native_section(container: &[u8]) -> Option<&[u8]> {
     crate::codegen::section_framing::find_native_section(container)
 }
 
+/// 构造内嵌 UI 段的测试用 DEX 容器。
 #[cfg(test)]
 pub fn dex_with_embedded_ui(components: &[LoweredComponent]) -> Vec<u8> {
     let mut dex_builder = acorn_dex::dex::DexImageBuilder::new();
@@ -404,6 +405,7 @@ pub fn dex_with_embedded_ui(components: &[LoweredComponent]) -> Vec<u8> {
     dex
 }
 
+/// 构造内嵌 UI 段的测试用宿主可执行容器。
 #[cfg(test)]
 pub fn host_executable_with_embedded_ui(platform: &str, components: &[LoweredComponent]) -> Vec<u8> {
     let builder = acorn_mach_o::mach_o::MachOImageBuilder::new();

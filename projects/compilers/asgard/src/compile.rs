@@ -8,7 +8,8 @@ use legion_workspace::{
 };
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nyar_language::{
-    CanonicalTarget, CompilerBuildContext, CompilerSourceFile, CompilerSourceGroup, compile_source_groups_to_artifacts, nyar::ArtifactKind,
+    CanonicalTarget, CompilerBuildContext, CompilerSourceFile, CompilerSourceGroup, CompilerSourceInput, GeneratedSourceGroup,
+    compile_source_groups_to_artifacts, nyar::ArtifactKind,
 };
 
 use crate::{
@@ -58,22 +59,42 @@ pub fn resolve_project_source_groups(project_dir: &Path, target: &CanonicalTarge
     Ok(ResolvedCompilerSources { project_name, groups })
 }
 
-/// 将编译器生成的显式源码附着到已解析的应用组。
-pub fn append_generated_source(sources: &ResolvedCompilerSources, generated_source: &str) -> Result<Vec<CompilerSourceGroup>> {
-    let mut groups = sources.groups.clone();
-    let application = groups
-        .iter_mut()
-        .find(|group| group.dependency_key == sources.project_name)
-        .ok_or_else(|| miette::miette!("源码快照缺少应用组 `{}`", sources.project_name))?;
-    if !generated_source.trim().is_empty() {
-        application.sources.push(CompilerSourceFile { path: "generated/awsl.v".into(), source: format!("{generated_source}\n") });
-    }
-    Ok(groups)
+/// 独立生成源码：唯一生成器身份与生成文本。
+///
+/// 生成文本由 Asgard 从 AWSL 降低产生，作为 Compiler 的独立生成输入参与闭包；
+/// 它不会写回应用源码组，也不会在 Compiler 内部被再次拼接或重解析。
+#[derive(Debug, Clone, Copy)]
+pub struct GeneratedSource<'a> {
+    /// 生成器稳定身份；进入 Compiler 证据与 freshness 比对。
+    pub producer: &'a str,
+    /// 生成源码文本。
+    pub source: &'a str,
 }
 
-/// 将已解析的源码组编译为宿主制品。
+/// 把应用源码组与生成源码组合成 Compiler 的完整输入。
+///
+/// 生成组显式入口，并只依赖本工程的入口组：生成代码可以看到应用源码的声明，
+/// 但不会获得依赖包的额外可见性。
+fn compiler_input_for(source_groups: &[CompilerSourceGroup], generated: GeneratedSource<'_>) -> Result<CompilerSourceInput> {
+    let entry_keys = source_groups.iter().filter(|group| group.is_entry).map(|group| group.dependency_key.clone()).collect::<Vec<_>>();
+    if entry_keys.is_empty() {
+        return Err(miette::miette!("源码快照缺少应用入口组，无法挂接生成源码"));
+    }
+    let group = CompilerSourceGroup {
+        dependency_key: "asgard.generated".into(),
+        name: "asgard.generated".into(),
+        sources: vec![CompilerSourceFile { path: "asgard/generated.v".into(), source: generated.source.into() }],
+        direct_dependencies: entry_keys,
+        is_entry: true,
+    };
+    let generated = GeneratedSourceGroup::new(generated.producer, group).map_err(|error| miette::miette!("生成源码输入失败: {error}"))?;
+    CompilerSourceInput::with_generated(source_groups.to_vec(), vec![generated]).map_err(|error| miette::miette!("生成源码输入失败: {error}"))
+}
+
+/// 将已解析的源码组与独立生成源码编译为宿主制品。
 pub fn compile_v_bundle(
     source_groups: &[CompilerSourceGroup],
+    generated: GeneratedSource<'_>,
     output_dir: &Path,
     module_name: &str,
     target: &CanonicalTarget,
@@ -88,9 +109,10 @@ pub fn compile_v_bundle(
         nyar_language::nyar::ClrSuspendStrategy::default(),
         nyar_emitter::nyar_backend_wasi::WasmPackageKind::Binary,
     );
+    let input = compiler_input_for(source_groups, generated)?;
     let artifact = compile_source_groups_to_artifacts(
         &compiler,
-        &source_groups,
+        &input,
         &build_context,
         output_dir,
         module_name,

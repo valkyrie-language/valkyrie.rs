@@ -7,15 +7,17 @@ use std::{fs, path::Path};
 use tempfile::tempdir;
 
 #[test]
-fn compiler_does_not_treat_comment_examples_or_file_length_as_language_errors() {
+fn unindexable_entry_source_does_not_become_a_silent_empty_program() {
     let directory = tempdir().expect("创建源码目录");
-    let mut source = "// 锟斤拷 Ã© â€™ `r`n \u{fffd}\n".repeat(5000);
-    source.push_str("[main] micro main() -> i32 { return 23 }");
+    // 只有维护性文本、没有可索引入口声明的入口组必须结构化失败。
+    // 旧行为把入口组整文件下沉，会静默编译出一个没有程序入口的空模块。
+    let source = "// 锟斤拷 Ã© â€™ `r`n \u{fffd}\n".repeat(5000);
     let group = source_group(directory.path(), "application", &source, &[], true);
-    let groups = compile_source_snapshot(&[group]).expect("保留输入原文");
+    let groups = compile_source_snapshot(&[group]).expect("Resolver 保留输入原文");
     let output = directory.path().join("output");
     fs::create_dir_all(&output).expect("创建产物目录");
-    compile_snapshot(&groups, &output).expect("维护性文本规则不参与编译合法性");
+    let error = compile_snapshot(&groups, &output).expect_err("入口组缺少显式入口必须结构化失败");
+    assert!(error.to_string().contains("declares no `[export]` or `[main]` entry"), "{error}");
 }
 
 #[test]
@@ -63,7 +65,7 @@ fn compile_snapshot_with_bindings(
     .with_selected_host_providers(host_bindings.to_vec());
     nyar_language::compile_source_groups_to_artifacts(
         &nyar_language::ValkyrieCompiler::default(),
-        groups,
+        &nyar_language::CompilerSourceInput::application(groups.to_vec()),
         &build_context,
         output_dir,
         "application",
@@ -75,7 +77,7 @@ fn compile_snapshot_with_bindings(
 #[test]
 fn single_group_keeps_resolver_identity() {
     let directory = tempdir().expect("创建源码目录");
-    let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &[], true);
+    let group = source_group(directory.path(), "application", "[main] micro main() -> bool { return true }", &[], true);
     let groups = compile_source_snapshot(&[group]).expect("Resolver 形成完整源码组");
     assert_eq!(groups[0].dependency_key, "application");
     assert_eq!(groups[0].name, "application");
@@ -91,8 +93,8 @@ fn single_group_keeps_resolver_identity() {
 #[test]
 fn dependency_groups_link_from_current_source() {
     let directory = tempdir().expect("创建源码目录");
-    let dependency = source_group(directory.path(), "library", "micro answer() -> i32 { return 1 }", &[], false);
-    let application = source_group(directory.path(), "application", "[main] micro main() -> i32 { return answer() }", &["library"], true);
+    let dependency = source_group(directory.path(), "library", "micro answer() -> bool { return true }", &[], false);
+    let application = source_group(directory.path(), "application", "[main] micro main() -> bool { return answer() }", &["library"], true);
     let groups = compile_source_snapshot(&[dependency, application]).expect("Resolver 形成完整源码组");
     assert_eq!(groups[1].direct_dependencies, ["library"]);
     assert_eq!(groups[0].dependency_key, "library");
@@ -105,7 +107,7 @@ fn dependency_groups_link_from_current_source() {
 #[test]
 fn changed_source_is_not_replaced_by_a_previous_success() {
     let directory = tempdir().expect("创建源码目录");
-    let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &[], true);
+    let group = source_group(directory.path(), "application", "[main] micro main() -> bool { return true }", &[], true);
     let output = directory.path().join("output");
     fs::create_dir_all(&output).expect("创建产物目录");
     let groups = compile_source_snapshot(std::slice::from_ref(&group)).expect("Resolver 形成完整源码组");
@@ -118,7 +120,7 @@ fn changed_source_is_not_replaced_by_a_previous_success() {
 #[test]
 fn unresolved_dependency_does_not_flatten_the_source_closure() {
     let directory = tempdir().expect("创建源码目录");
-    let group = source_group(directory.path(), "application", "[main] micro main() -> i32 { return 23 }", &["missing"], true);
+    let group = source_group(directory.path(), "application", "[main] micro main() -> bool { return true }", &["missing"], true);
     let groups = compile_source_snapshot(&[group]).expect("Resolver 形成完整源码组");
     let output = directory.path().join("output");
     fs::create_dir_all(&output).expect("创建产物目录");
@@ -129,7 +131,7 @@ fn unresolved_dependency_does_not_flatten_the_source_closure() {
 #[test]
 fn missing_source_file_fails_instead_of_compiling_a_partial_group() {
     let directory = tempdir().expect("创建源码目录");
-    let mut group = source_group(directory.path(), "application", "micro main() -> i32 { return 23 }", &[], true);
+    let mut group = source_group(directory.path(), "application", "micro main() -> bool { return true }", &[], true);
     group.source_files.push(directory.path().join("missing.v"));
     let error = compile_source_snapshot(&[group]).expect_err("必须拒绝不完整源码组");
     assert!(error.to_string().contains("读取源码失败"), "{error}");
@@ -145,12 +147,12 @@ fn empty_snapshot_is_not_a_successful_program() {
 fn selected_host_provider_rewrites_contract_calls_in_snapshot_closure() {
     let directory = tempdir().expect("创建源码目录");
     let adaptor =
-        source_group(directory.path(), "adaptor", "[host_provider(demo.write)] micro write(value: i32) -> i32 { return value }", &[], false);
+        source_group(directory.path(), "adaptor", "[host_provider(demo.write)] micro write(value: bool) -> bool { return value }", &[], false);
     let application = source_group(
         directory.path(),
         "demo",
-        "[host_contract] micro write(value: i32) -> i32 { } \
- [main] micro main() -> i32 { return write(1) }",
+        "[host_contract] micro write(value: bool) -> bool { } \
+ [main] micro main() -> bool { return write(true) }",
         &["adaptor"],
         true,
     );
@@ -172,9 +174,9 @@ fn resolver_keeps_templates_and_compiler_expands_by_arch() {
     let directory = tempdir().expect("创建源码目录");
     let template = r#"<% match arch %>
 <% case "wasm32" %>
-[main] micro main() -> i32 { return 23 }
+[main] micro main() -> bool { return true }
 <% else %>
-[main] micro main() -> i32 { return 0 }
+[main] micro main() -> bool { return false }
 <% end %>"#;
     let group = source_group(directory.path(), "application", template, &[], true);
     let groups = compile_source_snapshot(&[group]).expect("Resolver 只拼接源码，不展开模板");
@@ -191,7 +193,7 @@ fn unreachable_dependency_inventory_syntax_error_does_not_block_entry_snapshot()
     let good = directory.path().join("library/good.v");
     let broken = directory.path().join("library/broken.v");
     fs::create_dir_all(good.parent().expect("library dir")).expect("创建依赖目录");
-    fs::write(&good, "micro answer() -> i32 { return 23 }").expect("写入可达依赖源码");
+    fs::write(&good, "micro answer() -> bool { return true }").expect("写入可达依赖源码");
     fs::write(&broken, "micro broken() { value = }").expect("写入不可达坏依赖源码");
     let dependency = PlannedSemanticSourceGroup {
         dependency_key: "library".into(),
@@ -202,7 +204,7 @@ fn unreachable_dependency_inventory_syntax_error_does_not_block_entry_snapshot()
         is_entry: false,
     };
     let application_file = directory.path().join("application.v");
-    fs::write(&application_file, "[main] micro main() -> i32 { return answer() }").expect("写入入口源码");
+    fs::write(&application_file, "[main] micro main() -> bool { return answer() }").expect("写入入口源码");
     let application = PlannedSemanticSourceGroup {
         dependency_key: "application".into(),
         name: "application".into(),

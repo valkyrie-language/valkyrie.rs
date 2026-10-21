@@ -28,10 +28,12 @@ pub fn build_awsl_host_source(components: &[LoweredComponent]) -> String {
 pub fn build_awsl_terminal_source(components: &[LoweredComponent]) -> String {
     let mut out = terminal_prelude();
     out.push_str("namespace std.terminal;\n\n");
+    let mut generated = String::new();
     for component in components {
-        out.push_str(&render_terminal_component_v(component));
-        out.push('\n');
+        generated.push_str(&render_terminal_component_v(component));
+        generated.push('\n');
     }
+    push_host_callable_micros(&mut out, &generated);
     out
 }
 
@@ -39,17 +41,33 @@ pub fn build_awsl_terminal_source(components: &[LoweredComponent]) -> String {
 pub fn build_awsl_mp_source(components: &[LoweredComponent]) -> String {
     let mut out = String::from(MP_SIG_PRELUDE);
     out.push_str("micro awsl_key_none(): utf8 { return \"\" }\n\n");
+    let mut generated = String::new();
     for component in components {
-        emit_module_level_signal_slots(&mut out, component);
-        emit_mp_component_init(&mut out, component);
+        emit_module_level_signal_slots(&mut generated, component);
+        emit_mp_component_init(&mut generated, component);
         if !component.synthetic_v.trim().is_empty() {
-            out.push_str(&component.synthetic_v);
-            out.push('\n');
+            generated.push_str(&component.synthetic_v);
+            generated.push('\n');
         }
-        emit_component_call_wrappers(&mut out, component);
-        emit_mp_sig_value_exports(&mut out, component);
+        emit_component_call_wrappers(&mut generated, component);
+        emit_mp_sig_value_exports(&mut generated, component);
     }
+    push_host_callable_micros(&mut out, &generated);
     out
+}
+
+/// 生成源码的顶层 `micro` 是宿主 ABI 的一部分：JS / 原生宿主按名字直接调用，
+/// 因此每条都必须显式 `[export]`。缺注解时编译虽然成功，但调用会静默落空。
+///
+/// 只处理生成段，不处理静态 prelude：prelude 里的辅助函数不是宿主调用表面。
+fn push_host_callable_micros(out: &mut String, generated: &str) {
+    for line in generated.lines() {
+        if line.starts_with("micro ") {
+            out.push_str("[export]\n");
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
 }
 
 fn emit_module_level_signal_slots(out: &mut String, component: &LoweredComponent) {
@@ -87,18 +105,20 @@ fn build_awsl_source_with_prelude(components: &[LoweredComponent], dom_or_mobile
     let mut out = String::from(dom_or_mobile);
     out.push_str(reactive);
     out.push_str("micro awsl_key_none(): utf8 { return \"\" }\n\n");
+    let mut generated = String::new();
     for component in components {
-        emit_module_level_signal_slots(&mut out, component);
+        emit_module_level_signal_slots(&mut generated, component);
         if !component.synthetic_v.trim().is_empty() {
-            out.push_str(&component.synthetic_v);
-            out.push('\n');
+            generated.push_str(&component.synthetic_v);
+            generated.push('\n');
         }
-        emit_component_call_wrappers(&mut out, component);
-        emit_component_sig_exports(&mut out, component);
+        emit_component_call_wrappers(&mut generated, component);
+        emit_component_sig_exports(&mut generated, component);
         let script_body = script_lets_prelude(component);
-        out.push_str(&render_component_v(&component.route_name, &component.script_bindings, &script_body, &component.render_ir));
-        out.push('\n');
+        generated.push_str(&render_component_v(&component.route_name, &component.script_bindings, &script_body, &component.render_ir));
+        generated.push('\n');
     }
+    push_host_callable_micros(&mut out, &generated);
     out
 }
 

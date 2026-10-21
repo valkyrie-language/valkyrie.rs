@@ -95,6 +95,9 @@ pub struct CompileEvidenceDigest {
     pub canonical_surface_hash: String,
     /// 宿主提供者绑定哈希。
     pub host_provider_binding_hash: String,
+    /// 独立生成源码摘要；无生成输入时为空串。
+    #[serde(default)]
+    pub generated_source_hash: String,
 }
 
 impl From<&nyar_language::CompilerCompileEvidence> for CompileEvidenceDigest {
@@ -103,6 +106,7 @@ impl From<&nyar_language::CompilerCompileEvidence> for CompileEvidenceDigest {
             semantic_closure_hash: evidence.semantic_closure_hash.clone(),
             canonical_surface_hash: evidence.canonical_surface_hash.clone(),
             host_provider_binding_hash: evidence.host_provider_binding_hash.clone(),
+            generated_source_hash: evidence.generated_source_hash.clone(),
         }
     }
 }
@@ -256,6 +260,7 @@ impl ExecutionManifest {
         let expected = expected_resolver_compile_evidence(plan)?;
         if stored.semantic_closure_hash != expected.semantic_closure_hash
             || stored.host_provider_binding_hash != expected.host_provider_binding_hash
+            || stored.generated_source_hash != expected.generated_source_hash
         {
             return Ok(false);
         }
@@ -306,6 +311,7 @@ fn expected_resolver_compile_evidence_from_groups(
         semantic_closure_hash: nyar_language::semantic_closure_hash_for_groups(groups, arch),
         canonical_surface_hash: String::new(),
         host_provider_binding_hash: nyar_language::host_provider_binding_hash_for_bindings(host_bindings),
+        generated_source_hash: String::new(),
     }
 }
 

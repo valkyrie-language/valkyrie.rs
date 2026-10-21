@@ -264,7 +264,7 @@ pub fn compile_plan(plan: &BuildPlan, verbose: bool) -> Result<nyar_emitter::Dri
         );
     let artifact = compile_source_groups_to_artifacts(
         &nyar_language::ValkyrieCompiler::default(),
-        &source_groups,
+        &nyar_language::CompilerSourceInput::application(source_groups),
         &build_context,
         &plan.output_dir,
         &plan.project.name,

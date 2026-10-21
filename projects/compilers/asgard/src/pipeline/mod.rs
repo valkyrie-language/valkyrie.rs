@@ -12,10 +12,10 @@ use std::{
 use crate::{
     awsl::{LoweredComponent, LoweringOptions, ThemeRegistryOptions, compile_awsl_source, theme_registry_pass},
     codegen::{
-        IslandPackageOptions, build_awsl_host_source, build_awsl_mp_source, build_awsl_wasm_source, embed_asgard_ui_section,
-        encode_mobile_ui_package, generate_mp_runtime, maybe_build_tailwind_css, package_browser_islands,
+        IslandPackageOptions, build_awsl_host_source, build_awsl_mp_source, build_awsl_terminal_source, build_awsl_wasm_source,
+        embed_asgard_ui_section, encode_mobile_ui_package, generate_mp_runtime, maybe_build_tailwind_css, package_browser_islands,
     },
-    compile::{HostArtifactKind, append_generated_source, compile_v_bundle, resolve_project_source_groups},
+    compile::{GeneratedSource, HostArtifactKind, compile_v_bundle, resolve_project_source_groups},
     config::{UiConfig, VoaConfig},
     debug_sidecar::{should_emit_render_ir_sidecar, write_render_ir_sidecar},
     host::HostPlatform,
@@ -105,20 +105,19 @@ pub fn compile_voa_project(options: &CompileOptions) -> Result<CompileReport> {
     let wasm_stem = module_name.replace('.', "-");
 
     let wasm_built = if matches!(backend, HostBackend::BrowserDom | HostBackend::WechatMiniProgram) {
-        let awsl_v = if matches!(backend, HostBackend::WechatMiniProgram) {
-            build_awsl_mp_source(&components)
-        }
-        else {
-            build_awsl_wasm_source(&components)
-        };
         let target = match options.target.clone() {
             Some(target) => target,
             None => parse_target(&config.target)?,
         };
         let resolved = resolve_project_source_groups(&options.project_dir, &target)?;
-        let source_groups = append_generated_source(&resolved, &awsl_v)?;
-        let report = compile_wasm_bundle(&source_groups, &output_dir, &module_name, &target)
-            .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?;
+        // 生成源码按宿主选择：WASM 目标是显式入口组，不是应用源码的附加文件。
+        let (producer, generated_source) = match backend {
+            HostBackend::WechatMiniProgram => ("asgard.awsl.wechat-miniprogram", build_awsl_mp_source(&components)),
+            _ => ("asgard.awsl.browser-dom", build_awsl_wasm_source(&components)),
+        };
+        let report =
+            compile_wasm_bundle(&resolved.groups, GeneratedSource { producer, source: &generated_source }, &output_dir, &module_name, &target)
+                .wrap_err_with(|| format!("WASM 编译失败 (platform={})", config.platform))?;
         copy_wasm_artifacts_to_dist(&output_dir, &report)?;
         true
     }
@@ -350,23 +349,30 @@ fn compile_host_logic(
     module_name: &str,
     backend: HostBackend,
 ) -> Result<(Vec<u8>, HostArtifactKind)> {
-    let awsl_v = build_awsl_host_source(components);
     let target = match options.target.clone() {
         Some(target) => target,
         None => parse_target(&config.target)?,
     };
     let resolved = resolve_project_source_groups(&options.project_dir, &target)?;
-    let source_groups = append_generated_source(&resolved, &awsl_v)?;
     let target_str = format!("{target:?}");
     let backend_name = format!("{backend:?}");
     let scratch = output_dir.join(".asgard-build");
-    let report = compile_v_bundle(&source_groups, &scratch, module_name, &target, backend).wrap_err_with(|| {
-        format!(
-            "宿主编译失败: platform={}, target={}, backend={}. \
+    // 宿主逻辑同样由生成源码提供 UI 入口；终端走纯 V TUI，其余走原生 patch/event FFI。
+    let (producer, generated_source) = match backend {
+        HostBackend::Terminal => ("asgard.awsl.terminal", build_awsl_terminal_source(components)),
+        HostBackend::AndroidCompose => ("asgard.awsl.android-compose", build_awsl_host_source(components)),
+        HostBackend::IosSwiftUi => ("asgard.awsl.ios-swiftui", build_awsl_host_source(components)),
+        _ => ("asgard.awsl.desktop-native", build_awsl_host_source(components)),
+    };
+    let report =
+        compile_v_bundle(&resolved.groups, GeneratedSource { producer, source: &generated_source }, &scratch, module_name, &target, backend)
+            .wrap_err_with(|| {
+                format!(
+                    "宿主编译失败: platform={}, target={}, backend={}. \
              请检查 asgard.config.v target 与 legion.von 对齐，并确认 legion 后端可用。",
-            config.platform, target_str, backend_name
-        )
-    })?;
+                    config.platform, target_str, backend_name
+                )
+            })?;
     validate_host_logic_bytes(&report.artifact_bytes, &config.platform, &backend_name, &target_str, report.kind)?;
     Ok((report.artifact_bytes, report.kind))
 }

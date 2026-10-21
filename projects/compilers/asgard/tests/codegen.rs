@@ -95,7 +95,7 @@ fn blog_awsl_v_compiles_or_prints_error() {
     let mut components = Vec::new();
     collect_awsl_components(&source_root, &mut components);
     let v_source = build_awsl_wasm_source(&components);
-    let result = ValkyrieCompiler::default().compile_source_to_build_output(&v_source);
+    let result = ValkyrieCompiler::default().compile_source_to_program(&v_source);
     if let Err(error) = &result {
         eprintln!("AWSL V compile error: {error}");
         eprintln!("--- source tail ---\n{}", &v_source[v_source.len().saturating_sub(500)..]);
@@ -116,7 +116,7 @@ fn demo_todo_awsl_v_compiles_or_prints_error() {
     let mut components = Vec::new();
     collect_awsl_components(&source_root, &mut components);
     let v_source = build_awsl_wasm_source(&components);
-    let result = ValkyrieCompiler::default().compile_source_to_build_output(&v_source);
+    let result = ValkyrieCompiler::default().compile_source_to_program(&v_source);
     if let Err(error) = &result {
         eprintln!("AWSL V compile error: {error}");
         let snippet_start = 1000usize.min(v_source.len());
@@ -178,7 +178,7 @@ fn interactive_col_plot_v_compiles_or_prints_error() {
     let root = AwslParser::parse_root(&source).expect("parse");
     let lowered = lower_component(&root, "interactive-col-plot", "interactive-col-plot.awsl", &LoweringOptions::default());
     let v_source = build_awsl_wasm_source(&[lowered]);
-    let result = ValkyrieCompiler::default().compile_source_to_build_output(&v_source);
+    let result = ValkyrieCompiler::default().compile_source_to_program(&v_source);
     if let Err(error) = &result {
         eprintln!("InteractiveColPlot V compile error: {error}");
         eprintln!("--- source tail ---\n{}", &v_source[v_source.len().saturating_sub(800)..]);
