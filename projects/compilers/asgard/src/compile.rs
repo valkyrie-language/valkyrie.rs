@@ -87,8 +87,14 @@ fn compiler_input_for(source_groups: &[CompilerSourceGroup], generated: Generate
         direct_dependencies: entry_keys,
         is_entry: true,
     };
-    let generated = GeneratedSourceGroup::new(generated.producer, group).map_err(|error| miette::miette!("生成源码输入失败: {error}"))?;
-    CompilerSourceInput::with_generated(source_groups.to_vec(), vec![generated]).map_err(|error| miette::miette!("生成源码输入失败: {error}"))
+    let generated = GeneratedSourceGroup {
+        producer: generated.producer.into(),
+        group,
+    };
+    Ok(CompilerSourceInput {
+        groups: source_groups.to_vec(),
+        generated: vec![generated],
+    })
 }
 
 /// 将已解析的源码组与独立生成源码编译为宿主制品。
