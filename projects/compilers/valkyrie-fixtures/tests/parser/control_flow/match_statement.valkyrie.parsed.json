@@ -1,6 +1,6 @@
 {
     "success": true,
-    "node_count": 28,
+    "node_count": 31,
     "ast_structure": {
         "kind": "Root",
         "children": [
@@ -84,16 +84,36 @@
                                                         "is_leaf": false
                                                     },
                                                     {
-                                                        "kind": "LiteralExpression",
+                                                        "kind": "BlockExpression",
                                                         "children": [
                                                             {
-                                                                "kind": "Leaves(1)",
-                                                                "children": [],
-                                                                "text_length": 1,
-                                                                "is_leaf": true
+                                                                "kind": "ExprStatement",
+                                                                "children": [
+                                                                    {
+                                                                        "kind": "LiteralExpression",
+                                                                        "children": [
+                                                                            {
+                                                                                "kind": "Leaves(1)",
+                                                                                "children": [],
+                                                                                "text_length": 1,
+                                                                                "is_leaf": true
+                                                                            }
+                                                                        ],
+                                                                        "text_length": 1,
+                                                                        "is_leaf": false
+                                                                    },
+                                                                    {
+                                                                        "kind": "Leaves(2)",
+                                                                        "children": [],
+                                                                        "text_length": 10,
+                                                                        "is_leaf": true
+                                                                    }
+                                                                ],
+                                                                "text_length": 11,
+                                                                "is_leaf": false
                                                             }
                                                         ],
-                                                        "text_length": 1,
+                                                        "text_length": 11,
                                                         "is_leaf": false
                                                     },
                                                     {
@@ -103,33 +123,34 @@
                                                         "is_leaf": true
                                                     }
                                                 ],
-                                                "text_length": 3,
+                                                "text_length": 13,
                                                 "is_leaf": false
                                             },
                                             {
                                                 "kind": "MatchArm",
                                                 "children": [
                                                     {
-                                                        "kind": "Pattern",
-                                                        "children": [],
-                                                        "text_length": 0,
-                                                        "is_leaf": false
-                                                    }
-                                                ],
-                                                "text_length": 0,
-                                                "is_leaf": false
-                                            },
-                                            {
-                                                "kind": "MatchArm",
-                                                "children": [
-                                                    {
-                                                        "kind": "LiteralExpression",
+                                                        "kind": "BlockExpression",
                                                         "children": [
                                                             {
-                                                                "kind": "Leaves(2)",
-                                                                "children": [],
+                                                                "kind": "ExprStatement",
+                                                                "children": [
+                                                                    {
+                                                                        "kind": "LiteralExpression",
+                                                                        "children": [
+                                                                            {
+                                                                                "kind": "Leaves(2)",
+                                                                                "children": [],
+                                                                                "text_length": 6,
+                                                                                "is_leaf": true
+                                                                            }
+                                                                        ],
+                                                                        "text_length": 6,
+                                                                        "is_leaf": false
+                                                                    }
+                                                                ],
                                                                 "text_length": 6,
-                                                                "is_leaf": true
+                                                                "is_leaf": false
                                                             }
                                                         ],
                                                         "text_length": 6,
@@ -146,9 +167,9 @@
                                                 "is_leaf": false
                                             },
                                             {
-                                                "kind": "Leaves(9)",
+                                                "kind": "Leaves(7)",
                                                 "children": [],
-                                                "text_length": 29,
+                                                "text_length": 19,
                                                 "is_leaf": true
                                             }
                                         ],

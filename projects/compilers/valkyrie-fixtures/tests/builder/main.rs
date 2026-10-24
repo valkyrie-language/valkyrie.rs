@@ -1,6 +1,6 @@
 use oak_testing::building::BuilderTester;
 use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
-use std::{path::Path, time::Duration};
+use std::time::Duration;
 
 #[test]
 fn test_valkyrie_builder() -> Result<(), oak_core::OakError> {

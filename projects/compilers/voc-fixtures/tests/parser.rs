@@ -1,4 +1,4 @@
-use oak_awsl::{AwslAttributeValue, AwslDirectiveKind, AwslElement, AwslParser, AwslTemplateNode, validate_component_contract};
+use oak_awsl::{AwslAttributeValue, AwslDirectiveKind, AwslElement, AwslParser, AwslTemplateNode};
 
 fn expect_element<'a>(node: &'a AwslTemplateNode) -> &'a AwslElement {
     match node {

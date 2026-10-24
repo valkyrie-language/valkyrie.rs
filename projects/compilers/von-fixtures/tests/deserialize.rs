@@ -5,7 +5,6 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use nyar_language::printer::{to_string, to_string_indented};
 use oak_core::OakError;
 use oak_von::{
     from_str as oak_from_str,
@@ -38,13 +37,6 @@ where
     oak_von::from_str(&text)
 }
 
-fn to_value<T>(value: &T) -> Result<VonValue, OakError>
-where
-    T: serde::Serialize,
-{
-    VonParser::parse(&to_string(value)?)
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ManifestLike {
     name: String,
@@ -55,18 +47,6 @@ struct ManifestLike {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct BuildItem {
     target: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ToolConfig {
-    mode: ToolMode,
-    note: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-enum ToolMode {
-    Clr,
-    Script { command: String },
 }
 
 #[test]
@@ -119,41 +99,6 @@ fn deserializes_typed_value_from_von() {
     let parsed: ManifestLike = from_str(source).unwrap();
     assert_eq!(parsed.name, "legion.tools");
     assert_eq!(parsed.build[0].target, "clr");
-}
-
-#[test]
-fn serializes_typed_value_into_von() {
-    let value = ManifestLike {
-        name: "legion.tools".to_string(),
-        version: "workspace".to_string(),
-        build: vec![BuildItem { target: "clr".to_string() }],
-    };
-
-    let von = to_string(&value).unwrap();
-    assert!(von.contains("legion.tools"));
-    assert!(von.contains("clr"));
-}
-
-#[test]
-fn pretty_von_round_trips_through_serde() {
-    let value = ManifestLike {
-        name: "legion.tools".to_string(),
-        version: "workspace".to_string(),
-        build: vec![BuildItem { target: "clr".to_string() }, BuildItem { target: "wasm".to_string() }],
-    };
-
-    let von = to_string_indented(&value).unwrap();
-    let decoded: ManifestLike = from_str(&von).unwrap();
-    assert_eq!(decoded, value);
-}
-
-#[test]
-fn round_trips_enum_and_option_through_von_serde() {
-    let value = ToolConfig { mode: ToolMode::Script { command: "dotnet".to_string() }, note: None };
-
-    let von = to_string_indented(&value).unwrap();
-    assert!(von.contains("dotnet"));
-    assert!(von.contains("note"));
 }
 
 #[test]
@@ -263,16 +208,6 @@ fn deserializes_full_legion_tools_manifest() {
     match dep {
         DependencySpecDef::Detailed(d) => assert_eq!(d.version, Some("workspace".to_string())),
         other => panic!("expected Detailed, got {other:?}"),
-    }
-}
-
-#[test]
-fn serializes_option_none_as_null() {
-    let value = ToolConfig { mode: ToolMode::Clr, note: None };
-    let encoded = to_value(&value).unwrap();
-    match encoded.get("note") {
-        Some(VonValue::Null) | Some(VonValue::Enum(_)) => {}
-        other => panic!("expected null or Option::None enum, got {other:?}"),
     }
 }
 

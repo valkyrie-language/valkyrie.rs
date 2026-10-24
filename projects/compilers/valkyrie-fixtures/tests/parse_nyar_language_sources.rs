@@ -1,14 +1,14 @@
-//! Parse every nyar.emitter `.v` via `projects/valkyrie.v` submodule:
-//!   projects/valkyrie.v/projects/nyar._/projects/nyar.emitter/source
+//! Parse every nyar.language `.v` via `projects/valkyrie.v` submodule:
+//!   projects/valkyrie.v/projects/nyar._/projects/nyar.language/source
 use std::{fs, path::PathBuf};
 
 use oak_valkyrie::printer::parse_source;
 
 #[test]
-fn parse_nyar_emitter_sources() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/projects/nyar._/projects/nyar.emitter/source");
+fn parse_nyar_language_sources() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../valkyrie.v/projects/nyar._/projects/nyar.language/source");
     let root = root.canonicalize().unwrap_or(root);
-    assert!(root.is_dir(), "missing valkyrie.v emitter sources at {} (init `projects/valkyrie.v` submodule)", root.display());
+    assert!(root.is_dir(), "missing valkyrie.v nyar.language sources at {} (init `projects/valkyrie.v` submodule)", root.display());
 
     let mut files = Vec::new();
     fn walk(dir: &std::path::Path, out: &mut Vec<PathBuf>) {

@@ -1,4 +1,5 @@
 mod bare_root;
+#[path = "lexer/main.rs"]
 mod lexer;
 
 #[test]

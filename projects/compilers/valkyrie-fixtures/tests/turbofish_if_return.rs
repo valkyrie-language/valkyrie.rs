@@ -81,12 +81,12 @@ fn array_declarations_keep_empty_initializer_and_ordered_elements() {
     else {
         panic!("空数组声明丢失")
     };
-    assert!(matches!(&empty.expr, TermExpression::ArrayLiteral { items, .. } if items.is_empty()));
+    assert!(matches!(&empty.expr, Some(TermExpression::ArrayLiteral { items, .. }) if items.is_empty()));
     let Statement::Let(values) = &micro.body.statements[1]
     else {
         panic!("数组声明丢失")
     };
-    let TermExpression::ArrayLiteral { items, .. } = &values.expr
+    let TermExpression::ArrayLiteral { items, .. } = values.expr.as_ref().expect("数组未结构化")
     else {
         panic!("数组未结构化")
     };

@@ -3,8 +3,12 @@ use oak_valkyrie::printer::{PrintOptions, print_source};
 #[test]
 fn prints_empty_namespace_block() {
     let options = PrintOptions::compact();
+    // `{}` 现在结构化为 `body: Some(空 ProgramBody)`，因此保留块形式；只有无 body 的声明才是 `;` 形式。
     let out = print_source("namespace demo {}", &options).expect("print");
-    assert_eq!(out, "namespace demo;");
+    assert_eq!(out, "namespace demo {}");
+
+    let declared = print_source("namespace demo;", &options).expect("print");
+    assert_eq!(declared, "namespace demo;");
 }
 
 #[test]
