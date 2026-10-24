@@ -44,7 +44,7 @@ nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }
 nyar-types = { workspace = true }
 nyar = { workspace = true }
-ovm-bytecode = { workspace = true }
+odin-bytecode = { workspace = true }
 zip = { workspace = true }
 sha2 = { workspace = true }
 pulldown-cmark = { workspace = true }
