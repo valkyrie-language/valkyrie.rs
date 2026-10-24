@@ -23,11 +23,11 @@ license = "MIT"
 repository = "https://github.com/valkyrie-language/valkyrie.rs"
 
 [workspace.dependencies]
-oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8907696cd6929bdda632209e57705ee7b521bdc9" }
-oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8907696cd6929bdda632209e57705ee7b521bdc9" }
-oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8907696cd6929bdda632209e57705ee7b521bdc9" }
-oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8907696cd6929bdda632209e57705ee7b521bdc9", features = ["serde"] }
-oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8907696cd6929bdda632209e57705ee7b521bdc9" }
+oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684" }
+oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684" }
+oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684" }
+oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684", features = ["serde"] }
+oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684" }
 
 # Acorn：外部二进制格式（Wasm / JVM / PE / ELF / MSIL / DEX / Mach-O / TVM…）编解码的唯一所有者。
 # 诊断链（`legion spy`）直接消费这些解码器，不再使用任何混合包副本。
@@ -42,17 +42,17 @@ acorn-host = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "80
 
 # Compiler / VM stack lives in nyar-vm.rs. CI resolves these from the pinned `rev`.
 # Local sibling checkout: copy `.cargo/config.example.toml` to `.cargo/config.toml`.
-nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-language = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-optimizer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
-ovm-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "548bcab4" }
+nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-language = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-optimizer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-package-registry = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+nyar-workspace = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
+odin-bytecode = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "40ef8094" }
 
 asgard = { path = "projects/compilers/asgard" }
 legion = { path = "projects/compilers/legion" }
