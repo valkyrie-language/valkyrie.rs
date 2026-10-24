@@ -7,9 +7,9 @@ license.workspace = true
 
 [features]
 # LeetCode / 正式编译链默认只启用 Nyar + Node/Wasm seed；诊断链与自举旁路不默认开启。
-default = ["nyar-vm-lane"]
-nyar-vm-lane = ["nyar-emitter/nyar-vm-lane"]
-legacy-lanes = ["nyar-vm-lane"]
+default = ["ovm-lane"]
+ovm-lane = ["nyar-emitter/ovm-lane"]
+legacy-lanes = ["ovm-lane"]
 # `legion spy *` 诊断（Wasm/JVM/CLR/Native 格式解码），不属于 build/run 生产链。
 format-spy = []
 # `legion bootstrap` 自举验收，不属于 LeetCode 双 target 正式链。
@@ -44,7 +44,7 @@ nyar-analyzer = { workspace = true }
 nyar-runner = { workspace = true }
 nyar-types = { workspace = true }
 nyar = { workspace = true }
-nyar-bytecode = { workspace = true }
+ovm-bytecode = { workspace = true }
 zip = { workspace = true }
 sha2 = { workspace = true }
 pulldown-cmark = { workspace = true }

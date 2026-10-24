@@ -65,10 +65,10 @@ pub struct RunArgs {
     /// 输出调试用构建副产物。
     #[arg(long, default_value_t = false)]
     pub debug_artifacts: bool,
-    /// 进程级工作负载意图 JSON（仅 `nyar-vm`：转发给 `nyar-vm --workload-json`）。
+    /// 进程级工作负载意图 JSON（仅 `ovm`：转发给 `ovm-runtime --workload-json`）。
     #[arg(long = "workload-json", value_name = "json")]
     pub workload_json: Option<String>,
-    /// 工作负载意图 JSON 文件路径（仅 `nyar-vm`：转发给 `nyar-vm --workload-file`）。
+    /// 工作负载意图 JSON 文件路径（仅 `ovm`：转发给 `ovm-runtime --workload-file`）。
     #[arg(long = "workload-file", value_name = "path")]
     pub workload_file: Option<PathBuf>,
 }
@@ -208,7 +208,7 @@ impl ExecutionManifest {
             identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
             mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
             layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
-            bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
+            bytecode_format_version: ovm_bytecode::BYTECODE_FORMAT_VERSION,
             project_name: plan.project.name.clone(),
             target: plan.project.build_target.target.to_string(),
             inputs: collect_execution_input_digests(plan)?,
@@ -226,7 +226,7 @@ impl ExecutionManifest {
         if self.identity_schema_version != nyar_types::IDENTITY_SCHEMA_VERSION
             || self.mir_contract_version != nyar_types::MIR_CONTRACT_VERSION
             || self.layout_plan_version != nyar_types::LAYOUT_PLAN_VERSION
-            || self.bytecode_format_version != nyar_bytecode::BYTECODE_FORMAT_VERSION
+            || self.bytecode_format_version != ovm_bytecode::BYTECODE_FORMAT_VERSION
         {
             return Ok(false);
         }
@@ -366,7 +366,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
         &execution_manifest.run_contracts,
         args.artifact.as_deref(),
     )?;
-    append_nyar_vm_workload_args(&mut command, args)?;
+    append_ovm_workload_args(&mut command, args)?;
 
     println!("project: {}", plan.project.name);
     println!("target: {}", plan.project.build_target.target);
@@ -391,13 +391,13 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     Ok(exit_code_from_status(status.code()))
 }
 
-/// 将 legion 侧工作负载意图参数转发给 `nyar-vm` runner。
-fn append_nyar_vm_workload_args(command: &mut RunCommand, args: &RunArgs) -> Result<()> {
+/// 将 legion 侧工作负载意图参数转发给 `ovm-runtime` runner。
+fn append_ovm_workload_args(command: &mut RunCommand, args: &RunArgs) -> Result<()> {
     if args.workload_json.is_none() && args.workload_file.is_none() {
         return Ok(());
     }
-    if command.target != RunnerFamily::NyarVm {
-        return Err(miette!("--workload-json/--workload-file are only supported for target nyar-vm"));
+    if command.target != RunnerFamily::Ovm {
+        return Err(miette!("--workload-json/--workload-file are only supported for target ovm"));
     }
     if let Some(json) = &args.workload_json {
         command.args.push("--workload-json".to_string());
@@ -551,7 +551,7 @@ fn runtime_family_for(target: RunnerFamily) -> InterpreterRuntimeFamily {
         RunnerFamily::Node => InterpreterRuntimeFamily::Node,
         RunnerFamily::Windows => InterpreterRuntimeFamily::Windows,
         RunnerFamily::Wasi => InterpreterRuntimeFamily::Wasi,
-        RunnerFamily::NyarVm => InterpreterRuntimeFamily::NyarVm,
+        RunnerFamily::Ovm => InterpreterRuntimeFamily::Ovm,
     }
 }
 
@@ -584,7 +584,7 @@ fn build_placeholders(
     // `{entry}` is the callable symbol. Nyar VM / JVM keep the module file in `{artifact}`
     // (or classpath) and must not reuse `physical_entry` filenames here.
     let entry = match run_contract {
-        Some(contract) if matches!(runner_target, RunnerFamily::Jvm | RunnerFamily::NyarVm) && !contract.logical_entry.is_empty() => {
+        Some(contract) if matches!(runner_target, RunnerFamily::Jvm | RunnerFamily::Ovm) && !contract.logical_entry.is_empty() => {
             contract.logical_entry.clone()
         }
         Some(contract) if !contract.physical_entry.is_empty() => contract.physical_entry.clone(),

@@ -376,7 +376,7 @@ fn discover_artifact(
         RuntimeFamily::Node => &["mjs", "js", "wasm"][..],
         RuntimeFamily::Windows => &["exe", ""][..],
         RuntimeFamily::Wasi => &["wasi", "wasm"][..],
-        RuntimeFamily::NyarVm => &["legion", "json"][..],
+        RuntimeFamily::Ovm => &["legion", "json"][..],
     };
 
     for extension in preferred {

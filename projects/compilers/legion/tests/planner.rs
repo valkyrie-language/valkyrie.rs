@@ -69,7 +69,7 @@ fn synthesizes_cli_build_target_for_library_without_manifest_entry() {
 "#,
     );
     let workspace = WorkspaceResolver::discover(&fixture.project_dir).unwrap();
-    let nyar = CanonicalTarget::parse("nyar").unwrap();
+    let nyar = CanonicalTarget::parse("ovm").unwrap();
     let plan = workspace.build_plan(&BuildRequest { project_dir: fixture.project_dir.clone(), target: nyar, output_dir: None }).unwrap();
     assert_eq!(plan.project.build_target.target, nyar);
 }
@@ -654,7 +654,7 @@ fn create_legion_tools_workspace_fixture() -> WorkspaceFixture {
             target: "node"
         },
         {
-            target: "nyar"
+            target: "ovm"
         }
     ]
 }
@@ -726,7 +726,7 @@ fn create_nested_legion_tools_with_outer_core_fixture() -> WorkspaceFixture {
     },
     build: [
         {
-            target: "nyar"
+            target: "ovm"
         }
     ]
 }
@@ -863,7 +863,7 @@ fn filters_and_injects_sdk_vendor_by_publish_format() {
         wechat_sdk.join("legion.von"),
         r#"{
     name: "tencent.wechat.sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "tencent",
         host: "wechat",
         kind: "platform-sdk",
@@ -881,7 +881,7 @@ fn filters_and_injects_sdk_vendor_by_publish_format() {
         mp_sdk.join("legion.von"),
         r#"{
     name: "tencent.wechat.miniprogram.sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "tencent",
         host: "wechat-miniprogram",
         kind: "platform-sdk",
@@ -950,7 +950,7 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
         "std": "workspace",
         "std.adaptor.disabled": false
     },
-    build: [{ target: "nyar" }]
+    build: [{ target: "ovm" }]
 }
 "#,
         &[("source/main.v", "micro main() -> i64 { return 0; }\n")],
@@ -960,7 +960,7 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
         "core",
         r#"{
     name: "core",
-    build: [{ target: "nyar" }]
+    build: [{ target: "ovm" }]
 }
 "#,
         &[("source/_.v", "namespace core;\n")],
@@ -971,7 +971,7 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
         r#"{
     name: "std",
     dependencies: {},
-    build: [{ target: "nyar" }]
+    build: [{ target: "ovm" }]
 }
 "#,
         &[("source/_.v", "namespace std;\n")],
@@ -987,9 +987,9 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
     },
     sdk_vendor: {
         kind: "distribution-default",
-        targets: ["nyar"]
+        targets: ["ovm"]
     },
-    build: [{ target: "nyar" }]
+    build: [{ target: "ovm" }]
 }
 "#,
         &[("source/_.v", "namespace std.adaptor.demo;\n")],
@@ -1001,9 +1001,9 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
     name: "std.adaptor.disabled",
     sdk_vendor: {
         kind: "distribution-default",
-        targets: ["nyar"]
+        targets: ["ovm"]
     },
-    build: [{ target: "nyar" }]
+    build: [{ target: "ovm" }]
 }
 "#,
         &[("source/_.v", "namespace std.adaptor.disabled;\n")],
@@ -1025,7 +1025,7 @@ fn injects_distribution_default_adaptors_at_root_without_reverse_std_edge() {
 
     let workspace = WorkspaceResolver::discover(&app_dir).unwrap();
     let plan = workspace
-        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("nyar").unwrap(), output_dir: None })
+        .build_plan(&BuildRequest { project_dir: app_dir.clone(), target: CanonicalTarget::parse("ovm").unwrap(), output_dir: None })
         .unwrap();
 
     let dependency_names = plan.project.dependencies.iter().map(|dependency| dependency.name.as_str()).collect::<Vec<_>>();
@@ -1130,7 +1130,7 @@ micro get(url: utf8): utf8
         unity_sdk.join("legion.von"),
         r#"{
     name: "unity.engine.sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "unity",
         host: "engine",
         kind: "platform-sdk",
@@ -1163,7 +1163,7 @@ micro get(url: utf8): utf8 { return ""; }
         clr_dir.join("legion.von"),
         r#"{
     name: "std.adaptor.clr",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1276,7 +1276,7 @@ micro main() -> i64 {
         clr_dir.join("legion.von"),
         r#"{
     name: "std.adaptor.clr",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1306,7 +1306,7 @@ micro write(message: utf8): unit {
         wasm_dir.join("legion.von"),
         r#"{
     name: "std.adaptor.wasm",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "browser",
         kind: "platform-sdk",
@@ -1460,7 +1460,7 @@ imply Writer {
         sdk_dir.join("legion.von"),
         r#"{
     name: "sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1550,7 +1550,7 @@ micro clear(): unit
         sdk_dir.join("legion.von"),
         r#"{
     name: "sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1638,7 +1638,7 @@ micro clear(): unit
         sdk_dir.join("legion.von"),
         r#"{
     name: "sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1732,7 +1732,7 @@ micro write(message: utf8): unit
             project_dir.join("legion.von"),
             r#"{
     name: "sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1753,7 +1753,7 @@ micro write(message: utf8): unit
         left_dir.join("legion.von"),
         r#"{
     name: "sdk.left",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1772,7 +1772,7 @@ micro write(message: utf8): unit
         right_dir.join("legion.von"),
         r#"{
     name: "sdk.right",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",
@@ -1875,7 +1875,7 @@ micro write(message: utf8): unit
         sdk_dir.join("legion.von"),
         r#"{
     name: "sdk",
-    sdk-vendor: {
+    sdk_vendor: {
         organization: "valkyrie",
         host: "clr",
         kind: "platform-sdk",

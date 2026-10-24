@@ -327,9 +327,9 @@ fn runner_family_for_label(label: &str) -> RunnerFamily {
         "clr" => RunnerFamily::Clr,
         "jvm" => RunnerFamily::Jvm,
         "node" => RunnerFamily::Node,
-        "legion" => RunnerFamily::NyarVm,
+        "legion" => RunnerFamily::Ovm,
         "wasi" => RunnerFamily::Wasi,
-        _ => RunnerFamily::NyarVm,
+        _ => RunnerFamily::Ovm,
     }
 }
 
@@ -387,7 +387,7 @@ fn default_runner_template(target: RunnerFamily, function_name: &str) -> RunnerT
         RunnerFamily::Node => InterpreterRuntimeFamily::Node,
         RunnerFamily::Windows => InterpreterRuntimeFamily::Windows,
         RunnerFamily::Wasi => InterpreterRuntimeFamily::Wasi,
-        RunnerFamily::NyarVm => InterpreterRuntimeFamily::NyarVm,
+        RunnerFamily::Ovm => InterpreterRuntimeFamily::Ovm,
     };
     let template = family.default_template(Some(contract));
     RunnerTemplate { command: template.command, args: template.args }

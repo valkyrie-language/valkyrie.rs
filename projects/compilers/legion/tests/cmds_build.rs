@@ -29,7 +29,7 @@ fn builds_minimal_nyar_vm_project() {
     let fixture = create_smoke_project_with_build(
         "legion-build-nyar-vm",
         r#"{
-            target: "nyar-vm"
+            target: "ovm"
         }"#,
         r#"[main]
 micro main() -> i64 {
@@ -40,7 +40,7 @@ micro main() -> i64 {
     let output_dir = fixture.project_dir.join("dist").join("custom-nyar-vm");
     let status = run(&BuildArgs {
         project_dir: fixture.project_dir.clone(),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir.clone()),
         workspace: false,
         debug_artifacts: false,
@@ -62,7 +62,7 @@ fn builds_cross_file_nyar_vm_project_and_prefers_main_entry() {
     let fixture = create_smoke_project_with_build(
         "legion-build-nyar-vm-cross-file",
         r#"{
-            target: "nyar-vm"
+            target: "ovm"
         }"#,
         // 入口注解必须直接落在 micro 声明上；namespace body 内的 `[main]` 归 namespace，
         // 不构成声明入口身份，因此这里使用文件级 namespace。
@@ -88,7 +88,7 @@ micro identity(x: bool) -> bool {
     let output_dir = fixture.project_dir.join("dist").join("cross-file-nyar-vm");
     let status = run(&BuildArgs {
         project_dir: fixture.project_dir.clone(),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir.clone()),
         workspace: false,
         debug_artifacts: false,
@@ -105,7 +105,7 @@ micro identity(x: bool) -> bool {
     assert_eq!(manifest.identity_schema_version, nyar_types::IDENTITY_SCHEMA_VERSION);
     assert_eq!(manifest.mir_contract_version, nyar_types::MIR_CONTRACT_VERSION);
     assert_eq!(manifest.layout_plan_version, nyar_types::LAYOUT_PLAN_VERSION);
-    assert_eq!(manifest.bytecode_format_version, nyar_bytecode::BYTECODE_FORMAT_VERSION);
+    assert_eq!(manifest.bytecode_format_version, ovm_bytecode::BYTECODE_FORMAT_VERSION);
     assert!(
         manifest.run_contracts.iter().any(|contract| {
             contract.logical_entry == "main"
@@ -143,7 +143,7 @@ micro main() -> i64 {
     let output_dir = fixture.project_dir.join("dist").join("option-nyar-vm");
     let status = run(&BuildArgs {
         project_dir: fixture.project_dir.clone(),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir.clone()),
         workspace: false,
         debug_artifacts: false,

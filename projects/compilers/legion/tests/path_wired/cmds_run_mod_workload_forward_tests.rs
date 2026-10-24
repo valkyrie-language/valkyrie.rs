@@ -5,7 +5,7 @@ use super::*;
 fn bare_run_args() -> RunArgs {
     RunArgs {
         project_dir: PathBuf::from("."),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm"),
+        target: CanonicalTarget::parse("ovm").expect("ovm"),
         output_dir: None,
         workspace: false,
         runner: Vec::new(),
@@ -20,22 +20,22 @@ fn bare_run_args() -> RunArgs {
 #[test]
 fn appends_workload_json_for_nyar_vm() {
     let mut command = RunCommand {
-        target: RunnerFamily::NyarVm,
+        target: RunnerFamily::Ovm,
         artifact: PathBuf::from("out.nyar"),
-        command: "nyar-vm".into(),
+        command: "ovm-runtime".into(),
         args: vec!["out.nyar".into()],
     };
     let mut args = bare_run_args();
     args.workload_json = Some(r#"{"pause_budget_ms":5}"#.into());
-    append_nyar_vm_workload_args(&mut command, &args).expect("append");
+    append_ovm_workload_args(&mut command, &args).expect("append");
     assert!(command.args.windows(2).any(|w| w[0] == "--workload-json" && w[1].contains("pause_budget_ms")));
 }
 
 #[test]
 fn resolver_compile_evidence_matches_compiler_helpers() {
     let groups = vec![nyar_language::CompilerSourceGroup::single_source("app", "app", "[main] micro main() -> i32 { return 1 }")];
-    let digest = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
-    assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups, "nyar"));
+    let digest = expected_resolver_compile_evidence_from_groups(&groups, &[], "ovm");
+    assert_eq!(digest.semantic_closure_hash, nyar_language::semantic_closure_hash_for_groups(&groups, "ovm"));
     assert_eq!(digest.host_provider_binding_hash, nyar_language::host_provider_binding_hash_for_bindings(&[]));
 }
 
@@ -62,7 +62,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         direct_dependencies: Vec::new(),
         is_entry: true,
     };
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
+    let target = CanonicalTarget::parse("ovm").expect("ovm");
     let plan = BuildPlan {
         workspace_root: root.to_path_buf(),
         output_dir: root.join("dist"),
@@ -97,7 +97,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
         mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
         layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
-        bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
+        bytecode_format_version: ovm_bytecode::BYTECODE_FORMAT_VERSION,
         project_name: plan.project.name.clone(),
         target: plan.project.build_target.target.to_string(),
         inputs,
@@ -105,7 +105,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         run_contracts: vec![RunContract {
             logical_entry: "main".into(),
             physical_entry: "app.nyar".into(),
-            invocation: "nyar-vm app.nyar".into(),
+            invocation: "ovm-runtime app.nyar".into(),
             validate: "exists".into(),
         }],
         compile_evidence: Some(CompileEvidenceDigest {
@@ -153,7 +153,7 @@ fn sample_freshness_plan() -> (tempfile::TempDir, BuildPlan, PathBuf) {
         direct_dependencies: Vec::new(),
         is_entry: true,
     };
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm");
+    let target = CanonicalTarget::parse("ovm").expect("ovm");
     let plan = BuildPlan {
         workspace_root: root.to_path_buf(),
         output_dir: root.join("dist"),
@@ -183,7 +183,7 @@ fn sample_execution_manifest(plan: &BuildPlan, artifact_path: &Path, evidence: C
         identity_schema_version: nyar_types::IDENTITY_SCHEMA_VERSION,
         mir_contract_version: nyar_types::MIR_CONTRACT_VERSION,
         layout_plan_version: nyar_types::LAYOUT_PLAN_VERSION,
-        bytecode_format_version: nyar_bytecode::BYTECODE_FORMAT_VERSION,
+        bytecode_format_version: ovm_bytecode::BYTECODE_FORMAT_VERSION,
         project_name: plan.project.name.clone(),
         target: plan.project.build_target.target.to_string(),
         inputs: collect_execution_input_digests(plan).expect("input digests"),
@@ -191,7 +191,7 @@ fn sample_execution_manifest(plan: &BuildPlan, artifact_path: &Path, evidence: C
         run_contracts: vec![RunContract {
             logical_entry: "main".into(),
             physical_entry: "app.nyar".into(),
-            invocation: "nyar-vm app.nyar".into(),
+            invocation: "ovm-runtime app.nyar".into(),
             validate: "exists".into(),
         }],
         compile_evidence: Some(evidence),
@@ -263,22 +263,22 @@ fn resolver_compile_evidence_host_provider_hash_is_binding_sensitive() {
         contract: micro_declaration("demo", "demo.v", "write"),
         provider: micro_declaration("std", "std.v", "print"),
     };
-    let without = expected_resolver_compile_evidence_from_groups(&groups, &[], "nyar");
-    let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()], "nyar");
-    let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second], "nyar");
+    let without = expected_resolver_compile_evidence_from_groups(&groups, &[], "ovm");
+    let with_first = expected_resolver_compile_evidence_from_groups(&groups, &[first.clone()], "ovm");
+    let with_second = expected_resolver_compile_evidence_from_groups(&groups, &[second], "ovm");
     assert_eq!(without.semantic_closure_hash, with_first.semantic_closure_hash);
     assert_ne!(with_first.host_provider_binding_hash, without.host_provider_binding_hash);
     assert_ne!(with_first.host_provider_binding_hash, with_second.host_provider_binding_hash);
 }
 
 #[test]
-fn rejects_workload_json_for_non_nyar_vm() {
+fn rejects_workload_json_for_non_ovm() {
     let mut command =
         RunCommand { target: RunnerFamily::Node, artifact: PathBuf::from("out.mjs"), command: "node".into(), args: vec!["out.mjs".into()] };
     let mut args = bare_run_args();
     args.workload_json = Some("{}".into());
-    let err = append_nyar_vm_workload_args(&mut command, &args).expect_err("must reject");
-    assert!(err.to_string().contains("nyar-vm"));
+    let err = append_ovm_workload_args(&mut command, &args).expect_err("must reject");
+    assert!(err.to_string().contains("ovm"));
 }
 
 fn micro_declaration(dependency_key: &str, source_path: &str, name: &str) -> nyar_language::DeclarationKey {
