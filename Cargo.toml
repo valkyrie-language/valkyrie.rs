@@ -4,6 +4,7 @@ members = [
     "projects/compilers/valkyrie-fixtures",
     "projects/compilers/von-fixtures",
     "projects/compilers/voc-fixtures",
+    "projects/harness",
 ]
 default-members = ["projects/compilers/valkyrie-fixtures"]
 
