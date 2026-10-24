@@ -6,11 +6,12 @@
 
 ## 现状
 
-1. **语义层**：HIR 脱糖、类型驱动简化、可达性与单态化相关工作在 `nyar-language` / 规划层推进。
-2. **优化宿主**：`nyar-optimizer` 提供 egraph 等能力，但 **尚未**达到「全面 equality saturation 产品态」（见
+1. **语义层**：HIR 脱糖、类型检查、可见性、泛型替换、evidence 绑定与可达性在对应语言 frontend 内闭合；语言层不把单态化作为泛型语义。
+2. **Nyar 平台层**：frontend contract 闭合后，Nyar 可以根据通用分析结果和 target 上下文选择 specialization、witness 消除、去虚拟化或内联。
+3. **优化宿主**：`nyar-optimizer` 提供 egraph 等能力，但 **尚未**达到「全面 equality saturation 产品态」（见
    `projects/readme.md`）。
-3. **后端**：CLR/JVM/WASM 在 MIR→目标指令时做栈平衡、调用约定与布局选择； **不**依赖未落地的 Gaia 代价模型作为现行必经之路。
-4. **约束**：优化不得抹平 `void`/`unit`，不得把 `utf8` 优化成 UTF-16 code-unit API，不得引入外部工具产盘捷径。
+4. **后端**：CLR/JVM/WASM 在 MIR→目标指令时做栈平衡、调用约定与布局选择； **不**依赖未落地的 Gaia 代价模型作为现行必经之路。
+5. **约束**：优化不得抹平 `void`/`unit`，不得把 `utf8` 优化成 UTF-16 code-unit API，不得引入外部工具产盘捷径。
 
 ## 愿景（非现行）
 

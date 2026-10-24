@@ -1,28 +1,31 @@
 # Valkyrie 项目架构与维护指南
 
-本仓拥有工程输入、CLI/host 装配、缓存和产物提交。语言语义与 Nyar 编译框架通过依赖接入，不能按旧目录图在装配仓重新实现。
+本仓是 Valkyrie 的语料与 fixture 仓库：保存 `.v` 语料、Oak 解析/构建 golden 与最小黑盒验收。
+编译器、语言语义、标准库与 CLI/host 实现位于 `nyar-vm.rs` 与 `projects/valkyrie.v`，本仓不重复实现。
 
 ## 目录与职责
 
-- projects/compilers/legion：CLI、manifest/workspace、Compiler 调用与 build/test 编排。
-- projects/compilers/legion-workspace：package graph 与逐文件不可变输入。
-- projects/compilers/vcc-napi、vcc-wasm：宿主接口。
-- projects/compilers/asgard：上层应用构建编排。
-- projects/packages：npm CLI、host wrapper 与平台包。
-- scripts：开发、装配和发布脚本。
+- projects/compilers/valkyrie-fixtures：Valkyrie lexer/parser/builder/printer fixture 与 golden。
+- projects/compilers/von-fixtures：VON 格式 fixture 与 serde golden。
+- projects/compilers/voc-fixtures：VOC（AWSL 组件）fixture。
+- projects/fixtures：Legion/工程级 `.v` 语料与 bootstrap 工程，供黑盒 harness 调用外部 CLI 验收。
+- projects/valkyrie.v：语言源码与标准库（只读 submodule）。
 
-成员与依赖以 Cargo.toml 为准。nyar-language、nyar-emitter 及其他编译框架 crate 的实现位于 nyar-vm.rs；Oak 拥有文本格式，Acorn 拥有外部二进制格式。本仓不保留混合格式包或第二份 codec/parser。
+成员与依赖以 Cargo.toml 为准。Oak 拥有语法树、恢复状态、syntax diagnostics 与 source edits；Valkyrie frontend
+（`nyar-vm.rs` 的 `rusty-valkyrie`）拥有名称、类型、泛型替换、evidence、调用与 Semantic MIR；Acorn 拥有外部二进制
+格式。fixture 只记录既成行为，不定义语言合法性。
 
 ## 深模块边界
 
-外部接口为 WorkspaceResolver、Compiler、ArtifactStore。Resolver 冻结来源和依赖图；Compiler 内部负责绑定、语义需求及代码生成；ArtifactStore 原子提交完整 ArtifactSet。
-
-装配层不访问 AST/HIR/MIR、语义 planner 或 target lowering 实现。新增 host/CLI 路由必须记录实际 Compiler/host 来源，不得以 wrapper 成功证明源码编译能力。
+外部接口为 WorkspaceResolver、Compiler、ArtifactStore，均在本仓之外。本仓不构造 AST/HIR/MIR、语义 planner 或
+target lowering，也不以 wrapper 成功证明源码编译能力。黑盒验收只消费外部 CLI 的实际退出码、stdout 与产物。
 
 ## 维护流程
 
-先定位缺失事实的唯一生产者，再选择仓和接口。每个工作包说明可观察行为、失败条件、正反验收与证据范围；不能用题目名、operator 或当前报错作为特判依据。
+先定位缺失事实的唯一生产者，再选择仓和接口。每个工作包说明可观察行为、失败条件、正反验收与证据范围；不能用
+题目名、operator 或当前报错作为特判依据。
 
-缓存复用前重算期望语义与产物身份。inventory provenance 与语义 freshness 分开；本地 patch 与准确依赖 pin 分开记录。删除旧路线必须迁移消费者、依赖和实现并验证旧入口不可达。
+Golden 由 Oak 的 `REGENERATE_TESTS=1` 生成。解析/构建行为变化时按实际输出更新 golden，并确认所有语料仍然成功；
+禁止用 `#[ignore]`、删除用例或预期失败掩盖陈旧 golden。
 
 详见 [编译协议](compiler-architecture.md)、[后端边界](backends/index.md)及[诊断](error-handling.md)。
