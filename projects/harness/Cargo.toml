@@ -1,0 +1,16 @@
+[package]
+name = "fixture-harness"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+# Windows 链接器会打印导入库创建信息；那是链接器 chatter，不是本 crate 的代码诊断。
+[lints.rust]
+linker_messages = "allow"
+
+[dependencies]
+
+[dev-dependencies]
+# 黑盒验收只经 `nyar-vm.rs` 的生产 CLI 入口，不复制任何编译器实现。
+legion = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "e84adfafbd62745074c2d70c22a51cc6c3d47f41" }
