@@ -15,11 +15,8 @@ target/
 Cargo.lock
 
 # Node
-node_modules/
-dist/
 *.node
 *.wasm
-pnpm-lock.yaml
 
 # Valkyrie
 .cache/
@@ -27,17 +24,10 @@ documentation/maintenance/releases/*.reference.md
 # Legacy root checkout only. Canonical read-only tree is `projects/valkyrie.v` submodule.
 /valkyrie.v/
 
-# npm Trusted Publisher local secrets (nifty + legacy)
+# Local secrets
 .env.placeholder.local
 .env.npm-trust.local
-scripts/lib/.npm-trust-cache.json
 .npm-trust-cache.json
 
 # Commit reword scratch files
 reword.pending.json
-
-# Assembled wasm collect (generated locally or in CI)
-projects/packages/vcc-unknown-wasm32/legion.mjs
-projects/packages/vcc-unknown-wasm32/provenance.json
-projects/packages/vcc-unknown-wasm32/run-contracts.txt
-projects/packages/vcc-unknown-wasm32/SHA256SUMS
