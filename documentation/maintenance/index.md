@@ -1,18 +1,21 @@
 # 架构与贡献指南
 
-面向**公开仓库贡献者**：说明 `valkyrie.rs` 现行 crate 分工、编译主链与文档边界。发布流程、自举验收与未公开里程碑不在本文范围。
+面向**公开仓库贡献者**：说明 `valkyrie.rs` 现行职责、语料边界与文档规则。编译器实现、发布流程与自举验收不在本文范围。
 
 ## Workspace 结构
 
-根 `Cargo.toml` 成员以 `projects/compilers/`、`projects/hosts/` 为准（节选）：
+根 `Cargo.toml` 只保留语料 crate 与黑盒 harness：
 
-| Crate | 职责 |
+| Crate / 路径 | 职责 |
 | --- | --- |
-| `legion` | CLI、清单解析、轻量编排 |
-| `vcc-napi` / `vcc-wasm` | 原生与 Wasm 宿主 cdylib |
-| `asgard` | 跨平台 GUI 应用 CLI（可选） |
+| `valkyrie-fixtures` | Valkyrie lexer/parser/builder/printer fixture 与 golden |
+| `von-fixtures` | VON 文本格式 fixture 与 serde golden |
+| `voc-fixtures` | VOC（AWSL 组件）fixture |
+| `projects/fixtures/` | Legion 与 bootstrap 工程级 `.v` 语料 |
+| `projects/harness/` | 调 `nyar-vm.rs` 生产 CLI 的语料黑盒验收 |
+| `projects/valkyrie.v/` | 语言源码与标准库（只读 submodule） |
 
-二进制与文本格式编解码归 Acorn / Oak 仓；本工作区不再保留混合格式包。
+二进制与文本格式编解码归 Acorn / Oak 仓；本工作区不保留混合格式包、npm 包、CI 与发布脚本。
 
 语言语义、`nyar-emitter` 与多数 `nyar-*` crate 来自 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) git 依赖。
 
@@ -25,7 +28,14 @@ WorkspaceResolver → immutable inventory / package graph
   → Acorn 或 Nyar bytecode 编码 → ArtifactStore
 ```
 
+该主链的实现位于 `nyar-vm.rs`；本仓只经 `projects/harness` 的 CLI 入口黑盒验收，不复制其中任何阶段。
 细节见 [compiler-architecture.md](compiler-architecture.md)、[backends/index.md](backends/index.md)。
+
+## 语料与 golden
+
+- fixture 只记录既成解析/构建行为，不定义语言合法性。
+- Golden 由 Oak 的 `REGENERATE_TESTS=1` 生成；更新后必须确认所有语料仍然成功，禁止用 `#[ignore]` 或删除用例掩盖失败。
+- 新增语料工程放在 `projects/fixtures`，并让 `projects/harness` 能通过 `vcc plan` 解析它。
 
 ## 文档边界
 
@@ -33,20 +43,9 @@ WorkspaceResolver → immutable inventory / package graph
 - `documentation/maintenance/`：与**当前代码一致**的架构说明；不得写入未公开计划、发布门槛或工作区外文档链接。
 - 集成测试若需外部语言规范树，通过环境变量注入路径，不得在文档或源码中写死本机路径。
 
-## npm 发布说明
-
-- Trusted Publisher 一次配置：`pnpm npm:trust`（`@doki-land/nifty` + `nifty.config.ts`；合同见 `.github/workflows/publish-npm.yml`）
-- 本地密钥：`.env.placeholder.local`（nifty）或兼容 `.env.npm-trust.local`（`NPM_TOTP_SECRET`）
-- 发布说明：[`.agents/skills/update-change-logs/SKILL.md`](../../.agents/skills/update-change-logs/SKILL.md)（reference → 发布稿 → `gh release edit`）
-- 提交信息与 `git-reword`：[`.agents/skills/update-commit-messages/SKILL.md`](../../.agents/skills/update-commit-messages/SKILL.md)
-- 模板：[release-notes.template.md](release-notes.template.md)
-- 起草对照：`pnpm change-logs --version X.Y.Z`（`nifty change-logs`；亦可全局 `git-change-logs`）
-- `--write` → `releases/vX.Y.Z.reference.md`（gitignore）。`nifty change-logs lookup --email` 查 GitHub `id` → `author-github.json`
-- 非 GitHub 邮箱 → 贡献者映射：[author-github.json](author-github.json)（`id` 稳定，`login` 可改）
-- 已发布版本：`releases/v0.0.0.md` … `releases/v0.0.4.md`（对应 Git tag `v0.0.x`）
-
 ## 相关入口
 
 - [project-architecture.md](project-architecture.md)
+- [package-management.md](package-management.md)
 - [error-handling.md](error-handling.md)
 - 根 [readme.md](../../readme.md)

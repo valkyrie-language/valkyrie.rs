@@ -1,11 +1,12 @@
-# Valkyrie 语言文档项目
+# Valkyrie 语言文档
 
-该项目是 **Valkyrie 编程语言** 的官方文档库，基于 [VitePress](https://vitepress.dev/) 构建。
+本目录是 **Valkyrie 编程语言** 的官方文档，以纯 Markdown 维护；站点渲染、主题与构建工具由外部文档仓负责，
+本仓不再携带 VitePress 工程或 pnpm 依赖。
 
 ## 项目简介
 
-Valkyrie 是一门现代的函数式编程语言，专注于提供强大的 **代数效应（Algebraic Effects） **系统和**强类型安全**。本项目包含了
-Valkyrie 语言的所有官方学习资源、参考指南和示例代码。
+Valkyrie 是一门现代的函数式编程语言，专注于提供强大的 **代数效应（Algebraic Effects）** 系统和**强类型安全**。
+本目录包含语言的学习资源、参考指南与示例说明。
 
 ## 文档结构
 
@@ -13,38 +14,13 @@ Valkyrie 语言的所有官方学习资源、参考指南和示例代码。
 - **[语言特性](./language/)**: 深入了解代数效应、模式匹配、元编程和模块系统等核心功能。
 - **[实战示例](./examples/)**: 涵盖从 Web 开发到深度学习的多种应用场景示例。
 - **[常见问题](./faq.md)**: 汇总开发过程中可能遇到的各类问题。
-
-## 开发与预览
-
-本项目使用 VitePress 驱动，支持实时预览和静态站点生成。
-
-### 安装依赖
-
-在 `projects/valkyrie-document` 目录下，使用 pnpm 安装：
-
-```bash
-pnpm install
-```
-
-### 启动开发服务器
-
-```bash
-pnpm dev
-```
-
-启动后可在浏览器访问 `http://localhost:5173` 进行实时预览。
-
-### 构建静态站点
-
-```bash
-pnpm build
-```
-
-构建产物将保存在 `.vitepress/dist` 目录中。
+- **[维护文档](./maintenance/index.md)**: 仓库职责、编译器架构与验收边界。
 
 ## 参与贡献
 
-我们欢迎并感谢任何形式的贡献，包括修复错别字、完善文档内容或翻译。
+文档与实现保持一致：涉及语言语义的描述以 `valkyrie-2020` 规范为准，编译器行为以
+[nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) 的 `rusty-valkyrie` 为准。修改文档前请先确认该事实的
+唯一生产者，不要用文档描述未实现或已删除的模块。
 
 1. Fork 本仓库
 2. 创建特性分支
