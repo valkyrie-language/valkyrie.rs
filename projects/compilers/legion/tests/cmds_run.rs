@@ -183,7 +183,7 @@ micro main(): i64 {
 "#,
     );
     let output_dir = fixture.project_dir.join("dist").join("run-option-nyar-vm");
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    let target = CanonicalTarget::parse("ovm").expect("nyar-vm target");
     assert_eq!(
         run_build(&BuildArgs {
             project_dir: fixture.project_dir.clone(),
@@ -198,10 +198,10 @@ micro main(): i64 {
     assert_eq!(
         run_project(&RunArgs {
             project_dir: fixture.project_dir.clone(),
-            target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+            target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
             output_dir: Some(output_dir),
             workspace: false,
-            runner: vec![format!("nyar-vm={}", nyar_vm.display())],
+            runner: vec![format!("ovm={}", nyar_vm.display())],
             artifact: None,
             dry_run: false,
             debug_artifacts: false,
@@ -224,7 +224,7 @@ fn runs_cross_file_nyar_vm_project() {
     let fixture = support::create_smoke_project_with_build(
         "legion-run-nyar-vm-cross-file",
         r#"{
-            target: "nyar-vm"
+            target: "ovm"
         }"#,
         r#"namespace app.smoke;
 
@@ -246,7 +246,7 @@ micro add_one(x: i64): i64 {
     .unwrap();
 
     let output_dir = fixture.project_dir.join("dist").join("run-cross-file-nyar-vm");
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    let target = CanonicalTarget::parse("ovm").expect("nyar-vm target");
     assert_eq!(
         run_build(&BuildArgs {
             project_dir: fixture.project_dir.clone(),
@@ -261,10 +261,10 @@ micro add_one(x: i64): i64 {
     assert_eq!(
         run_project(&RunArgs {
             project_dir: fixture.project_dir.clone(),
-            target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+            target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
             output_dir: Some(output_dir),
             workspace: false,
-            runner: vec![format!("nyar-vm={}", nyar_vm.display())],
+            runner: vec![format!("ovm={}", nyar_vm.display())],
             artifact: None,
             dry_run: false,
             debug_artifacts: false,
@@ -287,7 +287,7 @@ fn runs_minimal_nyar_vm_project() {
     let fixture = support::create_smoke_project_with_build(
         "legion-run-nyar-vm",
         r#"{
-            target: "nyar-vm"
+            target: "ovm"
         }"#,
         r#"[main]
 micro main(): i64 {
@@ -296,7 +296,7 @@ micro main(): i64 {
 "#,
     );
     let output_dir = fixture.project_dir.join("dist").join("run-nyar-vm");
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    let target = CanonicalTarget::parse("ovm").expect("nyar-vm target");
 
     let build_status = run_build(&BuildArgs {
         project_dir: fixture.project_dir.clone(),
@@ -310,10 +310,10 @@ micro main(): i64 {
 
     let run_status = run_project(&RunArgs {
         project_dir: fixture.project_dir.clone(),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir),
         workspace: false,
-        runner: vec![format!("nyar-vm={}", nyar_vm.display())],
+        runner: vec![format!("ovm={}", nyar_vm.display())],
         artifact: None,
         dry_run: false,
         debug_artifacts: false,
@@ -329,7 +329,7 @@ fn dry_run_nyar_vm_accepts_workload_json() {
     let fixture = support::create_smoke_project_with_build(
         "legion-run-nyar-vm-workload",
         r#"{
-            target: "nyar-vm"
+            target: "ovm"
         }"#,
         r#"[main]
 micro main(): i64 {
@@ -338,7 +338,7 @@ micro main(): i64 {
 "#,
     );
     let output_dir = fixture.project_dir.join("dist").join("run-nyar-vm-workload");
-    let target = CanonicalTarget::parse("nyar-vm").expect("nyar-vm target");
+    let target = CanonicalTarget::parse("ovm").expect("nyar-vm target");
     let build_status = run_build(&BuildArgs {
         project_dir: fixture.project_dir.clone(),
         target,
@@ -351,10 +351,10 @@ micro main(): i64 {
 
     let status = run_project(&RunArgs {
         project_dir: fixture.project_dir.clone(),
-        target: CanonicalTarget::parse("nyar-vm").expect("nyar-vm target"),
+        target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir),
         workspace: false,
-        runner: vec!["nyar-vm=nyar-vm".to_string()],
+        runner: vec!["ovm=ovm".to_string()],
         artifact: None,
         dry_run: true,
         debug_artifacts: false,

@@ -3,7 +3,7 @@
 use super::*;
 
 #[test]
-fn defaults_to_nyar() {
+fn defaults_to_legion_label() {
     assert_eq!(resolve_test_targets(None), vec!["legion"]);
 }
 
@@ -15,17 +15,18 @@ fn expands_all() {
 #[test]
 fn splits_list() {
     assert_eq!(resolve_test_targets(Some("legion,clr")), vec!["legion", "clr"]);
-    assert_eq!(resolve_test_targets(Some("nyar,node")), vec!["nyar", "node"]);
+    assert_eq!(resolve_test_targets(Some("ovm,node")), vec!["ovm", "node"]);
 }
 
 #[test]
-fn legion_alias_parses_to_nyar_target() {
+fn legion_alias_parses_to_ovm_target() {
     let target = parse_target_label("legion").expect("legion");
-    assert_eq!(target.to_string(), "nyar-unknown-unknown-managed");
+    assert_eq!(target.to_string(), "ovm-unknown-unknown-managed");
 }
 
 #[test]
-fn nyar_vm_alias_parses_to_nyar_target() {
-    let target = parse_target_label("nyar-vm").expect("nyar-vm");
-    assert_eq!(target.to_string(), "nyar-unknown-unknown-managed");
+fn legacy_nyar_aliases_are_rejected() {
+    for label in ["nyar", "nyar-vm", "nyarvm", "nvm"] {
+        assert!(parse_target_label(label).is_err(), "legacy alias `{label}` must not resolve");
+    }
 }

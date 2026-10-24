@@ -25,7 +25,7 @@ export {
 } from './execution-manifest.ts';
 
 /** Nyar VM 目标三元组（与 `legion build --target nyar` 对齐）。 */
-export const NYAR_VM_TARGET = 'nyar-unknown-unknown-managed';
+export const OVM_TARGET = 'ovm-unknown-unknown-managed';
 
 /** Node Wasm GC 目标三元组（与 legion build --target node 对齐）。 */
 export const NODE_WASM_TARGET = 'wasm32-node-unknown-wasm';
@@ -39,7 +39,7 @@ export type NodeWasmEntry = {
 };
 
 /** 解析后的 Nyar VM 入口产物。 */
-export type NyarVmEntry = {
+export type OvmEntry = {
     nyarPath: string;
     physicalEntry: string;
     logicalEntry: string;
@@ -150,7 +150,7 @@ export function listWasmModuleExports(wasmPath: string): string[] {
 /**
  * 在 Nyar 构建产物目录中定位 `.nyar` 模块与 run-contract 入口。
  */
-export function resolveNyarEntry(targetDir: string): NyarVmEntry | null {
+export function resolveOvmEntry(targetDir: string): OvmEntry | null {
     const contractPath = join(targetDir, 'run-contracts.txt');
     if (!existsSync(contractPath)) {
         return null;

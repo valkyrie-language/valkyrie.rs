@@ -240,7 +240,7 @@ pub fn valkyrie_v_std_workspace_available() -> bool {
     ["core", "std", "std.adaptors._"].iter().all(|name| sibling_valkyrie_v_project(name).is_dir())
 }
 
-/// Smoke project with `core`/`std` workspace deps and `target: "nyar-vm"`.
+/// Smoke project with `core`/`std` workspace deps and `target: "ovm"`.
 pub fn create_nyar_vm_std_project(prefix: &str, source: &str) -> SmokeProject {
     let core = von_path(&canonicalize_lossy(&sibling_valkyrie_v_project("core")));
     let std = von_path(&canonicalize_lossy(&sibling_valkyrie_v_project("std")));
@@ -276,7 +276,7 @@ pub fn create_nyar_vm_std_project(prefix: &str, source: &str) -> SmokeProject {
     },
     build: [
         {
-            target: "nyar-vm"
+            target: "ovm"
         }
     ]
 }

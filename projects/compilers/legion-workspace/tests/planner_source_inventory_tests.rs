@@ -26,7 +26,7 @@ fn semantic_source_groups_do_not_depend_on_target() {
     name: "inventory-app",
     artifact: "library",
     build: [
-        { target: "nyar" },
+        { target: "ovm" },
         { target: "node" }
     ]
 }"#,
@@ -51,5 +51,5 @@ fn semantic_source_groups_do_not_depend_on_target() {
     };
 
     // 同一个工程的声明集合必须与 target 无关；只有表示、adaptor 与 backend private plan 可以不同。
-    assert_eq!(groups_for("nyar"), groups_for("node"));
+    assert_eq!(groups_for("ovm"), groups_for("node"));
 }

@@ -72,7 +72,7 @@ pub fn toolchain_fingerprint() -> String {
         "legion={};{};bytecode={}",
         env!("CARGO_PKG_VERSION"),
         nyar_types::contract_version_fingerprint(),
-        nyar_bytecode::BYTECODE_FORMAT_VERSION,
+        ovm_bytecode::BYTECODE_FORMAT_VERSION,
     )
 }
 
