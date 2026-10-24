@@ -8,17 +8,20 @@
 flowchart TD
     Resolver["WorkspaceResolver：manifest / package graph / immutable inventory"]
     Compiler["Compiler：绑定、需求固定点与语义编译"]
-    Canonical["Linked Canonical Semantic MIR"]
-    Representation["稀疏 RepresentationPlan"]
-    Private["TargetExecutionPlan / pre-encode validation"]
+    FrontendIR["Frontend-owned semantic IR / contract"]
+    Modules["Selected Nyar modules"]
+    Representation["Optional RepresentationPlan"]
+    Private["Optional TargetExecutionPlan / pre-encode validation"]
     Encode["Acorn 外部格式编码 / Nyar 字节码编码"]
     Store["ArtifactStore：原子提交与证据"]
-    Resolver --> Compiler --> Canonical --> Representation --> Private --> Encode --> Store
+    Resolver --> Compiler --> FrontendIR --> Modules --> Representation --> Private --> Encode --> Store
 ```
 
 Legion 只编排 WorkspaceResolver、Compiler、ArtifactStore；不直接构造 AST/HIR/MIR 或语义选择结果。Compiler 不自行读取工程文件。
 
-Oak 生产语法树、恢复状态和 syntax diagnostics。Valkyrie frontend 生产名称、类型、泛型替换、trait/imply evidence、调用与 package Semantic MIR；当前实现位于外部 Nyar 仓的 nyar-language。Nyar 框架负责通用验证、优化、表示与降低；Acorn 负责外部格式编解码。
+Oak 生产语法树、恢复状态和 syntax diagnostics。Valkyrie frontend 生产名称、类型、泛型替换、trait/imply evidence、调用与 package Semantic MIR；当前实现位于 Nyar workspace 的 `nyar-language`，但事实所有权仍属于 Valkyrie frontend。Nyar 是多语言分析、编译与执行平台，负责 frontend 接入框架、通用验证、优化、表示与降低；它不能反向生产 Valkyrie 语义。Acorn 负责外部格式编解码。
+
+Nyar 可以托管多个语言 frontend。frontend adapter 按需把自己的语义 IR 或其他明确 contract 交给选定的 Nyar 模块；Nyar 不要求所有语言共享同一套 AST/HIR/语义 IR，也不建立为了兼容所有 frontend 的 Universal IR。某个 frontend 的私有类型规则不能升级为平台公共语义。target 优化可以选择 specialization、witness 消除或内联，但语言层不以单态化作为泛型语义。
 
 ## 声明绑定与语义需求
 
@@ -32,7 +35,7 @@ AST operator 在 HIR 展开为普通 callable。HIR/MIR/LIR 不建立 unary/bina
 
 ItemInstanceId 关联声明、完整 substitution、签名及 evidence。字段/变体引用所属完整名义实例。同声明不同实参不能混用，Self、Cast 目标及关联类型等全部类型位共用绑定事实。
 
-linker 选择 target-conditioned adaptor/import；表示规划只选择 carrier/layout。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 TargetExecutionPlan，不能按 callee、field、类型名或 carrier 补语义。
+linker 选择 target-conditioned adaptor/import；只有接入相应模块时才生成 RepresentationPlan 和 TargetExecutionPlan。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 TargetExecutionPlan，不能按 callee、field、类型名或 carrier 补语义。
 
 ## 恢复、诊断与工具
 
