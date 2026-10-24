@@ -14,6 +14,7 @@ Valkyrie 语言语料与 fixtures 仓库。编译器、语言语义与标准库�
 | [`projects/compilers/von-fixtures/`](projects/compilers/von-fixtures/)           | VON 格式 fixture 与序列化 golden          |
 | [`projects/compilers/voc-fixtures/`](projects/compilers/voc-fixtures/)           | VOC（AWSL 组件）fixture                   |
 | [`projects/fixtures/`](projects/fixtures/)                     | Legion/工程级 `.v` 语料与 bootstrap 工程  |
+| [`projects/harness/`](projects/harness/)                       | 调 `nyar-vm.rs` 生产 CLI 的语料黑盒验收   |
 | [`projects/valkyrie.v/`](projects/valkyrie.v/)                 | Valkyrie V 源码、标准库和工具工程（只读 submodule） |
 | [`documentation/`](documentation/)                             | 语言与维护文档                            |
 
