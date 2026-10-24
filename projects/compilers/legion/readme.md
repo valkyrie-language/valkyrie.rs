@@ -9,7 +9,7 @@ Valkyrie 工作区 CLI：清单解析、依赖解析、构建与目标选择。
 - 本地依赖覆盖：`.config/legion/legions.von`（类似 Rust `.cargo/config.toml`）
 - 构建计划与目标编排
 
-编译器语义与后端降低在 OVM（`ovm-runtime` / `ovm-bytecode`）与 Acorn / Oak 的 git 依赖中实现；本 crate 负责装配与调度。
+编译器语义与后端降低在 OVM（`odin-vm` / `ovm-bytecode`）与 Acorn / Oak 的 git 依赖中实现；本 crate 负责装配与调度。
 
 ## 构建
 
