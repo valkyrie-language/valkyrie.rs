@@ -25,6 +25,6 @@ fn builder_preserves_numeric_literal_kind() {
     else {
         panic!("第二个语句不是 let")
     };
-    assert!(matches!(first.expr, TermExpression::IntegerLiteral { ref value, .. } if value == "42"));
-    assert!(matches!(second.expr, TermExpression::FloatLiteral { ref value, .. } if value == "3.5"));
+    assert!(matches!(first.expr, Some(TermExpression::IntegerLiteral { ref value, .. }) if value == "42"));
+    assert!(matches!(second.expr, Some(TermExpression::FloatLiteral { ref value, .. }) if value == "3.5"));
 }

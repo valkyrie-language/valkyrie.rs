@@ -1,7 +1,7 @@
 use oak_core::{Builder, ParseSession, SourceText};
 use oak_valkyrie::{
     ValkyrieBuilder, ValkyrieLanguage,
-    ast::{Statement, StatementNode, TermExpression},
+    ast::{StatementNode, TermExpression},
 };
 
 /// 不完整源码必须在有限时间内结束解析，禁止饥饿循环撑爆 green tree。
@@ -65,7 +65,7 @@ fn object_initializer_parses_named_fields() {
     else {
         panic!("expected let, got {:?}", root.items)
     };
-    let TermExpression::Object { callee, fields, .. } = &let_stmt.expr
+    let TermExpression::Object { callee, fields, .. } = let_stmt.expr.as_ref().expect("expected Packet {{...}}")
     else {
         panic!("expected Packet {{...}}, got {:?}", let_stmt.expr)
     };

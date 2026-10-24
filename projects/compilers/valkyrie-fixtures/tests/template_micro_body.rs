@@ -1,4 +1,4 @@
-use oak_core::{Lexer, Parser, RedNode, RedTree, SourceText, TokenType, parser::session::ParseSession};
+use oak_core::{Lexer, Parser, RedNode, RedTree, SourceText, parser::session::ParseSession};
 use oak_valkyrie::{
     ValkyrieLanguage, ValkyrieLexer, ValkyrieParser, ValkyrieTokenType, lexer::ValkyrieKeywords, parser::element_type::ValkyrieElementType,
 };

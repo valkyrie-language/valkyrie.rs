@@ -7,72 +7,78 @@
                 {
                     "Namespace": {
                         "annotations": [],
-                        "items": [
-                            {
-                                "Micro": {
-                                    "annotations": [],
-                                    "body": {
-                                        "span": {
-                                            "end": 62,
-                                            "start": 34
-                                        },
-                                        "statements": [
-                                            {
-                                                "Let": {
-                                                    "annotations": [],
-                                                    "expr": {
-                                                        "IntegerLiteral": {
-                                                            "span": {
-                                                                "end": 54,
-                                                                "start": 52
-                                                            },
-                                                            "value": "42"
-                                                        }
-                                                    },
-                                                    "pattern": {
-                                                        "Variable": {
-                                                            "name": {
-                                                                "name": "x",
+                        "body": {
+                            "items": [
+                                {
+                                    "Micro": {
+                                        "annotations": [],
+                                        "body": {
+                                            "span": {
+                                                "end": 62,
+                                                "start": 34
+                                            },
+                                            "statements": [
+                                                {
+                                                    "Let": {
+                                                        "annotations": [],
+                                                        "expr": {
+                                                            "IntegerLiteral": {
+                                                                "span": {
+                                                                    "end": 54,
+                                                                    "start": 52
+                                                                },
+                                                                "value": "42"
+                                                            }
+                                                        },
+                                                        "pattern": {
+                                                            "Variable": {
+                                                                "name": {
+                                                                    "name": "x",
+                                                                    "span": {
+                                                                        "end": 49,
+                                                                        "start": 48
+                                                                    }
+                                                                },
                                                                 "span": {
                                                                     "end": 49,
                                                                     "start": 48
                                                                 }
-                                                            },
-                                                            "span": {
-                                                                "end": 49,
-                                                                "start": 48
                                                             }
-                                                        }
-                                                    },
-                                                    "span": {
-                                                        "end": 60,
-                                                        "start": 44
-                                                    },
-                                                    "ty": null
+                                                        },
+                                                        "span": {
+                                                            "end": 60,
+                                                            "start": 44
+                                                        },
+                                                        "ty": null
+                                                    }
                                                 }
+                                            ]
+                                        },
+                                        "generics": [],
+                                        "is_abstract": false,
+                                        "is_final": false,
+                                        "name": {
+                                            "name": "main",
+                                            "span": {
+                                                "end": 31,
+                                                "start": 27
                                             }
-                                        ]
-                                    },
-                                    "generics": [],
-                                    "is_abstract": false,
-                                    "is_final": false,
-                                    "name": {
-                                        "name": "main",
+                                        },
+                                        "params": [],
+                                        "return_type": null,
                                         "span": {
-                                            "end": 31,
-                                            "start": 27
-                                        }
-                                    },
-                                    "params": [],
-                                    "return_type": null,
-                                    "span": {
-                                        "end": 62,
-                                        "start": 21
-                                    },
-                                    "where_constraints": []
+                                            "end": 62,
+                                            "start": 21
+                                        },
+                                        "where_constraints": []
+                                    }
                                 }
+                            ],
+                            "span": {
+                                "end": 16,
+                                "start": 15
                             }
-                        ],
+                        },
                         "name": {
                             "parts": [
                                 {
