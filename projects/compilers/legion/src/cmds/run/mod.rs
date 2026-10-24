@@ -65,10 +65,10 @@ pub struct RunArgs {
     /// 输出调试用构建副产物。
     #[arg(long, default_value_t = false)]
     pub debug_artifacts: bool,
-    /// 进程级工作负载意图 JSON（仅 `ovm`：转发给 `ovm-runtime --workload-json`）。
+    /// 进程级工作负载意图 JSON（仅 `ovm`：转发给 `odin-vm --workload-json`）。
     #[arg(long = "workload-json", value_name = "json")]
     pub workload_json: Option<String>,
-    /// 工作负载意图 JSON 文件路径（仅 `ovm`：转发给 `ovm-runtime --workload-file`）。
+    /// 工作负载意图 JSON 文件路径（仅 `ovm`：转发给 `odin-vm --workload-file`）。
     #[arg(long = "workload-file", value_name = "path")]
     pub workload_file: Option<PathBuf>,
 }
@@ -391,7 +391,7 @@ pub fn run(args: &RunArgs) -> Result<ExitCode> {
     Ok(exit_code_from_status(status.code()))
 }
 
-/// 将 legion 侧工作负载意图参数转发给 `ovm-runtime` runner。
+/// 将 legion 侧工作负载意图参数转发给 `odin-vm` runner。
 fn append_ovm_workload_args(command: &mut RunCommand, args: &RunArgs) -> Result<()> {
     if args.workload_json.is_none() && args.workload_file.is_none() {
         return Ok(());

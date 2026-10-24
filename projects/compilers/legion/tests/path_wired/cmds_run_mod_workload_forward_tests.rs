@@ -22,7 +22,7 @@ fn appends_workload_json_for_nyar_vm() {
     let mut command = RunCommand {
         target: RunnerFamily::Ovm,
         artifact: PathBuf::from("out.nyar"),
-        command: "ovm-runtime".into(),
+        command: "odin-vm".into(),
         args: vec!["out.nyar".into()],
     };
     let mut args = bare_run_args();
@@ -105,7 +105,7 @@ fn is_fresh_rejects_stale_host_provider_compile_evidence() {
         run_contracts: vec![RunContract {
             logical_entry: "main".into(),
             physical_entry: "app.nyar".into(),
-            invocation: "ovm-runtime app.nyar".into(),
+            invocation: "odin-vm app.nyar".into(),
             validate: "exists".into(),
         }],
         compile_evidence: Some(CompileEvidenceDigest {
@@ -191,7 +191,7 @@ fn sample_execution_manifest(plan: &BuildPlan, artifact_path: &Path, evidence: C
         run_contracts: vec![RunContract {
             logical_entry: "main".into(),
             physical_entry: "app.nyar".into(),
-            invocation: "ovm-runtime app.nyar".into(),
+            invocation: "odin-vm app.nyar".into(),
             validate: "exists".into(),
         }],
         compile_evidence: Some(evidence),
