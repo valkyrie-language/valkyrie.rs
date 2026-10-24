@@ -15,6 +15,9 @@ target/
 Cargo.lock
 
 # Node
+node_modules/
+dist/
+pnpm-lock.yaml
 *.node
 *.wasm
 
