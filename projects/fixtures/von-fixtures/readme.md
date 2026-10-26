@@ -1,14 +1,9 @@
 # von-fixtures
 
-VON manifest Oak 解析器回归 fixture（仅测试用）。
+VON 文本格式的测试集合，覆盖 Oak 的词法、格式化、打印，以及 manifest 反序列化。样本和快照帮助使用者检查配置文本的解析与往返输出。
 
-## 职责
+在仓库根目录运行：
 
-- 为 `oak-von` 词法、格式化、打印提供快照测试
-- 不链接 `legion` 生产链
-
-## 运行
-
-```bash
+```sh
 cargo test -p von-fixtures
 ```

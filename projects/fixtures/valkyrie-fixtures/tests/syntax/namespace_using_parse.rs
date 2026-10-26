@@ -29,7 +29,7 @@ fn dotted_namespace_declaration_parses() {
 fn wasm_attribute_with_two_string_arguments_parses() {
     let items = parse_items(
         r#"[wasm("env", "utf8_concat")]
-private micro __host_utf8_concat(a: Utf8Text, b: Utf8Text): Utf8Text
+private micro __js_utf8_concat(a: Utf8Text, b: Utf8Text): Utf8Text
 "#,
     );
     let micro = items
@@ -58,7 +58,7 @@ fn keyword_micro_name_yield_parses() {
 
 #[test]
 fn signature_only_micro_declaration_parses() {
-    let items = parse_items("private micro __host_utf8_length(s: Utf8Text): i32\n");
+    let items = parse_items("private micro __js_utf8_length(s: Utf8Text): i32\n");
     let micro = items
         .iter()
         .find_map(|item| match item {
@@ -66,7 +66,7 @@ fn signature_only_micro_declaration_parses() {
             _ => None,
         })
         .expect("micro item");
-    assert_eq!(micro.name.name, "__host_utf8_length");
+    assert_eq!(micro.name.name, "__js_utf8_length");
     assert!(micro.body.statements.is_empty());
 }
 
@@ -127,6 +127,69 @@ micro two_sum() {}"#,
     assert_eq!(micro.annotations[0].name.name, "export");
     assert_eq!(micro.annotations[0].args.len(), 1);
     assert_eq!(micro.annotations[0].args[0].key.as_ref().map(|k| k.name.as_str()), Some("case"));
+}
+
+#[test]
+fn imply_private_micro_after_suffix_operator_parses() {
+    let items = parse_items(
+        r#"imply Box {
+    suffix `[ ]`(self, i: usize): u8 { return 0 }
+    private micro helper(self) -> bool { return true }
+}"#,
+    );
+    let imply = items
+        .iter()
+        .find_map(|item| match item {
+            StatementNode::Imply(imply) => Some(imply),
+            _ => None,
+        })
+        .expect("imply item");
+    assert!(imply.methods.len() >= 2, "expected suffix + private micro members, got {}", imply.methods.len());
+}
+
+#[test]
+fn utf8text_style_split_imply_blocks_parse() {
+    let items = parse_items(
+        r#"class Utf8Text { _repr: [u8] }
+
+imply Utf8Text {
+    micro length(self) -> usize { return 0 }
+    private micro char_width(self, index: usize) -> usize { return 1 }
+}
+
+imply Utf8Text: std::iterator::IntoIterator {
+    type Item = char;
+    type Iter = Utf8Iterator;
+    micro into_iterator(self): Utf8Iterator { return Utf8Iterator::new(self) }
+}
+
+imply Utf8Text {
+    suffix `⁅ ⁆`(self, cardinal: usize): u8 { return self._repr⁅cardinal⁆ }
+    private micro equals_repr(self, other_repr: [u8]) -> bool { return true }
+}"#,
+    );
+    assert_eq!(items.iter().filter(|item| matches!(item, StatementNode::Imply(_))).count(), 3);
+}
+
+#[test]
+fn multiple_imply_blocks_for_same_type_parse() {
+    let items = parse_items(
+        r#"imply Widget {
+    micro a(self) -> i32 { return 1 }
+}
+
+imply Widget: std::iterator::IntoIterator {
+    type Item = i32;
+    type Iter = WidgetIter;
+    micro into_iterator(self): WidgetIter { return WidgetIter::new(self) }
+}
+
+imply Widget {
+    micro b(self) -> i32 { return 2 }
+}"#,
+    );
+    let imply_count = items.iter().filter(|item| matches!(item, StatementNode::Imply(_))).count();
+    assert_eq!(imply_count, 3);
 }
 
 #[test]

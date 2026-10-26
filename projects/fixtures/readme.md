@@ -1,14 +1,13 @@
-# Compilers
+# Valkyrie 测试语料
 
-`projects/compilers/` 下的 Rust workspace 成员只保留语料 fixture：
+这里收集 Valkyrie、VON、AWSL 及 Legion 工程样本。解析器维护者可用快照比较语法树和文本输出，工程工具维护者可用完整工程验证规划、构建与运行行为。
 
-| Crate | 职责 |
-| --- | --- |
-| `valkyrie-fixtures` | Valkyrie lexer/parser/builder/printer fixture 与 golden |
-| `legion-fixtures` | Legion bootstrap/run 语料；`nyar-vm.rs` 经 git `rev` 消费 |
-| `von-fixtures` | VON 文本格式 fixture 与序列化 golden |
-| `voc-fixtures` | VOC（AWSL 组件）fixture |
+```mermaid
+flowchart LR
+  syntax[语言与格式样本] --> oak[Oak 快照测试]
+  projects[工程与自举样本] --> harness[工程 harness]
+  oak --> results[回归结果]
+  harness --> results
+```
 
-编译实现、CLI 与 host 绑定位于 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs)，不在本仓重复实现。
-二进制与文本格式编解码由 Acorn / Oak 拥有（[acorn.rs](https://github.com/yggdrasil-language/acorn.rs) /
-[oak.rs](https://github.com/yggdrasil-language/oak.rs) git 依赖）。
+Valkyrie、VON 和 VOC 的 crate 提供各格式测试入口；Legion 语料通过 `legion_fixtures::root()` 访问。具体用法见各项目的 README。

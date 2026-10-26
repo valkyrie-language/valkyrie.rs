@@ -1,6 +1,6 @@
 # Valkyrie text snapshot fixtures
 
-`legion` 持有的 Valkyrie 源文件与文本 sidecar 基线。`std-data` / `nyar-language` 只消费、不持有 fixture。
+Legion 工程使用的 Valkyrie 源文件与文本 sidecar 基线。fixture crate 持有语料，Nyar 测试工具在运行时读取这些文件。
 
 ## 文件形态
 
@@ -21,8 +21,7 @@ lexer/angle_less.v.highlight
 - `*.highlight`：merged highlight spans（lexical + semantic），每行 `Span { kind, span, text, modifier }`；语义层为空时等价于
   lexical merged
 
-禁止使用 Rust `Debug` 直接落盘；printer 实现在 [
-`std-data/src/text/valkyrie/parse_dump/`](../../../../std-data/src/text/valkyrie/parse_dump/mod.rs)。
+文本输出由对应的 formatter/printer 生成，sidecar 保存稳定的 token、parse 和 highlight 结果。
 
 ## 重生成
 
@@ -47,9 +46,9 @@ cargo test -p nyar-language text_fixture_highlight_regression
 
 ## 消费方
 
-| Crate           | Runner                                   | Sidecar           |
-|-----------------|------------------------------------------|-------------------|
-| `std-data`      | `tests/text/valkyrie/fixtures/runner.rs` | `.lex` / `.parse` |
-| `nyar-language` | `tests/valkyrie/highlight/fixtures.rs`   | `.highlight`      |
+| 用途 | Sidecar |
+|------|---------|
+| 词法与解析回归 | `.lex` / `.parse` |
+| 高亮回归 | `.highlight` |
 
-路径解析（两 crate 相同）：`CARGO_MANIFEST_DIR/../legion/tests/fixtures/text/valkyrie`
+语料根目录由 `legion-fixtures::root()` 提供，测试通过该入口定位 `text/valkyrie`。

@@ -1,14 +1,9 @@
 # valkyrie-fixtures
 
-Valkyrie 语言 Oak 解析器回归 fixture（仅测试用）。
+为 Oak 的 Valkyrie 解析器提供语法样本和快照回归，涵盖词法、解析、builder、打印与格式化。适合在调整语法或文本输出后比较行为变化。
 
-## 职责
+在仓库根目录运行：
 
-- 为 `oak-valkyrie` 词法、格式化、打印、解析与 builder 提供快照测试
-- 不链接 `legion` 生产链，避免 parser 回归与交付 lane 耦合
-
-## 运行
-
-```bash
+```sh
 cargo test -p valkyrie-fixtures
 ```

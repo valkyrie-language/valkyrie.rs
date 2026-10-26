@@ -1,14 +1,9 @@
 # voc-fixtures
 
-VOC（AWSL 配置）Oak 解析器回归 fixture（仅测试用）。
+为 AWSL 相关解析提供样本和快照回归。这个项目适合用于检查组件配置语法及解析结果的变化。
 
-## 职责
+在仓库根目录运行：
 
-- 为 `oak-awsl` 相关解析快照提供独立 workspace 成员
-- 不进入 `legion` / Asgard 生产交付链
-
-## 运行
-
-```bash
+```sh
 cargo test -p voc-fixtures
 ```
