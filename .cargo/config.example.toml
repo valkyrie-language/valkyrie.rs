@@ -1,4 +1,5 @@
-# Copy to `.cargo/config.toml` (gitignored) for local nyar-vm.rs / oak.rs sibling patches.
+# Copy to `.cargo/config.toml` (gitignored). Do not commit real paths.
+# Replace `<your-path>` with the directory that contains sibling checkouts `nyar-vm.rs` / `oak.rs`.
 # CI resolves nyar-* / oak-* from git `rev` in `Cargo.toml`.
 #
 # 黑盒 Legion/Asgard 走 `@nyar/valkyrie`（根 `package.json`）；白盒链走下方 nyar-vm patch。
@@ -20,6 +21,9 @@ nyar-workspace = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nya
 [patch."https://github.com/yggdrasil-language/oak.rs"]
 oak-awsl = { path = "<your-path>/oak.rs/examples/oak-voc" }
 oak-core = { path = "<your-path>/oak.rs/projects/oak-core" }
+oak-dejavu = { path = "<your-path>/oak.rs/examples/oak-dejavu" }
+oak-formatter = { path = "<your-path>/oak.rs/projects/oak-formatter" }
+oak-pretty-print = { path = "<your-path>/oak.rs/projects/oak-pretty-print" }
 oak-testing = { path = "<your-path>/oak.rs/projects/oak-testing" }
 oak-valkyrie = { path = "<your-path>/oak.rs/examples/oak-valkyrie" }
 oak-von = { path = "<your-path>/oak.rs/examples/oak-von" }
