@@ -1,0 +1,22 @@
+[package]
+name = "legion-fixtures"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Legion bootstrap and run corpora for downstream integration tests (nyar-vm via git rev)."
+include = [
+    "/src/",
+    "/bootstrap_legion_tools/",
+    "/bootstrap_node/",
+    "/cmds_run/",
+    "/control_flow/",
+    "/oop/",
+    "/runtime_smoke/",
+    "/text/",
+]
+
+[lib]
+path = "src/lib.rs"

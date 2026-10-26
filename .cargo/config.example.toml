@@ -1,23 +1,25 @@
-# Local sibling checkout of nyar-vm.rs (copy to `.cargo/config.toml`).
-# CI resolves nyar-* from git `dev`; this patch is for offline / monorepo dev only.
+# Copy to `.cargo/config.toml` (gitignored) for local nyar-vm.rs / oak.rs sibling patches.
+# CI resolves nyar-* / oak-* from git `rev` in `Cargo.toml`.
+#
+# 黑盒 Legion/Asgard 走 `@nyar/valkyrie`（根 `package.json`）；白盒链走下方 nyar-vm patch。
 
 [patch."https://github.com/nyar-vm/nyar-vm.rs"]
-nyar = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar" }
-nyar-analyzer = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-analyzer" }
-nyar-emitter = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-emitter" }
-odin-bytecode = { path = "<your-path>/nyar-vm.rs/projects/formats/odin-bytecode" }
-nyar-language = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-language" }
-nyar-optimizer = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-optimizer" }
-nyar-package-manager = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-package-manager" }
-nyar-package-registry = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-package-registry" }
-nyar-runner = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-runner" }
-nyar-types = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-types" }
-nyar-workspace = { path = "<your-path>/nyar-vm.rs/projects/compilers/nyar-workspace" }
+rusty-valkyrie = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/languages/rusty-valkyrie" }
+nyar = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar" }
+nyar-analyzer = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-analyzer" }
+nyar-emitter = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-emitter" }
+nyar-format = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-format" }
+odin-bytecode = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/formats/odin-bytecode" }
+nyar-optimizer = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-optimizer" }
+nyar-package-manager = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-package-manager" }
+nyar-package-registry = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-package-registry" }
+nyar-runner = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-runner" }
+nyar-types = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-types" }
+nyar-workspace = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-workspace" }
 
-# Optional oak.rs sibling patch (CI uses git `dev`; uncomment and point at your checkout):
 [patch."https://github.com/yggdrasil-language/oak.rs"]
-oak-awsl = { path = "<your-path>/oaks/examples/oak-voc" }
-oak-core = { path = "<your-path>/oaks/projects/oak-core" }
-oak-testing = { path = "<your-path>/oaks/projects/oak-testing" }
-oak-valkyrie = { path = "<your-path>/oaks/examples/oak-valkyrie" }
-oak-von = { path = "<your-path>/oaks/examples/oak-von" }
+oak-awsl = { path = "<your-path>/oak.rs/examples/oak-voc" }
+oak-core = { path = "<your-path>/oak.rs/projects/oak-core" }
+oak-testing = { path = "<your-path>/oak.rs/projects/oak-testing" }
+oak-valkyrie = { path = "<your-path>/oak.rs/examples/oak-valkyrie" }
+oak-von = { path = "<your-path>/oak.rs/examples/oak-von" }

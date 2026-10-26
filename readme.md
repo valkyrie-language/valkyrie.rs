@@ -1,7 +1,7 @@
 # 🛡️ Valkyrie
 
 Valkyrie 语言语料与 fixtures 仓库。编译器、语言语义与标准库实现位于
-[nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) 与 [`projects/valkyrie.v`](projects/valkyrie.v/)；
+[nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) 与 [`projects/examples/valkyrie.v`](projects/examples/valkyrie.v/)；
 本仓只保留 Oak 语法解析与构建的 fixture 语料及其黑盒验收。
 
 > 语言语义以 `valkyrie-2020` 规范为准。本仓不重新实现编译器、CLI、host 或发布包。
@@ -14,8 +14,9 @@ Valkyrie 语言语料与 fixtures 仓库。编译器、语言语义与标准库�
 | [`projects/compilers/von-fixtures/`](projects/compilers/von-fixtures/)           | VON 格式 fixture 与序列化 golden          |
 | [`projects/compilers/voc-fixtures/`](projects/compilers/voc-fixtures/)           | VOC（AWSL 组件）fixture                   |
 | [`projects/fixtures/`](projects/fixtures/)                     | Legion/工程级 `.v` 语料与 bootstrap 工程  |
-| [`projects/harness/`](projects/harness/)                       | 调 `nyar-vm.rs` 生产 CLI 的语料黑盒验收   |
-| [`projects/valkyrie.v/`](projects/valkyrie.v/)                 | Valkyrie V 源码、标准库和工具工程（只读 submodule） |
+| [`projects/harness/`](projects/harness/)                       | 语料黑盒（`@nyar/valkyrie`）与白盒（`rusty-valkyrie` git）验收 |
+| [`projects/examples/`](projects/examples/)                     | 示例工程与只读 `valkyrie.v` submodule |
+| [`projects/examples/valkyrie.v/`](projects/examples/valkyrie.v/) | Valkyrie V 发行版 monorepo（只读 submodule） |
 | [`documentation/`](documentation/)                             | 语言与维护文档                            |
 
 Oak 拥有语法树、恢复状态与 syntax diagnostics；Valkyrie frontend 拥有名称、类型、泛型替换、evidence 与调用语义。
@@ -26,6 +27,7 @@ fixture 只记录这些既成行为，不定义语言合法性，也不替代 `n
 要求 Rust toolchain，版本由 [`rust-toolchain.toml`](rust-toolchain.toml) 固定。
 
 ```bash
+pnpm install               # harness 黑盒验收需要 @nyar/valkyrie（pnpm workspace）
 cargo test --workspace     # 运行全部 fixture 与 golden 校验
 cargo check --workspace    # 检查 fixtures crate
 ```

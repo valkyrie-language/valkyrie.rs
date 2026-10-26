@@ -1,7 +1,7 @@
 # Valkyrie 项目架构与维护指南
 
 本仓是 Valkyrie 的语料与 fixture 仓库：保存 `.v` 语料、Oak 解析/构建 golden 与最小黑盒验收。
-编译器、语言语义、标准库与 CLI/host 实现位于 `nyar-vm.rs` 与 `projects/valkyrie.v`，本仓不重复实现。
+编译器、语言语义、标准库与 CLI/host 实现位于 `nyar-vm.rs` 与 `projects/examples/valkyrie.v`，本仓不重复实现。
 
 ## 目录与职责
 
@@ -9,7 +9,7 @@
 - projects/compilers/von-fixtures：VON 格式 fixture 与 serde golden。
 - projects/compilers/voc-fixtures：VOC（AWSL 组件）fixture。
 - projects/fixtures：Legion/工程级 `.v` 语料与 bootstrap 工程，供黑盒 harness 调用外部 CLI 验收。
-- projects/valkyrie.v：语言源码与标准库（只读 submodule）。
+- projects/examples/valkyrie.v：语言源码与标准库（只读 submodule）。
 
 成员与依赖以 Cargo.toml 为准。Oak 拥有语法树、恢复状态、syntax diagnostics 与 source edits；Valkyrie frontend
 （`nyar-vm.rs` 的 `rusty-valkyrie`）拥有名称、类型、泛型替换、evidence、调用与 Semantic MIR；Acorn 拥有外部二进制

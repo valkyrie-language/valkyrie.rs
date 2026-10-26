@@ -1,0 +1,16 @@
+{
+    "name": "@valkyrie-language/valkyrie.rs",
+    "private": true,
+    "description": "Valkyrie fixtures workspace — Rust fixtures + pnpm harness for @nyar/valkyrie CLI",
+    "scripts": {
+        "test": "cargo test --workspace",
+        "test:harness": "cargo test -p valkyrie-harness",
+        "check": "cargo cry",
+        "check:rust": "cargo cry"
+    },
+    "engines": {
+        "node": ">=22.18.0",
+        "pnpm": ">=10.0.0"
+    },
+    "packageManager": "pnpm@10.18.3"
+}

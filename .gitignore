@@ -17,14 +17,15 @@ Cargo.lock
 # Node
 node_modules/
 dist/
-pnpm-lock.yaml
 *.node
 *.wasm
+package-lock.json
+pnpm-lock.yaml
 
 # Valkyrie
 .cache/
 documentation/maintenance/releases/*.reference.md
-# Legacy root checkout only. Canonical read-only tree is `projects/valkyrie.v` submodule.
+# Legacy root checkout only. Canonical read-only tree is `projects/examples/valkyrie.v` submodule.
 /valkyrie.v/
 
 # Local secrets

@@ -4,7 +4,7 @@
 
 > **归属**：`LegionManager`、`legion` CLI 与 `legion.von` / `legions.von` 的解析实现在
 > [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs)，本文描述的是编译器所需的事实合同；本仓只在
-> `projects/fixtures` 保留语料，在 `projects/harness` 通过 `vcc plan` 黑盒验证这些清单仍可解析。
+> `projects/fixtures` 保留语料，在 `projects/harness` 通过 `@nyar/valkyrie` 的 `legion plan` 黑盒验证这些清单仍可解析。
 
 ## 1. 核心概念区分
 

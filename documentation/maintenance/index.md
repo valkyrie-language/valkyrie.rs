@@ -12,12 +12,13 @@
 | `von-fixtures` | VON 文本格式 fixture 与 serde golden |
 | `voc-fixtures` | VOC（AWSL 组件）fixture |
 | `projects/fixtures/` | Legion 与 bootstrap 工程级 `.v` 语料 |
-| `projects/harness/` | 调 `nyar-vm.rs` 生产 CLI 的语料黑盒验收 |
-| `projects/valkyrie.v/` | 语言源码与标准库（只读 submodule） |
+| `projects/harness/` | 语料黑盒（`@nyar/valkyrie`）与白盒（`rusty-valkyrie` git）验收 |
+| `projects/examples/valkyrie.v/` | 语言源码与标准库（只读 submodule） |
 
 二进制与文本格式编解码归 Acorn / Oak 仓；本工作区不保留混合格式包、npm 包、CI 与发布脚本。
 
-语言语义、`nyar-emitter` 与多数 `nyar-*` crate 来自 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) git 依赖。
+黑盒经 npm [`@nyar/valkyrie`](https://www.npmjs.com/package/@nyar/valkyrie) 的 `legion`/`asgard`；
+白盒经 [nyar-vm.rs](https://github.com/nyar-vm/nyar-vm.rs) git 依赖的 `rusty-valkyrie` 与 `nyar-*` crate（本机 path patch 见 `.cargo/config.example.toml`）。
 
 ## 编译主链（摘要）
 
@@ -35,7 +36,7 @@ WorkspaceResolver → immutable inventory / package graph
 
 - fixture 只记录既成解析/构建行为，不定义语言合法性。
 - Golden 由 Oak 的 `REGENERATE_TESTS=1` 生成；更新后必须确认所有语料仍然成功，禁止用 `#[ignore]` 或删除用例掩盖失败。
-- 新增语料工程放在 `projects/fixtures`，并让 `projects/harness` 能通过 `vcc plan` 解析它。
+- 新增语料工程放在 `projects/fixtures`，并让 `projects/harness` 能通过 `legion plan` 解析它。
 
 ## 文档边界
 

@@ -1,12 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "projects/compilers/valkyrie-fixtures",
-    "projects/compilers/von-fixtures",
-    "projects/compilers/voc-fixtures",
-    "projects/harness",
+    "projects/harness/valkyrie-harness",
+    "projects/fixtures/valkyrie-fixtures",
+    "projects/fixtures/legion-fixtures",
+    "projects/fixtures/von-fixtures",
+    "projects/fixtures/voc-fixtures",
 ]
-default-members = ["projects/compilers/valkyrie-fixtures"]
+default-members = ["projects/fixtures/valkyrie-fixtures"]
 
 [workspace.package]
 version = "0.0.1"
@@ -24,6 +25,8 @@ oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa
 oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "a6ababa09448b33bce1618e4dffbc8ef19c9b684" }
 
 serde = { version = "1.0.228", features = ["derive", "rc"] }
+# 白盒 harness / 集成测试经 git `rev` 链接；本机兄弟仓路径写在 `.cargo/config.toml`。
+rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "bfd8c5a01d0fc9cb85adacce2812337e7dcd71ab" }
 
 [profile.release]
 lto = false

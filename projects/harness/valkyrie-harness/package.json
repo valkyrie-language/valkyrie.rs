@@ -1,0 +1,12 @@
+{
+    "name": "@valkyrie-language/harness",
+    "version": "0.0.1",
+    "private": true,
+    "description": "Black-box harness: @nyar/valkyrie legion/asgard CLI for cargo integration tests",
+    "devDependencies": {
+        "@nyar/valkyrie": "0.0.14"
+    },
+    "engines": {
+        "node": ">=22.18.0"
+    }
+}

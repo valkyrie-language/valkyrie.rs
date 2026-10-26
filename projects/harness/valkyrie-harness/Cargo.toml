@@ -1,0 +1,18 @@
+[package]
+name = "valkyrie-harness"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+# Windows 链接器会打印导入库创建信息；那是链接器 chatter，不是本 crate 的代码诊断。
+[lints.rust]
+linker_messages = "allow"
+
+[dependencies]
+
+[dev-dependencies]
+# 黑盒：`@nyar/valkyrie` `legion`/`asgard`（见根 `package.json`）；白盒：`rusty-valkyrie` 程序化 API。
+rusty-valkyrie = { workspace = true }
+oak-core = { workspace = true }
+oak-valkyrie = { workspace = true }
