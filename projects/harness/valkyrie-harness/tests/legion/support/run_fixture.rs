@@ -333,7 +333,6 @@ fn execute_run_fixture_target(project_dir: &Path, target: RunFixtureTarget) -> R
         project_dir: project_dir.to_path_buf(),
         target: target.canonical_target(),
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     }) {
         Ok(status) => status,
@@ -482,7 +481,6 @@ fn run_legion_dry_run(project_dir: &Path, target: RunFixtureTarget, output_dir: 
         project_dir: project_dir.to_path_buf(),
         target: target.canonical_target(),
         output_dir: Some(output_dir.to_path_buf()),
-        workspace: false,
         runner: Vec::new(),
         artifact: None,
         dry_run: true,

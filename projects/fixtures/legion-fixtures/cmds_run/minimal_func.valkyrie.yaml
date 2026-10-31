@@ -12,7 +12,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: unresolved call `infix !=` in main'
+    - 'build failed for clr-microsoft-unknown-managed: unresolved call `infix !=` in main at source/core_primitive.v:64..75'
     errors: []
   jvm-openjdk-unknown-managed:
     build_success: false
@@ -22,7 +22,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: unresolved call `infix !=` in main'
+    - 'build failed for jvm-openjdk-unknown-managed: unresolved call `infix !=` in main at source/core_primitive.v:64..75'
     errors: []
   wasm32-node-unknown-wasm:
     build_success: false
@@ -32,7 +32,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-node-unknown-wasm: unresolved call `infix !=` in main'
+    - 'build failed for wasm32-node-unknown-wasm: unresolved call `infix !=` in main at source/core_primitive.v:64..75'
     errors: []
   wasm32-unknown-wasi-wasi:
     build_success: false
@@ -42,5 +42,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: unresolved call `infix !=` in main'
+    - 'build failed for wasm32-unknown-wasi-wasi: unresolved call `infix !=` in main at source/core_primitive.v:64..75'
     errors: []

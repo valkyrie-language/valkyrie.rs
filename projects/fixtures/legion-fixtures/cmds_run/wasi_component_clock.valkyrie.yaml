@@ -9,5 +9,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: unresolved call `infix <=` in main'
+    - 'build failed for wasm32-unknown-wasi-wasi: unresolved call `infix <=` in main at source/core_primitive.v:259..274'
     errors: []

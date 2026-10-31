@@ -5,7 +5,7 @@ use rusty_valkyrie::legion::cmds::{
     build::{BuildArgs, run},
     run::ExecutionManifest,
 };
-use rusty_valkyrie::CanonicalTarget;
+use rusty_valkyrie::legion::CanonicalTarget;
 use std::{env, fs, path::Path, process::Command};
 use crate::support::create_smoke_project_with_manifest;
 
@@ -24,7 +24,6 @@ fn bootstrap_node_entry_fixture_wired_from_repository() {
         project_dir: fixture.project_dir.clone(),
         target: CanonicalTarget::parse("node").unwrap(),
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .unwrap();
@@ -56,7 +55,6 @@ micro legion(args: [utf8]) -> i32 {
         project_dir: fixture.project_dir.clone(),
         target: CanonicalTarget::parse("node").unwrap(),
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .unwrap();
@@ -93,7 +91,6 @@ micro legion(args: [utf8]) -> i32 {
         project_dir: fixture.project_dir.clone(),
         target: CanonicalTarget::parse("node").unwrap(),
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .unwrap();

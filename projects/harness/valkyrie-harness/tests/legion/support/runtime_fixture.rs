@@ -290,7 +290,6 @@ fn execute_runtime_target(
         project_dir: project.project_dir.clone(),
         target: target.canonical_target(),
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     });
 

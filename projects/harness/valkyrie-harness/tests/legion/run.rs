@@ -8,11 +8,7 @@ use rusty_valkyrie::legion::{
         run::{RunArgs, run as run_project},
     },
 };
-use std::{
-    env,
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+use std::{env, path::PathBuf, process::ExitCode};
 use crate::support::run_fixture::{
     RunFixtureContext, can_run_all_runtime_targets, can_run_fixture_context, collect_run_fixture_cases, verify_run_fixture,
     verify_run_fixture_for_context,
@@ -193,7 +189,6 @@ micro add_one(x: i64): i64 {
             project_dir: fixture.project_dir.clone(),
             target,
             output_dir: Some(output_dir.clone()),
-            workspace: false,
             debug_artifacts: false,
         })
         .unwrap(),
@@ -204,7 +199,6 @@ micro add_one(x: i64): i64 {
             project_dir: fixture.project_dir.clone(),
             target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
             output_dir: Some(output_dir),
-            workspace: false,
             runner: vec![format!("ovm={}", nyar_vm.display())],
             artifact: None,
             dry_run: false,
@@ -243,7 +237,6 @@ micro main(): i64 {
         project_dir: fixture.project_dir.clone(),
         target,
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .unwrap();
@@ -253,7 +246,6 @@ micro main(): i64 {
         project_dir: fixture.project_dir.clone(),
         target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir),
-        workspace: false,
         runner: vec![format!("ovm={}", nyar_vm.display())],
         artifact: None,
         dry_run: false,
@@ -284,7 +276,6 @@ micro main(): i64 {
         project_dir: fixture.project_dir.clone(),
         target,
         output_dir: Some(output_dir.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .unwrap();
@@ -294,7 +285,6 @@ micro main(): i64 {
         project_dir: fixture.project_dir.clone(),
         target: CanonicalTarget::parse("ovm").expect("nyar-vm target"),
         output_dir: Some(output_dir),
-        workspace: false,
         runner: vec!["ovm=ovm".to_string()],
         artifact: None,
         dry_run: true,
@@ -327,7 +317,8 @@ fn resolve_nyar_vm_runner() -> Option<PathBuf> {
 }
 
 fn run_fixture_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join("cmds_run")
+    // reshape 后 run 语料归 valkyrie.rs 的 legion-fixtures 仓根所有。
+    crate::support::legion_corpus_subdir("cmds_run")
 }
 
 fn explicit_interop_fixture_paths() -> Vec<PathBuf> {

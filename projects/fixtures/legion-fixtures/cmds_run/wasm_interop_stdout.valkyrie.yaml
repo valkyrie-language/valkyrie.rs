@@ -9,5 +9,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-node-unknown-wasm: compile pipeline rejected module `wasm_interop_stdout` (PIPE004)'
+    - 'build failed for wasm32-node-unknown-wasm: compile pipeline rejected module `wasm_interop_stdout` (SMIR007): Semantic MIR 合同失败: function=wasm_interop_stdout::main, location=block 0 instruction 1, detail=call argument type differs from declared signature (actual=Utf8, expected=Utf16)'
     errors: []

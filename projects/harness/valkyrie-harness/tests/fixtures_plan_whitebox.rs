@@ -1,6 +1,6 @@
-//! 白盒：用 git 依赖的 `rusty-valkyrie` `legion::plan_project` 对语料验收。
+//! 白盒：用 git 依赖的 `rusty-valkyrie` `legion::api::plan` 对语料验收。
 
-use rusty_valkyrie::{CanonicalTarget, legion::plan_project};
+use rusty_valkyrie::legion::{CanonicalTarget, PlanRequest, plan};
 use valkyrie_harness::fixtures;
 
 #[test]
@@ -11,7 +11,8 @@ fn fixture_projects_resolve_plan_whitebox() {
     let target = CanonicalTarget::parse("node").expect("node target");
     let mut failures = Vec::new();
     for project in &projects {
-        match plan_project(project, target.clone()) {
+        let request = PlanRequest { project_dir: project.clone(), target: target.clone(), output_dir: None };
+        match plan(request) {
             Ok(summary) => {
                 assert!(!summary.project.is_empty(), "{} plan 返回空项目名", project.display());
             }

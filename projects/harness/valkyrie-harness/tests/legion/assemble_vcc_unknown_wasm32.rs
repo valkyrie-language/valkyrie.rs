@@ -8,7 +8,7 @@
 //! 不依赖 native `legion` 二进制；直接调用库内 `legion build` 实现。
 
 use rusty_valkyrie::legion::cmds::build::{BuildArgs, run};
-use rusty_valkyrie::CanonicalTarget;
+use rusty_valkyrie::legion::CanonicalTarget;
 use std::path::{Path, PathBuf};
 
 fn bootstrap_fixture_root() -> PathBuf {
@@ -41,7 +41,6 @@ fn assemble_vcc_unknown_wasm32_capability() {
         project_dir: fixture.clone(),
         target: CanonicalTarget::parse("node").expect("node target"),
         output_dir: Some(out_root.clone()),
-        workspace: false,
         debug_artifacts: false,
     })
     .expect("legion build bootstrap node fixture");
