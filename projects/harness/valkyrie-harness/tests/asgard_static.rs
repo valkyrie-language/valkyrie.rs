@@ -106,11 +106,22 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
 
 #[test]
 fn example_fixture_is_self_contained() {
-    // 示例必须自带 `.w` 入口与根组件声明，且不依赖 submodule 语料。
-    let entry = example_project().join("source").join("index.w");
+    // 正向示例必须是合法 Legion 项目并具备真实 Asgard 配置，二者缺一都不能作为
+    // Asgard 应用运行；同时入口必须自带 `.w` 根组件声明，不依赖 submodule 语料。
+    let project = example_project();
+    for required in ["legion.von", "asgard.config.v"] {
+        let path = project.join(required);
+        assert!(path.is_file(), "示例工程缺少 `{required}`: {}", path.display());
+    }
+    let entry = project.join("source").join("index.w");
     let source = fs::read_to_string(&entry).unwrap_or_else(|err| panic!("示例入口缺失 {}: {err}", entry.display()));
     assert!(source.contains("<widget index>"), "示例入口应声明根组件 index:\n{source}");
     assert!(source.contains("<style>"), "示例入口应携带样式块:\n{source}");
+    // 跨平台正向页面不得以 HTML 标签作为基础组件树；HTML 只在显式 Web 能力边界使用。
+    for html_tag in ["<div", "<h1", "<h2", "<span", "<section"] {
+        assert!(!source.contains(html_tag), "跨平台组件树不应使用 HTML 标签 `{html_tag}`:\n{source}");
+    }
+    assert!(source.contains("<Column"), "示例入口应使用跨平台框架布局组件:\n{source}");
 }
 
 #[test]
@@ -134,7 +145,7 @@ fn static_build_emits_self_contained_page() {
     assert!(html.contains("<title>静态示例</title>"), "--title 应写入页面:\n{html}");
     assert!(html.contains("asgard-static-index"), "应包含作用域 class:\n{html}");
     assert!(html.contains(".hero { color: #c67b34; }"), "应透传组件样式文本:\n{html}");
-    assert!(html.contains("<div class=\"hero\"><h1>你好，静态世界</h1></div>"), "应包含初始状态插值结果:\n{html}");
+    assert!(html.contains("<div class=\"hero\"><span class=\"hero-title\">你好，静态世界</span></div>"), "框架组件应降低为 DOM adapter 形态并保留初始状态:\n{html}");
     assert!(!html.contains("<script"), "静态页面不应包含 runtime script:\n{html}");
     assert!(!html.contains("src="), "页面应自包含、无外链 src:\n{html}");
     assert!(!html.contains("href="), "页面应自包含、无外链 href:\n{html}");

@@ -1,7 +1,7 @@
 <widget index>
-<div class="hero">
-    <h1>{greeting}</h1>
-</div>
+<Column class="hero">
+    <Text class="hero-title">{greeting}</Text>
+</Column>
 </widget>
 <script>
 let greeting: utf8 = "你好，静态世界"

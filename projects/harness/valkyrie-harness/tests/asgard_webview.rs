@@ -63,15 +63,24 @@ fn stdout_field(stdout: &str, key: &str) -> String {
     stdout.lines().find_map(|line| line.strip_prefix(&prefix)).unwrap_or_else(|| panic!("stdout 应含 `{prefix}` 合同行:\n{stdout}")).to_string()
 }
 
-/// 三个示例入口都必须自带根组件、脚本状态和样式，且不引用外部语料。
+/// 示例工程必须是合法 Legion 项目并具备真实 Asgard 配置；三个入口自带根组件、
+/// 脚本状态和样式，且组件树只用跨平台框架组件，不以 HTML 标签作为基础布局。
 #[test]
 fn webview_examples_are_self_contained() {
+    let project = example_project();
+    for required in ["legion.von", "asgard.config.v"] {
+        let path = project.join(required);
+        assert!(path.is_file(), "示例工程缺少 `{required}`: {}", path.display());
+    }
     for (entry, widget) in [("index.w", "index"), ("settings.w", "settings"), ("dashboard.w", "dashboard")] {
-        let path = example_project().join("source").join(entry);
+        let path = project.join("source").join(entry);
         let source = fs::read_to_string(&path).unwrap_or_else(|err| panic!("示例入口缺失 {}: {err}", path.display()));
         assert!(source.contains(&format!("<widget {widget}>")), "{entry} 应声明根组件 {widget}:\n{source}");
         assert!(source.contains("<script>"), "{entry} 应携带脚本状态:\n{source}");
         assert!(source.contains("<style>"), "{entry} 应携带样式块:\n{source}");
+        for html_tag in ["<div", "<h1", "<h2", "<span", "<section"] {
+            assert!(!source.contains(html_tag), "{entry} 的跨平台组件树不应使用 HTML 标签 `{html_tag}`:\n{source}");
+        }
     }
 }
 
