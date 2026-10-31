@@ -4,7 +4,7 @@
     "private": true,
     "description": "Black-box harness: @nyar/valkyrie legion/asgard CLI for cargo integration tests",
     "devDependencies": {
-        "@nyar/valkyrie": "0.0.14"
+        "@nyar/valkyrie": "0.0.21"
     },
     "engines": {
         "node": ">=22.18.0"
