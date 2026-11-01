@@ -77,6 +77,26 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         status: Status::VerifiedNow,
     },
     ContractItem {
+        id: "widget-stem-correspondence",
+        claim: "入口根组件名 ↔ 文件 stem 对应：错配结构化拒绝，匹配则组件名进 stdout 合同行与标题回退",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "conditional-aggregation-shape",
+        claim: "条件渲染（`<if>`/`<else>`）、字符串聚合插值与 `@click`+`micro` 事件声明形态在正式 Legion 示例中通过构建，产物完整；\
+                渲染与交互执行语义依赖 Rust 内置线，执行证据属 `event-state-dom` blocked 条目",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "list-each-shape",
+        claim: "`each`/`item`/`key` 列表集合形态通过构建并产出完整页面",
+        status: Status::Blocked(
+            "实测构建线程栈溢出崩溃（退出码 `0xC00000FD`），非结构化失败：nyar-vm.rs \
+             `codegen/html_render.rs::emit_loop` → `codegen/expr_eval.rs` 列表表达式求值路径；\
+             根因修复前列表形态不得进入可构建示例，修复后本条目重锚为执行证据",
+        ),
+    },
+    ContractItem {
         id: "config-driven-build",
         claim: "`asgard build <project>` 读 `asgard.config.v` 求值产出完整 static 产物，不要求裸参数",
         status: Status::Blocked(
