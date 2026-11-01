@@ -130,11 +130,7 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     ContractItem {
         id: "mime-and-base-subdir",
         claim: "serve 交付 Wasm 用正确 MIME；base 子目录部署时 HTML/JS/Wasm/CSS/资源路径全部相对 base",
-        status: Status::Blocked(
-            "构建侧已成立：`--base` 写入 `<base href>`，页面与 manifest 全部相对 URL（有测试）。\
-             仍缺产品 `serve`：`projects/nyar.ts/emulators/valkyrie/src/cli/asgard-cli.ts` 的 \
-             `UNWIRED_COMMANDS` 仍是失败闭合，仓库内无 MIME 表（无 `application/wasm` 响应头生产者）",
-        ),
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "assets-copy",
@@ -145,8 +141,10 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "chunk-dependency-graph",
         claim: "chunk 依赖图与按需加载边界成立；共享 runtime 不重复打包",
         status: Status::Blocked(
-            "仍是单 chunk：`compile::compile_wasm_bundle` 只发射一个 wasm；`asgard/chunk_planning.rs` 有计划类型但无产物消费者，\
-             `artifact.chunks` 也未到达构建（配置求值未闭合）。本轮不伪造按需加载",
+            "仍是单 chunk，本轮不伪造按需加载。坐标：`rusty-valkyrie/src/asgard/compile.rs::compile_v_bundle` → \
+             `compile_source_groups_to_artifacts` 每次只产出一个模块；`nyar::ArtifactPartitionPlan` 按目标/后端分区，\
+             不按 UI 路由切分；`asgard/chunk_planning.rs::plan_asgard_build` 只有计划类型且无产物消费者；\
+             `boot.js::start` 只实例化 `manifest.wasm[0]`。解除条件：路由级模块发射 + 逐 chunk 懒加载 + 配置求值（见 config-driven-build）",
         ),
     },
     ContractItem {
@@ -375,14 +373,18 @@ fn assets_flag_copies_resources_into_output() {
     assert!(dist.join("index.html").is_file(), "页面必须仍在");
 }
 
-/// CLI 面 blocked 条目的失败闭合证据：serve/dev 未接入、配置驱动构建未接入。
+/// CLI 面 blocked 条目的失败闭合证据：dev/pack 未接入、配置驱动构建未接入；
+/// `serve` 已接通，但缺产物目录时仍结构化失败而不是静默成功。
 #[test]
 fn blocked_cli_paths_fail_closed_not_silently() {
-    for command in ["serve", "dev"] {
+    for command in ["dev", "pack"] {
         let output = asgard(&[command]);
         assert!(!output.status.success(), "`{command}` 应失败闭合");
         assert!(stderr_of(&output).contains("尚未接入"), "`{command}` blocked 诊断缺失");
     }
+    let serve = asgard(&["serve", "--port", "0"]);
+    assert!(!serve.status.success(), "缺产物目录的 serve 应失败");
+    assert!(stderr_of(&serve).contains("托管根"), "serve 诊断应指出托管根不可用: {}", stderr_of(&serve));
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
     let output = asgard(&["build", project.to_str().expect("UTF-8 路径")]);
