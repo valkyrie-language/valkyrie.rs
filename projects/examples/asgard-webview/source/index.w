@@ -2,14 +2,15 @@
 <Column class="desk">
     <Text class="desk-title">{title}</Text>
     <Text class="desk-subtitle">{subtitle}</Text>
+    <Text class="desk-status">{status}</Text>
     <Text class="desk-count">Count: {count}</Text>
     <Button @click="on_increment">Increment</Button>
-    <Link href="settings.html">Settings</Link>
 </Column>
 </widget>
 <script>
-let title: string = "Valkyrie Desk"
-let subtitle: string = "WebView desktop host example"
+let title: utf8 = "Valkyrie Desk"
+let subtitle: utf8 = "WebView desktop host example"
+let status: utf8 = "All services online"
 let mut count: i32 = 0
 micro on_increment() {
     count = count + 1
