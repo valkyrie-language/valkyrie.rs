@@ -13,14 +13,16 @@
 //!   build --static source/index.awsl <examples/asgard-static>
 //! ```
 //!
-//! 实际产物清单（本轮实测）：`dist/index.html` 一份，来源为
-//! `rusty_valkyrie::asgard::static_site::build_static_site` →
-//! `codegen::html_render::render_static_ir`（Rust 内置组件语义预渲染）→
-//! `ssg::generate_static_page_with_base`（页面壳）。无 `.js`、无 `.wasm`、无 loader、
-//! 无 manifest、无资源拷贝。
+//! 实际产物清单（本轮实测）：`index.html`（含 `data-component` 岛挂载点与 `boot.js` 引用）、
+//! `<module>.wasm`、`<module>.mjs`（浏览器 WASM glue）、`<module>.wat`（debug 构建附带）、
+//! `c/<route>.js`（组件胶水）、`manifest.json`（wasm `url`/`glue`/`hash` 与组件胶水）、
+//! `boot.js`、`<module>.css`。来源为 `rusty_valkyrie::asgard::static_site::build_static_site`
+//! → `compile::compile_wasm_bundle`（`GeneratedOnly`）→ `copy_wasm_artifacts_to_dist`
+//! → `codegen::package_browser_islands`。
 //!
-//! blocked 条目的"缺席哨兵"测试断言产物中确实没有 glue/chunk 文件；当 nyar-vm.rs
-//! 接入真实产物链后该哨兵会失败，即提醒按本表逐条重锚为执行证据，而不是放行半成品。
+//! 仍为 blocked 的条目附根因与 nyar-vm.rs 坐标；不用 HTML 字符串搜索、"目录里有 wasm"
+//! 或存在性断言冒充执行证据。浏览器内执行语义（事件→状态→DOM、卸载重建）由本轮
+//! 浏览器自动化实测通过，但合同测试进程不启浏览器，故仍标注 blocked 并说明宿主缺口。
 
 use std::{
     ffi::OsStr,
@@ -52,7 +54,7 @@ struct ContractItem {
 const CONTRACT_ITEMS: &[ContractItem] = &[
     ContractItem {
         id: "artifact-completeness",
-        claim: "static 构建产物树完整且只含合同声明的文件；当前合同面为单 `index.html`",
+        claim: "static 构建产物树完整：页面 + wasm chunk + 浏览器 glue + 组件胶水 + boot + manifest + CSS（集合相等，不只是存在）",
         status: Status::VerifiedNow,
     },
     ContractItem {
@@ -100,70 +102,81 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "config-driven-build",
         claim: "`asgard build <project>` 读 `asgard.config.v` 求值产出完整 static 产物，不要求裸参数",
         status: Status::Blocked(
-            "配置求值（C0/C2）未接入：nyar-vm.rs `rusty-valkyrie/src/asgard/cli.rs::run_build` App 分支失败闭合；\
-             `projects/nyar.ts/emulators/valkyrie/src/cli/asgard-cli.ts::runStaticBuild` 仍消费裸 entry/title/output",
+            "配置求值（C0）仍断在聚合读回：nyar-vm.rs `rusty-valkyrie/tests/asgard/config_probe.rs` 的 \
+             `c0_aggregate_layer_fails_closed_on_missing_nominal_identity` 固定了 WASM 预发射 SSA 名义身份门禁失败；\
+             `cli.rs::run_build` App 分支因此保持失败闭合，`asgard-cli.ts` 的裸 `build` 也只打印该诊断",
         ),
     },
     ContractItem {
         id: "project-admission-rejection",
-        claim: "缺 `legion.von` / 缺 `asgard.config.v` / 内容无效 / 工程归属不一致 → 拒绝执行",
-        status: Status::Blocked(
-            "`--static` 黑盒面绕过准入：nyar-vm.rs `projects/nyar.rs/ffis/valkyrie-napi/src/asgard_api.rs::asgard_build_static` \
-             直达 `static_site::build_static_site`，未经 `asgard/cli.rs::require_project_admission`（后者仅覆盖 Rust argv `run_build`）",
-        ),
+        claim: "缺 `legion.von` / 缺 `asgard.config.v` / 内容无效 / 工程归属不一致 → 拒绝执行（命令面与 N-API 面同一准入实现）",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "js-glue-exists",
-        claim: "首屏 JS glue 作为独立产物文件生成，可被宿主加载",
-        status: Status::Blocked("静态构建只写 `index.html`：`static_site.rs::build_static_site` 无 JS 产物发射"),
+        claim: "首屏 JS glue 作为独立产物文件生成，可被宿主加载（`c/<route>.js` 注册组件工厂，`<module>.mjs` 为浏览器 WASM glue）",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "wasm-chunk-exists",
-        claim: "可达性减枝后的 Wasm chunk 作为产物文件生成，与 glue 成对",
-        status: Status::Blocked("无 Wasm chunk 产物：backend/emitter 产物链未接入 asgard 静态交付（06 §3 记录产物仍只有 index.html）"),
+        claim: "可达性减枝后的 Wasm chunk 作为产物文件生成，与 glue 成对；manifest 引用可解析到落盘文件",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "loader-manifest-hash",
-        claim: "每个 chunk 有配套 loader/manifest：URL/hash、依赖、真实 import/export、初始化顺序；入口↔loader↔manifest↔hash 对应",
-        status: Status::Blocked("无 loader/manifest 产物；`chunk_planning` 有目标策略但无产物消费者（06 §3）"),
+        claim: "manifest 为唯一 loader 入口：URL、glue、内容 hash、组件胶水与初始化顺序均可解析；hash 等于落盘 chunk 字节的 sha256",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "mime-and-base-subdir",
         claim: "serve 交付 Wasm 用正确 MIME；base 子目录部署时 HTML/JS/Wasm/CSS/资源路径全部相对 base",
         status: Status::Blocked(
-            "`serve` 未接入（`asgard-cli.ts` UNWIRED_COMMANDS）；`base` 在 `cli.rs::run_build` 与 \
-             `asgard_api.rs::asgard_build_static` 硬编码 `/`，配置 `artifact.base` 未被消费",
+            "构建侧已成立：`--base` 写入 `<base href>`，页面与 manifest 全部相对 URL（有测试）。\
+             仍缺产品 `serve`：`projects/nyar.ts/emulators/valkyrie/src/cli/asgard-cli.ts` 的 \
+             `UNWIRED_COMMANDS` 仍是失败闭合，仓库内无 MIME 表（无 `application/wasm` 响应头生产者）",
         ),
     },
     ContractItem {
         id: "assets-copy",
-        claim: "显式 `assets` 目录资源进入产物树，重名/越界拒绝",
-        status: Status::Blocked("`static_site.rs` 无资源拷贝路径；配置 `assets` 字段无产物消费者"),
+        claim: "显式资源目录资源进入产物树，重名/越界拒绝",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "chunk-dependency-graph",
         claim: "chunk 依赖图与按需加载边界成立；共享 runtime 不重复打包",
-        status: Status::Blocked("无 chunk 产物即无依赖图证据；`artifact.chunks` 配置未被求值消费"),
+        status: Status::Blocked(
+            "仍是单 chunk：`compile::compile_wasm_bundle` 只发射一个 wasm；`asgard/chunk_planning.rs` 有计划类型但无产物消费者，\
+             `artifact.chunks` 也未到达构建（配置求值未闭合）。本轮不伪造按需加载",
+        ),
     },
     ContractItem {
         id: "abi-string-aggregate",
         claim: "glue↔Wasm 的字符串/聚合 ABI 往返在真实宿主执行中成立",
-        status: Status::Blocked("无 glue/Wasm 运行时；聚合 ABI 仍断在 SSA 名义身份门禁（06 §5）"),
+        status: Status::Blocked("utf8 标量往返已在浏览器实测成立；聚合（列表/对象）读回仍断在 WASM 预发射 SSA 名义身份门禁（`compile_pipeline` verifier）"),
     },
     ContractItem {
         id: "event-state-dom",
-        claim: "浏览器真实事件 → V/Wasm 状态 → DOM 更新往返（计数器、输入、焦点键盘）",
-        status: Status::Blocked("当前交付为无 script 的预渲染页；事件处理语义归 `asgard.ui` V 库（03 §12），Rust 内置线不再扩语义"),
+        claim: "浏览器真实事件 → V/Wasm 状态 → DOM 更新往返（按钮点击、文本输入）",
+        status: Status::Blocked(
+            "浏览器实测通过（点击 off→on、输入 hello、重建后回到 off）；但合同测试进程不启浏览器，\
+             缺少宿主内断言设施，故不在此标绿",
+        ),
     },
     ContractItem {
         id: "dispose-reload",
         claim: "dispose 停止调度/取消异步/解除监听/释放 handle；重载与卸载后回调行为成立",
-        status: Status::Blocked("无运行时实例可 dispose；依赖交互交付线"),
+        status: Status::Blocked(
+            "`boot.js` 已实现 `unmountIslands`（解绑订阅/监听、丢弃 memo、释放 DOM 句柄）并经浏览器重建实测；\
+             缺宿主内断言设施，故不在此标绿",
+        ),
     },
     ContractItem {
         id: "dev-atomic-replacement",
         claim: "`dev` 成功重建后原子替换整页，失败保留上一可用 generation 并显示错误",
-        status: Status::Blocked("`dev` 未接入（`cli.rs::run_dev` 失败闭合）"),
+        status: Status::Blocked(
+            "Rust `cli.rs::run_dev` 已实现 staging→整代替换并有测试；产品 CLI 未接通：\
+             `asgard-cli.ts` 的 `UNWIRED_COMMANDS` 仍把 `dev` 挡在 TS 层",
+        ),
     },
     ContractItem {
         id: "desktop-unsplit-artifact",
@@ -247,9 +260,19 @@ fn verified_items_hold_against_real_artifacts() {
     assert!(output.status.success(), "静态构建应成功\nstderr:\n{}", stderr_of(&output));
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
 
-    // artifact-completeness：产物树恰为单 index.html。
+    // artifact-completeness：页面 + 成对浏览器产物（集合相等，不是存在性）。
     let dist = project.join("dist");
-    assert_eq!(artifact_tree(&dist), vec!["index.html".to_string()], "artifact-completeness");
+    let expected = vec![
+        "asgard-static.css".to_string(),
+        "asgard-static.mjs".to_string(),
+        "asgard-static.wasm".to_string(),
+        "asgard-static.wat".to_string(),
+        "boot.js".to_string(),
+        "c/index.js".to_string(),
+        "index.html".to_string(),
+        "manifest.json".to_string(),
+    ];
+    assert_eq!(artifact_tree(&dist), expected, "artifact-completeness");
 
     // entry-component-correspondence：stdout 合同行与产物路径一致。
     assert!(stdout.contains("component: index"), "entry-component-correspondence:\n{stdout}");
@@ -264,34 +287,92 @@ fn verified_items_hold_against_real_artifacts() {
     assert!(html.contains("<!DOCTYPE html>"), "page-shell-base:\n{html}");
     assert!(html.contains("<meta charset=\"utf-8\">"), "page-shell-base:\n{html}");
     assert!(html.contains("<title>index</title>"), "page-shell-base:\n{html}");
-    assert!(!html.contains("<base"), "page-shell-base（根部署省略 `<base>`，非根 base 属 blocked 缺口）:\n{html}");
+    assert!(!html.contains("<base"), "page-shell-base（根部署省略 `<base>`）:\n{html}");
+    assert!(html.contains(r#"<script src="boot.js"></script>"#), "页面必须引用 boot 启动脚本:\n{html}");
+    assert!(html.contains("data-component=\"index\""), "页面必须声明岛挂载点:\n{html}");
 
-    // build-determinism：同输入重建逐字节确定。
-    let first = fs::read(dist.join("index.html")).expect("读取第一次页面失败");
+    // js-glue / wasm-chunk / loader-manifest-hash：用宿主执行核对 manifest↔产物↔hash，
+    // 不是字符串搜索；脚本内部对每个引用做存在性与 sha256 比对。
+    assert_manifest_matches_artifacts(&dist);
+
+    // build-determinism：同输入重建逐字节确定（页面与 chunk 都不得漂移）。
+    let first_page = fs::read(dist.join("index.html")).expect("读取第一次页面失败");
+    let first_wasm = fs::read(dist.join("asgard-static.wasm")).expect("读取第一次 chunk 失败");
     let output2 = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
     assert!(output2.status.success(), "重建应成功\nstderr:\n{}", stderr_of(&output2));
-    let second = fs::read(dist.join("index.html")).expect("读取第二次页面失败");
-    assert_eq!(first, second, "build-determinism");
+    assert_eq!(first_page, fs::read(dist.join("index.html")).expect("读取第二次页面失败"), "build-determinism（页面）");
+    assert_eq!(first_wasm, fs::read(dist.join("asgard-static.wasm")).expect("读取第二次 chunk 失败"), "build-determinism（chunk）");
 }
 
-/// blocked 条目的缺席哨兵：产物中确实没有 JS/Wasm/loader/manifest 文件。
-/// 本测试失败 = 交付链已前进，必须把对应条目从 Blocked 重锚为真实执行证据，
-/// 禁止半成品绿灯（例如只出 wasm 不出 loader/manifest 同样不合格）。
+/// 用 Node 宿主核对 manifest：每个引用必须解析到产物文件，wasm 的 hash 必须等于字节 sha256。
+fn assert_manifest_matches_artifacts(dist: &Path) {
+    const SCRIPT: &str = r#"
+const fs = require('fs');
+const crypto = require('crypto');
+const path = require('path');
+const root = process.argv[1];
+const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+const resolve = (reference) => path.join(root, String(reference).replace(/^\/+/, ''));
+for (const entry of manifest.wasm || []) {
+  const wasmPath = resolve(entry.url);
+  if (!fs.existsSync(wasmPath)) throw new Error('wasm missing: ' + entry.url);
+  if (!fs.existsSync(resolve(entry.glue))) throw new Error('glue missing: ' + entry.glue);
+  const digest = 'sha256:' + crypto.createHash('sha256').update(fs.readFileSync(wasmPath)).digest('hex');
+  if (entry.hash !== digest) throw new Error('hash mismatch: manifest=' + entry.hash + ' actual=' + digest);
+}
+for (const reference of manifest.css || []) {
+  if (!fs.existsSync(resolve(reference))) throw new Error('css missing: ' + reference);
+}
+for (const component of manifest.components || []) {
+  if (!fs.existsSync(resolve(component.js))) throw new Error('component glue missing: ' + component.js);
+  if (!component.name) throw new Error('component glue entry has no name');
+}
+console.log('manifest ok: ' + (manifest.wasm || []).length + ' chunk(s), ' + (manifest.components || []).length + ' component(s)');
+"#;
+    let output = std::process::Command::new("node")
+        .arg("-e")
+        .arg(SCRIPT)
+        .arg(dist.to_str().expect("UTF-8 路径"))
+        .output()
+        .expect("Node 必须可用（主动交付线宿主）");
+    assert!(
+        output.status.success(),
+        "manifest 与产物不一致（loader-manifest-hash / js-glue-exists / wasm-chunk-exists）:\nstdout={}\nstderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// 准入条目：缺 `legion.von` 的项目走 N-API 面同样被拒绝，不再绕过准入。
 #[test]
-fn blocked_glue_items_have_no_partial_artifacts() {
+fn admission_rejects_project_without_manifest() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
+    fs::remove_file(project.join("legion.von")).expect("删除工程清单失败");
     let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
-    assert!(output.status.success(), "静态构建应成功\nstderr:\n{}", stderr_of(&output));
+    assert!(!output.status.success(), "缺 legion.von 的构建应失败");
+    let stderr = stderr_of(&output);
+    assert!(stderr.contains("准入失败"), "诊断应指出项目准入失败，实际:\n{stderr}");
+    assert!(!project.join("dist").exists(), "准入失败不得产出任何产物");
+}
 
-    let tree = artifact_tree(&project.join("dist"));
-    let offenders: Vec<&String> =
-        tree.iter().filter(|file| file.ends_with(".js") || file.ends_with(".mjs") || file.ends_with(".wasm") || file.ends_with(".json")).collect();
-    assert!(
-        offenders.is_empty(),
-        "js-glue-exists / wasm-chunk-exists / loader-manifest-hash 当前为 Blocked（产物链未接入）。\
-         出现半成文件 {offenders:?} 说明链路已前进：请把对应条目重锚为执行证据（loader↔manifest↔hash↔MIME 成套），不得只验存在性。"
-    );
+/// 资源条目：`--assets` 指向的目录被复制进产物树，且不覆盖已生成产物。
+#[test]
+fn assets_flag_copies_resources_into_output() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = copy_example_into(temp.path());
+    fs::create_dir_all(project.join("assets/nested")).expect("创建资源目录失败");
+    fs::write(project.join("assets/logo.txt"), "logo").expect("写入资源失败");
+    fs::write(project.join("assets/nested/icon.svg"), "<svg/>").expect("写入嵌套资源失败");
+
+    let output = asgard(&["build", "--static", "source/index.awsl", "--assets", "assets", project.to_str().expect("UTF-8 路径")]);
+    assert!(output.status.success(), "带资源目录的构建应成功\nstderr:\n{}", stderr_of(&output));
+    let dist = project.join("dist");
+    assert!(dist.join("logo.txt").is_file(), "资源应复制到产物根");
+    assert!(dist.join("nested/icon.svg").is_file(), "嵌套资源应保留相对路径");
+    // 复制不得顶掉产物本身。
+    assert!(dist.join("manifest.json").is_file(), "manifest 必须仍在");
+    assert!(dist.join("index.html").is_file(), "页面必须仍在");
 }
 
 /// CLI 面 blocked 条目的失败闭合证据：serve/dev 未接入、配置驱动构建未接入。
