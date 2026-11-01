@@ -10,7 +10,7 @@ using asgard;
 define_config({
     artifact: {
         target: "static",
-        entry: "source/index.w",
+        entry: "source/index.awsl",
         output: "dist",
         base: "/"
     }

@@ -4,11 +4,12 @@
 //!
 //! ```text
 //! node <nyar-vm.rs>/projects/nyar.ts/emulators/valkyrie/bin/asgard.mjs \
-//!   build --static source/index.w <examples/asgard-webview>
+//!   build --static source/index.awsl <examples/asgard-webview>
 //! ```
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
-//! - 本示例是单一入口（`source/index.w`）的合法 Legion 工程；首轮 `artifact.target`
+//! - 本示例是单一入口（规范后缀 `source/index.awsl`，`.w` 同语义可接受）的合法 Legion
+//!   工程；首轮 `artifact.target`
 //!   只支持 `static`（03 §6），桌面差异在 target 策略与宿主打包，不在配置拼写。
 //!   原 `settings.w`/`dashboard.w` 多入口仅靠 CLI 裸参数各自构建，不在正式合同内，已并入
 //!   单入口页面。
@@ -35,7 +36,9 @@ fn example_project() -> PathBuf {
 }
 
 /// 配置声明的唯一入口（相对项目根）；结构断言与构建命令共用同一常量。
-const CONFIGURED_ENTRY: &str = "source/index.w";
+/// `.awsl` 为规范拼写（03 §2，设计仓 `54d13b9`），`.w` 同语义仍可接受，
+/// 由 `asgard_static` 的同义用例证明，本文件不把任一后缀写成唯一合法形态。
+const CONFIGURED_ENTRY: &str = "source/index.awsl";
 
 fn copy_example_into(dest: &Path) -> PathBuf {
     let target = dest.join("asgard-webview");
@@ -140,7 +143,7 @@ fn webview_example_is_single_entry_legion_project() {
 
 #[test]
 fn entry_uses_framework_components_and_v_text_types() {
-    let path = example_project().join("source").join("index.w");
+    let path = example_project().join("source").join("index.awsl");
     let source = fs::read_to_string(&path).unwrap_or_else(|err| panic!("示例入口缺失 {}: {err}", path.display()));
     assert!(source.contains("<widget index>"), "入口应声明根组件 index:\n{source}");
     assert!(source.contains("<script>"), "入口应携带脚本状态:\n{source}");

@@ -10,7 +10,7 @@
 //!
 //! ```text
 //! node <nyar-vm.rs>/projects/nyar.ts/emulators/valkyrie/bin/asgard.mjs \
-//!   build --static source/index.w <examples/asgard-static>
+//!   build --static source/index.awsl <examples/asgard-static>
 //! ```
 //!
 //! 实际产物清单（本轮实测）：`dist/index.html` 一份，来源为
@@ -73,7 +73,7 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     },
     ContractItem {
         id: "w-awsl-synonym",
-        claim: "`.w` 与 `.awsl` 同格式同语义：同内容入口产物逐字节相同",
+        claim: "后缀合同（设计仓 `54d13b9`）：`.awsl` 为规范拼写，`.w` 同 parser/同 lowering/同身份仍可接受，同内容入口产物逐字节相同",
         status: Status::VerifiedNow,
     },
     ContractItem {
@@ -223,7 +223,7 @@ fn contract_table_is_well_formed() {
 fn verified_items_hold_against_real_artifacts() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let output = asgard(&["build", "--static", "source/index.w", project.to_str().expect("UTF-8 路径")]);
+    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
     assert!(output.status.success(), "静态构建应成功\nstderr:\n{}", stderr_of(&output));
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
 
@@ -248,7 +248,7 @@ fn verified_items_hold_against_real_artifacts() {
 
     // build-determinism：同输入重建逐字节确定。
     let first = fs::read(dist.join("index.html")).expect("读取第一次页面失败");
-    let output2 = asgard(&["build", "--static", "source/index.w", project.to_str().expect("UTF-8 路径")]);
+    let output2 = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
     assert!(output2.status.success(), "重建应成功\nstderr:\n{}", stderr_of(&output2));
     let second = fs::read(dist.join("index.html")).expect("读取第二次页面失败");
     assert_eq!(first, second, "build-determinism");
@@ -261,7 +261,7 @@ fn verified_items_hold_against_real_artifacts() {
 fn blocked_glue_items_have_no_partial_artifacts() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let output = asgard(&["build", "--static", "source/index.w", project.to_str().expect("UTF-8 路径")]);
+    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
     assert!(output.status.success(), "静态构建应成功\nstderr:\n{}", stderr_of(&output));
 
     let tree = artifact_tree(&project.join("dist"));

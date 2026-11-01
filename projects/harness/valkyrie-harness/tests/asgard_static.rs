@@ -6,7 +6,7 @@
 //!
 //! ```text
 //! node <nyar-vm.rs>/projects/nyar.ts/emulators/valkyrie/bin/asgard.mjs \
-//!   build --static source/index.w <examples/asgard-static>
+//!   build --static source/index.awsl <examples/asgard-static>
 //! ```
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
@@ -43,7 +43,10 @@ fn example_project() -> PathBuf {
 }
 
 /// 配置声明的入口（相对项目根）；结构断言与构建命令共用同一常量，防止二者偶然一致。
-const CONFIGURED_ENTRY: &str = "source/index.w";
+/// `.awsl` 为规范拼写（03 §2，设计仓 `54d13b9`）；`.w` 同 parser/同 lowering/同身份、
+/// 仍可接受，由 `w_entry_is_still_accepted_and_identical_to_awsl` 用例证明，
+/// 本文件不把任一后缀写成唯一合法形态。
+const CONFIGURED_ENTRY: &str = "source/index.awsl";
 
 /// 把示例工程复制进目标目录并返回副本根（构建只写临时目录，不落仓库）。
 fn copy_example_into(dest: &Path) -> PathBuf {
@@ -177,7 +180,7 @@ fn entry_uses_framework_components_only() {
     // 03 §2：跨平台正向页面以框架组件表达，不以 HTML 标签为基础组件树；
     // 未进入框架合同表面的组件（如 `Link`/`Box` 这类仅 DOM adapter 认识的标签）
     // 不得出现在示例里。
-    let entry = example_project().join("source").join("index.w");
+    let entry = example_project().join("source").join("index.awsl");
     let source = fs::read_to_string(&entry).unwrap_or_else(|err| panic!("示例入口缺失 {}: {err}", entry.display()));
     assert!(source.contains("<widget index>"), "示例入口应声明根组件 index:\n{source}");
     assert!(source.contains("<style>"), "示例入口应携带样式块:\n{source}");
@@ -218,19 +221,21 @@ fn static_build_emits_complete_single_page_artifact() {
 }
 
 #[test]
-fn awsl_entry_builds_identical_page_to_w() {
-    // `.w` 与 `.awsl` 同格式同语义（03 §2）：同内容入口应产出逐字节相同的页面。
+fn w_entry_is_still_accepted_and_identical_to_awsl() {
+    // 后缀合同（03 §2，设计仓 `54d13b9`）：`.awsl` 为规范拼写，`.w` 同 parser、
+    // 同 lowering、同身份，仍可接受且不要求迁移。示例以规范后缀存在，此处把同一
+    // 内容写成 `.w` 再构建，证明两种后缀产物逐字节相同、合同没有判死既有写法。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let source = fs::read(example_project().join("source").join("index.w")).expect("读取示例入口失败");
+    let source = fs::read(example_project().join("source").join("index.awsl")).expect("读取示例入口失败");
 
     expect_success(&build_static(&project));
-    let w_page = fs::read(project.join("dist").join("index.html")).expect("读取 .w 页面失败");
-
-    fs::write(project.join("source").join("index.awsl"), &source).expect("写入 .awsl 入口失败");
-    let stdout = expect_success(&asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]));
-    assert_eq!(stdout_field(&stdout, "component"), "index");
     let awsl_page = fs::read(project.join("dist").join("index.html")).expect("读取 .awsl 页面失败");
+
+    fs::write(project.join("source").join("index.w"), &source).expect("写入 .w 入口失败");
+    let stdout = expect_success(&asgard(&["build", "--static", "source/index.w", project.to_str().expect("UTF-8 路径")]));
+    assert_eq!(stdout_field(&stdout, "component"), "index");
+    let w_page = fs::read(project.join("dist").join("index.html")).expect("读取 .w 页面失败");
     assert_eq!(w_page, awsl_page, ".w 与 .awsl 入口产物应逐字节相同");
     assert_eq!(artifact_tree(&project.join("dist")), vec!["index.html".to_string()]);
 }
@@ -267,7 +272,7 @@ fn static_build_rejects_unknown_option() {
 fn static_build_rejects_unknown_entry_extension() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let source = fs::read(example_project().join("source").join("index.w")).expect("读取示例入口失败");
+    let source = fs::read(example_project().join("source").join("index.awsl")).expect("读取示例入口失败");
     fs::write(project.join("source").join("index.v"), source).expect("写入 .v 入口失败");
     let output = asgard(&["build", "--static", "source/index.v", project.to_str().expect("UTF-8 路径")]);
     let stderr = expect_failure(&output, "静态站点入口必须是");
@@ -278,8 +283,8 @@ fn static_build_rejects_unknown_entry_extension() {
 fn static_build_rejects_missing_entry() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let output = asgard(&["build", "--static", "source/missing.w", project.to_str().expect("UTF-8 路径")]);
-    expect_failure(&output, "missing.w");
+    let output = asgard(&["build", "--static", "source/missing.awsl", project.to_str().expect("UTF-8 路径")]);
+    expect_failure(&output, "missing.awsl");
 }
 
 #[test]
@@ -287,7 +292,7 @@ fn static_build_rejects_entry_escaping_project() {
     // 入口真实存在于项目根之外：越界检查必须先于读取失败闭合。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let source = fs::read(example_project().join("source").join("index.w")).expect("读取示例入口失败");
+    let source = fs::read(example_project().join("source").join("index.awsl")).expect("读取示例入口失败");
     fs::write(temp.path().join("outside.awsl"), source).expect("写入越界入口失败");
     let output = asgard(&["build", "--static", "../outside.awsl", project.to_str().expect("UTF-8 路径")]);
     expect_failure(&output, "越出项目根");
