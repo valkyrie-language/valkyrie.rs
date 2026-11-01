@@ -1,9 +1,23 @@
 <widget index>
 <Column class="hero">
     <Text class="hero-title">{greeting}</Text>
+    <Text class="state-label">Label: {label}</Text>
+    <Button class="toggle-button" @click="turn_on">Turn on</Button>
+    <Button class="toggle-button" @click="turn_off">Turn off</Button>
 </Column>
 </widget>
 <script>
 let greeting: utf8 = "你好，静态世界"
+let mut label: utf8 = "off"
+
+micro turn_on() {
+    label = "on"
+}
+
+micro turn_off() {
+    label = "off"
+}
 </script>
-<style>.hero { color: #c67b34; }</style>
+<style>.hero { color: #c67b34; }
+.state-label { font-weight: 600; }
+.toggle-button { margin-right: 8px; }</style>
