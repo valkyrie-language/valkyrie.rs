@@ -1,0 +1,43 @@
+<widget index>
+<Column class="page">
+    <Row class="header">
+        <Text class="brand">Console</Text>
+        <Button class="nav-toggle primary" @click="toggle_nav">Menu</Button>
+    </Row>
+    <Row class="content">
+        <Column class="sidebar">
+            <Text class="nav-state">Nav: {nav}</Text>
+        </Column>
+        <Column class="main">
+            <Input class="note-input" value="{note}" />
+            <Text class="note-echo">Note: {note}</Text>
+            <Button class="clear-note secondary" @click="clear_note">Clear</Button>
+        </Column>
+    </Row>
+</Column>
+</widget>
+<script>
+let mut nav_open: bool = true
+let mut nav: utf8 = "open"
+let mut note: utf8 = "first"
+micro toggle_nav() {
+    if nav_open {
+        nav = "closed"
+        nav_open = false
+    }
+    else {
+        nav = "open"
+        nav_open = true
+    }
+}
+micro clear_note() {
+    note = ""
+}
+</script>
+<style>.page { display: flex; flex-direction: column; }
+.header { display: flex; justify-content: space-between; }
+.content { display: flex; }
+.sidebar { width: 160px; }
+.main { flex: 1; }
+.primary { font-weight: 700; }
+.secondary { color: #666; }</style>

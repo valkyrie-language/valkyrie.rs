@@ -1,0 +1,27 @@
+<widget index>
+<Column class="lifecycle">
+    <Text class="mark-line">Mark: {label}</Text>
+    <Button class="mark-button" @click="mark">Mark</Button>
+    <Button class="rebuild-button" @click="rebuild_island">Rebuild island</Button>
+</Column>
+</widget>
+<script>
+let mut active: bool = false
+let mut label: utf8 = "off"
+micro mark() {
+    if active {
+        label = "off"
+        active = false
+    }
+    else {
+        label = "on"
+        active = true
+    }
+}
+micro rebuild_island() {
+    dom_unmount_islands()
+    dom_mount_islands()
+}
+</script>
+<style>.lifecycle { padding: 16px; }
+.mark-line { font-family: monospace; min-height: 1.2em; }</style>

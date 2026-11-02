@@ -1,0 +1,21 @@
+<widget index>
+<Column class="form">
+    <Text class="form-title">Profile</Text>
+    <Input class="name-input" value="{name}" />
+    <Input class="city-input" value="{city}" />
+    <Text class="echo-name">Name: {name}</Text>
+    <Text class="echo-city">City: {city}</Text>
+    <Button class="reset-button" @click="reset_form">Reset</Button>
+</Column>
+</widget>
+<script>
+let mut name: utf8 = "Ada"
+let mut city: utf8 = "Paris"
+micro reset_form() {
+    name = "Ada"
+    city = "Paris"
+}
+</script>
+<style>.form { padding: 16px; }
+.form-title { font-weight: 700; }
+.echo-name, .echo-city { font-family: monospace; }</style>

@@ -1,0 +1,12 @@
+{
+    name: "asgard-static-form",
+    version: "0.1.0",
+    dependencies: {
+        "asgard.render": { version: "workspace" },
+        "asgard.render.host.ovm": { version: "workspace" }
+    },
+    build: [
+        { target: "wasm32-unknown-browser-wasm" },
+        { target: "ovm" }
+    ]
+}

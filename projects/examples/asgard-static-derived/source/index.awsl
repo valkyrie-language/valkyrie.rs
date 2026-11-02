@@ -1,0 +1,29 @@
+<widget index>
+<Column class="derived">
+    <Text class="status-label">Status: {status}</Text>
+    <Button class="advance-button" @click="advance">Advance</Button>
+    <Text class="message-label">{message}</Text>
+    <Button class="shout-button" @click="shout">Shout</Button>
+</Column>
+</widget>
+<script>
+let mut is_green: bool = false
+let mut status: utf8 = "red"
+let mut message: utf8 = "hello"
+micro advance() {
+    if is_green {
+        status = "red"
+        is_green = false
+    }
+    else {
+        status = "green"
+        is_green = true
+    }
+}
+micro shout() {
+    message = "louder"
+}
+</script>
+<style>.derived { padding: 16px; }
+.status-label { font-family: monospace; }
+.message-label { color: #3355aa; }</style>
