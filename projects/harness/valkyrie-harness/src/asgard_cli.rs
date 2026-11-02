@@ -44,10 +44,7 @@ pub fn resolve_asgard() -> AsgardInvocation {
 
     let harness_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let root = workspace_root();
-    for candidate in [
-        harness_dir.join("node_modules/@nyar/valkyrie/bin/asgard.mjs"),
-        root.join("node_modules/@nyar/valkyrie/bin/asgard.mjs"),
-    ] {
+    for candidate in [harness_dir.join("node_modules/@nyar/valkyrie/bin/asgard.mjs"), root.join("node_modules/@nyar/valkyrie/bin/asgard.mjs")] {
         if candidate.is_file() {
             return invocation_for_path(candidate);
         }
@@ -63,7 +60,45 @@ pub fn run(args: &[&OsStr]) -> std::io::Result<Output> {
     for arg in &invocation.prefix {
         command.arg(arg);
     }
+    apply_native_addon_override(&mut command, invocation.prefix.first());
     command.args(args).output()
+}
+
+/// 本机构建 addon 的显式通道（`VALKYRIE_NATIVE`，loader 文档化的覆盖入口）。
+///
+/// 走兄弟仓 CLI 时 loader 会按 `node_modules` 链接 → 根级遗留位置 → 正式
+/// `platforms/<short>/lib/` 的顺序解析 addon：开发树根级遗留的陈旧二进制会遮蔽
+/// 正式 lib/ 通道，使验收实际跑在过期编译器上。此处显式指向本机构建的 lib/
+/// addon，与 loader 的正式本地通道同源；调用方已设 `VALKYRIE_NATIVE` 时不覆盖。
+pub fn apply_native_addon_override(command: &mut Command, resolved_prefix: Option<&String>) {
+    if std::env::var_os("VALKYRIE_NATIVE").is_some() {
+        return;
+    }
+    let sibling = sibling_repo_root();
+    let is_sibling_cli = resolved_prefix.is_some_and(|prefix| PathBuf::from(prefix).starts_with(&sibling));
+    if !is_sibling_cli {
+        return;
+    }
+    let Some((short, triple)) = host_platform_ids()
+    else {
+        return;
+    };
+    let binary =
+        sibling.join("projects/nyar.ts/platforms").join(format!("valkyrie-{short}")).join("lib").join(format!("valkyrie.{triple}.node"));
+    if binary.is_file() {
+        command.env("VALKYRIE_NATIVE", binary.as_os_str());
+    }
+}
+
+/// 当前宿主 OS/arch 对应的 npm 平台短名与 addon triple（与 loader 的映射一致）。
+fn host_platform_ids() -> Option<(&'static str, &'static str)> {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("windows", "x86_64") => Some(("win32-x64", "win32-x64-msvc")),
+        ("linux", "x86_64") => Some(("linux-x64", "linux-x64-gnu")),
+        ("macos", "x86_64") => Some(("darwin-x64", "darwin-x64")),
+        ("macos", "aarch64") => Some(("darwin-arm64", "darwin-arm64")),
+        _ => None,
+    }
 }
 
 fn workspace_root() -> PathBuf {

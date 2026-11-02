@@ -45,6 +45,7 @@ pub fn run(args: &[&OsStr]) -> std::io::Result<Output> {
     for arg in &invocation.prefix {
         command.arg(arg);
     }
+    crate::asgard_cli::apply_native_addon_override(&mut command, invocation.prefix.first());
     command.args(args).output()
 }
 
