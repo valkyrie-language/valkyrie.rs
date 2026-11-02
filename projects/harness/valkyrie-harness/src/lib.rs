@@ -6,5 +6,6 @@
 //! 本 crate 不重复实现编译器；测试见 `tests/`。
 
 pub mod asgard_cli;
+pub mod asgard_workspace;
 pub mod fixtures;
 pub mod legion_cli;
