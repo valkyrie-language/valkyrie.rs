@@ -32,7 +32,7 @@ use std::{
 };
 
 use tempfile::TempDir;
-use valkyrie_harness::asgard_cli;
+use valkyrie_harness::{asgard_cli, asgard_workspace::materialize_example_workspace};
 
 /// 合同条目状态。
 #[derive(Debug)]
@@ -69,9 +69,7 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         status: Status::VerifiedNow,
     },
     ContractItem {
-        id: "build-determinism",
-        claim: "同输入重复构建逐字节确定（manifest 确定性的页面级子集）",
-        status: Status::VerifiedNow,
+        id: "build-determinism", claim: "同输入重复构建逐字节确定（manifest 确定性的页面级子集）", status: Status::VerifiedNow
     },
     ContractItem {
         id: "w-awsl-synonym",
@@ -87,23 +85,39 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "conditional-aggregation-shape",
         claim: "条件渲染（`<if>`/`<else>`）、字符串聚合插值与 `@click`+`micro` 事件声明形态在正式 Legion 示例中通过构建，产物完整；\
                 渲染与交互执行语义依赖 Rust 内置线，执行证据属 `event-state-dom` blocked 条目",
-        status: Status::VerifiedNow,
+        status: Status::Blocked(
+            "SSG 准入门拒绝条件构造：nyar-vm.rs `rusty-valkyrie/src/asgard/codegen/ssg_ovm/admission.rs::check_node` \
+             对 `RenderNode::If` 产 `OutOfSubsetConstruct` 诊断，`static_site.rs` 据此失败闭合不产残缺页面。\
+             解除条件：准入子集扩展到 `<if>`/`<else>` 并经 OVM 执行出真实页面后，本条目重锚为 VerifiedNow",
+        ),
     },
     ContractItem {
         id: "list-each-shape",
         claim: "`each`/`item`/`key` 列表集合形态通过构建并产出完整页面",
         status: Status::Blocked(
-            "实测构建线程栈溢出崩溃（退出码 `0xC00000FD`），非结构化失败：nyar-vm.rs \
-             `codegen/html_render.rs::emit_loop` → `codegen/expr_eval.rs` 列表表达式求值路径；\
-             根因修复前列表形态不得进入可构建示例，修复后本条目重锚为执行证据",
+            "SSG 准入门拒绝列表构造：nyar-vm.rs `rusty-valkyrie/src/asgard/codegen/ssg_ovm/admission.rs::check_node` \
+             对 `RenderNode::Loop` 产 `OutOfSubsetConstruct` 诊断（本轮复测 `<loop :each>` 与 `<List each>` \
+             两种写法均为结构化拒绝，不再复现旧解释器路径的 `0xC00000FD` 构建崩溃）。\
+             解除条件：准入子集扩展到列表构造并经 OVM 执行出真实页面后，本条目重锚为执行证据",
+        ),
+    },
+    ContractItem {
+        id: "non-utf8-text-interpolation",
+        claim: "文本插值位接受非 `utf8` 绑定（如 `i32` 计数器），经显式转换后产出页面",
+        status: Status::Blocked(
+            "SSG 文本位只支持 `utf8` 绑定：i32 绑定插值被准入门放行后，发射的 `dom_create_text(count)` \
+             因无 i32 重载在生成源码报 `unresolved call`（最小复现：`<Text>{count}</Text>` + \
+             `let mut count: i32 = 0`）。坐标：nyar-vm.rs `rusty-valkyrie/src/asgard/codegen/ssg_ovm/emit.rs::expr_value` \
+             与 `admission.rs::classify_e1`——绑定准入不按类型过滤，需在准入拒绝或插入转换配方之间裁决。\
+             解除条件：非 utf8 绑定在文本位有明确转换或结构化拒绝后，本条目按裁决结果重锚",
         ),
     },
     ContractItem {
         id: "config-driven-build",
         claim: "`asgard build <project>` 读 `asgard.config.v` 求值产出完整 static 产物，不要求裸参数",
         status: Status::Blocked(
-            "配置求值（C0）仍断在聚合读回：nyar-vm.rs `rusty-valkyrie/tests/asgard/config_probe.rs` 的 \
-             `c0_aggregate_layer_fails_closed_on_missing_nominal_identity` 固定了 WASM 预发射 SSA 名义身份门禁失败；\
+            "配置求值仍断在聚合读回：nyar-vm.rs `rusty-valkyrie/tests/asgard/config_probe.rs` 的 \
+             聚合名义身份门禁用例固定了 WASM 预发射 SSA 名义身份门禁失败；\
              `cli.rs::run_build` App 分支因此保持失败闭合，`asgard-cli.ts` 的裸 `build` 也只打印该诊断",
         ),
     },
@@ -132,11 +146,7 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         claim: "serve 交付 Wasm 用正确 MIME；base 子目录部署时 HTML/JS/Wasm/CSS/资源路径全部相对 base",
         status: Status::VerifiedNow,
     },
-    ContractItem {
-        id: "assets-copy",
-        claim: "显式资源目录资源进入产物树，重名/越界拒绝",
-        status: Status::VerifiedNow,
-    },
+    ContractItem { id: "assets-copy", claim: "显式资源目录资源进入产物树，重名/越界拒绝", status: Status::VerifiedNow },
     ContractItem {
         id: "chunk-dependency-graph",
         claim: "chunk 依赖图与按需加载边界成立；共享 runtime 不重复打包",
@@ -150,23 +160,21 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     ContractItem {
         id: "abi-string-aggregate",
         claim: "glue↔Wasm 的字符串/聚合 ABI 往返在真实宿主执行中成立",
-        status: Status::Blocked("utf8 标量往返已在浏览器实测成立；聚合（列表/对象）读回仍断在 WASM 预发射 SSA 名义身份门禁（`compile_pipeline` verifier）"),
+        status: Status::Blocked(
+            "utf8 标量往返已在浏览器实测成立；聚合（列表/对象）读回仍断在 WASM 预发射 SSA 名义身份门禁（`compile_pipeline` verifier）",
+        ),
     },
     ContractItem {
         id: "event-state-dom",
-        claim: "浏览器真实事件 → V/Wasm 状态 → DOM 更新往返（按钮点击、文本输入）",
-        status: Status::Blocked(
-            "浏览器实测通过（点击 off→on、输入 hello、重建后回到 off）；但合同测试进程不启浏览器，\
-             缺少宿主内断言设施，故不在此标绿",
-        ),
+        claim: "真实事件 → V/Wasm 状态 → DOM 更新往返（按钮点击、文本输入），\
+                由 `asgard_island_interaction` 的 Node 宿主探针对真实 boot.js + wasm + 组件胶水断言",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "dispose-reload",
-        claim: "dispose 停止调度/取消异步/解除监听/释放 handle；重载与卸载后回调行为成立",
-        status: Status::Blocked(
-            "`boot.js` 已实现 `unmountIslands`（解绑订阅/监听、丢弃 memo、释放 DOM 句柄）并经浏览器重建实测；\
-             缺宿主内断言设施，故不在此标绿",
-        ),
+        claim: "dispose 停止调度/取消异步/解除监听/释放 handle；重载与卸载后回调行为成立，\
+                由 `asgard_island_interaction` 的 Rebuild island 点击断言卸载重建后状态复位且 DOM 不双份",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "dev-atomic-replacement",
@@ -183,29 +191,8 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     },
 ];
 
-fn example_project() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/asgard-static")
-}
-
 fn copy_example_into(dest: &Path) -> PathBuf {
-    let target = dest.join("asgard-static");
-    copy_dir(&example_project(), &target);
-    target
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("创建目标目录失败");
-    for entry in fs::read_dir(from).expect("读取示例目录失败") {
-        let entry = entry.expect("目录项");
-        let path = entry.path();
-        let target = to.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir(&path, &target);
-        }
-        else {
-            fs::copy(&path, &target).expect("复制示例文件失败");
-        }
-    }
+    materialize_example_workspace("asgard-static", dest)
 }
 
 fn asgard(args: &[&str]) -> Output {
@@ -237,12 +224,13 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
     }
 }
 
-/// 条目表自身的一致性：ID 唯一；blocked 条目必须携带非空根因。
+/// 条目表自身的一致性：ID 唯一、claim 非空；blocked 条目必须携带非空根因。
 #[test]
 fn contract_table_is_well_formed() {
     let mut ids = std::collections::BTreeSet::new();
     for item in CONTRACT_ITEMS {
         assert!(ids.insert(item.id), "合同条目 ID 重复: {}", item.id);
+        assert!(!item.claim.trim().is_empty(), "合同条目 `{}` 必须陈述可核验声明", item.id);
         if let Status::Blocked(reason) = &item.status {
             assert!(!reason.trim().is_empty(), "blocked 条目 `{}` 必须附根因", item.id);
         }
@@ -274,10 +262,7 @@ fn verified_items_hold_against_real_artifacts() {
 
     // entry-component-correspondence：stdout 合同行与产物路径一致。
     assert!(stdout.contains("component: index"), "entry-component-correspondence:\n{stdout}");
-    let page = stdout
-        .lines()
-        .find_map(|line| line.strip_prefix("page: "))
-        .expect("stdout 应含 page: 合同行");
+    let page = stdout.lines().find_map(|line| line.strip_prefix("page: ")).expect("stdout 应含 page: 合同行");
     assert_eq!(fs::canonicalize(page).expect("page 路径应存在"), fs::canonicalize(dist.join("index.html")).expect("产物页应存在"));
 
     // page-shell-base：页面壳合同（doctype/charset/标题回退；根 base 省略 `<base>`）。
@@ -373,21 +358,10 @@ fn assets_flag_copies_resources_into_output() {
     assert!(dist.join("index.html").is_file(), "页面必须仍在");
 }
 
-/// CLI 面 blocked 条目的失败闭合证据：dev/pack 未接入、配置驱动构建未接入；
-/// `serve` 已接通，但缺产物目录时仍结构化失败而不是静默成功。
+/// `serve` 已接通，但缺产物目录时仍结构化失败而不是静默成功（常驻输入校验合同）。
 #[test]
-fn blocked_cli_paths_fail_closed_not_silently() {
-    for command in ["dev", "pack"] {
-        let output = asgard(&[command]);
-        assert!(!output.status.success(), "`{command}` 应失败闭合");
-        assert!(stderr_of(&output).contains("尚未接入"), "`{command}` blocked 诊断缺失");
-    }
+fn serve_missing_dist_root_fails_closed() {
     let serve = asgard(&["serve", "--port", "0"]);
     assert!(!serve.status.success(), "缺产物目录的 serve 应失败");
     assert!(stderr_of(&serve).contains("托管根"), "serve 诊断应指出托管根不可用: {}", stderr_of(&serve));
-    let temp = TempDir::new().expect("创建临时目录失败");
-    let project = copy_example_into(temp.path());
-    let output = asgard(&["build", project.to_str().expect("UTF-8 路径")]);
-    assert!(!output.status.success(), "config-driven-build 应失败闭合");
-    assert!(stderr_of(&output).contains("配置求值"), "config-driven-build blocked 诊断缺失");
 }

@@ -9,16 +9,14 @@
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
 //! - 本示例是单一入口（规范后缀 `source/index.awsl`，`.w` 同语义可接受）的合法 Legion
-//!   工程；首轮 `artifact.target`
-//!   只支持 `static`（03 §6），桌面差异在 target 策略与宿主打包，不在配置拼写。
-//!   原 `settings.w`/`dashboard.w` 多入口仅靠 CLI 裸参数各自构建，不在正式合同内，已并入
-//!   单入口页面。
-//! - 当前可执行的只有浏览器静态预渲染线；页面内容依赖 `nyar-vm.rs` 的 Rust 内置组件
-//!   语义（名称表分派、`map_html_tag` DOM 映射、文本求值），且产物作用域前缀被硬编码为
-//!   `asgard-static-*`（`codegen/html_render.rs:30`）。因此不断言渲染形态，只断言
-//!   工程结构、产物完整性与页面壳合同。
-//! - 桌面 WebView 验收门（干净打包启动、点击/键盘状态往返、离线资源、宿主权限/导航隔离、
-//!   关闭清理）依赖宿主选型与 `asgard.ui` V 库（03 §12 所有权裁定），当前全部 blocked，
+//!   工程；首轮 `artifact.target` 只支持 `static`，桌面差异在 target 策略与宿主打包，
+//!   不在配置拼写。
+//! - 当前可执行的只有浏览器静态交付线：模板经 Legion 内置 Odin VM 进程内执行产出
+//!   预渲染页面，交付产物为页面 + wasm chunk + 浏览器 glue + 组件胶水 + boot +
+//!   manifest + CSS（完整链证据见 `asgard_delivery_artifact`）；本文件只断言工程
+//!   结构、产物树形态与页面壳合同，不断言组件级渲染形态。
+//! - 桌面 WebView 验收门（干净打包启动、点击/键盘状态往返、离线资源、宿主权限/导航
+//!   隔离、关闭清理）依赖宿主选型与 `asgard.ui` V 库，当前全部 blocked，
 //!   记录于 `asgard_delivery_contract`，不以静态预渲染冒充桌面交付。
 
 use std::{
@@ -29,7 +27,7 @@ use std::{
 };
 
 use tempfile::TempDir;
-use valkyrie_harness::asgard_cli;
+use valkyrie_harness::{asgard_cli, asgard_workspace::materialize_example_workspace};
 
 fn example_project() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/asgard-webview")
@@ -41,24 +39,7 @@ fn example_project() -> PathBuf {
 const CONFIGURED_ENTRY: &str = "source/index.awsl";
 
 fn copy_example_into(dest: &Path) -> PathBuf {
-    let target = dest.join("asgard-webview");
-    copy_dir(&example_project(), &target);
-    target
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("创建目标目录失败");
-    for entry in fs::read_dir(from).expect("读取示例目录失败") {
-        let entry = entry.expect("目录项");
-        let path = entry.path();
-        let target = to.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir(&path, &target);
-        }
-        else {
-            fs::copy(&path, &target).expect("复制示例文件失败");
-        }
-    }
+    materialize_example_workspace("asgard-webview", dest)
 }
 
 fn asgard(args: &[&str]) -> Output {
@@ -78,13 +59,6 @@ fn expect_success(output: &Output) -> String {
     let (stdout, stderr) = (stdout_of(output), stderr_of(output));
     assert!(output.status.success(), "asgard 应以 0 退出，实际 {:?}\nstdout:\n{stdout}\nstderr:\n{stderr}", output.status);
     stdout
-}
-
-fn expect_failure(output: &Output, needle: &str) -> String {
-    let stderr = stderr_of(output);
-    assert!(!output.status.success(), "asgard 应非 0 退出（needle `{needle}`）\nstdout:\n{}\nstderr:\n{stderr}", stdout_of(output));
-    assert!(stderr.contains(needle), "stderr 应包含 `{needle}`:\n{stderr}");
-    stderr
 }
 
 /// 剥离 `#` 行注释，只保留代码文本；配置形态检查针对作者实际书写的代码。
@@ -162,9 +136,9 @@ fn entry_uses_framework_components_and_v_text_types() {
 }
 
 #[test]
-fn webview_entry_builds_complete_single_page_artifact() {
-    // 当前唯一可执行交付：浏览器静态预渲染线。只断言产物完整性与页面壳合同；
-    // 渲染内容依赖 Rust 内置组件语义，不作为断言对象（见文件头证据边界）。
+fn webview_entry_builds_complete_artifact_tree() {
+    // 当前唯一可执行交付：浏览器静态交付线。断言产物树形态与页面壳合同；
+    // 组件级渲染形态不作为断言对象（见文件头证据边界）。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
     let output = asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径")]);
@@ -172,20 +146,23 @@ fn webview_entry_builds_complete_single_page_artifact() {
     assert!(stdout.contains("asgard build (static) complete"), "stdout 应有完成行:\n{stdout}");
 
     let dist = project.join("dist");
-    assert_eq!(artifact_tree(&dist), vec!["index.html".to_string()], "静态产物树应只有 index.html");
+    let expected = [
+        "asgard-webview.css",
+        "asgard-webview.mjs",
+        "asgard-webview.wasm",
+        "asgard-webview.wat",
+        "boot.js",
+        "c/index.js",
+        "index.html",
+        "manifest.json",
+    ]
+    .map(str::to_string);
+    assert_eq!(artifact_tree(&dist), expected, "WebView 示例应产出完整静态交付链");
     let html = fs::read_to_string(dist.join("index.html")).expect("读取 index.html 失败");
     assert!(html.contains("<!DOCTYPE html>"), "应为完整 HTML 页面:\n{html}");
     assert!(html.contains("<meta charset=\"utf-8\">"), "页面壳应声明字符集:\n{html}");
     assert!(!html.contains("<base"), "根部署页面壳不输出 `<base>`（ssg 合同：base `/` 省略标签；配置驱动 base 属缺口）:\n{html}");
     assert!(html.contains("<title>index</title>"), "标题缺省应回退根组件名:\n{html}");
-    assert!(!html.contains("<script"), "当前静态产物不携带 runtime script:\n{html}");
-}
-
-#[test]
-fn config_driven_build_fails_closed_as_gap_evidence() {
-    let temp = TempDir::new().expect("创建临时目录失败");
-    let project = copy_example_into(temp.path());
-    let output = asgard(&["build", project.to_str().expect("UTF-8 路径")]);
-    let stderr = expect_failure(&output, "当前可用入口");
-    assert!(stderr.contains("配置求值"), "诊断应说明配置求值链路未闭合:\n{stderr}");
+    assert!(html.contains(r#"<script src="boot.js"></script>"#), "页面应引用 boot 启动脚本:\n{html}");
+    assert!(html.contains("data-component=\"index\""), "页面应声明岛挂载点:\n{html}");
 }

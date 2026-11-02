@@ -32,34 +32,13 @@ use std::{
 };
 
 use tempfile::TempDir;
-use valkyrie_harness::asgard_cli;
+use valkyrie_harness::{asgard_cli, asgard_workspace::materialize_example_workspace};
 
 const ENTRY: &str = "source/index.awsl";
 const MODULE_STEM: &str = "asgard-static";
 
-fn example_project() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/asgard-static")
-}
-
 fn copy_example_into(dest: &Path) -> PathBuf {
-    let target = dest.join("asgard-static");
-    copy_dir(&example_project(), &target);
-    target
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("创建目标目录失败");
-    for entry in fs::read_dir(from).expect("读取示例目录失败") {
-        let entry = entry.expect("目录项");
-        let path = entry.path();
-        let target = to.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir(&path, &target);
-        }
-        else {
-            fs::copy(&path, &target).expect("复制示例文件失败");
-        }
-    }
+    materialize_example_workspace("asgard-static", dest)
 }
 
 fn asgard(args: &[&str]) -> Output {
@@ -193,12 +172,8 @@ const timer = setInterval(() => {
   }
 }, 20);
 "##;
-    let output = Command::new("node")
-        .arg("-e")
-        .arg(SCRIPT)
-        .arg(dist.to_str().expect("UTF-8 路径"))
-        .output()
-        .expect("Node 必须可用（主动交付线的宿主）");
+    let output =
+        Command::new("node").arg("-e").arg(SCRIPT).arg(dist.to_str().expect("UTF-8 路径")).output().expect("Node 必须可用（主动交付线的宿主）");
     assert!(
         output.status.success(),
         "loader 探针失败:\nstdout={}\nstderr={}",
@@ -213,10 +188,7 @@ const timer = setInterval(() => {
 }
 
 fn kv<'a>(pairs: &'a [(String, String)], key: &str) -> &'a str {
-    pairs
-        .iter()
-        .find_map(|(k, v)| (k == key).then_some(v.as_str()))
-        .unwrap_or_else(|| panic!("loader 探针缺少 `{key}` 行: {pairs:?}"))
+    pairs.iter().find_map(|(k, v)| (k == key).then_some(v.as_str())).unwrap_or_else(|| panic!("loader 探针缺少 `{key}` 行: {pairs:?}"))
 }
 
 /// 真实构建 + 真实 loader 执行：页面引用 boot、manifest 摘要与落盘字节一致、
@@ -265,8 +237,11 @@ fn loader_requests_only_manifest_declared_artifacts() {
 
     // loader 实际请求集合：manifest + manifest 声明的 chunk，别无其他。
     assert_eq!(kv(&pairs, "request.count"), "2", "loader 只应请求 manifest 与声明的 chunk");
-    let requested: Vec<&str> =
-        pairs.iter().filter(|(key, _)| key.starts_with("request.") && key.as_str() != "request.count").map(|(_, value)| value.as_str()).collect();
+    let requested: Vec<&str> = pairs
+        .iter()
+        .filter(|(key, _)| key.starts_with("request.") && key.as_str() != "request.count")
+        .map(|(_, value)| value.as_str())
+        .collect();
     let expected_requests = ["manifest.json", "asgard-static.wasm"];
     assert_eq!(requested, expected_requests, "未声明产物不得被加载");
     assert!(!requested.iter().any(|url| url.ends_with(".wat")), "debug 产物 .wat 不得被 loader 请求");
@@ -274,7 +249,6 @@ fn loader_requests_only_manifest_declared_artifacts() {
     // 组件胶水按 manifest 顺序加载；manifest 之外脚本不得出现。
     assert_eq!(kv(&pairs, "script.count"), "1");
     assert_eq!(kv(&pairs, "script.0"), "c/index.js");
-
 }
 
 /// 子目录部署与资源目录：`<base href>` 进入页面壳，serve 按 base 前缀交付真实产物与正确 MIME。
@@ -286,16 +260,8 @@ fn base_prefix_and_assets_are_served_with_real_mime() {
     fs::write(project.join("assets/logo.txt"), "logo").expect("写入资源失败");
     fs::write(project.join("assets/nested/icon.svg"), "<svg/>").expect("写入嵌套资源失败");
 
-    let stdout = expect_success(&asgard(&[
-        "build",
-        "--static",
-        ENTRY,
-        "--base",
-        "/app/",
-        "--assets",
-        "assets",
-        project.to_str().expect("UTF-8 路径"),
-    ]));
+    let stdout =
+        expect_success(&asgard(&["build", "--static", ENTRY, "--base", "/app/", "--assets", "assets", project.to_str().expect("UTF-8 路径")]));
 
     let dist = project.join("dist");
     let tree = artifact_tree(&dist);
@@ -336,7 +302,6 @@ fn base_prefix_and_assets_are_served_with_real_mime() {
     assert_eq!(wasm.header("content-length").map(str::to_string), Some(wasm_len.to_string()), "响应体长度必须等于落盘 chunk");
     assert_eq!(wasm.body.len() as u64, wasm_len, "serve 必须交付真实 chunk 字节");
 
-
     let glue = http_get(address, "/app/asgard-static.mjs");
     assert_eq!(glue.header("content-type"), Some("text/javascript; charset=utf-8"));
 
@@ -355,11 +320,9 @@ fn base_prefix_and_assets_are_served_with_real_mime() {
     let svg = http_get(address, "/app/nested/icon.svg");
     assert_eq!(svg.header("content-type"), Some("image/svg+xml"));
 
-
     // 部署前缀与越界路径必须拒绝。
     assert_eq!(http_get(address, "/asgard-static.wasm").status, 404, "未带 base 前缀必须拒绝");
     assert_eq!(http_get(address, "/app/../manifest.json").status, 404, "越界路径必须拒绝");
-
 }
 
 /// 真实 `asgard serve` 子进程；测试结束（含 panic）时强制终止，避免残留监听。
@@ -403,6 +366,7 @@ fn start_serve(dist: &Path, base: &str) -> ServeProcess {
         port.to_string(),
     ]);
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    valkyrie_harness::asgard_cli::apply_native_addon_override(&mut command, invocation.prefix.first());
     let mut child = command.spawn().expect("无法启动 asgard serve");
     let address = SocketAddr::from(([127, 0, 0, 1], port));
 

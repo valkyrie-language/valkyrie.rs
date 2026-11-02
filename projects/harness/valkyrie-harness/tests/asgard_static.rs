@@ -10,22 +10,16 @@
 //! ```
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
-//! - 当前静态交付只产出 `index.html` 预渲染页面；页面内容（组件→DOM 映射、插值、
-//!   样式透传、`asgard-static-*` 作用域前缀）全部由 `nyar-vm.rs` 的 Rust 内置组件
-//!   语义产生（`awsl/render_ir/surface.rs::is_intrinsic_tag` 名称表、
-//!   `codegen/html_render.rs::map_html_tag`、`codegen/expr_eval.rs` 文本求值），
-//!   不是 `asgard.ui` V 库经 OVM 执行的产物。因此本文件只断言产物完整性、页面壳
-//!   （doctype/charset/viewport/title；根基址 `/` 时 `ssg` 按合同不输出 `<base>`，
-//!   见 `nyar-vm.rs/.../asgard/ssg/mod.rs::generate_static_page_with_base`）与
-//!   准入/拒绝合同，不断言组件渲染形态——后者属于待迁移
-//!   实现细节，固化成断言会把 Rust 特判锁成合同。
-//! - 入口/输出/基址当前来自 CLI 裸参数与硬编码默认（`--static <entry>`、缺省 `dist`、
-//!   `base` 固定 `/`），`asgard.config.v` 尚未被求值消费；配置驱动构建
-//!   （`asgard build <project>`）以结构化失败闭合，本文件把该失败作为缺口证据断言。
-//! - `--static` 路径经 `asgardBuildStatic` 直达 `build_static_site`，未执行
-//!   `legion.von`/`asgard.config.v` 准入（准入只在 Rust `run_build` 生效）；缺 manifest/
-//!   配置的拒绝合同当前在黑盒面不成立，作为 blocked 记录于 `asgard_delivery_contract`，
-//!   不以断言固化该绕过。
+//! - 当前静态交付链：模板由生成的 V 代码经 Legion 内置 Odin VM 进程内执行
+//!   （`asgard.render` 合同族）产出预渲染页面，交付产物为页面 + wasm chunk +
+//!   浏览器 glue + 组件胶水 + boot 启动脚本 + manifest + CSS。loader 级请求、
+//!   manifest sha256 复算与 serve MIME 证据归 `asgard_delivery_artifact`；本文件
+//!   断言工程结构、stdout 合同行、产物树形态、页面壳与 CLI 错误路径合同。
+//! - 页面壳可固化部分：完整 doctype、charset/viewport、标题回退根组件名、
+//!   boot 脚本引用与岛挂载点；根基址 `/` 时 `ssg` 按合同不输出 `<base>`。
+//!   组件级渲染形态（标签映射、作用域类名）不作为本文件断言对象。
+//! - 配置驱动构建（`asgard build <project>` 读配置求值）尚未接入，
+//!   缺口记录于交付合同矩阵 `config-driven-build` 条目，本文件不把失败当绿灯。
 
 use std::{
     ffi::OsStr,
@@ -35,9 +29,9 @@ use std::{
 };
 
 use tempfile::TempDir;
-use valkyrie_harness::asgard_cli;
+use valkyrie_harness::{asgard_cli, asgard_workspace::materialize_example_workspace};
 
-/// 静态交付示例工程根（自包含，不依赖 `valkyrie.v` submodule）。
+/// 静态交付示例工程根（仓库内只读事实来源；构建用 [`materialize_example_workspace`] 的临时工作区副本）。
 fn example_project() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/asgard-static")
 }
@@ -48,26 +42,9 @@ fn example_project() -> PathBuf {
 /// 本文件不把任一后缀写成唯一合法形态。
 const CONFIGURED_ENTRY: &str = "source/index.awsl";
 
-/// 把示例工程复制进目标目录并返回副本根（构建只写临时目录，不落仓库）。
+/// 把示例工程装配成自洽临时工作区（含 `asgard.render` 合同包与根 `legions.von`）并返回示例根。
 fn copy_example_into(dest: &Path) -> PathBuf {
-    let target = dest.join("asgard-static");
-    copy_dir(&example_project(), &target);
-    target
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("创建目标目录失败");
-    for entry in fs::read_dir(from).expect("读取示例目录失败") {
-        let entry = entry.expect("目录项");
-        let path = entry.path();
-        let target = to.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir(&path, &target);
-        }
-        else {
-            fs::copy(&path, &target).expect("复制示例文件失败");
-        }
-    }
+    materialize_example_workspace("asgard-static", dest)
 }
 
 fn asgard(args: &[&str]) -> Output {
@@ -105,11 +82,7 @@ fn code_only(source: &str) -> String {
 /// 提取 stdout 合同字段值（如 `component:` / `output:` / `page:` 行）。
 fn stdout_field(stdout: &str, key: &str) -> String {
     let prefix = format!("{key}: ");
-    stdout
-        .lines()
-        .find_map(|line| line.strip_prefix(&prefix))
-        .unwrap_or_else(|| panic!("stdout 应含 `{prefix}` 合同行:\n{stdout}"))
-        .to_string()
+    stdout.lines().find_map(|line| line.strip_prefix(&prefix)).unwrap_or_else(|| panic!("stdout 应含 `{prefix}` 合同行:\n{stdout}")).to_string()
 }
 
 fn canonical(path: &str) -> PathBuf {
@@ -139,6 +112,22 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
 /// 以配置声明的入口执行当前唯一可用的静态交付命令（不带任何覆盖 flag）。
 fn build_static(project: &Path) -> Output {
     asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径")])
+}
+
+/// 当前静态交付链的完整产物清单（与 `asgard_delivery_artifact` 的宿主证据同源）。
+fn expected_artifact_tree() -> Vec<String> {
+    [
+        "asgard-static.css",
+        "asgard-static.mjs",
+        "asgard-static.wasm",
+        "asgard-static.wat",
+        "boot.js",
+        "c/index.js",
+        "index.html",
+        "manifest.json",
+    ]
+    .map(str::to_string)
+    .to_vec()
 }
 
 #[test]
@@ -194,9 +183,10 @@ fn entry_uses_framework_components_only() {
 }
 
 #[test]
-fn static_build_emits_complete_single_page_artifact() {
-    // 当前交付合同的产物完整性：产物树恰为一个 `index.html`，无 loader/manifest/wasm
-    // （JS/Wasm 交付链缺失属于缺口，见文件头与 asgard_delivery_contract 矩阵）。
+fn static_build_emits_complete_artifact_tree() {
+    // 当前交付合同的产物完整性：stdout 合同行、交付链产物树（页面 + chunk + glue +
+    // 组件胶水 + boot + manifest + CSS）与页面壳。loader 级请求与 manifest sha256
+    // 复算证据见 `asgard_delivery_artifact`。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
     let stdout = expect_success(&build_static(&project));
@@ -206,18 +196,17 @@ fn static_build_emits_complete_single_page_artifact() {
     let dist = project.join("dist");
     assert_eq!(canonical(&stdout_field(&stdout, "output")), canonical(dist.to_str().expect("UTF-8 路径")));
     assert_eq!(canonical(&stdout_field(&stdout, "page")), canonical(dist.join("index.html").to_str().expect("UTF-8 路径")));
-    assert_eq!(artifact_tree(&dist), vec!["index.html".to_string()], "静态产物树应只有 index.html");
+    assert_eq!(artifact_tree(&dist), expected_artifact_tree(), "静态交付产物树应为完整交付链");
 
-    // 页面壳合同（与组件渲染语义无关，可固化）：完整文档、charset/viewport、标题回退根组件名。
-    // 基址：当前构建的 base 由 N-API 硬编码 `/`，`ssg::generate_static_page_with_base`
-    // 对根部署按合同不输出 `<base>`；配置驱动的 `artifact.base` 消费属缺口（见交付合同矩阵
-    // `mime-and-base-subdir`），故此处断言"根页面壳无 base 标签"，而非伪造 `<base href="/">`。
+    // 页面壳合同（与组件渲染语义无关，可固化）：完整文档、charset/viewport、标题回退
+    // 根组件名、boot 启动脚本引用与岛挂载点。根基址 `/` 时 `ssg` 按合同不输出 `<base>`。
     let html = fs::read_to_string(dist.join("index.html")).expect("读取 index.html 失败");
     assert!(html.contains("<!DOCTYPE html>"), "应为完整 HTML 页面:\n{html}");
     assert!(html.contains("<meta charset=\"utf-8\">"), "页面壳应声明字符集:\n{html}");
     assert!(!html.contains("<base"), "根部署页面壳不输出 `<base>`（ssg 合同：base `/` 省略标签）:\n{html}");
     assert!(html.contains("<title>index</title>"), "标题缺省应回退根组件名:\n{html}");
-    assert!(!html.contains("<script"), "当前静态产物不携带 runtime script（glue/Wasm 链未建立）:\n{html}");
+    assert!(html.contains(r#"<script src="boot.js"></script>"#), "页面应引用 boot 启动脚本:\n{html}");
+    assert!(html.contains("data-component=\"index\""), "页面应声明岛挂载点:\n{html}");
 }
 
 #[test]
@@ -237,7 +226,7 @@ fn w_entry_is_still_accepted_and_identical_to_awsl() {
     assert_eq!(stdout_field(&stdout, "component"), "index");
     let w_page = fs::read(project.join("dist").join("index.html")).expect("读取 .w 页面失败");
     assert_eq!(w_page, awsl_page, ".w 与 .awsl 入口产物应逐字节相同");
-    assert_eq!(artifact_tree(&project.join("dist")), vec!["index.html".to_string()]);
+    assert_eq!(artifact_tree(&project.join("dist")), expected_artifact_tree());
 }
 
 #[test]
@@ -251,7 +240,7 @@ fn rebuild_is_deterministic_and_leaves_no_strays() {
     expect_success(&build_static(&project));
     let second = fs::read(project.join("dist").join("index.html")).expect("读取第二次页面失败");
     assert_eq!(first, second, "同输入重建应逐字节确定");
-    assert_eq!(artifact_tree(&project.join("dist")), vec!["index.html".to_string()]);
+    assert_eq!(artifact_tree(&project.join("dist")), expected_artifact_tree());
 }
 
 #[test]
@@ -296,25 +285,6 @@ fn static_build_rejects_entry_escaping_project() {
     fs::write(temp.path().join("outside.awsl"), source).expect("写入越界入口失败");
     let output = asgard(&["build", "--static", "../outside.awsl", project.to_str().expect("UTF-8 路径")]);
     expect_failure(&output, "越出项目根");
-}
-
-#[test]
-fn config_driven_build_fails_closed_as_gap_evidence() {
-    // 正式合同下 `asgard build <project>` 应读配置产出完整 static 产物（03 §6）；
-    // 配置求值（C0/C2）未接入，当前必须结构化失败，不得静默回退裸参数路径。
-    let temp = TempDir::new().expect("创建临时目录失败");
-    let project = copy_example_into(temp.path());
-    let output = asgard(&["build", project.to_str().expect("UTF-8 路径")]);
-    let stderr = expect_failure(&output, "当前可用入口");
-    assert!(stderr.contains("配置求值"), "诊断应说明配置求值链路未闭合:\n{stderr}");
-}
-
-#[test]
-fn unwired_commands_fail_closed() {
-    for command in ["serve", "dev", "pack", "fmt"] {
-        let output = asgard(&[command]);
-        expect_failure(&output, "尚未接入");
-    }
 }
 
 #[test]

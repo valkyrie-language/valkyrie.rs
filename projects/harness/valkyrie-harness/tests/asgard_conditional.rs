@@ -9,15 +9,13 @@
 //! ```
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
-//! - 本示例覆盖的形态（`<if>`/`<else>` 条件、`{a} — {b}` 字符串聚合、`@click` + `micro`
-//!   事件声明）当前能通过构建，但页面内容全部由 `nyar-vm.rs` 的 Rust 内置语义产生
-//!   （`awsl/lower.rs` 合成 V、`codegen/expr_eval.rs` 文本求值、`codegen/html_render.rs`
-//!   DOM 映射），静态路径丢弃事件 handler、无运行时往返。因此只断言工程结构、产物
-//!   完整性与页面壳，不断言渲染内容；交互执行证据属 `asgard.ui` V 库线（03 §12），
-//!   记录于 `asgard_delivery_contract` 的 blocked 条目。
-//! - `each` 列表形态不在本示例内：实测构建线程栈溢出崩溃（`0xC00000FD`），非结构化
-//!   失败，根因坐标见交付合同矩阵 `list-each-shape` blocked 条目，不以断言固化崩溃。
-//! - 入口根组件名 ↔ 文件 stem 对应是 CLI 实际执行的错误路径合同，本文件双向断言。
+//! - 本示例覆盖的 `<if>`/`<else>` 条件构造当前越出 SSG 准入子集，构建按准入门
+//!   结构化失败；该缺口以交付合同矩阵 `conditional-aggregation-shape` blocked 条目
+//!   记录（含坐标），本文件不把构建失败当作测试绿灯，也不把缺口写成通过。
+//! - `each`/`<loop>` 列表形态同样越出准入子集（结构化拒绝，非崩溃），见合同矩阵
+//!   `list-each-shape` blocked 条目。
+//! - 入口根组件名 ↔ 文件 stem 对应是 CLI 实际执行的错误路径合同，本文件双向断言；
+//!   准入子集内的入口必须真实构建出完整交付链（页面 + chunk + glue + manifest）。
 
 use std::{
     ffi::OsStr,
@@ -27,7 +25,7 @@ use std::{
 };
 
 use tempfile::TempDir;
-use valkyrie_harness::asgard_cli;
+use valkyrie_harness::{asgard_cli, asgard_workspace::materialize_example_workspace};
 
 /// 条件形态示例工程根。
 fn example_project() -> PathBuf {
@@ -40,24 +38,7 @@ fn example_project() -> PathBuf {
 const CONFIGURED_ENTRY: &str = "source/index.awsl";
 
 fn copy_example_into(dest: &Path) -> PathBuf {
-    let target = dest.join("asgard-static-conditional");
-    copy_dir(&example_project(), &target);
-    target
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("创建目标目录失败");
-    for entry in fs::read_dir(from).expect("读取示例目录失败") {
-        let entry = entry.expect("目录项");
-        let path = entry.path();
-        let target = to.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir(&path, &target);
-        }
-        else {
-            fs::copy(&path, &target).expect("复制示例文件失败");
-        }
-    }
+    materialize_example_workspace("asgard-static-conditional", dest)
 }
 
 fn asgard(args: &[&str]) -> Output {
@@ -111,10 +92,6 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
     }
 }
 
-fn build_static(project: &Path) -> Output {
-    asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径")])
-}
-
 #[test]
 fn conditional_example_is_a_legal_legion_project() {
     let project = example_project();
@@ -150,32 +127,13 @@ fn entry_shape_uses_contract_components_with_control_flow() {
     assert!(source.contains("micro on_toggle()"), "事件 handler 应为 V `micro` 函数:\n{source}");
     assert!(source.contains(": utf8"), "脚本状态应使用 `utf8`:\n{source}");
     assert!(!source.contains(": string"), "V 不存在 `string` 类型:\n{source}");
-    assert!(!source.contains("each="), "`each` 列表形态当前触发栈溢出崩溃（见合同矩阵 `list-each-shape`），不得进入可构建示例:\n{source}");
+    assert!(!source.contains("each="), "`each` 列表形态越出 SSG 准入子集（见合同矩阵 `list-each-shape`），不得进入可构建示例:\n{source}");
     for html_tag in ["<div", "<h1", "<span", "<section"] {
         assert!(!source.contains(html_tag), "跨平台组件树不应使用 HTML 标签 `{html_tag}`:\n{source}");
     }
     for uncontracted in ["<Link", "<Box", "<Flex", "<Slot", "<List", "<Item"] {
         assert!(!source.contains(uncontracted), "`{uncontracted}` 不在跨平台组件合同内，示例不得使用:\n{source}");
     }
-}
-
-#[test]
-fn conditional_build_emits_complete_single_page_artifact() {
-    // 条件/聚合形态在当前静态交付线的产物证据：产物树恰为一个 `index.html`，
-    // 页面壳合同成立；渲染内容依赖 Rust 内置语义，不作为断言对象（见文件头）。
-    let temp = TempDir::new().expect("创建临时目录失败");
-    let project = copy_example_into(temp.path());
-    let stdout = expect_success(&build_static(&project));
-    assert!(stdout.contains("asgard build (static) complete"), "stdout 应有完成行:\n{stdout}");
-
-    let dist = project.join("dist");
-    assert_eq!(artifact_tree(&dist), vec!["index.html".to_string()], "条件形态产物树应只有 index.html");
-    let html = fs::read_to_string(dist.join("index.html")).expect("读取 index.html 失败");
-    assert!(html.contains("<!DOCTYPE html>"), "应为完整 HTML 页面:\n{html}");
-    assert!(html.contains("<meta charset=\"utf-8\">"), "页面壳应声明字符集:\n{html}");
-    assert!(!html.contains("<base"), "根部署页面壳不输出 `<base>`（ssg 合同）:\n{html}");
-    assert!(html.contains("<title>index</title>"), "标题缺省应回退根组件名:\n{html}");
-    assert!(!html.contains("<script"), "静态产物不携带 runtime script（交互执行证据属 blocked 交付线）:\n{html}");
 }
 
 #[test]
@@ -191,7 +149,8 @@ fn widget_name_must_match_entry_file_stem() {
 
 #[test]
 fn matching_widget_stem_builds_under_component_name() {
-    // 正向对应：stem 与根组件名一致的入口按该名产出页面（入口↔组件↔产物对应合同）。
+    // 正向对应：stem 与根组件名一致的入口按该名产出页面与组件胶水
+    //（入口↔组件↔产物对应合同在真实交付链上成立）。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
     fs::remove_file(project.join("source").join("index.awsl")).expect("移除默认入口失败");
@@ -202,8 +161,13 @@ fn matching_widget_stem_builds_under_component_name() {
     .expect("写入 panel 入口失败");
     let stdout = expect_success(&asgard(&["build", "--static", "source/panel.awsl", project.to_str().expect("UTF-8 路径")]));
     assert!(stdout.contains("component: panel"), "组件名应取根组件:\n{stdout}");
-    // 当前静态线产物恒为单 `index.html`（`static_site.rs` 写出固定页名），标题回退根组件名。
-    assert_eq!(artifact_tree(&project.join("dist")), vec!["index.html".to_string()], "产物树应为单页");
-    let html = fs::read_to_string(project.join("dist").join("index.html")).expect("读取页面失败");
+
+    let dist = project.join("dist");
+    let tree = artifact_tree(&dist);
+    for required in ["index.html", "manifest.json", "boot.js", "c/panel.js"] {
+        assert!(tree.iter().any(|entry| entry == required), "产物树应含 `{required}`: {tree:?}");
+    }
+    let html = fs::read_to_string(dist.join("index.html")).expect("读取页面失败");
     assert!(html.contains("<title>panel</title>"), "标题缺省应回退根组件名 panel:\n{html}");
+    assert!(html.contains("data-component=\"panel\""), "页面应声明 panel 岛挂载点:\n{html}");
 }
