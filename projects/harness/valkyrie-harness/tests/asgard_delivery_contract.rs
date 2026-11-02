@@ -20,9 +20,23 @@
 //! → `compile::compile_wasm_bundle`（`GeneratedOnly`）→ `copy_wasm_artifacts_to_dist`
 //! → `codegen::package_browser_islands`。
 //!
-//! 仍为 blocked 的条目附根因与 nyar-vm.rs 坐标；不用 HTML 字符串搜索、"目录里有 wasm"
-//! 或存在性断言冒充执行证据。浏览器内执行语义（事件→状态→DOM、卸载重建）由本轮
-//! 浏览器自动化实测通过，但合同测试进程不启浏览器，故仍标注 blocked 并说明宿主缺口。
+//! 示例覆盖事实表（example × 特性 × 证据类型；证据类型：产物断言 / DOM 行为 / 不可达）：
+//!
+//! | 示例 | 特性 | 证据 |
+//! |---|---|---|
+//! | `asgard-static` | 状态切换、文本输入、重建岛 | 产物断言 + DOM 行为（`asgard_island_interaction`） |
+//! | `asgard-static-form` | 双输入双向绑定、Reset 恢复默认 | 产物断言 + DOM 行为（`asgard_examples_interaction`） |
+//! | `asgard-static-derived` | 事件驱动状态机、重新赋值派生 | 产物断言 + DOM 行为（同上） |
+//! | `asgard-static-lifecycle` | 卸载重建复位、单次订阅、卸载监听清理 | 产物断言 + DOM 行为（同上） |
+//! | `asgard-static-nested` | Row/Column 嵌套、多 token 类复用、双交互区独立 | 产物断言 + DOM 行为（同上） |
+//! | `asgard-static-conditional` | 条件/聚合形态 | 工程结构断言；构建不可达（准入子集外） |
+//! | `asgard-webview` | 桌面示例形态 | 产物断言；桌面宿主不可达（未选型） |
+//!
+//! 不可达形态（blocked，现象描述，不作绿灯）：
+//! `<if>`/`<else>` 与 `<loop>`/`<List each>`（SSG 准入子集外）、非 `utf8` 绑定文本位插值、
+//! handler 体内运算符（见 `handler-operator-surface` 条目）、单页多岛/组件组合
+//! （CLI 单入口 + 组件调用准入拒绝）、属性模板拼接、聚合绑定初始化、配置驱动构建、
+//! 多 chunk 依赖图、`dev` 原子替换、桌面未分割产物。
 
 use std::{
     ffi::OsStr,
@@ -113,6 +127,27 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         ),
     },
     ContractItem {
+        id: "handler-operator-surface",
+        claim: "事件 handler 体内可使用语言运算符（比较、拼接、取反、算术）驱动状态派生",
+        status: Status::Blocked(
+            "生成 bundle 的依赖闭包不含运算符声明面：`infix ==`/`infix +`（utf8 与 i32）、`prefix !`（bool）在 \
+             handler 体内全部报 `unresolved call`（最小复现：裸工程 `[export] micro probe(): bool { let mut b: bool = false; b = !b; return b }` \
+             对 `wasm32-unknown-browser-wasm` 与 `ovm` 双 target 同现）。把 std 树与两个 adaptor 注册为 workspace 成员后 \
+             可解析运算符，但构建随即停在 `std.math.random` 的 `std.adaptor.ovm.builtin.math_rand` 无 provider。\
+             当前 handler 只能写字面量赋值与 bool 分支（本批示例据此塑形）。解除条件：隐式 SDK 注入覆盖运算符声明面 \
+             且 `math_rand` provider 补齐或按需求裁剪后，示例扩回运算符驱动并重锚",
+        ),
+    },
+    ContractItem {
+        id: "multi-island-page",
+        claim: "单页多岛：多个组件/挂载点共存一页，独立状态与生命周期",
+        status: Status::Blocked(
+            "当前链一次 `build --static` 只接受单入口、单组件、单挂载点：CLI 无多入口形态，组件调用 \
+             （`RenderNode::Component`）也被 SSG 准入门拒绝。可达部分的证据由 `asgard-static-nested` 的 \
+             双交互区独立性承担；解除条件：多入口编排或组件组合进入准入子集后补多岛示例并重锚",
+        ),
+    },
+    ContractItem {
         id: "config-driven-build",
         claim: "`asgard build <project>` 读 `asgard.config.v` 求值产出完整 static 产物，不要求裸参数",
         status: Status::Blocked(
@@ -174,6 +209,31 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "dispose-reload",
         claim: "dispose 停止调度/取消异步/解除监听/释放 handle；重载与卸载后回调行为成立，\
                 由 `asgard_island_interaction` 的 Rebuild island 点击断言卸载重建后状态复位且 DOM 不双份",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "example-form-input-binding",
+        claim: "表单示例：两个 `utf8` 输入各自与回显双向同步，Reset 把输入与回显同时恢复默认值；\
+                由 `asgard_examples_interaction::form_example_two_way_inputs_and_reset` 的产物断言 + DOM 行为承担",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "example-derived-event-state",
+        claim: "派生示例：事件 handler 以 bool 分支在两个字面状态间驱动状态机，另一 handler 重新赋值派生文本；\
+                由 `asgard_examples_interaction::derived_example_event_driven_state` 的产物断言 + DOM 行为承担",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "example-lifecycle-dispose-rebuild",
+        claim: "生命周期示例：重建后信号复位、组件 DOM 不双份、一次点击只翻转一次（单次订阅）、\
+                已卸载元素的旧监听不再触发；由 `asgard_examples_interaction::lifecycle_example_dispose_and_rebuild` 承担",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "example-nested-layout-regions",
+        claim: "嵌套示例：Column 嵌套两个 Row、Row 再嵌套 Column 的结构保持，多 token 类名（`nav-toggle primary`）\
+                完整保留，nav 开合与便签编辑两个交互区互不影响；\
+                由 `asgard_examples_interaction::nested_example_layout_regions_and_class_reuse` 承担",
         status: Status::VerifiedNow,
     },
     ContractItem {
