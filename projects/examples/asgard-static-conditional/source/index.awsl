@@ -1,25 +1,29 @@
 <widget index>
 <Column class="board">
     <Text class="headline">{title} — {status}</Text>
-    <if condition="show_details">
+    <if :condition="show_details">
         <Text class="detail">{detail}</Text>
         <else>
             <Text class="collapsed">details hidden</Text>
         </else>
     </if>
     <Row class="actions">
-        <Button @click="on_toggle">Toggle</Button>
+        <Button @click="on_show">Show</Button>
+        <Button @click="on_hide">Hide</Button>
         <Button @click="on_refresh">Refresh</Button>
     </Row>
 </Column>
 </widget>
 <script>
 let title: utf8 = "Status Board"
-let status: utf8 = "online"
+let mut status: utf8 = "online"
 let detail: utf8 = "expanded body"
 let mut show_details: bool = true
-micro on_toggle() {
-    show_details = !show_details
+micro on_show() {
+    show_details = true
+}
+micro on_hide() {
+    show_details = false
 }
 micro on_refresh() {
     status = "refreshed"
