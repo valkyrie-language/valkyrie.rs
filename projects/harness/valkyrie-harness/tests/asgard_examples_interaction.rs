@@ -321,6 +321,41 @@ fn lifecycle_example_dispose_and_rebuild() {
     assert_eq!(kv(&pairs, "probe.ready"), "true");
 }
 
+/// 条件渲染：`<if :condition>` + `<else>` 经 SSG 取初始分支渲染，hydration 后
+/// Show/Hide 点击经 `rx_bind_if` 挂载/卸载对应分支，Refresh 只更新标题绑定。
+#[test]
+fn conditional_example_if_else_branches_follow_state() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-static-conditional", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-static-conditional", &dist);
+    let pairs = run_scenario_probe(
+        &dist,
+        r#"
+    emit('initial.headline', one('headline').textContent);
+    emit('initial.detailCount', String(byClass('detail').length));
+    emit('initial.collapsedCount', String(byClass('collapsed').length));
+    click(byText('Hide'));
+    emit('afterHide.detailCount', String(byClass('detail').length));
+    emit('afterHide.collapsed', byClass('collapsed').length ? byClass('collapsed')[0].textContent : '<missing>');
+    click(byText('Show'));
+    emit('afterShow.detail', byClass('detail').length ? byClass('detail')[0].textContent : '<missing>');
+    click(byText('Refresh'));
+    emit('afterRefresh.headline', one('headline').textContent);
+    emit('afterRefresh.detailStays', byClass('detail').length ? byClass('detail')[0].textContent : '<missing>');
+"#,
+    );
+    assert_eq!(kv(&pairs, "initial.headline"), "Status Board — online");
+    assert_eq!(kv(&pairs, "initial.detailCount"), "1", "初始条件为真应渲染 then 分支");
+    assert_eq!(kv(&pairs, "initial.collapsedCount"), "0");
+    assert_eq!(kv(&pairs, "afterHide.detailCount"), "0", "Hide 应卸载 then 分支");
+    assert_eq!(kv(&pairs, "afterHide.collapsed"), "details hidden", "Hide 后应挂载 else 分支");
+    assert_eq!(kv(&pairs, "afterShow.detail"), "expanded body", "Show 应重新挂载 then 分支");
+    assert_eq!(kv(&pairs, "afterRefresh.headline"), "Status Board — refreshed");
+    assert_eq!(kv(&pairs, "afterRefresh.detailStays"), "expanded body", "Refresh 不应影响条件分支");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
+
 /// 嵌套布局与样式类复用、双交互区独立：Row/Column 嵌套结构、多 token 类名、
 /// nav 开合与便签编辑互不干扰。
 #[test]

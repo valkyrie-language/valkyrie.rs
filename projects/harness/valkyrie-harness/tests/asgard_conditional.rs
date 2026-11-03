@@ -9,11 +9,11 @@
 //! ```
 //!
 //! 证据边界（重要，勿以绿灯掩盖）：
-//! - 本示例覆盖的 `<if>`/`<else>` 条件构造当前越出 SSG 准入子集，构建按准入门
-//!   结构化失败；该缺口以交付合同矩阵 `conditional-aggregation-shape` blocked 条目
-//!   记录（含坐标），本文件不把构建失败当作测试绿灯，也不把缺口写成通过。
-//! - `each`/`<loop>` 列表形态同样越出准入子集（结构化拒绝，非崩溃），见合同矩阵
-//!   `list-each-shape` blocked 条目。
+//! - 条件渲染已在准入子集内：`<if :condition>` + `<else>` 要求 `bool` 类型条件（字面量或绑定），
+//!   SSG 取初始分支渲染，hydration 经 `rx_bind_if` 按状态挂载/卸载分支；行为证据见
+//!   `asgard_examples_interaction::conditional_example_if_else_branches_follow_state`。
+//! - `each`/`<loop>` 列表形态仍越出准入子集（聚合字面量初始化未入类型系统，结构化诊断附替代写法），
+//!   见合同矩阵 `list-each-shape` blocked 条目。
 //! - 入口根组件名 ↔ 文件 stem 对应是 CLI 实际执行的错误路径合同，本文件双向断言；
 //!   准入子集内的入口必须真实构建出完整交付链（页面 + chunk + glue + manifest）。
 
@@ -116,15 +116,15 @@ fn conditional_example_is_a_legal_legion_project() {
 #[test]
 fn entry_shape_uses_contract_components_with_control_flow() {
     // 组件树形状合同：只用 03 §11 跨平台组件（Column/Row/Text/Button）表达条件、
-    // 聚合与事件声明；不含 HTML 标签、未合同组件或崩溃中的 `each` 列表形态。
+    // 聚合与事件声明；不含 HTML 标签、未合同组件或准入子集外的 `each` 列表形态。
     let path = example_project().join("source").join("index.awsl");
     let source = fs::read_to_string(&path).unwrap_or_else(|err| panic!("示例入口缺失 {}: {err}", path.display()));
     assert!(source.contains("<widget index>"), "入口应声明根组件 index:\n{source}");
-    assert!(source.contains("<if condition="), "应声明条件渲染形态:\n{source}");
+    assert!(source.contains("<if :condition="), "应声明条件渲染形态:\n{source}");
     assert!(source.contains("<else>"), "应声明条件 else 分支:\n{source}");
     assert!(source.contains("{title} — {status}"), "应声明字符串聚合插值:\n{source}");
     assert!(source.contains("<Button @click="), "应声明事件绑定:\n{source}");
-    assert!(source.contains("micro on_toggle()"), "事件 handler 应为 V `micro` 函数:\n{source}");
+    assert!(source.contains("micro on_show()"), "事件 handler 应为 V `micro` 函数:\n{source}");
     assert!(source.contains(": utf8"), "脚本状态应使用 `utf8`:\n{source}");
     assert!(!source.contains(": string"), "V 不存在 `string` 类型:\n{source}");
     assert!(!source.contains("each="), "`each` 列表形态越出 SSG 准入子集（见合同矩阵 `list-each-shape`），不得进入可构建示例:\n{source}");

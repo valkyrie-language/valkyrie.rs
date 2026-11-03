@@ -29,11 +29,11 @@
 //! | `asgard-static-derived` | 事件驱动状态机、重新赋值派生 | 产物断言 + DOM 行为（同上） |
 //! | `asgard-static-lifecycle` | 卸载重建复位、单次订阅、卸载监听清理 | 产物断言 + DOM 行为（同上） |
 //! | `asgard-static-nested` | Row/Column 嵌套、多 token 类复用、双交互区独立 | 产物断言 + DOM 行为（同上） |
-//! | `asgard-static-conditional` | 条件/聚合形态 | 工程结构断言；构建不可达（准入子集外） |
+//! | `asgard-static-conditional` | 条件渲染（bool 条件 `<if :condition>`/`<else>`）、多表达文本 | 产物断言 + DOM 行为（`asgard_examples_interaction`） |
 //! | `asgard-webview` | 桌面示例形态 | 产物断言；桌面宿主不可达（未选型） |
 //!
 //! 不可达形态（blocked，现象描述，不作绿灯）：
-//! `<if>`/`<else>` 与 `<loop>`/`<List each>`（SSG 准入子集外）、非 `utf8` 绑定文本位插值、
+//! `<loop>`/`<List each>` 列表渲染（依赖聚合字面量初始化）、非 `utf8` 绑定文本位插值、
 //! handler 体内运算符（见 `handler-operator-surface` 条目）、单页多岛/组件组合
 //! （CLI 单入口 + 组件调用准入拒绝）、属性模板拼接、聚合绑定初始化、配置驱动构建、
 //! 多 chunk 依赖图、`dev` 原子替换、桌面未分割产物。
@@ -97,22 +97,18 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     },
     ContractItem {
         id: "conditional-aggregation-shape",
-        claim: "条件渲染（`<if>`/`<else>`）、字符串聚合插值与 `@click`+`micro` 事件声明形态在正式 Legion 示例中通过构建，产物完整；\
-                渲染与交互执行语义依赖 Rust 内置线，执行证据属 `event-state-dom` blocked 条目",
-        status: Status::Blocked(
-            "SSG 准入门拒绝条件构造：nyar-vm.rs `rusty-valkyrie/src/asgard/codegen/ssg_ovm/admission.rs::check_node` \
-             对 `RenderNode::If` 产 `OutOfSubsetConstruct` 诊断，`static_site.rs` 据此失败闭合不产残缺页面。\
-             解除条件：准入子集扩展到 `<if>`/`<else>` 并经 OVM 执行出真实页面后，本条目重锚为 VerifiedNow",
-        ),
+        claim: "条件渲染（`<if :condition>` + `<else>`，bool 条件）与多表达文本（`{a} — {b}`）经真实链交付：\
+                SSG 取初始分支渲染页面，hydration 后事件经 `rx_bind_if` 挂载/卸载对应分支；\
+                由 `asgard_examples_interaction::conditional_example_if_else_branches_follow_state` 的产物断言 + DOM 行为承担",
+        status: Status::VerifiedNow,
     },
     ContractItem {
         id: "list-each-shape",
         claim: "`each`/`item`/`key` 列表集合形态通过构建并产出完整页面",
         status: Status::Blocked(
-            "SSG 准入门拒绝列表构造：nyar-vm.rs `rusty-valkyrie/src/asgard/codegen/ssg_ovm/admission.rs::check_node` \
-             对 `RenderNode::Loop` 产 `OutOfSubsetConstruct` 诊断（本轮复测 `<loop :each>` 与 `<List each>` \
-             两种写法均为结构化拒绝，不再复现旧解释器路径的 `0xC00000FD` 构建崩溃）。\
-             解除条件：准入子集扩展到列表构造并经 OVM 执行出真实页面后，本条目重锚为执行证据",
+            "SSG 准入门对 `<loop :each>` 给出明确结构化诊断（列表渲染需要列表绑定的聚合字面量初始化，\
+             聚合尚未进入类型系统，诊断附替代写法）；`<List each>` 写法在更早的绑定/标识符校验处结构化失败。\
+             解除条件：聚合字面量进入类型系统、准入门放行列表构造并经 OVM 执行出真实页面后，本条目重锚为执行证据",
         ),
     },
     ContractItem {
@@ -130,12 +126,12 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "handler-operator-surface",
         claim: "事件 handler 体内可使用语言运算符（比较、拼接、取反、算术）驱动状态派生",
         status: Status::Blocked(
-            "生成 bundle 的依赖闭包不含运算符声明面：`infix ==`/`infix +`（utf8 与 i32）、`prefix !`（bool）在 \
-             handler 体内全部报 `unresolved call`（最小复现：裸工程 `[export] micro probe(): bool { let mut b: bool = false; b = !b; return b }` \
-             对 `wasm32-unknown-browser-wasm` 与 `ovm` 双 target 同现）。把 std 树与两个 adaptor 注册为 workspace 成员后 \
-             可解析运算符，但构建随即停在 `std.math.random` 的 `std.adaptor.ovm.builtin.math_rand` 无 provider。\
-             当前 handler 只能写字面量赋值与 bool 分支（本批示例据此塑形）。解除条件：隐式 SDK 注入覆盖运算符声明面 \
-             且 `math_rand` provider 补齐或按需求裁剪后，示例扩回运算符驱动并重锚",
+            "生成 bundle 的依赖闭包内运算符不可用：`infix ==`/`infix +`（utf8 与 i32）、`prefix !`（bool）在 handler \
+             体内全部报 `unresolved call`（最小复现：裸工程 `[export] micro probe(): bool { let mut b: bool = false; b = !b; return b }` \
+             对 `wasm32-unknown-browser-wasm` 与 `ovm` 双 target 同现；把 std 树与 wasm adaptor 注册为 workspace 成员后这些 \
+             运算符仍未进入可见域，且 std 全量注入当前另受 std 侧 `std.math.random` 的 OVM provider 悬空阻挡）。\
+             当前 handler 只能写字面量赋值与 bool 分支（本批示例据此塑形）。解除条件：运算符声明面进入 bundle 依赖闭包后，\
+             示例扩回运算符驱动并重锚",
         ),
     },
     ContractItem {
