@@ -56,6 +56,11 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
 /// 通用岛宿主探针：DOM shim + fetch 读盘 + 真实 boot 链装载，随后把控制权交给
 /// 示例场景脚本（`SCENARIO` 占位）。场景以 `emit(key, value)` 回报证据行。
 fn run_scenario_probe(dist: &Path, scenario: &str) -> Vec<(String, String)> {
+    run_scenario_probe_multi(dist, 1, scenario)
+}
+
+/// 同 `run_scenario_probe`，但按 `islands` 数量创建挂载点（多岛证据用）。
+fn run_scenario_probe_multi(dist: &Path, islands: usize, scenario: &str) -> Vec<(String, String)> {
     const PROBE_PREFIX: &str = r##"
 const fs = require('fs');
 const path = require('path');
@@ -136,11 +141,15 @@ documentHandle.head.appendChild = (script) => {
   return realAppend(script);
 };
 
-const islandHost = new VNode('div');
-islandHost.setAttribute('data-island', 'hydrated');
-islandHost.setAttribute('data-component', 'index');
-islandHost.appendChild(VNode.text('prerender-placeholder'));
-documentHandle.appendChild(islandHost);
+const islandHosts = [];
+for (let islandIndex = 0; islandIndex < ISLAND_COUNT; islandIndex++) {
+  const host = new VNode('div');
+  host.setAttribute('data-island', 'hydrated');
+  host.setAttribute('data-component', 'index');
+  host.appendChild(VNode.text('prerender-placeholder'));
+  documentHandle.appendChild(host);
+  islandHosts.push(host);
+}
 
 globalThis.document = documentHandle;
 globalThis.CustomEvent = class { constructor(t, i) { this.type = t; this.detail = i && i.detail; } };
@@ -184,7 +193,7 @@ let watchdog = setTimeout(() => {
 }, 15000);
 
 const poll = setInterval(() => {
-  const ready = globalThis.__voa && globalThis.__voa.isLoaded() && islandHost.__voaMounted;
+  const ready = globalThis.__voa && globalThis.__voa.isLoaded() && islandHosts.every((host) => host.__voaMounted);
   if (!ready) return;
   clearInterval(poll);
   try {
@@ -198,7 +207,7 @@ const poll = setInterval(() => {
   }
 }, 20);
 "##;
-    let script = format!("{PROBE_PREFIX}{scenario}{PROBE_SUFFIX}");
+    let script = format!("const ISLAND_COUNT = {islands};\n{PROBE_PREFIX}{scenario}{PROBE_SUFFIX}");
     let output =
         Command::new("node").arg("-e").arg(&script).arg(dist.to_str().expect("UTF-8 路径")).output().expect("Node 必须可用（岛宿主探针）");
     assert!(
@@ -353,6 +362,44 @@ fn conditional_example_if_else_branches_follow_state() {
     assert_eq!(kv(&pairs, "afterShow.detail"), "expanded body", "Show 应重新挂载 then 分支");
     assert_eq!(kv(&pairs, "afterRefresh.headline"), "Status Board — refreshed");
     assert_eq!(kv(&pairs, "afterRefresh.detailStays"), "expanded body", "Refresh 不应影响条件分支");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
+
+/// 多岛共存：同一组件在两个挂载点各自实例化。DOM 子树互相隔离，
+/// 而信号状态在 wasm 模块内全局共享——任一岛的点击会同步更新两岛文本。
+#[test]
+fn multi_island_instances_share_state_but_not_dom() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-static", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-static", &dist);
+    let pairs = run_scenario_probe_multi(
+        &dist,
+        2,
+        r#"
+    emit('islands.mounted', String(islandHosts.filter((h) => h.__voaMounted).length));
+    const heroOf = (host) => host.querySelectorAll('.hero')[0];
+    const labelOf = (host) => host.querySelectorAll('.state-label')[0].textContent;
+    const buttonOf = (host, text) => host.querySelectorAll('button').filter((b) => b.textContent === text)[0];
+    emit('islands.domDistinct', String(heroOf(islandHosts[0]) !== heroOf(islandHosts[1])));
+    emit('initial.a', labelOf(islandHosts[0]));
+    emit('initial.b', labelOf(islandHosts[1]));
+    click(buttonOf(islandHosts[0], 'Turn on'));
+    emit('afterAOn.a', labelOf(islandHosts[0]));
+    emit('afterAOn.b', labelOf(islandHosts[1]));
+    click(buttonOf(islandHosts[1], 'Turn off'));
+    emit('afterBOff.a', labelOf(islandHosts[0]));
+    emit('afterBOff.b', labelOf(islandHosts[1]));
+"#,
+    );
+    assert_eq!(kv(&pairs, "islands.mounted"), "2", "两个挂载点都应完成水合");
+    assert_eq!(kv(&pairs, "islands.domDistinct"), "true", "两岛 DOM 子树必须是不同实例");
+    assert_eq!(kv(&pairs, "initial.a"), "Label: off");
+    assert_eq!(kv(&pairs, "initial.b"), "Label: off");
+    assert_eq!(kv(&pairs, "afterAOn.a"), "Label: on", "A 岛点击更新 A 岛");
+    assert_eq!(kv(&pairs, "afterAOn.b"), "Label: on", "信号状态模块级共享：A 岛点击同步更新 B 岛");
+    assert_eq!(kv(&pairs, "afterBOff.a"), "Label: off");
+    assert_eq!(kv(&pairs, "afterBOff.b"), "Label: off");
     assert_eq!(kv(&pairs, "probe.ready"), "true");
 }
 
