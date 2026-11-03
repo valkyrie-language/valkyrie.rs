@@ -127,7 +127,7 @@ fn entry_shape_uses_contract_components_with_control_flow() {
     assert!(source.contains("micro on_show()"), "事件 handler 应为 V `micro` 函数:\n{source}");
     assert!(source.contains(": utf8"), "脚本状态应使用 `utf8`:\n{source}");
     assert!(!source.contains(": string"), "V 不存在 `string` 类型:\n{source}");
-    assert!(!source.contains("each="), "`each` 列表形态越出 SSG 准入子集（见合同矩阵 `list-each-shape`），不得进入可构建示例:\n{source}");
+    assert!(!source.contains("each="), "`each=` 魔法属性写法不是语言构造（唯一迭代形态是 `<loop>`），不得进入示例:\n{source}");
     for html_tag in ["<div", "<h1", "<span", "<section"] {
         assert!(!source.contains(html_tag), "跨平台组件树不应使用 HTML 标签 `{html_tag}`:\n{source}");
     }

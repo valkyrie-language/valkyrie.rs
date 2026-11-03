@@ -33,10 +33,11 @@
 //! | `asgard-webview` | 桌面示例形态 | 产物断言；桌面宿主不可达（未选型） |
 //!
 //! 不可达形态（blocked，现象描述，不作绿灯）：
-//! `<loop>`/`<List each>` 列表渲染（依赖聚合字面量初始化）、非 `utf8` 绑定文本位插值、
-//! handler 体内运算符（见 `handler-operator-surface` 条目）、单页多岛/组件组合
-//! （CLI 单入口 + 组件调用准入拒绝）、属性模板拼接、聚合绑定初始化、配置驱动构建、
+//! `<loop>` 列表渲染（数组类型身份缺口，见 `list-each-shape`）、非 `utf8` 绑定文本位插值、
+//! handler 体内运算符（见 `handler-operator-surface` 条目）、组件组合调用（`RenderNode::Component` 准入拒绝）、
+//! 属性模板拼接、聚合绑定初始化、配置驱动构建、
 //! 多 chunk 依赖图、`dev` 原子替换、桌面未分割产物。
+//! 注意：`each=` 魔法属性写法不是语言构造，任何时期硬拒绝（唯一迭代形态是 `<loop>`）。
 
 use std::{
     ffi::OsStr,
@@ -104,11 +105,13 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
     },
     ContractItem {
         id: "list-each-shape",
-        claim: "`each`/`item`/`key` 列表集合形态通过构建并产出完整页面",
+        claim: "`<loop item=\"x\" :each=\"{items}\" key=\"…\">` 列表形态通过构建并产出完整页面；\
+                `each=` 魔法属性写法不是语言构造，任何时期硬诊断拒绝",
         status: Status::Blocked(
-            "SSG 准入门对 `<loop :each>` 给出明确结构化诊断（列表渲染需要列表绑定的聚合字面量初始化，\
-             聚合尚未进入类型系统，诊断附替代写法）；`<List each>` 写法在更早的绑定/标识符校验处结构化失败。\
-             解除条件：聚合字面量进入类型系统、准入门放行列表构造并经 OVM 执行出真实页面后，本条目重锚为执行证据",
+            "迭代数据源需要数组值：数组字面量可编译，但显式标注 `[utf8]` 后接任意运算触发 canonical MIR 校验拒绝，\
+             数组下标（`items⁅i⁆`）在 while 合流处因元素名义类型与 `utf8` 编码类型身份不一致被拒绝（最小复现见本条交付说明）；\
+             另反应式预置的 list 信号类型名 `list` 不是已知类型，从未真实编译过。\
+             解除条件：编码/名义类型身份与数组降低修复后，`admission` 与发射层按 `<loop>` 放行并重锚",
         ),
     },
     ContractItem {
@@ -126,21 +129,27 @@ const CONTRACT_ITEMS: &[ContractItem] = &[
         id: "handler-operator-surface",
         claim: "事件 handler 体内可使用语言运算符（比较、拼接、取反、算术）驱动状态派生",
         status: Status::Blocked(
-            "生成 bundle 的依赖闭包内运算符不可用：`infix ==`/`infix +`（utf8 与 i32）、`prefix !`（bool）在 handler \
-             体内全部报 `unresolved call`（最小复现：裸工程 `[export] micro probe(): bool { let mut b: bool = false; b = !b; return b }` \
-             对 `wasm32-unknown-browser-wasm` 与 `ovm` 双 target 同现；把 std 树与 wasm adaptor 注册为 workspace 成员后这些 \
-             运算符仍未进入可见域，且 std 全量注入当前另受 std 侧 `std.math.random` 的 OVM provider 悬空阻挡）。\
-             当前 handler 只能写字面量赋值与 bool 分支（本批示例据此塑形）。解除条件：运算符声明面进入 bundle 依赖闭包后，\
-             示例扩回运算符驱动并重锚",
+            "生成 bundle 的依赖闭包不含运算符声明面：不声明 std 时 `infix ==`/`infix +`/`prefix !` 全部 `unresolved call`；\
+             声明 `std`（workspace 依赖 + 注册 std 与 adaptor 成员）后运算符可解析，但字符串字面量推断随之切到名义文本类型，\
+             所有 `utf8` 编码类型形参的调用点（`dom_create_text(\"…\")`、`sig_named(\"…\")` 等）大面积失配——\
+             最小复现：`micro f(name: utf8): i32 { return 0 }` + `[export] micro probe(): i32 { return f(\"a\") }` 在声明 std 后报 \
+             `unresolved call f: none matches the argument types`，不声明则通过。另有显式标注 `[utf8]` 数组后接任意运算触发 \
+             canonical MIR 校验拒绝，数组下标（`⁅i⁆` 形态）在 while 合流处类型身份不一致。当前 handler 只能写字面量赋值与 \
+             bool 分支。解除条件：编码类型与名义文本类型的身份关系修复后重锚",
         ),
     },
     ContractItem {
         id: "multi-island-page",
-        claim: "单页多岛：多个组件/挂载点共存一页，独立状态与生命周期",
+        claim: "多挂载点共存一页：同一组件在不同岛各自实例化，DOM 子树互相隔离，模块级信号状态全局共享；\
+                由 `asgard_examples_interaction::multi_island_instances_share_state_but_not_dom` 的 DOM 行为证据承担",
+        status: Status::VerifiedNow,
+    },
+    ContractItem {
+        id: "component-composition",
+        claim: "组件组合：模板内以组件标签调用另一组件（`RenderNode::Component`），独立生命周期",
         status: Status::Blocked(
-            "当前链一次 `build --static` 只接受单入口、单组件、单挂载点：CLI 无多入口形态，组件调用 \
-             （`RenderNode::Component`）也被 SSG 准入门拒绝。可达部分的证据由 `asgard-static-nested` 的 \
-             双交互区独立性承担；解除条件：多入口编排或组件组合进入准入子集后补多岛示例并重锚",
+            "SSG 准入门对组件调用结构化拒绝（`OutOfSubsetConstruct: component …`）；多组件单页还需多入口编排。\
+             解除条件：组件调用进入准入子集并给出组合语义后，本条目重锚",
         ),
     },
     ContractItem {
