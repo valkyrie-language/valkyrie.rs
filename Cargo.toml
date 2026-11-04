@@ -24,10 +24,10 @@ oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bba
 oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
 oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4", features = ["serde"] }
 oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
-rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "8bdcace892e1a1713aad6d7a3df22511b2539633" }
+rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "866f4df9435354970041863656d34df53f616e6e" }
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
-nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "8bdcace892e1a1713aad6d7a3df22511b2539633" }
-nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "8bdcace892e1a1713aad6d7a3df22511b2539633" }
+nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "866f4df9435354970041863656d34df53f616e6e" }
+nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "866f4df9435354970041863656d34df53f616e6e" }
 
 legion-fixtures = { path = "projects/fixtures/legion-fixtures" }
 
