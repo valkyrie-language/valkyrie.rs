@@ -19,11 +19,11 @@ repository = "https://github.com/valkyrie-language/valkyrie.rs"
 # 本仓只保留 Valkyrie 生态的 fixtures 与 bootstrap 语料；编译器与产品实现归 nyar-vm.rs。
 [workspace.dependencies]
 # 白盒 harness / 集成测试经 git `rev` 链接；本机路径写在 `.cargo/config.toml`。
-oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8edb3a68a836c9f50aa4ddfec11ac8de1863eddf" }
-oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8edb3a68a836c9f50aa4ddfec11ac8de1863eddf" }
-oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8edb3a68a836c9f50aa4ddfec11ac8de1863eddf" }
-oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8edb3a68a836c9f50aa4ddfec11ac8de1863eddf", features = ["serde"] }
-oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "8edb3a68a836c9f50aa4ddfec11ac8de1863eddf" }
+oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
+oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
+oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
+oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4", features = ["serde"] }
+oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "b97bbaa72b8b9da219fd25fe2209ae73a8a0bbd4" }
 rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "bfd8c5a01d0fc9cb85adacce2812337e7dcd71ab" }
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
 nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "bfd8c5a01d0fc9cb85adacce2812337e7dcd71ab" }
