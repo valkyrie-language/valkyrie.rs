@@ -455,3 +455,35 @@ fn nested_example_layout_regions_and_class_reuse() {
     assert_eq!(kv(&pairs, "afterSecond.nav"), "Nav: open");
     assert_eq!(kv(&pairs, "probe.ready"), "true");
 }
+
+/// WebView 示例的真实宿主行为：`Refresh` 事件把状态文本推进到刷新后的值，
+/// 标题与副标题保持预渲染内容，重复点击不会破坏已更新的状态。
+#[test]
+fn webview_example_refresh_updates_status_only() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-webview", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-webview", &dist);
+    let pairs = run_scenario_probe(
+        &dist,
+        r#"
+    emit('initial.title', one('desk-title').textContent);
+    emit('initial.subtitle', one('desk-subtitle').textContent);
+    emit('initial.status', one('desk-status').textContent);
+    click(byText('Refresh'));
+    emit('afterRefresh.status', one('desk-status').textContent);
+    emit('afterRefresh.title', one('desk-title').textContent);
+    emit('afterRefresh.subtitle', one('desk-subtitle').textContent);
+    click(byText('Refresh'));
+    emit('afterSecondRefresh.status', one('desk-status').textContent);
+"#,
+    );
+    assert_eq!(kv(&pairs, "initial.title"), "Valkyrie Desk");
+    assert_eq!(kv(&pairs, "initial.subtitle"), "WebView desktop host example");
+    assert_eq!(kv(&pairs, "initial.status"), "All services online");
+    assert_eq!(kv(&pairs, "afterRefresh.status"), "Refreshed just now", "点击应更新状态文本");
+    assert_eq!(kv(&pairs, "afterRefresh.title"), "Valkyrie Desk", "刷新不应改写标题");
+    assert_eq!(kv(&pairs, "afterRefresh.subtitle"), "WebView desktop host example", "刷新不应改写副标题");
+    assert_eq!(kv(&pairs, "afterSecondRefresh.status"), "Refreshed just now", "重复点击应保持已更新状态");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
