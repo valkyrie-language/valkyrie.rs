@@ -141,18 +141,20 @@ fn webview_entry_builds_complete_artifact_tree() {
     // 组件级渲染形态不作为断言对象（见文件头证据边界）。
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let output = asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径")]);
+    let dist = project.join("dist");
+    // 输出目录显式指定为临时工程内的 `dist`，不依赖 CLI 默认的 `.cache/asgard`。
+    let output = asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")]);
     let stdout = expect_success(&output);
     assert!(stdout.contains("asgard build (static) complete"), "stdout 应有完成行:\n{stdout}");
 
-    let dist = project.join("dist");
+    // CSS 产物名取入口页 stem（`index.css`），chunk 产物名取工程名。
     let expected = [
-        "asgard-webview.css",
         "asgard-webview.mjs",
         "asgard-webview.wasm",
         "asgard-webview.wat",
         "boot.js",
         "c/index.js",
+        "index.css",
         "index.html",
         "manifest.json",
     ]

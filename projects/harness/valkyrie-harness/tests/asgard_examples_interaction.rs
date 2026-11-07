@@ -12,7 +12,9 @@ const ENTRY: &str = "source/index.awsl";
 
 fn build_example(name: &str, dest: &Path) -> std::path::PathBuf {
     let project = materialize_example_workspace(name, dest);
-    let args = ["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径")];
+    let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let args = ["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")];
     let owned: Vec<&std::ffi::OsStr> = args.iter().map(std::ffi::OsStr::new).collect();
     let output = asgard_cli::run(&owned).expect("无法启动 asgard CLI");
     assert!(
@@ -24,14 +26,15 @@ fn build_example(name: &str, dest: &Path) -> std::path::PathBuf {
     project
 }
 
+/// 产物树清单：CSS 名取入口页 stem（`index.css`），chunk 名取工程名。
 fn assert_artifact_tree(name: &str, dist: &Path) {
     let expected = [
-        format!("{name}.css"),
         format!("{name}.mjs"),
         format!("{name}.wasm"),
         format!("{name}.wat"),
         "boot.js".into(),
         "c/index.js".into(),
+        "index.css".into(),
         "index.html".into(),
         "manifest.json".into(),
     ];
@@ -417,9 +420,11 @@ fn nested_example_layout_regions_and_class_reuse() {
     const page = one('page');
     const content = find((n) => (n.getAttribute('class') || '').split(/\s+/).includes('content'));
     const toggle = one('nav-toggle');
+    const toggleTokens = (toggle.getAttribute('class') || '').split(/\s+/).filter(Boolean);
     emit('structure.pageChildren', String(page.children.length));
     emit('structure.contentRegions', String(content.length ? content[0].children.length : -1));
-    emit('structure.toggleClassTokens', String((toggle.getAttribute('class') || '').split(/\s+/).filter(Boolean).length));
+    emit('structure.toggleHasBase', String(toggleTokens.includes('nav-toggle')));
+    emit('structure.toggleHasPrimary', String(toggleTokens.includes('primary')));
     emit('initial.nav', one('nav-state').textContent);
     emit('initial.note', one('note-echo').textContent);
     click(byText('Menu'));
@@ -437,7 +442,8 @@ fn nested_example_layout_regions_and_class_reuse() {
     );
     assert_eq!(kv(&pairs, "structure.pageChildren"), "2", "Column 应嵌套两个 Row");
     assert_eq!(kv(&pairs, "structure.contentRegions"), "2", "content Row 应嵌套 sidebar 与 main 两个 Column");
-    assert_eq!(kv(&pairs, "structure.toggleClassTokens"), "2", "样式类复用：nav-toggle 应同时携带 primary");
+    assert_eq!(kv(&pairs, "structure.toggleHasBase"), "true", "样式类复用：nav-toggle 应保留原类名");
+    assert_eq!(kv(&pairs, "structure.toggleHasPrimary"), "true", "样式类复用：nav-toggle 应同时携带 primary");
     assert_eq!(kv(&pairs, "initial.nav"), "Nav: open");
     assert_eq!(kv(&pairs, "initial.note"), "Note: first");
     assert_eq!(kv(&pairs, "afterToggle.nav"), "Nav: closed");

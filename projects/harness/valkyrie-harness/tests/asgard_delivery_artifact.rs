@@ -197,20 +197,21 @@ fn kv<'a>(pairs: &'a [(String, String)], key: &str) -> &'a str {
 fn loader_requests_only_manifest_declared_artifacts() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let stdout = expect_success(&asgard(&["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径")]));
+    let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let stdout = expect_success(&asgard(&["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")]));
 
     assert!(stdout.contains("asgard build (static) complete"), "stdout 应有完成行:\n{stdout}");
     assert!(stdout.contains("component: index"), "stdout 应声明根组件:\n{stdout}");
 
-    let dist = project.join("dist");
     let tree = artifact_tree(&dist);
     let expected = [
-        "asgard-static.css",
         "asgard-static.mjs",
         "asgard-static.wasm",
         "asgard-static.wat",
         "boot.js",
         "c/index.js",
+        "index.css",
         "index.html",
         "manifest.json",
     ]
@@ -260,18 +261,29 @@ fn base_prefix_and_assets_are_served_with_real_mime() {
     fs::write(project.join("assets/logo.txt"), "logo").expect("写入资源失败");
     fs::write(project.join("assets/nested/icon.svg"), "<svg/>").expect("写入嵌套资源失败");
 
-    let stdout =
-        expect_success(&asgard(&["build", "--static", ENTRY, "--base", "/app/", "--assets", "assets", project.to_str().expect("UTF-8 路径")]));
-
     let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let stdout = expect_success(&asgard(&[
+        "build",
+        "--static",
+        ENTRY,
+        "--base",
+        "/app/",
+        "--assets",
+        "assets",
+        project.to_str().expect("UTF-8 路径"),
+        "--output",
+        dist.to_str().expect("UTF-8 路径"),
+    ]));
+
     let tree = artifact_tree(&dist);
     let expected: Vec<String> = [
-        "asgard-static.css",
         "asgard-static.mjs",
         "asgard-static.wasm",
         "asgard-static.wat",
         "boot.js",
         "c/index.js",
+        "index.css",
         "index.html",
         "logo.txt",
         "manifest.json",
@@ -311,7 +323,7 @@ fn base_prefix_and_assets_are_served_with_real_mime() {
     let manifest = http_get(address, "/app/manifest.json");
     assert_eq!(manifest.header("content-type"), Some("application/json; charset=utf-8"));
 
-    let css = http_get(address, "/app/asgard-static.css");
+    let css = http_get(address, "/app/index.css");
     assert_eq!(css.header("content-type"), Some("text/css; charset=utf-8"));
 
     let asset = http_get(address, "/app/logo.txt");

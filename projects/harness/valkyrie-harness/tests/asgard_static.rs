@@ -109,20 +109,23 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
     }
 }
 
-/// 以配置声明的入口执行当前唯一可用的静态交付命令（不带任何覆盖 flag）。
+/// 以配置声明的入口执行当前唯一可用的静态交付命令，输出目录显式指定为临时工程内的
+/// `dist`。CLI 默认输出 `.cache/asgard`；测试不依赖该默认值，避免默认值调整时误碎。
 fn build_static(project: &Path) -> Output {
-    asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径")])
+    let dist = project.join("dist");
+    asgard(&["build", "--static", CONFIGURED_ENTRY, project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")])
 }
 
 /// 当前静态交付链的完整产物清单（与 `asgard_delivery_artifact` 的宿主证据同源）。
+/// CSS 产物名取入口页 stem（`index.css`），chunk 产物名取工程名。
 fn expected_artifact_tree() -> Vec<String> {
     [
-        "asgard-static.css",
         "asgard-static.mjs",
         "asgard-static.wasm",
         "asgard-static.wat",
         "boot.js",
         "c/index.js",
+        "index.css",
         "index.html",
         "manifest.json",
     ]
@@ -222,7 +225,15 @@ fn w_entry_is_still_accepted_and_identical_to_awsl() {
     let awsl_page = fs::read(project.join("dist").join("index.html")).expect("读取 .awsl 页面失败");
 
     fs::write(project.join("source").join("index.w"), &source).expect("写入 .w 入口失败");
-    let stdout = expect_success(&asgard(&["build", "--static", "source/index.w", project.to_str().expect("UTF-8 路径")]));
+    let dist = project.join("dist");
+    let stdout = expect_success(&asgard(&[
+        "build",
+        "--static",
+        "source/index.w",
+        project.to_str().expect("UTF-8 路径"),
+        "--output",
+        dist.to_str().expect("UTF-8 路径"),
+    ]));
     assert_eq!(stdout_field(&stdout, "component"), "index");
     let w_page = fs::read(project.join("dist").join("index.html")).expect("读取 .w 页面失败");
     assert_eq!(w_page, awsl_page, ".w 与 .awsl 入口产物应逐字节相同");

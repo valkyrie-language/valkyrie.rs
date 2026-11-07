@@ -16,7 +16,9 @@ const ENTRY: &str = "source/index.awsl";
 
 fn build_example(dest: &Path) -> std::path::PathBuf {
     let project = materialize_example_workspace("asgard-static", dest);
-    let args = ["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径")];
+    let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let args = ["build", "--static", ENTRY, project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")];
     let owned: Vec<&std::ffi::OsStr> = args.iter().map(std::ffi::OsStr::new).collect();
     let output = asgard_cli::run(&owned).expect("无法启动 asgard CLI");
     assert!(

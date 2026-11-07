@@ -307,19 +307,21 @@ fn contract_table_is_well_formed() {
 fn verified_items_hold_against_real_artifacts() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
-    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
+    let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")]);
     assert!(output.status.success(), "静态构建应成功\nstderr:\n{}", stderr_of(&output));
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
 
     // artifact-completeness：页面 + 成对浏览器产物（集合相等，不是存在性）。
-    let dist = project.join("dist");
+    // CSS 产物名取入口页 stem（`index.css`），chunk 产物名取工程名。
     let expected = vec![
-        "asgard-static.css".to_string(),
         "asgard-static.mjs".to_string(),
         "asgard-static.wasm".to_string(),
         "asgard-static.wat".to_string(),
         "boot.js".to_string(),
         "c/index.js".to_string(),
+        "index.css".to_string(),
         "index.html".to_string(),
         "manifest.json".to_string(),
     ];
@@ -346,7 +348,7 @@ fn verified_items_hold_against_real_artifacts() {
     // build-determinism：同输入重建逐字节确定（页面与 chunk 都不得漂移）。
     let first_page = fs::read(dist.join("index.html")).expect("读取第一次页面失败");
     let first_wasm = fs::read(dist.join("asgard-static.wasm")).expect("读取第一次 chunk 失败");
-    let output2 = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
+    let output2 = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")]);
     assert!(output2.status.success(), "重建应成功\nstderr:\n{}", stderr_of(&output2));
     assert_eq!(first_page, fs::read(dist.join("index.html")).expect("读取第二次页面失败"), "build-determinism（页面）");
     assert_eq!(first_wasm, fs::read(dist.join("asgard-static.wasm")).expect("读取第二次 chunk 失败"), "build-determinism（chunk）");
@@ -397,7 +399,7 @@ fn admission_rejects_project_without_manifest() {
     let temp = TempDir::new().expect("创建临时目录失败");
     let project = copy_example_into(temp.path());
     fs::remove_file(project.join("legion.von")).expect("删除工程清单失败");
-    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径")]);
+    let output = asgard(&["build", "--static", "source/index.awsl", project.to_str().expect("UTF-8 路径"), "--output", project.join("dist").to_str().expect("UTF-8 路径")]);
     assert!(!output.status.success(), "缺 legion.von 的构建应失败");
     let stderr = stderr_of(&output);
     assert!(stderr.contains("准入失败"), "诊断应指出项目准入失败，实际:\n{stderr}");
@@ -413,9 +415,10 @@ fn assets_flag_copies_resources_into_output() {
     fs::write(project.join("assets/logo.txt"), "logo").expect("写入资源失败");
     fs::write(project.join("assets/nested/icon.svg"), "<svg/>").expect("写入嵌套资源失败");
 
-    let output = asgard(&["build", "--static", "source/index.awsl", "--assets", "assets", project.to_str().expect("UTF-8 路径")]);
-    assert!(output.status.success(), "带资源目录的构建应成功\nstderr:\n{}", stderr_of(&output));
     let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let output = asgard(&["build", "--static", "source/index.awsl", "--assets", "assets", project.to_str().expect("UTF-8 路径"), "--output", dist.to_str().expect("UTF-8 路径")]);
+    assert!(output.status.success(), "带资源目录的构建应成功\nstderr:\n{}", stderr_of(&output));
     assert!(dist.join("logo.txt").is_file(), "资源应复制到产物根");
     assert!(dist.join("nested/icon.svg").is_file(), "嵌套资源应保留相对路径");
     // 复制不得顶掉产物本身。

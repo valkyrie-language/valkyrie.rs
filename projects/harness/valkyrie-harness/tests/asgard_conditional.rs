@@ -159,10 +159,18 @@ fn matching_widget_stem_builds_under_component_name() {
         "<widget panel>\n<Column><Text>{label}</Text></Column>\n</widget>\n<script>\nlet label: utf8 = \"Panel\"\n</script>\n",
     )
     .expect("写入 panel 入口失败");
-    let stdout = expect_success(&asgard(&["build", "--static", "source/panel.awsl", project.to_str().expect("UTF-8 路径")]));
+    let dist = project.join("dist");
+    // 输出目录显式指定，不依赖 CLI 默认的 `.cache/asgard`。
+    let stdout = expect_success(&asgard(&[
+        "build",
+        "--static",
+        "source/panel.awsl",
+        project.to_str().expect("UTF-8 路径"),
+        "--output",
+        dist.to_str().expect("UTF-8 路径"),
+    ]));
     assert!(stdout.contains("component: panel"), "组件名应取根组件:\n{stdout}");
 
-    let dist = project.join("dist");
     let tree = artifact_tree(&dist);
     for required in ["index.html", "manifest.json", "boot.js", "c/panel.js"] {
         assert!(tree.iter().any(|entry| entry == required), "产物树应含 `{required}`: {tree:?}");
