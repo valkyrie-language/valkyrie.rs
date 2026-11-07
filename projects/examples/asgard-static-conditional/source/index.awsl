@@ -1,6 +1,6 @@
 <widget index>
 <Column class="board">
-    <Text class="headline">{title} — {status}</Text>
+    <Text class="headline" id="headline">{title} — {status}</Text>
     <if :condition="show_details">
         <Text class="detail">{detail}</Text>
         <else>
@@ -30,6 +30,6 @@ micro on_refresh() {
 }
 </script>
 <style>
-.board { padding: 12px; }
-.headline { font-size: 18px; }
+root { inset: 12 }
+#headline { text: @title }
 </style>

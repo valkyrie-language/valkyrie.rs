@@ -1,10 +1,10 @@
 <widget index>
 <Column class="form">
-    <Text class="form-title">Profile</Text>
+    <Text class="form-title" id="form-title">Profile</Text>
     <Input class="name-input" value="{name}" />
     <Input class="city-input" value="{city}" />
-    <Text class="echo-name">Name: {name}</Text>
-    <Text class="echo-city">City: {city}</Text>
+    <Text class="echo-name" id="echo-name">Name: {name}</Text>
+    <Text class="echo-city" id="echo-city">City: {city}</Text>
     <Button class="reset-button" @click="reset_form">Reset</Button>
 </Column>
 </widget>
@@ -16,6 +16,7 @@ micro reset_form() {
     city = "Paris"
 }
 </script>
-<style>.form { padding: 16px; }
-.form-title { font-weight: 700; }
-.echo-name, .echo-city { font-family: monospace; }</style>
+<style>root { inset: 16 }
+#form-title { text: @title }
+#echo-name { text: @body }
+#echo-city { text: @body }</style>

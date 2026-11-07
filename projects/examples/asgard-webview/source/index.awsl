@@ -1,8 +1,8 @@
 <widget index>
 <Column class="desk">
-    <Text class="desk-title">{title}</Text>
-    <Text class="desk-subtitle">{subtitle}</Text>
-    <Text class="desk-status">{status}</Text>
+    <Text class="desk-title" id="desk-title">{title}</Text>
+    <Text class="desk-subtitle" id="desk-subtitle">{subtitle}</Text>
+    <Text class="desk-status" id="desk-status">{status}</Text>
     <Button @click="on_refresh">Refresh</Button>
 </Column>
 </widget>
@@ -15,7 +15,7 @@ micro on_refresh() {
 }
 </script>
 <style>
-.desk { padding: 24px; }
-.desk-title { font-size: 20px; }
-.desk-status { font-family: monospace; }
+root { inset: 24 }
+#desk-title { text: @title }
+#desk-status { text: @body }
 </style>

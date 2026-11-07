@@ -1,17 +1,17 @@
 <widget index>
 <Column class="page">
-    <Row class="header">
+    <Row class="header" id="header">
         <Text class="brand">Console</Text>
-        <Button class="nav-toggle primary" @click="toggle_nav">Menu</Button>
+        <Button class="nav-toggle primary" id="nav-toggle" @click="toggle_nav">Menu</Button>
     </Row>
-    <Row class="content">
-        <Column class="sidebar">
+    <Row class="content" id="content">
+        <Column class="sidebar" id="sidebar">
             <Text class="nav-state">Nav: {nav}</Text>
         </Column>
-        <Column class="main">
+        <Column class="main" id="main">
             <Input class="note-input" value="{note}" />
             <Text class="note-echo">Note: {note}</Text>
-            <Button class="clear-note secondary" @click="clear_note">Clear</Button>
+            <Button class="clear-note secondary" id="clear-note" @click="clear_note">Clear</Button>
         </Column>
     </Row>
 </Column>
@@ -34,10 +34,13 @@ micro clear_note() {
     note = ""
 }
 </script>
-<style>.page { display: flex; flex-direction: column; }
-.header { display: flex; justify-content: space-between; }
-.content { display: flex; }
-.sidebar { width: 160px; }
-.main { flex: 1; }
-.primary { font-weight: 700; }
-.secondary { color: #666; }</style>
+<style>root { direction: vertical }
+#header {
+    direction: horizontal
+    main-align: space-between
+}
+#content { direction: horizontal }
+#sidebar { width: 160 }
+#main { width: fill }
+#nav-toggle { text: @title }
+#clear-note { color: @ink-muted }</style>

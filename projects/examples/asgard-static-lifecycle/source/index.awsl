@@ -1,6 +1,6 @@
 <widget index>
 <Column class="lifecycle">
-    <Text class="mark-line">Mark: {label}</Text>
+    <Text class="mark-line" id="mark-line">Mark: {label}</Text>
     <Button class="mark-button" @click="mark">Mark</Button>
     <Button class="rebuild-button" @click="rebuild_island">Rebuild island</Button>
 </Column>
@@ -23,5 +23,10 @@ micro rebuild_island() {
     dom_mount_islands()
 }
 </script>
-<style>.lifecycle { padding: 16px; }
-.mark-line { font-family: monospace; min-height: 1.2em; }</style>
+<style>
+root { inset: 16 }
+#mark-line {
+    text: @body
+    height: 20
+}
+</style>

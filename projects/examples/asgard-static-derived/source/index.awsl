@@ -1,8 +1,8 @@
 <widget index>
 <Column class="derived">
-    <Text class="status-label">Status: {status}</Text>
+    <Text class="status-label" id="status-label">Status: {status}</Text>
     <Button class="advance-button" @click="advance">Advance</Button>
-    <Text class="message-label">{message}</Text>
+    <Text class="message-label" id="message-label">{message}</Text>
     <Button class="shout-button" @click="shout">Shout</Button>
 </Column>
 </widget>
@@ -24,6 +24,6 @@ micro shout() {
     message = "louder"
 }
 </script>
-<style>.derived { padding: 16px; }
-.status-label { font-family: monospace; }
-.message-label { color: #3355aa; }</style>
+<style>root { inset: 16 }
+#status-label { text: @body }
+#message-label { color: @brand }</style>

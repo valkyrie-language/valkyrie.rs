@@ -1,7 +1,7 @@
 <widget index>
 <Column class="hero">
     <Text class="hero-title">{greeting}</Text>
-    <Text class="state-label">Label: {label}</Text>
+    <Text class="state-label" id="state-label">Label: {label}</Text>
     <Input class="label-input" value="{label}" />
     <Button class="toggle-button" @click="turn_on">Turn on</Button>
     <Button class="toggle-button" @click="turn_off">Turn off</Button>
@@ -25,7 +25,10 @@ micro rebuild_island() {
     dom_mount_islands()
 }
 </script>
-<style>.hero { color: #c67b34; }
-.state-label { font-weight: 600; }
-.toggle-button { margin-right: 8px; }
-.rebuild-button { margin-top: 8px; }</style>
+<style>
+root {
+    color: @warn
+    spacing: 8
+}
+#state-label { text: @title }
+</style>
