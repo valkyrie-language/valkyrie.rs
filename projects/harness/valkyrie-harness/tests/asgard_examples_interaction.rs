@@ -487,3 +487,73 @@ fn webview_example_refresh_updates_status_only() {
     assert_eq!(kv(&pairs, "afterSecondRefresh.status"), "Refreshed just now", "重复点击应保持已更新状态");
     assert_eq!(kv(&pairs, "probe.ready"), "true");
 }
+
+/// 派生值示例的组件结构：根布局下是“状态文本、推进按钮、消息文本、喊话按钮”四元顺序，
+/// 事件驱动更新不改变组件结构。
+#[test]
+fn derived_example_keeps_component_structure_across_state_updates() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-static-derived", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-static-derived", &dist);
+    let pairs = run_scenario_probe(
+        &dist,
+        r#"
+    const root = one('derived');
+    emit('structure.tags', root.children.map((n) => n.tagName).join(','));
+    emit('structure.texts', root.children.map((n) => n.textContent.trim()).join('|'));
+    click(byText('Advance'));
+    emit('afterAdvance.tags', root.children.map((n) => n.tagName).join(','));
+    emit('afterAdvance.texts', root.children.map((n) => n.textContent.trim()).join('|'));
+"#,
+    );
+    assert_eq!(kv(&pairs, "structure.tags"), "SPAN,BUTTON,SPAN,BUTTON", "根布局应保留四元组件顺序");
+    assert_eq!(kv(&pairs, "structure.texts"), "Status: red|Advance|hello|Shout");
+    assert_eq!(kv(&pairs, "afterAdvance.tags"), "SPAN,BUTTON,SPAN,BUTTON", "状态更新不应改变组件结构");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
+
+/// 表单示例的组件结构：两个输入框与两个回显文本按声明顺序排列，Reset 不增删节点。
+#[test]
+fn form_example_keeps_input_and_echo_structure() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-static-form", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-static-form", &dist);
+    let pairs = run_scenario_probe(
+        &dist,
+        r#"
+    const root = one('form');
+    emit('structure.tags', root.children.map((n) => n.tagName).join(','));
+    emit('structure.inputs', String(root.children.filter((n) => n.tagName === 'INPUT').length));
+    click(byText('Reset'));
+    emit('afterReset.tags', root.children.map((n) => n.tagName).join(','));
+"#,
+    );
+    assert_eq!(kv(&pairs, "structure.tags"), "SPAN,INPUT,INPUT,SPAN,SPAN,BUTTON", "表单应保留标题、两个输入、两个回显与重置按钮");
+    assert_eq!(kv(&pairs, "structure.inputs"), "2", "表单应恰有两个输入框");
+    assert_eq!(kv(&pairs, "afterReset.tags"), "SPAN,INPUT,INPUT,SPAN,SPAN,BUTTON", "重置不应增删组件节点");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
+
+/// 生命周期示例的组件结构：标记文本与两个按钮，重建岛前后节点顺序稳定。
+#[test]
+fn lifecycle_example_keeps_mark_and_button_structure() {
+    let temp = TempDir::new().expect("创建临时目录失败");
+    let project = build_example("asgard-static-lifecycle", temp.path());
+    let dist = project.join("dist");
+    assert_artifact_tree("asgard-static-lifecycle", &dist);
+    let pairs = run_scenario_probe(
+        &dist,
+        r#"
+    const root = one('lifecycle');
+    emit('structure.tags', root.children.map((n) => n.tagName).join(','));
+    emit('structure.hasInput', String(root.children.some((n) => n.tagName === 'INPUT')));
+    click(byText('Rebuild island'));
+    emit('probe.ready', 'true');
+"#,
+    );
+    assert_eq!(kv(&pairs, "structure.tags"), "SPAN,BUTTON,BUTTON", "生命周期示例应保留标记文本和两个按钮");
+    assert_eq!(kv(&pairs, "structure.hasInput"), "false", "生命周期示例不应包含输入框");
+    assert_eq!(kv(&pairs, "probe.ready"), "true");
+}
