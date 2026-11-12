@@ -26,31 +26,37 @@ pub struct SmokeProject {
     pub project_dir: PathBuf,
 }
 
-/// 源级 `core/primitive` 声明族：数值原始类型名不是语言内建，必须绑定到源码声明身份。
-/// 夹具项目声明 `"core": false`，因此在 `source/` 下写入等价声明文件；属性值给出
-/// `core::primitive::*` 身份，与内联编译测试的 `PRIMITIVE_I32` 保持同一合同。
-const CORE_PRIMITIVE_DECLARATIONS: &str = concat!(
-    "[primitive(\"core::primitive::i8\")] structure i8 { }\n",
-    "[primitive(\"core::primitive::i16\")] structure i16 { }\n",
-    "[primitive(\"core::primitive::i32\")] structure i32 { }\n",
-    "[primitive(\"core::primitive::i64\")] structure i64 { }\n",
-    "[primitive(\"core::primitive::i128\")] structure i128 { }\n",
-    "[primitive(\"core::primitive::u8\")] structure u8 { }\n",
-    "[primitive(\"core::primitive::u16\")] structure u16 { }\n",
-    "[primitive(\"core::primitive::u32\")] structure u32 { }\n",
-    "[primitive(\"core::primitive::u64\")] structure u64 { }\n",
-    "[primitive(\"core::primitive::u128\")] structure u128 { }\n",
-    "[primitive(\"core::primitive::isize\")] structure isize { }\n",
-    "[primitive(\"core::primitive::usize\")] structure usize { }\n",
-    "[primitive(\"core::primitive::f32\")] structure f32 { }\n",
-    "[primitive(\"core::primitive::f64\")] structure f64 { }\n",
-    "[primitive(\"core::primitive::f128\")] structure f128 { }\n",
-    "[primitive(\"core::primitive::byte\")] structure byte { }\n",
-    "[primitive(\"core::primitive::sbyte\")] structure sbyte { }\n",
-    // 运行时夹具的 `main` 以 `ExitCode` 表达进程退出码；该名字来自 `std` 适配层，
-    // 夹具项目声明 `"std": false`，因此在源级给出等价别名，避免依赖未链接的 std 组。
+/// 运行时夹具的 `main` 以 `ExitCode` 表达进程退出码；该名字来自 `std` 适配层，
+/// 夹具项目声明 `"std": false`，因此在源级给出等价别名，避免依赖未链接的 std 组。
+const EXIT_CODE_DECLARATIONS: &str = concat!(
     "type ExitCode = i32;\n",
     "micro ExitCode(value: i32): i32 { return value }\n",
+);
+
+/// 源级 `std/primitive` 声明族：数值原始类型名不是语言内建，必须绑定到源码声明身份。
+/// 夹具项目声明 `"std": false`，因此在 `source/` 下写入等价声明文件；身份是
+/// `std::primitive::*`，声明落在该身份的规范 namespace（闭包身份来源门按绝对限定位置
+/// 解析来源，只有占据规范位置的声明才是 owner）。`usize`/`isize` 是 std 的指针宽度别名，
+/// 不是独立 primitive 身份。
+const CORE_PRIMITIVE_DECLARATIONS: &str = concat!(
+    "namespace std.primitive;\n",
+    "[primitive(\"std::primitive::i8\")] structure i8 { }\n",
+    "[primitive(\"std::primitive::i16\")] structure i16 { }\n",
+    "[primitive(\"std::primitive::i32\")] structure i32 { }\n",
+    "[primitive(\"std::primitive::i64\")] structure i64 { }\n",
+    "[primitive(\"std::primitive::i128\")] structure i128 { }\n",
+    "[primitive(\"std::primitive::u8\")] structure u8 { }\n",
+    "[primitive(\"std::primitive::u16\")] structure u16 { }\n",
+    "[primitive(\"std::primitive::u32\")] structure u32 { }\n",
+    "[primitive(\"std::primitive::u64\")] structure u64 { }\n",
+    "[primitive(\"std::primitive::u128\")] structure u128 { }\n",
+    "[primitive(\"std::primitive::f32\")] structure f32 { }\n",
+    "[primitive(\"std::primitive::f64\")] structure f64 { }\n",
+    "[primitive(\"std::primitive::f128\")] structure f128 { }\n",
+    "[primitive(\"std::primitive::byte\")] structure byte { }\n",
+    "[primitive(\"std::primitive::sbyte\")] structure sbyte { }\n",
+    "type usize = u64;\n",
+    "type isize = i64;\n",
 );
 
 /// 写入夹具入口源码，并同时提供源级 primitive 声明。
@@ -60,7 +66,8 @@ fn write_main_source(source_dir: &Path, source: &str) {
 }
 
 fn write_core_primitives(source_dir: &Path) {
-    fs::write(source_dir.join("core_primitive.v"), CORE_PRIMITIVE_DECLARATIONS).unwrap();
+    // `ExitCode` 是全局 namespace 的入口别名，写在规范 `std.primitive` 段之前。
+    fs::write(source_dir.join("core_primitive.v"), format!("{EXIT_CODE_DECLARATIONS}{CORE_PRIMITIVE_DECLARATIONS}")).unwrap();
 }
 
 pub fn create_smoke_project_with_build(prefix: &str, build_block: &str, source: &str) -> SmokeProject {

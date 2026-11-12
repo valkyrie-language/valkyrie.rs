@@ -1,17 +1,21 @@
-[primitive("core::primitive::i8")] structure i8 { }
-[primitive("core::primitive::i16")] structure i16 { }
-[primitive("core::primitive::i32")] structure i32 { }
-[primitive("core::primitive::i64")] structure i64 { }
-[primitive("core::primitive::i128")] structure i128 { }
-[primitive("core::primitive::u8")] structure u8 { }
-[primitive("core::primitive::u16")] structure u16 { }
-[primitive("core::primitive::u32")] structure u32 { }
-[primitive("core::primitive::u64")] structure u64 { }
-[primitive("core::primitive::u128")] structure u128 { }
-[primitive("core::primitive::isize")] structure isize { }
-[primitive("core::primitive::usize")] structure usize { }
-[primitive("core::primitive::f32")] structure f32 { }
-[primitive("core::primitive::f64")] structure f64 { }
-[primitive("core::primitive::f128")] structure f128 { }
-[primitive("core::primitive::byte")] structure byte { }
-[primitive("core::primitive::sbyte")] structure sbyte { }
+namespace std.primitive;
+
+[primitive("std::primitive::i8")] structure i8 { }
+[primitive("std::primitive::i16")] structure i16 { }
+[primitive("std::primitive::i32")] structure i32 { }
+[primitive("std::primitive::i64")] structure i64 { }
+[primitive("std::primitive::i128")] structure i128 { }
+[primitive("std::primitive::u8")] structure u8 { }
+[primitive("std::primitive::u16")] structure u16 { }
+[primitive("std::primitive::u32")] structure u32 { }
+[primitive("std::primitive::u64")] structure u64 { }
+[primitive("std::primitive::u128")] structure u128 { }
+[primitive("std::primitive::f32")] structure f32 { }
+[primitive("std::primitive::f64")] structure f64 { }
+[primitive("std::primitive::f128")] structure f128 { }
+[primitive("std::primitive::byte")] structure byte { }
+[primitive("std::primitive::sbyte")] structure sbyte { }
+
+# 指针宽度整数是别名而不是独立 primitive 身份，与 std 的 `type usize = u64` 一致。
+type usize = u64;
+type isize = i64;
