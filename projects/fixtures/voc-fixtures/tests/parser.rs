@@ -36,7 +36,7 @@ fn parse_widget_with_script_style_and_template() {
 </widget>"#;
     let root = AwslParser::parse_root(source).expect("parse widget shell");
     assert!(root.script.is_some());
-    assert!(root.style.is_some());
+    assert!(!root.styles.is_empty());
     assert!(!root.template.is_empty());
 }
 
@@ -137,7 +137,7 @@ fn widget_with_script_style_as_sibling_sections() {
 
     assert_eq!(root.widget_name, Some("todo".into()));
     assert!(root.script.as_ref().is_some_and(|s| s.contains("let x = 1")));
-    assert!(root.style.as_ref().is_some_and(|s| s.contains(".x")));
+    assert!(root.styles.iter().any(|block| block.content.contains(".x")));
     assert_eq!(root.template.len(), 1);
     assert_eq!(expect_element(&root.template[0]).tag, "div");
 }
