@@ -9,5 +9,18 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for wasm32-unknown-wasi-wasi: unresolved call `infix <=` in main at source/core_primitive.v:259..274'
+    - |-
+      build failed for wasm32-unknown-wasi-wasi: error[valkyrie.hir.unresolved_call]: unresolved call `infix <=` in main: no callable with this name is in scope
+        --> source/main.v:10:8
+         |
+      10 |     if resolution <= 0 {
+         |        ^^^^^^^^^^^^^^^
+
+      error[valkyrie.hir.unresolved_call]: unresolved call `infix <` in main: no callable with this name is in scope
+        --> source/main.v:15:8
+         |
+      15 |     if current < 0 {
+         |        ^^^^^^^^^^^
+
+      error: aborting due to 2 previous errors
     errors: []

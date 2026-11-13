@@ -9,5 +9,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: compile pipeline rejected module `jvm_interop_stdout` (SMIR007): Semantic MIR 合同失败: function=jvm_interop_stdout::main, location=block 0 instruction 1, detail=call argument type differs from declared signature (actual=Utf8, expected=Utf16)'
+    - 'build failed for jvm-openjdk-unknown-managed: JVM 最小 lowering 尚不支持常量 `Utf16("hello from jvm")`：缺少 JVM 常量池载体合同，function=jvm_interop_stdout::main'
     errors: []

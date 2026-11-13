@@ -12,18 +12,20 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: no backend interpreter for fragment `functions` (family=Clr, host=Clr)'
+    - 'build failed for clr-microsoft-unknown-managed: CLR 入口方法 `minimal_main` 返回类型 `int64` 不符合 CLR entry 合同（只接受 `void`/`int32`）'
     errors: []
   jvm-openjdk-unknown-managed:
-    build_success: false
+    build_success: true
     dry_run_success: false
     run_success: false
     run_contracts: []
     per_artifact: {}
-    artifacts: []
-    compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: no backend interpreter for fragment `functions` (family=Jvm, host=Jvm)'
-    errors: []
+    artifacts:
+    - compile-evidence.txt
+    - main.jar
+    compile_errors: []
+    errors:
+    - 'run command failed for jvm-openjdk-unknown-managed: missing execution manifest after build: \\?\C:\Users\Administrator\AppData\Local\Temp\legion-run-minimalGE3k5Y\app\dist\jvm\run-contracts.txt'
   wasm32-node-unknown-wasm:
     build_success: true
     dry_run_success: true

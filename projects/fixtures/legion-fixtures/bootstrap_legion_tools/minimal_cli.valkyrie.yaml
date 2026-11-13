@@ -5,25 +5,42 @@ targets:
 - wasm32-unknown-wasi-wasi
 expect:
   clr-microsoft-unknown-managed:
-    build_success: false
-    dry_run_success: false
+    build_success: true
+    dry_run_success: true
     run_success: false
-    run_contracts: []
-    per_artifact: {}
-    artifacts: []
-    compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: no backend interpreter for fragment `functions` (family=Clr, host=Clr)'
+    run_contracts:
+    - logical_entry: main
+      physical_entry: legion.exe
+      invocation: dotnet
+      validate: dotnet exec legion.exe
+    per_artifact:
+      legion.exe:
+        run_success: false
+        exit_code: -2147450749
+        stdout: []
+        stderr:
+        - A fatal error was encountered. The library 'hostpolicy.dll' required to execute the application was not found in 'C:\Users\Administrator\AppData\Local\Temp\legion-run-<normalized>\app\dist\clr\'.
+        - Failed to run as a self-contained app.
+        - '  - The application was run as a self-contained app because ''C:\Users\Administrator\AppData\Local\Temp\legion-run-<normalized>\app\dist\clr\legion.runtimeconfig.json'' was not found.'
+        - '  - If this should be a framework-dependent app, add the ''C:\Users\Administrator\AppData\Local\Temp\legion-run-<normalized>\app\dist\clr\legion.runtimeconfig.json'' file and specify the appropriate framework.'
+    artifacts:
+    - compile-evidence.txt
+    - legion.exe
+    - run-contracts.txt
+    compile_errors: []
     errors: []
   jvm-openjdk-unknown-managed:
-    build_success: false
+    build_success: true
     dry_run_success: false
     run_success: false
     run_contracts: []
     per_artifact: {}
-    artifacts: []
-    compile_errors:
-    - 'build failed for jvm-openjdk-unknown-managed: no backend interpreter for fragment `functions` (family=Jvm, host=Jvm)'
-    errors: []
+    artifacts:
+    - compile-evidence.txt
+    - legion.jar
+    compile_errors: []
+    errors:
+    - 'run command failed for jvm-openjdk-unknown-managed: missing execution manifest after build: \\?\C:\Users\Administrator\AppData\Local\Temp\legion-run-minimal_clivE0VNo\app\dist\jvm\run-contracts.txt'
   wasm32-node-unknown-wasm:
     build_success: true
     dry_run_success: true

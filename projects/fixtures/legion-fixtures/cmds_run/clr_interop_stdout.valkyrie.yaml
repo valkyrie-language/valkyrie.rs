@@ -9,5 +9,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: compile pipeline rejected module `clr_interop_stdout` (SMIR007): Semantic MIR 合同失败: function=clr_interop_stdout::clr_interop_stdout, location=block 0 instruction 1, detail=call argument type differs from declared signature (actual=Utf8, expected=Utf16)'
+    - 'build failed for clr-microsoft-unknown-managed: CLR 最小 lowering 尚不支持宿主导入 `ItemInstanceId(0)`（链接 `host[clr]("mscorlib", "System.Console", "WriteLine")`）：缺少 CLR host 编码，function=clr_interop_stdout::clr_interop_stdout'
     errors: []

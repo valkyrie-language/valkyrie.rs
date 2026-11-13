@@ -9,5 +9,5 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: no backend interpreter for fragment `functions` (family=Clr, host=Clr)'
+    - 'build failed for clr-microsoft-unknown-managed: CLR 入口方法 `nested_x2dworkspace_x2dminimal_main` 返回类型 `int64` 不符合 CLR entry 合同（只接受 `void`/`int32`）'
     errors: []
