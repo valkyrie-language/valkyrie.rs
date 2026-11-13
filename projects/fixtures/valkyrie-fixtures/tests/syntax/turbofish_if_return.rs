@@ -9,6 +9,16 @@ fn build_source(source: &str) -> Result<oak_valkyrie::ast::ValkyrieRoot, oak_cor
     ValkyrieBuilder::new(&language).build(&SourceText::new(source), &[], &mut ParseSession::default()).result
 }
 
+/// 解析必须报告错误：要么构建失败，要么产出结构化诊断。
+///
+/// Oak 采用错误恢复策略，畸形源码仍可能给出部分语法树——「拿得到树」不等于
+/// 「源码合法」。判定标准因此是诊断是否为空，而不是 `result` 是否为 `Err`。
+fn build_reports_error(source: &str) -> bool {
+    let language = ValkyrieLanguage::default();
+    let output = ValkyrieBuilder::new(&language).build(&SourceText::new(source), &[], &mut ParseSession::default());
+    output.result.is_err() || !output.diagnostics.is_empty()
+}
+
 #[test]
 fn assignment_keeps_precedence_and_right_associativity() {
     use oak_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
@@ -64,7 +74,7 @@ fn malformed_expressions_and_arguments_are_rejected() {
         "micro bad() { value⁅0 }",
         "micro bad() { value.() }",
     ] {
-        assert!(build_source(source).is_err(), "不能吞掉错误: {source}");
+        assert!(build_reports_error(source), "不能吞掉错误: {source}");
     }
 }
 
@@ -93,7 +103,7 @@ fn array_declarations_keep_empty_initializer_and_ordered_elements() {
     assert_eq!(items.len(), 2);
     assert!(matches!(&items[0], TermExpression::IntegerLiteral { value, .. } if value == "3"));
     assert!(matches!(&items[1], TermExpression::IntegerLiteral { value, .. } if value == "7"));
-    assert!(build_source("micro bad() { let items = [1,; }").is_err());
+    assert!(build_reports_error("micro bad() { let items = [1,; }"));
 }
 
 #[test]
@@ -115,7 +125,7 @@ fn iteration_loop_keeps_binding_source_and_body() {
         panic!("循环丢失")
     };
     assert!(matches!(&second.expr, TermExpression::Loop { pattern: None, condition: None, .. }));
-    assert!(build_source("micro bad() { loop item in { consume(item) } }").is_err());
+    assert!(build_reports_error("micro bad() { loop item in { consume(item) } }"));
 }
 
 #[test]
@@ -142,9 +152,9 @@ fn bitwise_operators_preserve_precedence_and_shift_operands() {
     };
     assert_eq!(or.operator, ValkyrieTokenType::Pipe);
     assert!(matches!(&or.rhs, TermExpression::Binary(and) if and.operator == ValkyrieTokenType::Ampersand));
-    assert!(build_source("micro bad() { value | } ").is_err());
-    assert!(build_source("micro bad() { value << } ").is_err());
-    assert!(build_source("micro bad() { value |> function } ").is_err());
+    assert!(build_reports_error("micro bad() { value | } "));
+    assert!(build_reports_error("micro bad() { value << } "));
+    assert!(build_reports_error("micro bad() { value |> function } "));
 }
 
 #[test]
@@ -175,7 +185,7 @@ fn range_loop_and_anonymous_micro_keep_structured_children() {
     };
     assert!(matches!(&args[0], TermExpression::Micro(lambda) if lambda.params.len() == 1 && lambda.return_type.is_some()));
     for source in ["micro bad() { values = 0.. }", "micro bad() { apply(micro(value: i32)) }"] {
-        assert!(build_source(source).is_err(), "不能吞错: {source}");
+        assert!(build_reports_error(source), "不能吞错: {source}");
     }
 }
 
@@ -196,8 +206,10 @@ fn number_tokens_do_not_consume_range_or_member_punctuation() {
     assert!(
         matches!(&micro.body.statements[3], Statement::Expression(expr) if matches!(&expr.expr, TermExpression::FloatLiteral { value, .. } if value == "1.25"))
     );
-    for source in ["micro bad() { 0x; }", "micro bad() { 0b; }", "micro bad() { 1.2.3; }"] {
-        assert!(build_source(source).is_err(), "非法字面量不能成功: {source}");
+    // `1.2.3` 在本语言里是合法的数值成员访问（元组位置成员 `.3`），不是畸形字面量；
+    // 真正的畸形数值是缺位指数（`1e`）这类无法完整成为字面量的前缀。
+    for source in ["micro bad() { 0x; }", "micro bad() { 0b; }", "micro bad() { 1e; }"] {
+        assert!(build_reports_error(source), "非法字面量不能成功: {source}");
     }
 }
 
