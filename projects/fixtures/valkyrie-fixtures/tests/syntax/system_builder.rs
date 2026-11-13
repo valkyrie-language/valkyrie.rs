@@ -28,7 +28,7 @@ fn system_attributes_and_method_arguments_are_preserved() {
     assert_eq!(system.name.name, "MovementSystem");
     assert_eq!(system.annotations.len(), 1);
     assert_eq!(system.annotations[0].name.name, "phase");
-    assert!(matches!(&system.annotations[0].args[0].value, TermExpression::StringLiteral(literal) if literal.quote_count == 1));
+    assert!(matches!(&system.annotations[0].args[0].value, TermExpression::QuoteLiteral(literal) if literal.quote_count == 1));
     assert_eq!(system.methods.len(), 2);
     assert_eq!(system.methods[0].name.name, "execute");
     assert_eq!(system.methods[0].parameters.len(), 1);
