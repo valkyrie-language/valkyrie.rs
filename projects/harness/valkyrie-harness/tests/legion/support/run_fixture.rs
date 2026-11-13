@@ -242,9 +242,15 @@ fn verify_run_fixture_with_context(fixture_path: &Path, explicit_context: Option
         }
     };
 
+    let temp_root = fixture.project_dir.display().to_string();
     let mut expect = BTreeMap::new();
     for target in targets.iter().copied() {
-        expect.insert(target.fixture_key(), execute_run_fixture_target(&fixture.project_dir, target));
+        let mut result = execute_run_fixture_target(&fixture.project_dir, target);
+        // 归一化：错误消息携带的本机临时目录绝对路径（含随机后缀）不进 golden，
+        // 否则每次运行/每台机器的快照都不同。占位符只代表「本项目临时根」。
+        result.compile_errors = result.compile_errors.iter().map(|error| error.replace(&temp_root, "<fixture-dir>")).collect();
+        result.errors = result.errors.iter().map(|error| error.replace(&temp_root, "<fixture-dir>")).collect();
+        expect.insert(target.fixture_key(), result);
     }
 
     let observed = RunDelegationFixtureSpec { targets: targets.iter().map(|target| target.fixture_key()).collect(), expect };

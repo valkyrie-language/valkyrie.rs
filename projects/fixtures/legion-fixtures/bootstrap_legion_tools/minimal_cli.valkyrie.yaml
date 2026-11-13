@@ -40,7 +40,7 @@ expect:
     - legion.jar
     compile_errors: []
     errors:
-    - 'run command failed for jvm-openjdk-unknown-managed: missing execution manifest after build: \\?\C:\Users\Administrator\AppData\Local\Temp\legion-run-minimal_clivE0VNo\app\dist\jvm\run-contracts.txt'
+    - 'run command failed for jvm-openjdk-unknown-managed: missing execution manifest after build: <fixture-dir>\dist\jvm\run-contracts.txt'
   wasm32-node-unknown-wasm:
     build_success: true
     dry_run_success: true
