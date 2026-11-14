@@ -19,15 +19,15 @@ repository = "https://github.com/valkyrie-language/valkyrie.rs"
 # 本仓只保留 Valkyrie 生态的 fixtures 与 bootstrap 语料；编译器与产品实现归 nyar-vm.rs。
 [workspace.dependencies]
 # 白盒 harness / 集成测试经 git `rev` 链接；本机路径写在 `.cargo/config.toml`。
-oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "1c3f84ed064dbe3c853c9704097e02c27c87f6c6" }
-oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "1c3f84ed064dbe3c853c9704097e02c27c87f6c6" }
-oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "1c3f84ed064dbe3c853c9704097e02c27c87f6c6" }
-oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "1c3f84ed064dbe3c853c9704097e02c27c87f6c6", features = ["serde"] }
-oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "1c3f84ed064dbe3c853c9704097e02c27c87f6c6" }
-rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "4ab1998d07d416764b6e3ea7a0375a8c536cfd26" }
+oak-awsl = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "fc94201d43926ac3f75b3a4f7dd10ac219d73f6e" }
+oak-core = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "fc94201d43926ac3f75b3a4f7dd10ac219d73f6e" }
+oak-testing = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "fc94201d43926ac3f75b3a4f7dd10ac219d73f6e" }
+oak-von = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "fc94201d43926ac3f75b3a4f7dd10ac219d73f6e", features = ["serde"] }
+oak-valkyrie = { git = "https://github.com/yggdrasil-language/oak.rs", rev = "fc94201d43926ac3f75b3a4f7dd10ac219d73f6e" }
+rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
-nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "4ab1998d07d416764b6e3ea7a0375a8c536cfd26" }
-nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "4ab1998d07d416764b6e3ea7a0375a8c536cfd26" }
+nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 
 legion-fixtures = { path = "projects/fixtures/legion-fixtures" }
 
