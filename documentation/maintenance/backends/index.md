@@ -1,19 +1,8 @@
 # 后端维护指南
 
-backend 只消费已验证的 TargetExecutionPlan。公共 Canonical 语义、RepresentationPlan 与目标私有计划各有所有者，不建立包含全部阶段的统一物理 IR。
+语言与目标适配器将本语言 IR 或 residual 降低到目标私有计划和 LIR。Nyar 提供变换、分析、优化和专门化工具，不规定公共语言 MIR。普通函数、合成包装和 runtime helper 共用目标 LIR 编码链路。
 
-## 数据流
-
-```text
-package Semantic MIR → linker / Canonical validation
-  → optimization / sparse RepresentationPlan
-  → BackendLowering.prepare → pre-encode validation
-  → TargetExecutionPlan → format encoding
-```
-
-linker 选择 adaptor/import；表示规划选择 carrier/layout；backend 安排目标私有编号并编码。backend 不能按 import field 猜 ABI、按 callee 尾名决定行为、按类型名找布局或缺 payload 补值。
-
-外部 PE/JVM/Wasm 等格式由对应 Acorn crate 编码；Nyar 字节码由 nyar-bytecode 编码。格式校验不能反向改变语言语义。
+Wasm、CLR、JVM、OVM 和 native 各自验证目标表示、调用与导入合同。Acorn 负责适用的外部格式，OVM 编码 `.odin` 供 OdinVM 执行。目标不能按函数名、类型形状、默认值或空载荷补语言语义。
 
 ## 验收边界
 
@@ -27,4 +16,4 @@ linker 选择 adaptor/import；表示规划选择 carrier/layout；backend 安�
 - [JVM](jvm.md)
 - [Wasm/WASI](wasi.md)
 - [Native](native.md)
-- [Nyar VM](nyar-vm.md)
+- [OVM / OdinVM](odin-vm.md)

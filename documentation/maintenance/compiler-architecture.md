@@ -4,22 +4,18 @@
 
 ## 生产入口与所有者
 
-```mermaid
-flowchart TD
-    Resolver["WorkspaceResolver：manifest / package graph / immutable inventory"]
-    Compiler["Compiler：绑定、需求固定点与语义编译"]
-    FrontendIR["Frontend-owned semantic IR / contract"]
-    Modules["Selected Nyar modules"]
-    Representation["Optional RepresentationPlan"]
-    Private["Optional TargetExecutionPlan / pre-encode validation"]
-    Encode["Acorn 外部格式编码 / Nyar 字节码编码"]
-    Store["ArtifactStore：原子提交与证据"]
-    Resolver --> Compiler --> FrontendIR --> Modules --> Representation --> Private --> Encode --> Store
-```
+语言拥有的 IR 或解释器专门化 residual → 语言与目标适配器 → 目标私有计划与 LIR → 验证与编码 → ArtifactStore。
+
+Nyar 提供可复用变换、分析、优化、部分求值及残余化工具。Valkyrie MIR、复杂控制流、效果和实例验证归 Valkyrie；历史 `Canonical MIR` 不能成为其他语言的公共前提。共享算法协议不等于统一语言操作枚举。
+
+Python、Lua 和动态 TypeScript 由语言包拥有解释器 `I_L`。LegendVM 提供 guest 解释与专门化支撑；第一投影 `S(I_L, P) = R_L,P` 保留未知运行输入及必要动态 runtime，不能以编译期执行删除可观察效果。这是职责合同，不宣称这些语言或第二、第三投影已经实现。
+
+Wasm、CLR、JVM、OVM、native 各自拥有计划、包装及 LIR。普通函数与合成包装共用 LIR 编码。OVM 产出 `.odin` 由 OdinVM 加载、验证和执行，并由其管理 VM 对象、执行帧、GC 与可选 JIT；其他目标不经 `.odin`。native 的 `.node` 和 `.pyd`/扩展 `.so` 分别使用 Node-API 和 CPython bridge 加 native 链接，明确注册、值、错误、资源和线程合同。
+
 
 Legion 只编排 WorkspaceResolver、Compiler、ArtifactStore；不直接构造 AST/HIR/MIR 或语义选择结果。Compiler 不自行读取工程文件。
 
-Oak 生产语法树、恢复状态和 syntax diagnostics。Valkyrie frontend 生产名称、类型、泛型替换、trait/imply evidence、调用与 package Semantic MIR；当前实现位于 Nyar workspace 的 `nyar-language`，但事实所有权仍属于 Valkyrie frontend。Nyar 是多语言分析、编译与执行平台，负责 frontend 接入框架、通用验证、优化、表示与降低；它不能反向生产 Valkyrie 语义。Acorn 负责外部格式编解码。
+Oak 生产语法树、恢复状态和 syntax diagnostics。Valkyrie frontend 生产名称、类型、泛型替换、trait/imply evidence、调用与 package Semantic MIR；实际编译工具链在 `nyar-vm.rs`，本仓维护夹具与符合性入口，不拥有编译器实现。Nyar 工具不能反向生产 Valkyrie 语义。Acorn 负责外部格式编解码。
 
 Nyar 可以托管多个语言 frontend。frontend adapter 按需把自己的语义 IR 或其他明确 contract 交给选定的 Nyar 模块；Nyar 不要求所有语言共享同一套 AST/HIR/语义 IR，也不建立为了兼容所有 frontend 的 Universal IR。某个 frontend 的私有类型规则不能升级为平台公共语义。target 优化可以选择 specialization、witness 消除或内联，但语言层不以单态化作为泛型语义。
 
@@ -35,7 +31,7 @@ AST operator 在 HIR 展开为普通 callable。HIR/MIR/LIR 不建立 unary/bina
 
 ItemInstanceId 关联声明、完整 substitution、签名及 evidence。字段/变体引用所属完整名义实例。同声明不同实参不能混用，Self、Cast 目标及关联类型等全部类型位共用绑定事实。
 
-linker 选择 target-conditioned adaptor/import；只有接入相应模块时才生成 RepresentationPlan 和 TargetExecutionPlan。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。backend 只编码已验证 TargetExecutionPlan，不能按 callee、field、类型名或 carrier 补语义。
+linker 选择 target-conditioned adaptor/import；只有接入相应模块时才生成 RepresentationPlan 和 TargetExecutionPlan。RepresentationPlan 是稳定语义 ID keyed 的稀疏侧表，不复制 CFG。语言与目标适配器产生私有计划和 LIR，backend 只编码已验证的目标 LIR，不能按 callee、field、类型名或 carrier 补语义。
 
 ## 恢复、诊断与工具
 

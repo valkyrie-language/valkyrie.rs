@@ -25,8 +25,8 @@
 ```text
 WorkspaceResolver → immutable inventory / package graph
   → Compiler：binding / demand fixed point / HIR / Semantic MIR
-  → linker / Canonical → RepresentationPlan → TargetExecutionPlan
-  → Acorn 或 Nyar bytecode 编码 → ArtifactStore
+  → Valkyrie MIR 验证 → 语言与目标适配器 → 目标私有计划及 LIR
+  → 目标格式编码（OVM 为 `.odin`） → ArtifactStore
 ```
 
 该主链的实现位于 `nyar-vm.rs`；本仓只经 `projects/harness` 的 CLI 入口黑盒验收，不复制其中任何阶段。

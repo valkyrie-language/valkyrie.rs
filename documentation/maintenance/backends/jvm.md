@@ -5,7 +5,7 @@ JVM backend 将已绑定语义与表示计划降低为私有 class/方法计划�
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → JVM TargetExecutionPlan
+已验证的语言 IR / residual → 语言与目标适配器 → JVM 私有计划与 LIR
   → pre-encode validation → acorn-jvm → class / jar
 ```
 
@@ -16,3 +16,5 @@ linker 选择 adaptor/import，表示规划选择擦除或保留方式；backend
 ## 验收
 
 缺 callable、import signature、carrier 或 layout 必须失败。格式有效还需真实入口调用和结果校验；class 文件存在、单条指令输出或某个 fixture 通过不证明全部语言能力完成。
+
+普通函数与合成包装共用目标 LIR 验证和编码。未静态化的动态语义由显式语言 runtime 合同承载。

@@ -5,7 +5,7 @@ Wasm 模块编码与具体宿主能力分开。Node、浏览器和 WASI 的导�
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → Wasm TargetExecutionPlan
+已验证的语言 IR / residual → 语言与目标适配器 → Wasm 私有计划与 LIR
   → pre-encode validation → acorn-wasm → Wasm artifact
   → signature-driven host glue / target runtime
 ```
@@ -17,3 +17,5 @@ typeidx/local/table/rec-group、GC 对象与线性内存 FFI carrier 属于私�
 ## 验收
 
 所有生产编码入口先验证 callable、import signature、carrier、layout 与 payload。真实验证包含非空 artifact、export、签名驱动传参/返回值、invoke 及完整题意用例；模块验读或 Node wrapper 启动不能替代执行。
+
+普通函数与合成包装共用目标 LIR 验证和编码。未静态化的动态语义由显式语言 runtime 合同承载。

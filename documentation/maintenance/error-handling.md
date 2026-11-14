@@ -9,7 +9,9 @@
 - 输入层：读取、解码、manifest 与 package graph 错误。
 - Oak：语法、missing/error 与恢复诊断。
 - Valkyrie frontend：名称、类型、place、调用、约束与 evidence。
-- Nyar：Canonical/IR、实例、表示、私有计划与执行验证。
+- Valkyrie：本语言 MIR、实例与效果验证。
+- Nyar：可复用变换、分析、优化和专门化工具。
+- 目标与 runtime：私有计划、LIR、表示及执行验证。
 - Acorn：二进制格式与编码。
 - ArtifactStore/Legion：原子提交、缓存身份、产物与执行编排。
 

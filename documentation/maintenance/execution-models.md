@@ -5,12 +5,12 @@
 ## 编译与执行
 
 ```text
-manifests/source → Compiler → Canonical / frozen plans
+manifests/source → Compiler → Valkyrie IR → 语言与目标适配器 → 目标私有计划及 LIR
   → artifact + export/import + execution manifest
   → target runtime/glue → invoke → result
 ```
 
-Nyar target 消费验证后的 Nyar 字节码；Wasm target 消费 Wasm 与签名驱动 glue。其他 target 的支持范围以实际构建、导出和执行证据判断。运行时不能按函数短名重建调用、类型或 ABI。
+OVM target 由 OdinVM 消费验证后的 `.odin`；Wasm target 消费 Wasm 与签名驱动 glue。其他 target 的支持范围以实际构建、导出和执行证据判断。运行时不能按函数短名重建调用、类型或 ABI。
 
 linker 绑定 adaptor/import，表示规划绑定 carrier/layout；backend 和 runtime 只能消费与验证。缺导入、签名、布局或载荷必须结构化失败，不能默认零值、默认签名或复制旧产物。
 

@@ -5,7 +5,7 @@ CLR 专题规定 IL/程序集表示边界，不声明完整语言或自举能力
 ## 输入与编码
 
 ```text
-Canonical + RepresentationPlan → CLR TargetExecutionPlan
+已验证的语言 IR / residual → 语言与目标适配器 → CLR 私有计划与 LIR
   → pre-encode validation → acorn-pe → assembly
 ```
 
@@ -16,3 +16,5 @@ Acorn 拥有 PE/CLI 格式。执行/验读工具可以检查产物，不能代�
 ## 验收
 
 缺实例、签名、layout 或导入时，在所属边界结构化失败；不能靠默认 carrier 或外部宿主补编译。合法计划须生成非空程序集，并验证 export/入口及真实调用结果。局部 IL 输出和格式校验不证明题意或自举。
+
+普通函数与合成包装共用目标 LIR 验证和编码。未静态化的动态语义由显式语言 runtime 合同承载。

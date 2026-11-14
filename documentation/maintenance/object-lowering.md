@@ -6,9 +6,9 @@
 
 Valkyrie frontend 完成名称、类型、place、泛型与 evidence 绑定，将语法糖展开为普通调用或控制流。Semantic MIR 保留普通 Invoke、结构操作与稳定身份。
 
-linker 选择 adaptor/import，Canonical validation 验证跨包身份和完整实例。优化保留语义；Representation Planner 为稳定语义 ID 选择稀疏 carrier/layout 行。BackendLowering.prepare 生产私有计划，backend 通过 pre-encode validation 后才编码。
+linker 选择 adaptor/import，Valkyrie MIR validation 验证跨包身份和完整实例。优化保留语义；Representation Planner 为稳定语义 ID 选择稀疏 carrier/layout 行。BackendLowering.prepare 生产私有计划，backend 通过 pre-encode validation 后才编码。
 
-Acorn 拥有外部二进制格式；Nyar 自有字节码由 nyar-bytecode 拥有。编码器不能通过名称、布局形状或默认值修复上游语义。
+Acorn 拥有外部二进制格式；OVM 目标编码 `.odin` 供 OdinVM 执行。编码器不能通过名称、布局形状或默认值修复上游语义。
 
 ## 特性约束
 
