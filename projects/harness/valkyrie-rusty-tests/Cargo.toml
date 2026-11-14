@@ -1,0 +1,15 @@
+[package]
+name = "valkyrie-rusty-tests"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Migrated heavyweight rusty-valkyrie suites; wire and port incrementally from downstream."
+
+# 从 `rusty-valkyrie` 迁出的重型套件暂存于此：文件保持原始模块结构，尚未接线到
+# 任何 harness。按下游节奏逐套件补依赖与 `[[test]]` 入口后再纳入构建。
+autotests = false
+
+[dependencies]
+
+[dev-dependencies]
