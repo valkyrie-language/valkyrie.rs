@@ -4,12 +4,43 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Migrated heavyweight rusty-valkyrie suites; wire and port incrementally from downstream."
+description = "Migrated heavyweight rusty-valkyrie suites; wired as standard `tests/` targets."
 
-# 从 `rusty-valkyrie` 迁出的重型套件暂存于此：文件保持原始模块结构，尚未接线到
-# 任何 harness。按下游节奏逐套件补依赖与 `[[test]]` 入口后再纳入构建。
-autotests = false
+# 从 `rusty-valkyrie` 迁出的重型套件：`tests/{asgard,backend,frontend,legion}/main.rs`
+# 与 `tests/smir003_tests.rs` 按 Cargo 标准集成测试目标自动发现；白盒依赖全部取自
+# 根 `Cargo.toml` 的 git `rev` pin，不在本仓复制编译器实现。
 
 [dependencies]
 
+# 与迁出前 `rusty-valkyrie` 的 feature 语义保持一致：正式 OVM 链与 serde 默认开启，
+# 诊断链（`format-spy`）与自举验收（`bootstrap-lane`）按需显式打开。
+[features]
+default = ["ovm-lane", "serde"]
+ovm-lane = ["rusty-valkyrie/ovm-lane", "nyar-emitter/ovm-lane"]
+serde = ["rusty-valkyrie/serde"]
+format-spy = ["rusty-valkyrie/format-spy"]
+bootstrap-lane = ["rusty-valkyrie/bootstrap-lane"]
+
 [dev-dependencies]
+rusty-valkyrie = { workspace = true }
+nyar = { workspace = true }
+nyar-analyzer = { workspace = true }
+nyar-emitter = { workspace = true }
+nyar-format = { workspace = true }
+nyar-package-manager = { workspace = true }
+nyar-types = { workspace = true }
+odin-vm = { workspace = true }
+acorn-aarch64 = { workspace = true }
+acorn-dex = { workspace = true }
+acorn-jvm = { workspace = true }
+acorn-odin = { workspace = true }
+acorn-pe = { workspace = true }
+acorn-wasm = { workspace = true }
+oak-awsl = { workspace = true }
+oak-core = { workspace = true }
+oak-valkyrie = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }
+zip = { workspace = true }

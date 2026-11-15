@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "projects/harness/valkyrie-harness",
+    "projects/harness/valkyrie-rusty-tests",
     "projects/fixtures/valkyrie-fixtures",
     "projects/fixtures/legion-fixtures",
     "projects/fixtures/von-fixtures",
@@ -28,11 +29,28 @@ rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
 nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+# 迁移套件按其原始白盒依赖直接链接 nyar 编译链与 odin 运行时（同 `rusty-valkyrie` pin）。
+nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+nyar-format = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+odin-vm = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+# 后端产物解码套件直接消费 acorn 格式 crate（rev 与 nyar pin 依赖的 acorn 一致）。
+acorn-aarch64 = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
+acorn-dex = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
+acorn-jvm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
+acorn-odin = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
+acorn-pe = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
+acorn-wasm = { git = "https://github.com/yggdrasil-language/acorn.rs", rev = "ad42cd939481564dc69d2b42e1cab2c716317439" }
 
 legion-fixtures = { path = "projects/fixtures/legion-fixtures" }
 
 serde = { version = "1.0.228", features = ["derive", "rc"] }
+serde_json = "1.0.154"
+sha2 = "0.10.9"
 tempfile = "3"
+zip = "9.1.1"
 
 [profile.release]
 lto = false
