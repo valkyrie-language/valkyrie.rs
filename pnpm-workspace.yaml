@@ -1,2 +1,4 @@
 packages:
   - 'projects/harness/*'
+  - 'projects/ts/emulators/*'
+  - 'projects/ts/platforms/*'

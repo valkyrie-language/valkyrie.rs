@@ -1,0 +1,121 @@
+#!/usr/bin/env node
+/**
+ * `valkyrie-napi` 原生绑定构建入口。
+ *
+ * 只构建 `projects/napi/valkyrie-napi` 并把产物复制到
+ * `projects/ts/platforms/valkyrie-<short>/lib/valkyrie.<triple>.node`。
+ *
+ * Usage:
+ *   node scripts/build.mjs napi
+ *   node scripts/build.mjs napi --debug
+ *   node scripts/build.mjs napi --all
+ */
+
+import {spawnSync} from 'node:child_process';
+import {copyFileSync, existsSync, mkdirSync, readdirSync} from 'node:fs';
+import {dirname, join, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** @typedef {{ triple: string, packageDir: string, npmTriple: string, short: string }} NativeTarget */
+
+const NATIVE_TARGETS = [
+    {triple: 'x86_64-pc-windows-msvc', packageDir: 'valkyrie-win32-x64', npmTriple: 'win32-x64-msvc', short: 'win32-x64'},
+    {triple: 'x86_64-unknown-linux-gnu', packageDir: 'valkyrie-linux-x64', npmTriple: 'linux-x64-gnu', short: 'linux-x64'},
+    {triple: 'x86_64-apple-darwin', packageDir: 'valkyrie-darwin-x64', npmTriple: 'darwin-x64', short: 'darwin-x64'},
+    {triple: 'aarch64-apple-darwin', packageDir: 'valkyrie-darwin-arm64', npmTriple: 'darwin-arm64', short: 'darwin-arm64'},
+];
+
+function parseArgs(argv) {
+    const flags = argv.filter((arg) => arg.startsWith('-'));
+    const positionals = argv.filter((arg) => !arg.startsWith('-'));
+    return {
+        mode: positionals.find((arg) => arg === 'napi') ?? 'napi',
+        all: flags.includes('--all'),
+        debug: flags.includes('--debug'),
+    };
+}
+
+function run(command, args) {
+    const result = spawnSync(command, args, {cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32', env: process.env});
+    if ((result.status ?? 1) !== 0) {
+        process.exit(result.status ?? 1);
+    }
+}
+
+function hostTriple() {
+    if (process.platform === 'win32') return 'x86_64-pc-windows-msvc';
+    if (process.platform === 'darwin') return process.arch === 'arm64' ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
+    return process.arch === 'arm64' ? 'aarch64-unknown-linux-gnu' : 'x86_64-unknown-linux-gnu';
+}
+
+function selectTargets(targets, all) {
+    if (all) return targets;
+    const forced = process.env.VALKYRIE_NATIVE_TARGET;
+    if (forced) {
+        const hit = targets.find((target) => target.short === forced || target.triple === forced);
+        if (hit) return [hit];
+        console.warn(`VALKYRIE_NATIVE_TARGET=${forced} did not match any native target; falling back to host selection`);
+    }
+    const host = hostTriple();
+    const exact = targets.find((target) => target.triple === host);
+    return exact ? [exact] : [targets[0]];
+}
+
+function nativeLibCandidates(triple, release, libName) {
+    const profile = release ? 'release' : 'debug';
+    const dir = join(ROOT, 'target', triple, profile);
+    if (triple.includes('windows')) return [join(dir, `${libName}.dll`)];
+    if (triple.includes('apple')) return [join(dir, `lib${libName}.dylib`)];
+    return [join(dir, `lib${libName}.so`), join(dir, `${libName}.so`)];
+}
+
+function findNativeArtifact(triple, release, libName) {
+    const candidates = nativeLibCandidates(triple, release, libName);
+    for (const candidate of candidates) {
+        if (existsSync(candidate)) return candidate;
+    }
+    const profile = release ? 'release' : 'debug';
+    const depsDir = join(ROOT, 'target', triple, profile, 'deps');
+    if (existsSync(depsDir)) {
+        for (const name of readdirSync(depsDir)) {
+            if (
+                (name === libName || name.startsWith(`${libName}.`) || name.startsWith(`lib${libName}.`)) &&
+                (name.endsWith('.dll') || name.endsWith('.so') || name.endsWith('.dylib') || name.endsWith('.node'))
+            ) {
+                return join(depsDir, name);
+            }
+        }
+    }
+    throw new Error(`missing build artifact (tried: ${candidates.join(', ')})`);
+}
+
+function buildNapi(opts) {
+    const release = !opts.debug;
+    const targets = selectTargets(NATIVE_TARGETS, opts.all);
+    console.log(`build:napi → valkyrie-napi cdylib (${release ? 'release' : 'debug'}, ${targets.length} target(s))`);
+
+    for (const target of targets) {
+        const triple = process.env.VALKYRIE_NATIVE_TARGET_TRIPLE ?? target.triple;
+        const profile = release ? ['--release'] : [];
+        console.log(`\n→ ${triple} → projects/ts/platforms/${target.packageDir}`);
+        run('cargo', ['build', ...profile, '--target', triple, '-p', 'valkyrie-napi']);
+
+        const source = findNativeArtifact(triple, release, 'valkyrie_napi');
+        const destination = join(ROOT, 'projects', 'ts', 'platforms', target.packageDir, 'lib', `valkyrie.${target.npmTriple}.node`);
+        mkdirSync(dirname(destination), {recursive: true});
+        copyFileSync(source, destination);
+        console.log(`  copied lib/valkyrie.${target.npmTriple}.node`);
+    }
+}
+
+const opts = parseArgs(process.argv.slice(2));
+if (opts.mode === 'napi') {
+    buildNapi(opts);
+} else {
+    console.error(`unsupported mode '${opts.mode}' (only 'napi' is published from this repository)`);
+    process.exit(1);
+}
+
+console.log('\nbuild complete');

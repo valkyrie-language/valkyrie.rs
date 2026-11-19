@@ -1,10 +1,13 @@
 {
     "name": "@valkyrie-language/valkyrie.rs",
     "private": true,
-    "description": "Valkyrie fixtures workspace — Rust fixtures + pnpm harness for @nyar/valkyrie CLI",
+    "description": "Valkyrie fixtures workspace and `@nyar/valkyrie` Node-API package — native bindings over Boost `language.valkyrie`",
     "scripts": {
         "test": "cargo test --workspace",
         "test:harness": "cargo test -p valkyrie-harness",
+        "test:ts": "pnpm --filter @nyar/valkyrie test",
+        "build:napi": "node scripts/build.mjs napi",
+        "build:js": "node scripts/build-npm-package-js.mjs",
         "check": "cargo cry",
         "check:rust": "cargo cry"
     },
