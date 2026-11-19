@@ -133,7 +133,7 @@ fn run_export(program: &nyar_types::CompiledProgram, name: &str) -> i32 {
         .map(|export| export.symbol_name.clone())
         .find(|symbol| symbol.ends_with(name))
         .unwrap_or_else(|| panic!("必须导出 `{name}`"));
-    let bytes = acorn_odin::encode_module(&module);
+    let bytes = data_binary_odin::encode_module(&module);
     let mut vm = OdinVm::new();
     let loaded = vm.load(&bytes).expect("对象模式绑定模块必须通过加载期校验");
     let value = vm.run(&loaded, &entry, Vec::new()).expect("被测函数必须在 OVM 内真实执行成功");

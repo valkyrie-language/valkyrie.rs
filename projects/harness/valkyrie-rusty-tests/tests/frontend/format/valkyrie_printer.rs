@@ -5,7 +5,7 @@ use nyar_format::{
     formatter::{FormatOptions, PrintStyle},
     printer::print_document,
 };
-use oak_valkyrie::printer::{
+use data_text_valkyrie::printer::{
     PrintOptions as OakPrintOptions, PrintStyle as OakPrintStyle, render_document as oak_render_document, to_document as oak_to_document,
 };
 use rusty_valkyrie::{compiler::syntax::oak::parse_source, text::ToDocument};

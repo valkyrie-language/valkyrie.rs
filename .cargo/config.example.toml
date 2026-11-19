@@ -1,6 +1,6 @@
 # Copy to `.cargo/config.toml` (gitignored). Do not commit real paths.
-# Replace `<your-path>` with the directory that contains sibling checkouts `nyar-vm.rs` / `oak.rs`.
-# CI resolves nyar-* / oak-* from git `rev` in `Cargo.toml`.
+# Replace `<your-path>` with the directory that contains sibling checkouts `nyar-vm.rs` / `rust-boost`.
+# CI resolves nyar-* / data-* from git `rev` in `Cargo.toml`.
 #
 # 黑盒 Legion/Asgard 走 `@nyar/valkyrie`（根 `package.json`）；白盒链走下方 nyar-vm patch。
 
@@ -18,12 +18,15 @@ nyar-runner = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-r
 nyar-types = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-types" }
 nyar-workspace = { path = "<your-path>/nyar-vm.rs/projects/nyar.rs/compilers/nyar-workspace" }
 
-[patch."https://github.com/yggdrasil-language/oak.rs"]
-oak-awsl = { path = "<your-path>/oak.rs/examples/oak-voc" }
-oak-core = { path = "<your-path>/oak.rs/projects/oak-core" }
-oak-dejavu = { path = "<your-path>/oak.rs/examples/oak-dejavu" }
-oak-formatter = { path = "<your-path>/oak.rs/projects/oak-formatter" }
-oak-pretty-print = { path = "<your-path>/oak.rs/projects/oak-pretty-print" }
-oak-testing = { path = "<your-path>/oak.rs/projects/oak-testing" }
-oak-valkyrie = { path = "<your-path>/oak.rs/examples/oak-valkyrie" }
-oak-von = { path = "<your-path>/oak.rs/examples/oak-von" }
+[patch."https://github.com/oovm/rust-boost"]
+data-binary-aarch64 = { path = "<your-path>/rust-boost/projects/data/data.binary.aarch64" }
+data-binary-dex = { path = "<your-path>/rust-boost/projects/data/data.binary.dex" }
+data-binary-jvm = { path = "<your-path>/rust-boost/projects/data/data.binary.jvm" }
+data-binary-odin = { path = "<your-path>/rust-boost/projects/data/data.binary.odin" }
+data-binary-pe = { path = "<your-path>/rust-boost/projects/data/data.binary.pe" }
+data-binary-wasm = { path = "<your-path>/rust-boost/projects/data/data.binary.wasm" }
+data-text-awsl = { path = "<your-path>/rust-boost/projects/data/data.text.awsl" }
+data-text-core = { path = "<your-path>/rust-boost/projects/data/data.text.core" }
+data-text-valkyrie = { path = "<your-path>/rust-boost/projects/data/data.text.valkyrie" }
+data-text-von = { path = "<your-path>/rust-boost/projects/data/data.text.von" }
+language-testing = { path = "<your-path>/rust-boost/projects/language/language.testing" }

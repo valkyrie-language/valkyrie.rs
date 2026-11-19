@@ -1,9 +1,9 @@
-use oak_testing::parsing::ParserTester;
-use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+use language_testing::parsing::ParserTester;
+use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 use std::{path::Path, time::Duration};
 
 #[test]
-fn test_valkyrie_parser() -> Result<(), oak_core::OakError> {
+fn test_valkyrie_parser() -> Result<(), data_text_core::TextError> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
     let lang = ValkyrieLanguage::default();
     let parser = ValkyrieParser::new(&lang);
@@ -13,7 +13,7 @@ fn test_valkyrie_parser() -> Result<(), oak_core::OakError> {
 }
 
 #[test]
-fn test_flags_parser() -> Result<(), oak_core::OakError> {
+fn test_flags_parser() -> Result<(), data_text_core::TextError> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
     let lang = ValkyrieLanguage::default();
     let parser = ValkyrieParser::new(&lang);
@@ -27,8 +27,8 @@ fn test_flags_parser() -> Result<(), oak_core::OakError> {
 
 #[test]
 fn test_valkyrie_namespace_parsing() {
-    use oak_core::SourceText;
-    use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+    use data_text_core::SourceText;
+    use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 
     let language = ValkyrieLanguage::default();
     let _parser = ValkyrieParser::new(&language);
@@ -46,8 +46,8 @@ fn test_valkyrie_namespace_parsing() {
 
 #[test]
 fn test_valkyrie_micro_function_parsing() {
-    use oak_core::SourceText;
-    use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+    use data_text_core::SourceText;
+    use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 
     let language = ValkyrieLanguage::default();
     let _parser = ValkyrieParser::new(&language);
@@ -63,8 +63,8 @@ fn test_valkyrie_micro_function_parsing() {
 
 #[test]
 fn test_valkyrie_micro_parsing() {
-    use oak_core::SourceText;
-    use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+    use data_text_core::SourceText;
+    use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 
     let language = ValkyrieLanguage::default();
     let _parser = ValkyrieParser::new(&language);
@@ -80,8 +80,8 @@ fn test_valkyrie_micro_parsing() {
 
 #[test]
 fn test_valkyrie_complex_parsing() {
-    use oak_core::SourceText;
-    use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+    use data_text_core::SourceText;
+    use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 
     let language = ValkyrieLanguage::default();
     let _parser = ValkyrieParser::new(&language);

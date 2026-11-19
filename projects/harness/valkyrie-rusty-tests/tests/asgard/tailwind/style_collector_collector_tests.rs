@@ -3,7 +3,7 @@
 use rusty_valkyrie::asgard::tailwind::style_collector::*;
 
 use rusty_valkyrie::asgard::awsl::{LoweringOptions, RenderAttrValue, RenderNode, lower_component};
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 
 fn first_element_attrs(lowered: &rusty_valkyrie::asgard::awsl::LoweredComponent) -> Option<&[rusty_valkyrie::asgard::awsl::RenderAttr]> {
     let module = &lowered.render_ir;

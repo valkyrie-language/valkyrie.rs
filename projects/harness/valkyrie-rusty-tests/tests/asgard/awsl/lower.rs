@@ -2,7 +2,7 @@
 
 use rusty_valkyrie::asgard::awsl::lower::*;
 
-use oak_awsl::{AwslElement, AwslParser, AwslTemplateNode};
+use data_text_awsl::{AwslElement, AwslParser, AwslTemplateNode};
 use rusty_valkyrie::asgard::awsl::is_fragment_root;
 
 fn expect_element<'a>(node: &'a AwslTemplateNode) -> &'a AwslElement {

@@ -1,5 +1,5 @@
-use oak_core::{Builder, ParseSession, SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
+use data_text_core::{Builder, ParseSession, SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
 
 const TEMPLATE: &str = r#"<% match arch %>
 <% case "wasm32" %>

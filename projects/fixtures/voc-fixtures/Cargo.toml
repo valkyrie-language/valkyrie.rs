@@ -7,6 +7,6 @@ license.workspace = true
 publish = false
 
 [dev-dependencies]
-oak-awsl = { workspace = true }
-oak-core = { workspace = true }
+data-text-awsl = { workspace = true }
+data-text-core = { workspace = true }
 serde = { workspace = true }

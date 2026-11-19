@@ -1,4 +1,4 @@
-use oak_valkyrie::ValkyrieLanguage;
+use data_text_valkyrie::ValkyrieLanguage;
 use rusty_valkyrie::compiler::syntax::oak::{parse_source_with_language, reject_unsupported_template_source};
 
 #[test]

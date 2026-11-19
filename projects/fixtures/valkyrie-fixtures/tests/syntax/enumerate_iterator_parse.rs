@@ -1,7 +1,7 @@
-use oak_core::{Builder, parser::ParseSession, source::SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage};
+use data_text_core::{Builder, parser::ParseSession, source::SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage};
 
-fn build_source(source: &str) -> Result<oak_valkyrie::ast::ValkyrieRoot, oak_core::OakError> {
+fn build_source(source: &str) -> Result<data_text_valkyrie::ast::ValkyrieRoot, data_text_core::TextError> {
     let language = ValkyrieLanguage::default();
     ValkyrieBuilder::new(&language).build(&SourceText::new(source), &[], &mut ParseSession::default()).result
 }

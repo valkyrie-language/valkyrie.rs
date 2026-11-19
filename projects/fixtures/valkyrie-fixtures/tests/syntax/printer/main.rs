@@ -1,4 +1,4 @@
-use oak_valkyrie::printer::{PrintOptions, print_source};
+use data_text_valkyrie::printer::{PrintOptions, print_source};
 
 #[test]
 fn prints_empty_namespace_block() {
@@ -21,7 +21,7 @@ fn prints_minimal_micro() {
 
 #[test]
 fn render_document_preserves_semantics() {
-    use oak_valkyrie::printer::{parse_source, render_document, to_document};
+    use data_text_valkyrie::printer::{parse_source, render_document, to_document};
 
     let source = "micro main(){let x=1}";
     let root = parse_source(source).expect("parse");
@@ -51,7 +51,7 @@ fn prints_host_contract_attribute() {
 
 #[test]
 fn to_document_round_trip_matches_compact_print() {
-    use oak_valkyrie::printer::{parse_source, print_root, render_document, to_document};
+    use data_text_valkyrie::printer::{parse_source, print_root, render_document, to_document};
 
     let source = "micro main(){let x=1}";
     let root = parse_source(source).expect("parse");

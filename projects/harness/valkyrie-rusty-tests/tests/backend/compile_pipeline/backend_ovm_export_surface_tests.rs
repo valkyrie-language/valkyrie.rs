@@ -29,17 +29,17 @@ fn backend_plan(groups: &[CompilerSourceGroup]) -> Result<TargetExecutionPlan, S
         .map_err(|error| error.to_string())
 }
 
-fn lower(plan: TargetExecutionPlan) -> Result<acorn_odin::OdinModuleData, String> {
+fn lower(plan: TargetExecutionPlan) -> Result<data_binary_odin::OdinModuleData, String> {
     nyar_emitter::lowering::backends::ovm::lower_fragment_to_nyar_module(&FragmentSubmission::from_backend_plan(plan))
         .map_err(|error| error.to_string())
 }
 
-fn export_names(module: &acorn_odin::OdinModuleData) -> Vec<String> {
+fn export_names(module: &data_binary_odin::OdinModuleData) -> Vec<String> {
     module.exports.iter().map(|export| export.symbol_name.clone()).collect()
 }
 
-fn run_export(module: &acorn_odin::OdinModuleData, name: &str) -> Value {
-    let bytes = acorn_odin::encode_module(module);
+fn run_export(module: &data_binary_odin::OdinModuleData, name: &str) -> Value {
+    let bytes = data_binary_odin::encode_module(module);
     let mut vm = OdinVm::new();
     let loaded = vm.load(&bytes).expect("编码后的模块必须可加载");
     vm.run(&loaded, name, Vec::new()).expect("导出入口必须在内置 OVM 运行时执行成功")

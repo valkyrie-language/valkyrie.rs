@@ -1,4 +1,4 @@
-use oak_von::formatter::{FormatOptions, format_source};
+use data_text_von::formatter::{FormatOptions, format_source};
 
 #[test]
 fn formats_object_spacing() {

@@ -1,10 +1,10 @@
-use oak_core::{Builder, parser::ParseSession, source::SourceText};
-use oak_valkyrie::{
+use data_text_core::{Builder, parser::ParseSession, source::SourceText};
+use data_text_valkyrie::{
     ValkyrieBuilder, ValkyrieLanguage,
     ast::{Statement, StatementNode},
 };
 
-fn build_source(source: &str) -> Result<oak_valkyrie::ast::ValkyrieRoot, oak_core::OakError> {
+fn build_source(source: &str) -> Result<data_text_valkyrie::ast::ValkyrieRoot, data_text_core::TextError> {
     let language = ValkyrieLanguage::default();
     ValkyrieBuilder::new(&language).build(&SourceText::new(source), &[], &mut ParseSession::default()).result
 }
@@ -21,7 +21,7 @@ fn build_reports_error(source: &str) -> bool {
 
 #[test]
 fn assignment_keeps_precedence_and_right_associativity() {
-    use oak_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
+    use data_text_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
     let root = build_source("micro update() { left = right = 3 + 4 * 5 }").expect("赋值语法");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
@@ -52,7 +52,7 @@ fn assignment_keeps_precedence_and_right_associativity() {
 
 #[test]
 fn contextual_members_and_cardinal_indices_keep_ast() {
-    use oak_valkyrie::ast::TermExpression;
+    use data_text_valkyrie::ast::TermExpression;
     let root = build_source("micro read() { object.get(1); object.set(1, 2); values⁅0⁆; values::[0]; values[1] }").expect("成员与下标语法");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
@@ -80,7 +80,7 @@ fn malformed_expressions_and_arguments_are_rejected() {
 
 #[test]
 fn array_declarations_keep_empty_initializer_and_ordered_elements() {
-    use oak_valkyrie::ast::TermExpression;
+    use data_text_valkyrie::ast::TermExpression;
     let root = build_source("micro arrays() { let empty = []; let values = [3, 7,]; }").expect("数组声明");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
@@ -108,7 +108,7 @@ fn array_declarations_keep_empty_initializer_and_ordered_elements() {
 
 #[test]
 fn iteration_loop_keeps_binding_source_and_body() {
-    use oak_valkyrie::ast::TermExpression;
+    use data_text_valkyrie::ast::TermExpression;
     let root = build_source("micro visit() { loop item in values { consume(item) } loop { break } }").expect("循环语法");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
@@ -130,7 +130,7 @@ fn iteration_loop_keeps_binding_source_and_body() {
 
 #[test]
 fn bitwise_operators_preserve_precedence_and_shift_operands() {
-    use oak_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
+    use data_text_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
     let root =
         build_source("micro bits() { left | middle & right == expected; word | (1 << bit); word ^ (word & (1 << bit)); }").expect("按位表达式");
     let StatementNode::Micro(micro) = &root.items[0]
@@ -159,7 +159,7 @@ fn bitwise_operators_preserve_precedence_and_shift_operands() {
 
 #[test]
 fn range_loop_and_anonymous_micro_keep_structured_children() {
-    use oak_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
+    use data_text_valkyrie::{ast::TermExpression, lexer::token_type::ValkyrieTokenType};
     let root = build_source("micro visit() { loop item in 0..count { consume(item) } apply(micro(value: i32) -> i32 { return value }) }")
         .expect("范围与匿名函数");
     let StatementNode::Micro(micro) = &root.items[0]
@@ -191,7 +191,7 @@ fn range_loop_and_anonymous_micro_keep_structured_children() {
 
 #[test]
 fn number_tokens_do_not_consume_range_or_member_punctuation() {
-    use oak_valkyrie::ast::TermExpression;
+    use data_text_valkyrie::ast::TermExpression;
     let root = build_source("micro numbers() { 0xFF; 0b101; 0o17; 1.25; 1..3; }").expect("数值词法");
     let StatementNode::Micro(micro) = &root.items[0]
     else {
@@ -220,7 +220,7 @@ fn attribute_binding_paths_keep_all_segments() {
     else {
         panic!("缺少函数")
     };
-    let oak_valkyrie::ast::TermExpression::NamePath(path) = &micro.annotations[0].args[0].value
+    let data_text_valkyrie::ast::TermExpression::NamePath(path) = &micro.annotations[0].args[0].value
     else {
         panic!("缺少结构路径")
     };
@@ -253,7 +253,7 @@ fn micro_body_keeps_if_with_return_turbofish_call() {
     let has_if = take.body.statements.iter().any(|statement| {
         matches!(
             statement,
-            Statement::Expression(expr) if matches!(expr.expr, oak_valkyrie::ast::TermExpression::If { .. })
+            Statement::Expression(expr) if matches!(expr.expr, data_text_valkyrie::ast::TermExpression::If { .. })
         )
     });
     assert!(has_if, "take body must include if before let, got {} statements", take.body.statements.len());

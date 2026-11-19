@@ -1,4 +1,4 @@
-﻿use oak_awsl::is_snake_case;
+use data_text_awsl::is_snake_case;
 
 #[test]
 fn snake_case_accepts_valid_names() {

@@ -1,5 +1,5 @@
-use oak_core::{Builder, parser::ParseSession, source::SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
+use data_text_core::{Builder, parser::ParseSession, source::SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
 
 fn parse_items(source: &str) -> Vec<StatementNode> {
     let language = ValkyrieLanguage::default();

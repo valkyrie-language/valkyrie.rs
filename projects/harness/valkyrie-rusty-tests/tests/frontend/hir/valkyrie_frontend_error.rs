@@ -2,7 +2,7 @@ use rusty_valkyrie::compiler::syntax::oak::ParseError;
 
 #[test]
 fn from_oak_preserves_source_offset_as_span() {
-    let error = oak_core::OakError::new(oak_core::OakErrorKind::SyntaxError {
+    let error = data_text_core::TextError::new(data_text_core::TextErrorKind::SyntaxError {
         message: "expected identifier".to_string(),
         offset: 12,
         source_id: None,

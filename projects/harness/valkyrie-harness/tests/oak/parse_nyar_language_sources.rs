@@ -2,7 +2,7 @@
 //!   projects/examples/valkyrie.v/projects/nyar._/projects/nyar.language/source
 use std::{fs, path::PathBuf};
 
-use oak_valkyrie::printer::parse_source;
+use data_text_valkyrie::printer::parse_source;
 
 #[test]
 fn parse_nyar_language_sources() {

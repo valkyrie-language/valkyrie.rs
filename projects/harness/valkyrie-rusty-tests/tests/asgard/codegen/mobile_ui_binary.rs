@@ -3,7 +3,7 @@
 use rusty_valkyrie::asgard::codegen::mobile_ui_binary::*;
 
 use rusty_valkyrie::asgard::awsl::{LoweringOptions, RenderModule, lower_component};
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 
 #[test]
 fn counter_ui_bin_snapshot() {

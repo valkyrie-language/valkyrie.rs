@@ -6,7 +6,7 @@
 //! 反向：未知助记符必须结构化失败，不得静默降级成别的指令。
 
 use crate::primitives::with_primitives;
-use acorn_wasm::WasmBinaryModule;
+use data_binary_wasm::WasmBinaryModule;
 use nyar_emitter::{FragmentSubmission, TargetExecutionPlan, testing::lower_fragment_to_wasm_mir_module};
 use rusty_valkyrie::{CompilerSourceGroup, ValkyrieCompiler};
 use std::{fs, process::Command};

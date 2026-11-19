@@ -4,7 +4,7 @@ use rusty_valkyrie::asgard::codegen::html_render::*;
 
 use rusty_valkyrie::asgard::awsl::{LoweringOptions, lower_component};
 use rusty_valkyrie::asgard::awsl::render_ir::IntrinsicWidget;
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use serde_json::Value;
 
 #[test]

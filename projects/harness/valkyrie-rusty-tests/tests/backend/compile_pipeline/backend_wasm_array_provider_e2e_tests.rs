@@ -7,7 +7,7 @@
 //! 解析；operator 全部内联，不得留下 host 导入。声明签名与冻结计划语义形状
 //! 不符、或助记符未知，都必须结构化失败。
 
-use acorn_wasm::WasmBinaryModule;
+use data_binary_wasm::WasmBinaryModule;
 use nyar_emitter::{FragmentSubmission, TargetExecutionPlan, testing::lower_fragment_to_wasm_mir_module};
 use rusty_valkyrie::{CompilerSourceGroup, ValkyrieCompiler};
 
@@ -303,7 +303,7 @@ fn groups_for(providers: &str) -> Vec<CompilerSourceGroup> {
 fn lower(
     groups: &[CompilerSourceGroup],
     bindings: &[rusty_valkyrie::compiler::emitter::pipeline::CompilerHostProviderBinding],
-) -> Result<acorn_wasm::WasmBinaryModule, String> {
+) -> Result<data_binary_wasm::WasmBinaryModule, String> {
     let program = ValkyrieCompiler::default()
         .compile_source_groups_to_program_with_host_bindings(groups, bindings, &[], "native")
         .map_err(|error| error.to_string())?;
@@ -317,7 +317,7 @@ fn lower(
 /// wasm GC arraytype 的类型段条目形式字节（GC MVP `0x5E`）。
 const TYPE_FORM_ARRAY: u8 = 0x5E;
 
-fn assert_gc_array_type_registered(module: &acorn_wasm::WasmBinaryModule) {
+fn assert_gc_array_type_registered(module: &data_binary_wasm::WasmBinaryModule) {
     let type_section = module.sections.iter().find(|section| section.id == 1).expect("type 段");
     assert!(type_section.bytes.contains(&TYPE_FORM_ARRAY), "元素类型 `[i32]` 的 arraytype 条目必须登记进类型段");
 }

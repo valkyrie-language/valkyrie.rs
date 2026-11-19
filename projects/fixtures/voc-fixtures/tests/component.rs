@@ -1,4 +1,4 @@
-﻿use oak_awsl::widget_name_from_stem;
+use data_text_awsl::widget_name_from_stem;
 
 #[test]
 fn stem_to_widget_name_examples() {

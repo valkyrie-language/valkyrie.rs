@@ -1,5 +1,5 @@
-use oak_core::{Lexer, Parser, RedNode, RedTree, SourceText, parser::session::ParseSession};
-use oak_valkyrie::{
+use data_text_core::{Lexer, Parser, RedNode, RedTree, SourceText, parser::session::ParseSession};
+use data_text_valkyrie::{
     ValkyrieLanguage, ValkyrieLexer, ValkyrieParser, ValkyrieTokenType, lexer::ValkyrieKeywords, parser::element_type::ValkyrieElementType,
 };
 
@@ -17,7 +17,7 @@ fn micro_body_lexer_emits_template_tokens() {
     let language = ValkyrieLanguage { support_t_grammar: true, ..ValkyrieLanguage::default() };
     let lexer = ValkyrieLexer::new(&language);
     let text = SourceText::new(MICRO_BODY);
-    let mut cache = oak_core::lexer::NoLexerCache;
+    let mut cache = data_text_core::lexer::NoLexerCache;
     let output = lexer.lex(&text, &[], &mut cache);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let tokens = output.result.expect("lex");

@@ -1,9 +1,9 @@
-use oak_testing::building::BuilderTester;
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
+use language_testing::building::BuilderTester;
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ast::StatementNode};
 use std::time::Duration;
 
 #[test]
-fn test_valkyrie_builder() -> Result<(), oak_core::OakError> {
+fn test_valkyrie_builder() -> Result<(), data_text_core::TextError> {
     let language = ValkyrieLanguage::default();
     let builder = ValkyrieBuilder::new(&language);
 
@@ -16,7 +16,7 @@ fn test_valkyrie_builder() -> Result<(), oak_core::OakError> {
 
 #[test]
 fn test_flags_builder() {
-    use oak_core::{Builder, SourceText};
+    use data_text_core::{Builder, SourceText};
 
     let language = ValkyrieLanguage::default();
     let builder = ValkyrieBuilder::new(&language);
@@ -26,7 +26,7 @@ fn test_flags_builder() {
 
     println!("Testing builder with flags");
 
-    let mut cache = oak_core::parser::ParseSession::<ValkyrieLanguage>::default();
+    let mut cache = data_text_core::parser::ParseSession::<ValkyrieLanguage>::default();
     let diagnostics = builder.build(&source, &[], &mut cache);
     match diagnostics.result {
         Ok(typed_root) => {
@@ -43,7 +43,7 @@ fn test_flags_builder() {
 
 #[test]
 fn test_valkyrie_builder_single_file() {
-    use oak_core::{Builder, SourceText};
+    use data_text_core::{Builder, SourceText};
 
     let language = ValkyrieLanguage::default();
     let builder = ValkyrieBuilder::new(&language);
@@ -53,7 +53,7 @@ fn test_valkyrie_builder_single_file() {
 
     println!("Testing builder with micro function");
 
-    let mut cache = oak_core::parser::ParseSession::<ValkyrieLanguage>::default();
+    let mut cache = data_text_core::parser::ParseSession::<ValkyrieLanguage>::default();
     let diagnostics = builder.build(&source, &[], &mut cache);
     match diagnostics.result {
         Ok(typed_root) => {
@@ -73,7 +73,7 @@ fn test_valkyrie_builder_single_file() {
 
 #[test]
 fn test_valkyrie_builder_namespace() {
-    use oak_core::{Builder, SourceText};
+    use data_text_core::{Builder, SourceText};
 
     let language = ValkyrieLanguage::default();
     let builder = ValkyrieBuilder::new(&language);
@@ -83,7 +83,7 @@ fn test_valkyrie_builder_namespace() {
 
     println!("Testing builder with namespace");
 
-    let mut cache = oak_core::parser::ParseSession::<ValkyrieLanguage>::default();
+    let mut cache = data_text_core::parser::ParseSession::<ValkyrieLanguage>::default();
     let diagnostics = builder.build(&source, &[], &mut cache);
     match diagnostics.result {
         Ok(typed_root) => {
@@ -99,8 +99,8 @@ fn test_valkyrie_builder_namespace() {
 
 #[test]
 fn test_system_builder_and_attributes() {
-    use oak_core::{Builder, SourceText};
-    use oak_valkyrie::ast::{StatementNode, TermExpression};
+    use data_text_core::{Builder, SourceText};
+    use data_text_valkyrie::ast::{StatementNode, TermExpression};
 
     let language = ValkyrieLanguage::ecs_language();
     let builder = ValkyrieBuilder::new(&language);
@@ -111,7 +111,7 @@ fn test_system_builder_and_attributes() {
             micro execute(world: World) { return 1 }
         }"#,
     );
-    let mut cache = oak_core::parser::ParseSession::<ValkyrieLanguage>::default();
+    let mut cache = data_text_core::parser::ParseSession::<ValkyrieLanguage>::default();
     let diagnostics = builder.build(&source, &[], &mut cache);
     let root = diagnostics.result.expect("system builder should succeed");
 

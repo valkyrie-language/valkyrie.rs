@@ -1,4 +1,4 @@
-﻿use oak_awsl::Lexer;
+use data_text_awsl::Lexer;
 
 #[test]
 fn peek_top_level_template_open_recognizes_widget_and_template() {

@@ -4,8 +4,8 @@ mod lexer;
 
 #[test]
 fn test_von_parsing() {
-    use oak_core::{Builder, SourceText, parser::session::ParseSession};
-    use oak_von::{VonBuilder, VonLanguage};
+    use data_text_core::{Builder, SourceText, parser::session::ParseSession};
+    use data_text_von::{VonBuilder, VonLanguage};
 
     let input = r#"name = "Valkyrie"
         version = 1_0.0
@@ -38,7 +38,7 @@ fn test_von_parsing() {
 
     // Verify fields
     match val {
-        oak_von::VonValueNode::Object(obj) => {
+        data_text_von::VonValueNode::Object(obj) => {
             assert_eq!(obj.fields.len(), 8);
             assert_eq!(obj.fields[0].name, "name");
             assert_eq!(obj.fields[1].name, "version");
@@ -49,7 +49,7 @@ fn test_von_parsing() {
             assert_eq!(obj.fields[6].name, "status");
             assert_eq!(obj.fields[7].name, "raw_path");
 
-            if let oak_von::VonValueNode::Enum(e) = &obj.fields[6].value {
+            if let data_text_von::VonValueNode::Enum(e) = &obj.fields[6].value {
                 assert_eq!(e.variant, "Success");
                 assert!(e.payload.is_some())
             }
@@ -57,7 +57,7 @@ fn test_von_parsing() {
                 panic!("Expected an enum, got {:?}", obj.fields[6].value)
             }
 
-            if let oak_von::VonValueNode::String(s) = &obj.fields[7].value {
+            if let data_text_von::VonValueNode::String(s) = &obj.fields[7].value {
                 assert_eq!(s.value, r#"C:\Users\Admin"#)
             }
             else {

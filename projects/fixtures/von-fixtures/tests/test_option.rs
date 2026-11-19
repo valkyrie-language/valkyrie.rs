@@ -1,4 +1,4 @@
-use oak_von::from_str; // 使用 from_str 函数来反序列化 VON 字符串
+use data_text_von::from_str; // 使用 from_str 函数来反序列化 VON 字符串
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 struct TestStruct {

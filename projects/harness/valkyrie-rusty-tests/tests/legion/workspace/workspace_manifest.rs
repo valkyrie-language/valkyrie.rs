@@ -1,5 +1,5 @@
 //! Migrated from `src/manifest.rs` (`tests`).
-use oak_core::{OakError as VonError, OakErrorKind};
+use data_text_core::{TextError as VonError, TextErrorKind};
 use rusty_valkyrie::legion::{CanonicalTarget, workspace::manifest::*};
 use std::{fs, path::Path};
 
@@ -113,7 +113,7 @@ build: [ { target: "node" } ]
 #[test]
 fn manifest_error_exposes_oak_source_offset_as_label() {
     let error =
-        ManifestError::from(VonError::new(OakErrorKind::SyntaxError { message: "expected value".to_string(), offset: 12, source_id: None }));
+        ManifestError::from(VonError::new(TextErrorKind::SyntaxError { message: "expected value".to_string(), offset: 12, source_id: None }));
     let ManifestError::Parse { span: Some(span), .. } = error
     else {
         panic!("expected parse error with span");

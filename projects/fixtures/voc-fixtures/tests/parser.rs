@@ -1,4 +1,4 @@
-use oak_awsl::{AwslAttributeValue, AwslDirectiveKind, AwslElement, AwslParser, AwslTemplateNode};
+use data_text_awsl::{AwslAttributeValue, AwslDirectiveKind, AwslElement, AwslParser, AwslTemplateNode};
 
 fn expect_element<'a>(node: &'a AwslTemplateNode) -> &'a AwslElement {
     match node {
@@ -146,7 +146,7 @@ fn widget_with_script_style_as_sibling_sections() {
 fn rejects_script_only_without_widget_shell() {
     let root = AwslParser::parse_root("<script>let x = 1</script>").unwrap();
     assert!(!root.has_widget_shell);
-    let contract = oak_awsl::validate_component_contract(&root, "x");
+    let contract = data_text_awsl::validate_component_contract(&root, "x");
     assert!(contract.is_err());
 }
 
@@ -154,7 +154,7 @@ fn rejects_script_only_without_widget_shell() {
 fn widget_name_must_match_file_stem_when_declared() {
     let source = "<widget foo><div /></widget>";
     let root = AwslParser::parse_root(source).expect("parse");
-    let error = oak_awsl::validate_component_contract(&root, "bar").expect_err("mismatch");
+    let error = data_text_awsl::validate_component_contract(&root, "bar").expect_err("mismatch");
     assert!(error.message.contains("expected <widget bar>"));
 }
 

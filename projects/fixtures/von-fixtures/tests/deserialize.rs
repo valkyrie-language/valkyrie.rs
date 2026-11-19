@@ -5,8 +5,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use oak_core::OakError;
-use oak_von::{
+use data_text_core::TextError;
+use data_text_von::{
     from_str as oak_from_str,
     language::value::{VonValue, from_ast},
     printer::PrintOptions,
@@ -15,26 +15,26 @@ use oak_von::{
 struct VonParser;
 
 impl VonParser {
-    fn parse(source: &str) -> Result<VonValue, OakError> {
+    fn parse(source: &str) -> Result<VonValue, TextError> {
         let trimmed = source.trim();
-        let ast = oak_von::parse(trimmed).map_err(OakError::custom_error)?;
+        let ast = data_text_von::parse(trimmed).map_err(TextError::custom_error)?;
         Ok(from_ast(&ast))
     }
 }
 
-fn from_str<T>(source: &str) -> Result<T, OakError>
+fn from_str<T>(source: &str) -> Result<T, TextError>
 where
     T: serde::de::DeserializeOwned,
 {
     oak_from_str(source.trim())
 }
 
-fn from_value<T>(value: VonValue) -> Result<T, OakError>
+fn from_value<T>(value: VonValue) -> Result<T, TextError>
 where
     T: serde::de::DeserializeOwned,
 {
-    let text = oak_von::printer::print_value(&value, &PrintOptions::default());
-    oak_von::from_str(&text)
+    let text = data_text_von::printer::print_value(&value, &PrintOptions::default());
+    data_text_von::from_str(&text)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

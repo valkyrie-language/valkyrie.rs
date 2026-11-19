@@ -1,4 +1,4 @@
-﻿use oak_awsl::{AbiIssueKind, AbiSeverity, extract_component_abi_from_vx};
+use data_text_awsl::{AbiIssueKind, AbiSeverity, extract_component_abi_from_vx};
 
 #[test]
 fn extracts_property_event_and_state_from_widget_script() {

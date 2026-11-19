@@ -1,6 +1,6 @@
-use oak_core::{Lexer, Source, SourceText, lexer::NoLexerCache};
-use oak_testing::lexing::LexerTester;
-use oak_valkyrie::{ValkyrieLanguage, ValkyrieLexer, ValkyrieTokenType, lexer::ValkyrieKeywords};
+use data_text_core::{Lexer, Source, SourceText, lexer::NoLexerCache};
+use language_testing::lexing::LexerTester;
+use data_text_valkyrie::{ValkyrieLanguage, ValkyrieLexer, ValkyrieTokenType, lexer::ValkyrieKeywords};
 use std::time::Duration;
 
 #[test]
@@ -78,7 +78,7 @@ fn support_t_grammar_disabled_rejects_template_source() {
 }
 
 #[test]
-fn test_valkyrie_lexer() -> Result<(), oak_core::OakError> {
+fn test_valkyrie_lexer() -> Result<(), data_text_core::TextError> {
     let here = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let tests = here.join("tests/lexer");
     let config = ValkyrieLanguage::default();

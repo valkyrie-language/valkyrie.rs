@@ -8,7 +8,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::{
     asgard::{
         awsl::{LoweringOptions, lower_component},

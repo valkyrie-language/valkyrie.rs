@@ -1,7 +1,7 @@
 use std::fs;
 
-use oak_core::{Builder, parser::ParseSession, source::SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage};
+use data_text_core::{Builder, parser::ParseSession, source::SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage};
 
 #[test]
 fn legion_tools_manifest_source_parses() {

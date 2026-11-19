@@ -4,7 +4,7 @@ use rusty_valkyrie::asgard::package::desktop::*;
 use rusty_valkyrie::asgard::package::PackageArtifact;
 
 use rusty_valkyrie::asgard::awsl::{LoweringOptions, lower_component};
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 
 #[test]
 fn package_desktop_no_gtk_artifacts() {

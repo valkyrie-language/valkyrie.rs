@@ -5,7 +5,7 @@ use rusty_valkyrie::asgard::{
     package::{PackageArtifact, terminal::*},
 };
 
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::asgard::awsl::{LoweredComponent, LoweringOptions, lower_component};
 
 fn demo_component() -> LoweredComponent {

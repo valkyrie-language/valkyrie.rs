@@ -1,12 +1,12 @@
-use oak_core::{Builder, Lexer, Source, SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ValkyrieLexer, ValkyrieTokenType, ast::StatementNode};
+use data_text_core::{Builder, Lexer, Source, SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ValkyrieLexer, ValkyrieTokenType, ast::StatementNode};
 
 #[test]
 fn hash_is_line_comment_slash_is_not() {
     let lang = ValkyrieLanguage::default();
     let lexer = ValkyrieLexer::new(&lang);
     let src = SourceText::new("# hello\nmicro f() {}\n// not a comment\n");
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let out = lexer.lex(&src, &[], &mut session);
     assert!(out.result.is_ok(), "lex err={:?}", out.result.err());
     let tokens = out.result.unwrap();
@@ -28,7 +28,7 @@ fn micro_with_typed_default_and_hash_comment_builds() {
     let lang = ValkyrieLanguage::default();
     let builder = ValkyrieBuilder::new(&lang);
     let src = SourceText::new("# entry\nmicro on_update(x: f32 = 0.0) {}\n");
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let out = builder.build(&src, &[], &mut session);
     assert!(out.result.is_ok(), "build failed: {:?}", out.result.err());
     let root = out.result.unwrap();
@@ -50,7 +50,7 @@ fn triple_slash_is_not_comment() {
     let lang = ValkyrieLanguage::default();
     let lexer = ValkyrieLexer::new(&lang);
     let src = SourceText::new("/// docs\nmicro f() {}\n");
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let out = lexer.lex(&src, &[], &mut session);
     assert!(out.result.is_ok(), "lex err={:?}", out.result.err());
     let tokens = out.result.unwrap();
@@ -67,7 +67,7 @@ fn block_comment_hash_angles() {
     let lang = ValkyrieLanguage::default();
     let lexer = ValkyrieLexer::new(&lang);
     let src = SourceText::new("<# keep #\n# nested line\n#>\nmicro f() {}\n");
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let out = lexer.lex(&src, &[], &mut session);
     assert!(out.result.is_ok(), "lex err={:?}", out.result.err());
     let tokens = out.result.unwrap();
@@ -81,7 +81,7 @@ fn block_comment_hash_angles() {
     assert!(blocks[0].ends_with("#>"), "block={:?}", blocks[0]);
 
     let builder = ValkyrieBuilder::new(&lang);
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let built = builder.build(&src, &[], &mut session);
     assert!(built.result.is_ok(), "build failed: {:?}", built.result.err());
     let root = built.result.unwrap();
@@ -94,7 +94,7 @@ fn c_style_block_comment_is_not_comment() {
     let lang = ValkyrieLanguage::default();
     let lexer = ValkyrieLexer::new(&lang);
     let src = SourceText::new("/* no */\nmicro f() {}\n");
-    let mut session = oak_core::ParseSession::<ValkyrieLanguage>::default();
+    let mut session = data_text_core::ParseSession::<ValkyrieLanguage>::default();
     let out = lexer.lex(&src, &[], &mut session);
     assert!(out.result.is_ok(), "lex err={:?}", out.result.err());
     let tokens = out.result.unwrap();

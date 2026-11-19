@@ -6,7 +6,7 @@
 #![cfg(feature = "ovm-lane")]
 
 use nyar_emitter::{FragmentSubmission, TargetExecutionPlan};
-use acorn_odin::{OdinHeadCode, OdinModuleData, decode_at};
+use data_binary_odin::{OdinHeadCode, OdinModuleData, decode_at};
 use rusty_valkyrie::{CompilerSourceGroup, ValkyrieCompiler};
 
 /// 沿 Compiler 产出的目标私有计划降低到 `.odin`，不重放调用边。
@@ -26,7 +26,7 @@ fn decoded_codes(module: &OdinModuleData) -> Vec<OdinHeadCode> {
     let mut codes = Vec::new();
     let mut position = 0;
     while position < module.code_bytes.len() {
-        let instruction = acorn_odin::decode_at(&module.code_bytes, position);
+        let instruction = data_binary_odin::decode_at(&module.code_bytes, position);
         assert!(instruction.size > 0, "字节码必须可解码");
         codes.push(instruction.code);
         position += instruction.size as usize;

@@ -1,6 +1,6 @@
 //! AWSL 降级与 JS 胶水测试（自包含样例，不读取外部语言语料）。
 
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::{
     ValkyrieCompiler,
     asgard::{
@@ -184,7 +184,7 @@ micro handler() {
     let lowered = lower_component(&root, "demo", "demo.awsl", &LoweringOptions::default()).expect("lower demo");
     assert_eq!(lowered.component_abi.properties.len(), 1);
     assert_eq!(lowered.component_abi.events.len(), 1);
-    assert!(lowered.abi_issues.iter().all(|issue| issue.severity != oak_awsl::AbiSeverity::Error));
+    assert!(lowered.abi_issues.iter().all(|issue| issue.severity != data_text_awsl::AbiSeverity::Error));
 }
 
 /// 跨文件非法 ABI：模板把未声明的属性绑到目标组件，必须在生成阶段失败并指向组件与属性。

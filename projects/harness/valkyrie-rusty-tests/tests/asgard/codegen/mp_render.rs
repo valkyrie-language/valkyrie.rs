@@ -3,7 +3,7 @@
 use rusty_valkyrie::asgard::codegen::mp_render::*;
 
 use rusty_valkyrie::asgard::awsl::{LoweringOptions, lower_component};
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 
 #[test]
 fn counter_page_wxml_snapshot() {

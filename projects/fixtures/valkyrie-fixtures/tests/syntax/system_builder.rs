@@ -1,5 +1,5 @@
-use oak_core::{Builder, SourceText};
-use oak_valkyrie::{
+use data_text_core::{Builder, SourceText};
+use data_text_valkyrie::{
     ValkyrieBuilder, ValkyrieLanguage,
     ast::{StatementNode, TermExpression},
 };
@@ -17,7 +17,7 @@ fn system_attributes_and_method_arguments_are_preserved() {
         }
         system OtherSystem { micro execute() {} }"#,
     );
-    let mut cache = oak_core::parser::ParseSession::<ValkyrieLanguage>::default();
+    let mut cache = data_text_core::parser::ParseSession::<ValkyrieLanguage>::default();
     let output = builder.build(&source, &[], &mut cache);
     let root = output.result.expect("system should build");
     assert_eq!(root.items.len(), 2);

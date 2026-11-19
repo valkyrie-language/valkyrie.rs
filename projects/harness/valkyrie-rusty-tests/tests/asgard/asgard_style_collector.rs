@@ -1,6 +1,6 @@
 //! StyleCollector / @style 降级与 codegen 测试。
 
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::asgard::{
     awsl::{LoweringOptions, RenderNode, lower_component},
     codegen::{ScalarBootstrap, build_awsl_wasm_source},

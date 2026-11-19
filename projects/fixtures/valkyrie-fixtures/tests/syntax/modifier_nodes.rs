@@ -1,5 +1,5 @@
-use oak_core::{Builder, ParseSession, Parser, SourceText};
-use oak_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ValkyrieParser, ValkyrieRoot, ast::StatementNode};
+use data_text_core::{Builder, ParseSession, Parser, SourceText};
+use data_text_valkyrie::{ValkyrieBuilder, ValkyrieLanguage, ValkyrieParser, ValkyrieRoot, ast::StatementNode};
 
 fn parse_and_build(source: &str) -> ValkyrieRoot {
     let language = ValkyrieLanguage::default();
@@ -98,7 +98,7 @@ micro main() {
         .statements
         .iter()
         .find_map(|stmt| match stmt {
-            oak_valkyrie::ast::Statement::Let(let_stmt) => Some(let_stmt),
+            data_text_valkyrie::ast::Statement::Let(let_stmt) => Some(let_stmt),
             _ => None,
         })
         .expect("expected let statement");

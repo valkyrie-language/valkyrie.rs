@@ -4,7 +4,7 @@
 //! 生成文本与附加文件随后一并产出；不再先造载体再按字符串前缀裁剪。
 
 use nyar_types::compiler_input::CompilerSourceGroup;
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::asgard::{
     awsl::{LoweredComponent, LoweringOptions, lower_component},
     codegen::{ScalarBootstrap, build_awsl_wasm_source},

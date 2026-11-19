@@ -19,5 +19,5 @@ rusty-valkyrie = { workspace = true }
 nyar = { workspace = true }
 nyar-runner = { workspace = true }
 serde = { workspace = true }
-oak-core = { workspace = true }
-oak-valkyrie = { workspace = true }
+data-text-core = { workspace = true }
+data-text-valkyrie = { workspace = true }

@@ -7,7 +7,7 @@
 #![cfg(feature = "ovm-lane")]
 
 use nyar_emitter::{FragmentSubmission, TargetExecutionPlan};
-use acorn_odin::{OdinExportKind, OdinModuleData, encode_module};
+use data_binary_odin::{OdinExportKind, OdinModuleData, encode_module};
 use odin_vm::{OdinVm, Value, executor::Executor, module::LoadedModule};
 use rusty_valkyrie::{
     CompilerSourceGroup, ValkyrieCompiler,
@@ -107,7 +107,7 @@ fn run_main(groups: &[CompilerSourceGroup], bindings: &[CompilerHostProviderBind
         .map(|export| export.symbol_name.clone())
         .find(|name| name.ends_with("main"))
         .unwrap_or_else(|| panic!("必须导出 main 入口: {:?}", module.exports));
-    let bytes = acorn_odin::encode_module(&module);
+    let bytes = data_binary_odin::encode_module(&module);
     let mut vm = OdinVm::new();
     let loaded = vm.load(&bytes).expect("编码后的模块必须可加载");
     vm.run(&loaded, &entry, Vec::new()).expect("main 必须在内置 OVM 运行时执行成功")
@@ -263,7 +263,7 @@ fn lower(
     groups: &[CompilerSourceGroup],
     bindings: &[rusty_valkyrie::compiler::emitter::pipeline::CompilerHostProviderBinding],
     test_exports: &[&str],
-) -> Result<acorn_odin::OdinModuleData, String> {
+) -> Result<data_binary_odin::OdinModuleData, String> {
     let program = ValkyrieCompiler::default()
         .compile_source_groups_to_program_with_host_bindings(groups, bindings, &[], "native")
         .map_err(|error| error.to_string())?;
@@ -287,7 +287,7 @@ fn lower(
         .map_err(|error| error.to_string())
 }
 
-fn run_export(module: &acorn_odin::OdinModuleData, symbol_suffix: &str) -> Value {
+fn run_export(module: &data_binary_odin::OdinModuleData, symbol_suffix: &str) -> Value {
     let bytes = encode_module(module);
     let loaded = LoadedModule::from_bytes(&bytes).expect("已绑定宿主导入的模块必须通过加载校验");
     let entry = loaded

@@ -2,7 +2,7 @@
 
 use rusty_valkyrie::asgard::codegen::android_compose_pack::*;
 
-use acorn_dex::dex::dex_contains_strings;
+use data_binary_dex::dex::dex_contains_strings;
 use std::path::PathBuf;
 
 #[test]

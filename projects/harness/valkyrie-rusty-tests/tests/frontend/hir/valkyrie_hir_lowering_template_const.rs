@@ -1,9 +1,9 @@
-use oak_core::Token;
-use oak_valkyrie::lexer::{ValkyrieKeywords, token_type::ValkyrieTokenType};
+use data_text_core::Token;
+use data_text_valkyrie::lexer::{ValkyrieKeywords, token_type::ValkyrieTokenType};
 use rusty_valkyrie::compiler::hir::lowering::{eval_const_condition, parse_const_loop_range, parse_const_range_text};
 
 fn tokens_from(_source: &str, kinds: &[(ValkyrieTokenType, std::ops::Range<usize>)]) -> Vec<Token<ValkyrieTokenType>> {
-    kinds.iter().map(|(kind, span)| Token { kind: *kind, span: oak_core::Range { start: span.start, end: span.end } }).collect()
+    kinds.iter().map(|(kind, span)| Token { kind: *kind, span: data_text_core::Range { start: span.start, end: span.end } }).collect()
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn range_i64_iterates_twice_for_zero_to_two() {
 
 #[test]
 fn parse_loop_range_from_parsed_header() {
-    use oak_valkyrie::ast::{StatementNode, TemplateNode};
+    use data_text_valkyrie::ast::{StatementNode, TemplateNode};
     use rusty_valkyrie::compiler::syntax::oak::{ast::Statement, parse_source};
     let source = r#"micro main() -> i32 {
 <% loop _ in 0..2 %>

@@ -7,7 +7,7 @@ license.workspace = true
 publish = false
 
 [dev-dependencies]
-oak-core = { workspace = true }
-oak-testing = { workspace = true }
-oak-von = { workspace = true, features = ["serde"] }
+data-text-core = { workspace = true }
+language-testing = { workspace = true }
+data-text-von = { workspace = true, features = ["serde"] }
 serde = { workspace = true }

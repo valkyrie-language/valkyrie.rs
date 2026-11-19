@@ -196,9 +196,9 @@ fn duplicate_abi_labels_do_not_redirect_nyar_calls_or_exports() {
     let mut calls = Vec::new();
     let mut position = 0;
     while position < module.code_bytes.len() {
-        let instruction = acorn_odin::decode_at(&module.code_bytes, position);
+        let instruction = data_binary_odin::decode_at(&module.code_bytes, position);
         assert!(instruction.size > 0, "字节码必须可解码");
-        if instruction.code == acorn_odin::OdinHeadCode::Call {
+        if instruction.code == data_binary_odin::OdinHeadCode::Call {
             calls.push(instruction.operand1);
         }
         position += instruction.size as usize;

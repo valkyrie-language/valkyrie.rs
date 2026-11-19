@@ -1,4 +1,4 @@
-use oak_valkyrie::formatter::{FormatOptions, format_source};
+use data_text_valkyrie::formatter::{FormatOptions, format_source};
 
 #[test]
 fn formats_micro_spacing() {

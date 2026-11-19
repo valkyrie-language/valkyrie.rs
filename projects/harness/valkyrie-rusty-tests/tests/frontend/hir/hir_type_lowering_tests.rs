@@ -10,8 +10,8 @@ use rusty_valkyrie::{
     },
 };
 
-use oak_core::Range;
-use oak_valkyrie::lexer::ValkyrieTokenType;
+use data_text_core::Range;
+use data_text_valkyrie::lexer::ValkyrieTokenType;
 use rusty_valkyrie::compiler::syntax::oak::ast::TermExpression as TypeExtent;
 
 fn oak_span(len: usize) -> Range<usize> {

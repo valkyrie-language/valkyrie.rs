@@ -1,5 +1,5 @@
-use oak_core::{ParseSession, Parser, SourceText};
-use oak_valkyrie::{ValkyrieLanguage, ValkyrieParser};
+use data_text_core::{ParseSession, Parser, SourceText};
+use data_text_valkyrie::{ValkyrieLanguage, ValkyrieParser};
 
 #[ignore = "Valkyrie ECS extension test is out of date"]
 #[test]

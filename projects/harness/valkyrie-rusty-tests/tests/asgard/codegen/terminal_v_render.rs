@@ -7,7 +7,7 @@
 
 use rusty_valkyrie::asgard::codegen::terminal_v_render::*;
 
-use oak_awsl::AwslParser;
+use data_text_awsl::AwslParser;
 use rusty_valkyrie::asgard::awsl::{LoweredComponent, LoweringOptions, lower_component};
 
 fn lower(source: &str) -> LoweredComponent {

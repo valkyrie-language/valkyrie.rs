@@ -1,9 +1,9 @@
-use oak_testing::lexing::LexerTester;
-use oak_von::{VonLanguage, VonLexer};
+use language_testing::lexing::LexerTester;
+use data_text_von::{VonLanguage, VonLexer};
 use std::{path::Path, time::Duration};
 
 #[test]
-fn test_von_lexer() -> Result<(), oak_core::OakError> {
+fn test_von_lexer() -> Result<(), data_text_core::TextError> {
     let here = Path::new(env!("CARGO_MANIFEST_DIR"));
     let language = VonLanguage::default();
     let lexer = VonLexer::new(&language);

@@ -4,7 +4,7 @@
 //! 列表、反汇编与偏移定位能力，不依赖外部文件。
 #![cfg(feature = "format-spy")]
 
-use acorn_wasm::{DecodedOperand, decode_code_body};
+use data_binary_wasm::{DecodedOperand, decode_code_body};
 use nyar_emitter::nyar_backend_wasi::{WasmBinaryModule, WasmSection};
 use rusty_valkyrie::legion::{SpyMode, SpyOptions, SpyTargetOptions, run_spy};
 
