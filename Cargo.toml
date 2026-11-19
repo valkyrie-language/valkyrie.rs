@@ -27,8 +27,8 @@ language-testing = { git = "https://github.com/oovm/rust-boost", rev = "71db8fa5
 data-text-von = { git = "https://github.com/oovm/rust-boost", rev = "71db8fa50f49e3693640cbd19e64ad9c797e5932", features = ["serde"] }
 data-text-valkyrie = { git = "https://github.com/oovm/rust-boost", rev = "71db8fa50f49e3693640cbd19e64ad9c797e5932" }
 rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
-# Node-API 导出层的唯一实现依赖：Boost 的 Valkyrie 语言消费门面。
-language-valkyrie = { git = "https://github.com/oovm/rust-boost", rev = "c083f802262f9f6cdaf6cd4346ba6d018028fb38" }
+# Node-API 导出层的唯一实现依赖：Boost 的 Valkyrie 产品工具链（legion / asgard / product / execution / ovm）。
+package-manager-legion = { git = "https://github.com/oovm/rust-boost", rev = "5d3b46b22dc11bd47951a01b4b645cc9f959197f" }
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
 nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
@@ -55,7 +55,7 @@ sha2 = "0.10.9"
 tempfile = "3"
 zip = "9.1.1"
 
-# Node-API 导出层（`projects/napi/valkyrie-napi`）：只绑定 Boost `language.valkyrie`。
+# Node-API 导出层（`projects/napi/valkyrie-napi`）：绑定 Boost `language.valkyrie` 与 `package.manager.legion`。
 napi = { version = "3.14.2", default-features = true, features = ["napi4"] }
 napi-derive = "3.6.12"
 napi-build = "2"

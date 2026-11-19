@@ -1,8 +1,8 @@
 //! Valkyrie Node-API 导出库。
 //!
-//! 本 crate 只做三件事：声明 N-API 对象、搬运参数、把 `language-valkyrie` 的纯 Rust
-//! 结果映射回宿主。语言语义、工程编排、执行清单与 OVM 调用全部由 Boost
-//! **`language.valkyrie`** 拥有；本层不得新增编译或执行旁路。
+//! 本 crate 只做三件事：声明 N-API 对象、搬运参数、把 Boost 的纯 Rust 结果映射回宿主。
+//! 语言语义归 **`language.valkyrie`**；工程编排、执行清单与 OVM 调用归
+//! **`package.manager.legion`**。本层不得新增编译或执行旁路。
 //!
 //! Legion 不经 argv；TypeScript 调用 `legionPlan` / `legionBuild` 等正交 N-API。
 
@@ -10,9 +10,9 @@
 
 use std::{process::ExitCode, thread};
 
-use language_valkyrie::legion::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, run_spy};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use package_manager_legion::legion::{SpyMode, SpyOptions, SpyTargetOptions, SpyTargetPlatform, run_spy};
 
 mod asgard_api;
 mod legion_host_api;
@@ -20,11 +20,11 @@ mod product_api;
 mod stdio_capture;
 
 pub use asgard_api::{AsgardServeOptions, AsgardServeOutcome, AsgardStaticBuildOptions, AsgardStaticBuildOutcome};
-pub use language_valkyrie::{asgard, legion};
 pub use legion_host_api::{
     LegionArtifactFreshness, LegionExecutionManifestView, LegionTestOutcome, legion_check_artifact_fresh, legion_compiler_build_identity,
     legion_invoke_ovm_export, legion_list_ovm_exports, legion_read_execution_manifest, legion_test, legion_toolchain_fingerprint,
 };
+pub use package_manager_legion::{asgard, legion};
 pub use product_api::{LegionBuildOptions, LegionBuildOutcome, LegionPlanOptions, LegionPlanOutcome, LegionSemanticGroupItem};
 
 /// `legion run` / `legion spy` 等 CLI 子进程等价结果。

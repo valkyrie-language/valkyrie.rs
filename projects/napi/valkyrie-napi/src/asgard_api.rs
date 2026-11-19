@@ -61,7 +61,7 @@ pub struct AsgardServeOutcome {
 /// 构建静态站点（页面 + WASM chunk + 岛包产物）并返回结构化结果。
 #[napi]
 pub fn asgard_build_static(options: AsgardStaticBuildOptions) -> AsgardStaticBuildOutcome {
-    let outcome = language_valkyrie::product::build_static_site(language_valkyrie::product::StaticBuildOptions {
+    let outcome = package_manager_legion::product::build_static_site(package_manager_legion::product::StaticBuildOptions {
         project_dir: options.project_dir.into(),
         entry: options.entry.into(),
         output_dir: options.output_dir.map(Into::into),
@@ -81,7 +81,7 @@ pub fn asgard_build_static(options: AsgardStaticBuildOptions) -> AsgardStaticBui
 /// 托管静态产物（`application/wasm` 等 MIME 由 Asgard `serve` 单一拥有）。
 #[napi]
 pub fn asgard_serve(options: AsgardServeOptions) -> AsgardServeOutcome {
-    let outcome = language_valkyrie::product::serve_static(language_valkyrie::product::ServeOptions {
+    let outcome = package_manager_legion::product::serve_static(package_manager_legion::product::ServeOptions {
         root: options.root.into(),
         base: options.base,
         host: options.host,

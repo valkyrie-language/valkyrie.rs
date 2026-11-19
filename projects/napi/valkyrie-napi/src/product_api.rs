@@ -1,7 +1,7 @@
 //! 程序化 N-API 产品面（`legionPlan` / `legionBuild`），不经 argv CLI。
 //!
 //! 参数搬运与结果映射之外没有逻辑；规划与编译的唯一实现是
-//! `language_valkyrie::product`。
+//! `package_manager_legion::product`。
 
 use napi_derive::napi;
 
@@ -81,7 +81,7 @@ pub struct LegionBuildOutcome {
 /// 解析 workspace 并输出 build plan（不进入 Compiler）。
 #[napi]
 pub fn legion_plan(options: LegionPlanOptions) -> LegionPlanOutcome {
-    let outcome = language_valkyrie::product::plan_project(&language_valkyrie::product::PlanOptions {
+    let outcome = package_manager_legion::product::plan_project(&package_manager_legion::product::PlanOptions {
         project_dir: options.project_dir.into(),
         target: options.target,
     });
@@ -106,7 +106,7 @@ pub fn legion_plan(options: LegionPlanOptions) -> LegionPlanOutcome {
 /// 编译项目并落盘产物（结构化结果）。
 #[napi]
 pub fn legion_build(options: LegionBuildOptions) -> LegionBuildOutcome {
-    let outcome = language_valkyrie::product::build_project(&language_valkyrie::product::BuildOptions {
+    let outcome = package_manager_legion::product::build_project(&package_manager_legion::product::BuildOptions {
         project_dir: options.project_dir.into(),
         target: options.target,
         output_dir: options.output_dir.map(Into::into),

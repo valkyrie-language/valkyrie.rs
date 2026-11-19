@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Valkyrie Node-API 导出库：只绑定 Boost `language.valkyrie` 的宿主友好表面"
+description = "Valkyrie Node-API 导出库：绑定 Boost `language.valkyrie` 与 `package.manager.legion` 的宿主友好表面"
 
 [lib]
 name = "valkyrie_napi"
@@ -12,7 +12,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-language-valkyrie = { workspace = true }
+package-manager-legion = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 windows-sys = { workspace = true }
