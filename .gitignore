@@ -33,3 +33,5 @@ documentation/maintenance/releases/*.reference.md
 
 # Commit reword scratch files
 reword.pending.json
+# npm secrets (nifty)
+.secrets/
