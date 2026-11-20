@@ -32,13 +32,13 @@ package-manager-legion = { git = "https://github.com/oovm/rust-boost", rev = "5d
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
 nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
-# 迁移套件按其原始白盒依赖直接链接 nyar 编译链与 odin 运行时（同 `rusty-valkyrie` pin）。
+# 迁移套件按其原始白盒依赖直接链接 nyar 编译链与 odin 运行时（`odin-vm` 已独立成仓）。
 nyar-analyzer = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-emitter = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-format = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-package-manager = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-types = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
-odin-vm = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
+odin-vm = { git = "https://github.com/nyar-vm/odin-vm", rev = "ae43362ec6f80d3541f4d8859ce31550916f174f" }
 # 后端产物解码套件直接消费 Boost `data.binary` 格式 crate（同 `data-text` pin）。
 data-binary-aarch64 = { git = "https://github.com/oovm/rust-boost", rev = "71db8fa50f49e3693640cbd19e64ad9c797e5932" }
 data-binary-dex = { git = "https://github.com/oovm/rust-boost", rev = "71db8fa50f49e3693640cbd19e64ad9c797e5932" }

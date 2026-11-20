@@ -30,3 +30,7 @@ data-text-core = { path = "<your-path>/rust-boost/projects/data/data.text.core" 
 data-text-valkyrie = { path = "<your-path>/rust-boost/projects/data/data.text.valkyrie" }
 data-text-von = { path = "<your-path>/rust-boost/projects/data/data.text.von" }
 language-testing = { path = "<your-path>/rust-boost/projects/language/language.testing" }
+
+# OdinVM 独立仓本地 overlay。
+[patch."https://github.com/nyar-vm/odin-vm"]
+odin-vm = { path = "<your-path>/odin-vm/projects/runtime/odin-vm" }
