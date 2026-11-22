@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 package-manager-legion = { workspace = true }
+package-manager-asgard = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 windows-sys = { workspace = true }

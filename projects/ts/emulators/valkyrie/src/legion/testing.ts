@@ -128,6 +128,16 @@ export function resolveWasmEntry(artifactDir: string): string | null {
     return findFileRecursive(artifactDir, (name) => name.endsWith('.wasm'));
 }
 
+/**
+ * 解析产物目录。
+ *
+ * `legion build` 直接写入调用方给出的 output dir，`target` 不再参与目录布局，
+ * 因此仅保留参数以兼容既有调用点；返回值恒为 `dir`。
+ */
+export function resolveArtifactDir(dir: string, _target?: string): string {
+    return dir;
+}
+
 /** Node 轨 package 产物入口：node glue 与 wasm artifact 必须同时存在。 */
 export type NodeArtifactEntry = {
     legionMjs: string;

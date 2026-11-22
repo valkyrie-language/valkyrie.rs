@@ -24,7 +24,8 @@ pub use legion_host_api::{
     LegionArtifactFreshness, LegionExecutionManifestView, LegionTestOutcome, legion_check_artifact_fresh, legion_compiler_build_identity,
     legion_invoke_ovm_export, legion_list_ovm_exports, legion_read_execution_manifest, legion_test, legion_toolchain_fingerprint,
 };
-pub use package_manager_legion::{asgard, legion};
+pub use package_manager_asgard as asgard;
+pub use package_manager_legion::legion;
 pub use product_api::{LegionBuildOptions, LegionBuildOutcome, LegionPlanOptions, LegionPlanOutcome, LegionSemanticGroupItem};
 
 /// `legion run` / `legion spy` 等 CLI 子进程等价结果。

@@ -98,7 +98,7 @@ pub fn legion_check_artifact_fresh(output_dir: String, expected_target: String, 
 /// 运行 `legion test`（结构化；不经 argv）。
 #[napi]
 pub fn legion_test(project_dir: String, target: Option<String>) -> LegionTestOutcome {
-    let outcome = package_manager_legion::product::test_project(PathBuf::from(project_dir), target);
+    let outcome = package_manager_asgard::product::test_project(PathBuf::from(project_dir), target);
     LegionTestOutcome { ok: outcome.ok, error: outcome.error, passed: outcome.passed, failed: outcome.failed, skipped: outcome.skipped }
 }
 
