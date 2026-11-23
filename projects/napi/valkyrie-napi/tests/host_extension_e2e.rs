@@ -94,7 +94,9 @@ expect("first(2^53+1)", addon.first(MAX_SAFE + 2n, 0n), MAX_SAFE + 2n);
 expect("first(i64::MIN)", addon.first(I64_MIN, 0n), I64_MIN);
 expect("first(i64::MAX)", addon.first(I64_MAX, 0n), I64_MAX);
 if (typeof addon.first(1n, 2n) !== "bigint") throw new Error("i64 return must be bigint");
-if (addon.always_true() !== true) throw new Error("always_true() must be true");
+// 新命名合同：无注解 `[export]` 的源码名 `always_true` 在 Node 面自动投影为 `alwaysTrue`。
+if (typeof addon.always_true !== "undefined") throw new Error("source name `always_true` must not leak to the Node surface");
+if (addon.alwaysTrue() !== true) throw new Error("alwaysTrue() must be true");
 
 let numberTypeError = null;
 try {

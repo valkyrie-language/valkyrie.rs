@@ -30,13 +30,17 @@ pub struct LegionExecutionManifestView {
     pub compiler_build_identity: Option<String>,
 }
 
-/// 库导出索引条目（逻辑导出名 + 物理产物）。
+/// 库导出索引条目（源码名 + 目标公开名 + 物理产物 + ABI 合同标签）。
 #[napi(object)]
 pub struct LegionLibraryExport {
-    /// 逻辑导出名（`[export]` 名称）。
+    /// 逻辑导出名（目标命名合同投影后的公开名）。
     pub logical_name: String,
+    /// 语言侧冻结的源码声明名；旧 manifest 缺少该字段时为空串。
+    pub source_name: String,
     /// 物理产物（相对输出目录的文件名）。
     pub physical_artifact: String,
+    /// 目标 ABI 合同标签（`node-api` / `cpython` / `c-abi` / `wasm` 等）；旧 manifest 缺少该字段时为空串。
+    pub abi: String,
 }
 
 /// 产物新鲜度检查结果。
@@ -76,7 +80,12 @@ pub fn legion_read_execution_manifest(output_dir: String) -> Option<LegionExecut
         library_exports: manifest
             .library_exports
             .into_iter()
-            .map(|entry| LegionLibraryExport { logical_name: entry.logical_name, physical_artifact: entry.physical_artifact })
+            .map(|entry| LegionLibraryExport {
+                logical_name: entry.logical_name,
+                source_name: entry.source_name,
+                physical_artifact: entry.physical_artifact,
+                abi: entry.abi,
+            })
             .collect(),
         semantic_closure_hash: manifest.semantic_closure_hash,
         canonical_surface_hash: manifest.canonical_surface_hash,

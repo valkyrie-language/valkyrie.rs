@@ -23,8 +23,8 @@ export function readExecutionManifest(artifactDir: string): {
     target: string;
     /** 产物种类：`binary` / `library`。 */
     artifact_kind: string;
-    /** 库导出索引（逻辑名 + 物理产物）；非库产物为空数组。 */
-    library_exports: { logical_name: string; physical_artifact: string }[];
+    /** 库导出索引（源码名 + 目标公开名 + 物理产物 + ABI 合同标签）；非库产物为空数组。 */
+    library_exports: { logical_name: string; source_name: string; physical_artifact: string; abi: string }[];
     compiler_build_identity?: string;
     compile_evidence?: {
         semantic_closure_hash?: string;
@@ -43,7 +43,9 @@ export function readExecutionManifest(artifactDir: string): {
         artifact_kind: view.artifactKind,
         library_exports: (view.libraryExports ?? []).map((entry) => ({
             logical_name: entry.logicalName,
+            source_name: entry.sourceName ?? '',
             physical_artifact: entry.physicalArtifact,
+            abi: entry.abi ?? '',
         })),
         compiler_build_identity: view.compilerBuildIdentity ?? undefined,
         compile_evidence: {

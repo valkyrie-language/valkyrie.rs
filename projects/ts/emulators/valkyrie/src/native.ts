@@ -6,7 +6,9 @@ import {fileURLToPath} from 'node:url';
 
 export type LegionLibraryExport = {
     logicalName: string;
+    sourceName: string;
     physicalArtifact: string;
+    abi: string;
 };
 
 export type LegionExecutionManifestView = {

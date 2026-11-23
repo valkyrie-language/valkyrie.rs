@@ -187,21 +187,21 @@ fn node_export_mutates_first_element_in_place() {
     let script = r#"
 const addon = require(process.env.MODULE_PATH);
 const values = [3n, 1n, 2n];
-const result = addon.mutate_first(values);
-if (result !== 7n) throw new Error("mutate_first must return 7n, got " + String(result));
+const result = addon.mutateFirst(values);
+if (result !== 7n) throw new Error("mutateFirst must return 7n, got " + String(result));
 if (typeof result !== "bigint") throw new Error("i64 return must be bigint");
 if (values.length !== 3 || values[0] !== 7n || values[1] !== 1n || values[2] !== 2n) {
     throw new Error("host array must be written back as [7n,1n,2n], got " + String(values));
 }
 // 元素同样走 bigint：i64 两端与 2^53+1 必须逐位保留。
 const wide = [-9223372036854775808n, 9007199254740993n, 9223372036854775807n];
-if (addon.mutate_first(wide) !== 7n) throw new Error("wide array return must be 7n");
+if (addon.mutateFirst(wide) !== 7n) throw new Error("wide array return must be 7n");
 if (wide[0] !== 7n || wide[1] !== 9007199254740993n || wide[2] !== 9223372036854775807n) {
     throw new Error("wide elements must round-trip, got " + String(wide));
 }
 for (let i = 0; i < 1000; i += 1) {
     const xs = [3n, 1n, 2n];
-    const value = addon.mutate_first(xs);
+    const value = addon.mutateFirst(xs);
     if (value !== 7n || xs[0] !== 7n || xs[1] !== 1n || xs[2] !== 2n) {
         throw new Error("iteration " + i + " failed: value=" + String(value) + " array=" + String(xs));
     }
@@ -238,22 +238,22 @@ fn node_array_alias_and_failed_marshalling_contract() {
 const addon = require(process.env.MODULE_PATH);
 // 同一 JS 数组传两次：两个形参各得一份独立副本，写回按形参顺序进行，后者整段覆盖前者。
 const shared = [1n, 2n];
-const value = addon.mirror_pair(shared, shared);
-if (value !== 11n) throw new Error("mirror_pair must return 11n, got " + String(value));
+const value = addon.mirrorPair(shared, shared);
+if (value !== 11n) throw new Error("mirrorPair must return 11n, got " + String(value));
 if (shared[0] !== 1n || shared[1] !== 22n) {
     throw new Error("independent copies must write back in parameter order, got " + String(shared));
 }
 
 // 标量在数组之前：数组帧槽仍必须落在帧内，且返回值/写回都走 bigint。
 const mixed = [1n, 2n];
-if (addon.shift_add_before(42n, mixed) !== 42n) throw new Error("scalar-before-array return must be 42n");
+if (addon.shiftAddBefore(42n, mixed) !== 42n) throw new Error("scalar-before-array return must be 42n");
 if (mixed[0] !== 42n || mixed[1] !== 2n) throw new Error("scalar-before-array writeback must be [42n,2n], got " + String(mixed));
 
 // 部分编组失败：第二个元素不是 bigint，必须在调用 guest 前抛 TypeError，且不写回。
 const bad = [5n, 6n, 7];
 let typeError = null;
 try {
-    addon.mutate_first(bad);
+    addon.mutateFirst(bad);
 } catch (error) {
     typeError = error;
 }
@@ -264,7 +264,7 @@ if (bad[0] !== 5n || bad[1] !== 6n || bad[2] !== 7) throw new Error("failed mars
 const outOfRange = [1n, 9223372036854775808n];
 let rangeError = null;
 try {
-    addon.mutate_first(outOfRange);
+    addon.mutateFirst(outOfRange);
 } catch (error) {
     rangeError = error;
 }
@@ -273,10 +273,10 @@ if (outOfRange[0] !== 1n || outOfRange[1] !== 9223372036854775808n) throw new Er
 
 // 反复失败后再成功：镜像副本已被释放，后续调用仍必须正确。
 for (let i = 0; i < 2000; i += 1) {
-    try { addon.mutate_first([1n, 2n, 3]); } catch (error) { if (!(error instanceof TypeError)) throw error; }
+    try { addon.mutateFirst([1n, 2n, 3]); } catch (error) { if (!(error instanceof TypeError)) throw error; }
 }
 const after = [3n, 1n, 2n];
-if (addon.mutate_first(after) !== 7n || after[0] !== 7n) throw new Error("array mirror must stay reusable after failures");
+if (addon.mutateFirst(after) !== 7n || after[0] !== 7n) throw new Error("array mirror must stay reusable after failures");
 process.stdout.write("ok alias [1,22] failures-clean");
 "#;
     let output = Command::new("node")
