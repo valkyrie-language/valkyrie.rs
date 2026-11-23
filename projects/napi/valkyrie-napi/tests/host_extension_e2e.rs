@@ -80,16 +80,66 @@ fn artifact_with_extension(outcome: &BuildOutcome, extension: &str) -> PathBuf {
 
 const NODE_SCRIPT: &str = r#"
 const addon = require(process.env.MODULE_PATH);
-if (addon.first(2, 3) !== 2) throw new Error("first(2,3) !== 2");
-if (addon.first(-9, 3) !== -9) throw new Error("first(-9,3) !== -9");
+const expect = (label, actual, want) => {
+    if (actual !== want) throw new Error(label + ": got " + String(actual) + " want " + String(want));
+};
+// 2^53-1、2^53+1、i64 两端：bigint 必须逐位往返，不能经过 JS number。
+const MAX_SAFE = 9007199254740991n;
+const I64_MIN = -9223372036854775808n;
+const I64_MAX = 9223372036854775807n;
+expect("first(2n,3n)", addon.first(2n, 3n), 2n);
+expect("first(-9n,3n)", addon.first(-9n, 3n), -9n);
+expect("first(2^53-1)", addon.first(MAX_SAFE, 0n), MAX_SAFE);
+expect("first(2^53+1)", addon.first(MAX_SAFE + 2n, 0n), MAX_SAFE + 2n);
+expect("first(i64::MIN)", addon.first(I64_MIN, 0n), I64_MIN);
+expect("first(i64::MAX)", addon.first(I64_MAX, 0n), I64_MAX);
+if (typeof addon.first(1n, 2n) !== "bigint") throw new Error("i64 return must be bigint");
 if (addon.always_true() !== true) throw new Error("always_true() must be true");
-let type_error = false;
+
+let numberTypeError = null;
 try {
-    addon.first("x", 1);
+    addon.first(1, 2n);
 } catch (error) {
-    type_error = error instanceof TypeError;
+    numberTypeError = error;
 }
-if (!type_error) throw new Error("non-integer argument must raise TypeError");
+if (!(numberTypeError instanceof TypeError)) throw new Error("JS number must raise TypeError, got " + numberTypeError);
+if (!/bigint/i.test(numberTypeError.message)) throw new Error("TypeError message must state the bigint rule: " + numberTypeError.message);
+
+let fractionalTypeError = null;
+try {
+    addon.first(1.5, 2n);
+} catch (error) {
+    fractionalTypeError = error;
+}
+if (!(fractionalTypeError instanceof TypeError)) throw new Error("fractional number must raise TypeError");
+
+let rangeError = null;
+try {
+    addon.first(9223372036854775808n, 0n);
+} catch (error) {
+    rangeError = error;
+}
+if (!(rangeError instanceof RangeError)) throw new Error("bigint above i64::MAX must raise RangeError, got " + rangeError);
+if (!/i64/.test(rangeError.message)) throw new Error("RangeError message must state the i64 range: " + rangeError.message);
+
+let negativeRangeError = null;
+try {
+    addon.first(-9223372036854775809n, 0n);
+} catch (error) {
+    negativeRangeError = error;
+}
+if (!(negativeRangeError instanceof RangeError)) throw new Error("bigint below i64::MIN must raise RangeError");
+process.stdout.write([
+    "ok bigint",
+    "2^53-1=" + String(addon.first(MAX_SAFE, 0n)),
+    "2^53+1=" + String(addon.first(MAX_SAFE + 2n, 0n)),
+    "i64::MIN=" + String(addon.first(I64_MIN, 0n)),
+    "i64::MAX=" + String(addon.first(I64_MAX, 0n)),
+    "numberTypeError=" + (numberTypeError instanceof TypeError),
+    "fractionTypeError=" + (fractionalTypeError instanceof TypeError),
+    "rangeError=" + (rangeError instanceof RangeError),
+    "negativeRangeError=" + (negativeRangeError instanceof RangeError),
+].join(" "));
 "#;
 
 #[cfg(windows)]
@@ -112,6 +162,7 @@ fn node_addon_loads_calls_and_propagates_errors() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    eprintln!("node stdout: {}", String::from_utf8_lossy(&output.stdout).trim());
     let _ = fs::remove_dir_all(output_dir);
 }
 
@@ -128,6 +179,10 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
         "import app\n",
         "assert app.first(2, 3) == 2, app.first(2, 3)\n",
         "assert app.first(-9, 3) == -9\n",
+        "assert app.first(2**53 - 1, 0) == 2**53 - 1\n",
+        "assert app.first(2**53 + 1, 0) == 2**53 + 1\n",
+        "assert app.first(-2**63, 0) == -2**63\n",
+        "assert app.first(2**63 - 1, 0) == 2**63 - 1\n",
         "assert app.always_true() is True\n",
         "try:\n",
         "    app.first('x', 1)\n",
@@ -135,6 +190,18 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
         "    pass\n",
         "else:\n",
         "    raise AssertionError('non-integer argument must raise TypeError')\n",
+        "try:\n",
+        "    app.first(1.5, 0)\n",
+        "except TypeError:\n",
+        "    pass\n",
+        "else:\n",
+        "    raise AssertionError('fractional argument must raise TypeError')\n",
+        "try:\n",
+        "    app.first(2**63, 0)\n",
+        "except OverflowError:\n",
+        "    pass\n",
+        "else:\n",
+        "    raise AssertionError('out-of-i64 argument must raise OverflowError')\n",
     );
     let output = Command::new("python")
         .arg("-c")
