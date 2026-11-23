@@ -12,11 +12,28 @@
  */
 
 import {spawnSync} from 'node:child_process';
-import {copyFileSync, existsSync, mkdirSync, readdirSync} from 'node:fs';
+import {copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * 从 Cargo.lock 解析 Boost `package-manager-legion` 的固定 rev，作为
+ * `NYAR_COMPILER_BUILD_ID` 注入编译环境：git 依赖 checkout 没有 `.git`，
+ * legion 侧 `option_env!` 否则退化为 `unknown`，native lane 的构建身份门
+ * 会拒绝正式复用。注入后 addon 内嵌身份与产物清单 `compiler=` 段同源一致。
+ */
+function boostBuildId() {
+    if (process.env.NYAR_COMPILER_BUILD_ID) return process.env.NYAR_COMPILER_BUILD_ID;
+    const lock = readFileSync(join(ROOT, 'Cargo.lock'), 'utf8');
+    const entry = lock.match(/\[\[package\]\]\nname = "package-manager-legion"\nversion = "[^"]*"\nsource = "git\+https:\/\/github\.com\/oovm\/rust-boost\?rev=([0-9a-f]+)#([0-9a-f]+)"/);
+    if (!entry) {
+        console.warn('warning: Cargo.lock 未含 package-manager-legion 的 git rev 条目，编译器构建身份将退化为 unknown');
+        return undefined;
+    }
+    return entry[2];
+}
 
 /** @typedef {{ triple: string, packageDir: string, npmTriple: string, short: string }} NativeTarget */
 
@@ -37,8 +54,13 @@ function parseArgs(argv) {
     };
 }
 
-function run(command, args) {
-    const result = spawnSync(command, args, {cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32', env: process.env});
+function run(command, args, extraEnv) {
+    const result = spawnSync(command, args, {
+        cwd: ROOT,
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+        env: {...process.env, ...extraEnv},
+    });
     if ((result.status ?? 1) !== 0) {
         process.exit(result.status ?? 1);
     }
@@ -94,13 +116,20 @@ function findNativeArtifact(triple, release, libName) {
 function buildNapi(opts) {
     const release = !opts.debug;
     const targets = selectTargets(NATIVE_TARGETS, opts.all);
+    const buildId = boostBuildId();
+    const extraEnv = buildId ? {NYAR_COMPILER_BUILD_ID: buildId} : {};
     console.log(`build:napi → valkyrie-napi cdylib (${release ? 'release' : 'debug'}, ${targets.length} target(s))`);
+    if (buildId) {
+        console.log(`compiler build id ← Cargo.lock rev ${buildId.slice(0, 12)}`);
+        // option_env! 不参与 cargo 指纹，身份变化必须强制重编 legion 及其下游。
+        run('cargo', ['clean', '-p', 'package-manager-legion']);
+    }
 
     for (const target of targets) {
         const triple = process.env.VALKYRIE_NATIVE_TARGET_TRIPLE ?? target.triple;
         const profile = release ? ['--release'] : [];
         console.log(`\n→ ${triple} → projects/ts/platforms/${target.packageDir}`);
-        run('cargo', ['build', ...profile, '--target', triple, '-p', 'valkyrie-napi']);
+        run('cargo', ['build', ...profile, '--target', triple, '-p', 'valkyrie-napi'], extraEnv);
 
         const source = findNativeArtifact(triple, release, 'valkyrie_napi');
         const destination = join(ROOT, 'projects', 'ts', 'platforms', target.packageDir, 'lib', `valkyrie.${target.npmTriple}.node`);
