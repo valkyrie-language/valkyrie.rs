@@ -10,7 +10,7 @@
 //! - 投影碰撞（`foo_bar` 与 `fooBar`）：Node 写出前 fail-closed，普通 DLL 不受影响；
 //! - 无导出面的库：三条 lane 全部拒绝。
 
-use std::{cell::RefCell, ffi::c_void, fs, path::{Path, PathBuf}, process::Command};
+use std::{ffi::c_void, fs, path::{Path, PathBuf}, process::Command};
 
 use package_manager_legion::{
     legion::cmds::run::{ExecutionManifest, LibraryExportIndexEntry},
@@ -151,25 +151,32 @@ unsafe extern "system" {
     fn LoadLibraryExW(lp_lib_file_name: *const u16, h_file: *mut c_void, dw_flags: u32) -> *mut c_void;
     fn GetProcAddress(h_module: *mut c_void, lp_proc_name: *const i8) -> *mut c_void;
     fn FreeLibrary(h_module: *mut c_void) -> i32;
+    fn GetModuleHandleExW(flags: u32, module_name: *const u16, module: *mut *mut c_void) -> i32;
 }
 
+/// 查询本身不得改变引用计数，否则「模块是否离开进程」的观测会自己留下引用。
 #[cfg(windows)]
-thread_local! {
-    static LOADED_MODULES: RefCell<Vec<*mut c_void>> = const { RefCell::new(Vec::new()) };
+const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 0x0000_0002;
+
+/// 模块当前是否仍驻留进程（按完整路径查询，不增加引用计数）。
+#[cfg(windows)]
+fn module_present(dll: &Path) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = dll.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    let mut module: *mut c_void = std::ptr::null_mut();
+    let found = unsafe {
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, wide.as_ptr(), &mut module)
+    };
+    found != 0 && !module.is_null()
 }
 
-/// 一次装载、多次按名解析；句柄登记后由 `unload_all` 统一卸载。
+/// 一次装载：同一模块句柄解析全部导出（Windows 按装载次数计引用）。
 #[cfg(windows)]
 fn module_of(dll: &Path) -> *mut c_void {
     use std::os::windows::ffi::OsStrExt;
     let wide: Vec<u16> = dll.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
     let module = unsafe { LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), 0) };
     assert!(!module.is_null(), "系统加载器无法装载 {}", dll.display());
-    LOADED_MODULES.with(|modules| {
-        if !modules.borrow().contains(&module) {
-            modules.borrow_mut().push(module);
-        }
-    });
     module
 }
 
@@ -179,14 +186,13 @@ fn symbol_of(module: *mut c_void, symbol: &str) -> *mut c_void {
     unsafe { GetProcAddress(module, name.as_ptr() as *const i8) }
 }
 
+/// 与装载成对释放一次，并验证模块确实离开进程：遗留引用会让下一轮装载复用旧模块。
 #[cfg(windows)]
-fn unload_all() {
-    let modules = LOADED_MODULES.with(|held| held.take());
-    assert!(!modules.is_empty(), "没有已装载的模块可卸载");
-    for module in modules {
-        let ok = unsafe { FreeLibrary(module) };
-        assert_ne!(ok, 0, "库必须可被系统加载器卸载");
-    }
+fn release(module: *mut c_void, dll: &Path) {
+    assert!(module_present(dll), "释放前模块必须驻留：{}", dll.display());
+    let released = unsafe { FreeLibrary(module) };
+    assert_ne!(released, 0, "库必须可被系统加载器卸载");
+    assert!(!module_present(dll), "成对释放后模块必须离开进程：{}", dll.display());
 }
 
 /// Node 面：`require()` 后只暴露 camelCase 投影名，源码名与私有 helper 一律不可见。
@@ -295,7 +301,13 @@ fn plain_dll_publishes_source_names_with_matching_manifest() {
     for absent in ["moveZeroes", "twoSum", "internal_helper", "internalHelper"] {
         assert!(symbol_of(module, absent).is_null(), "普通 DLL 导出面不得混入 `{absent}`");
     }
-    unload_all();
+    release(module, &dll);
+
+    // 重装：成对释放后模块已离开进程，第二轮必须重新装载并重新解析成功。
+    let module = module_of(&dll);
+    let move_zeroes: extern "system" fn(i64) -> i64 = unsafe { std::mem::transmute(symbol_of(module, "move_zeroes")) };
+    assert_eq!(move_zeroes(1), 2, "重新装载后导出必须仍可调用");
+    release(module, &dll);
 
     let manifest = manifest_at(&outcome);
     assert_eq!(manifest.schema_version, 2);
@@ -342,6 +354,6 @@ fn projection_collision_fails_closed_for_node_but_plain_dll_builds() {
     assert!(!symbol_of(module, "fooBar").is_null(), "C ABI 必须导出 `fooBar`");
     assert_eq!(foo_bar(1), 1);
     assert_eq!(foobar(2), 2);
-    unload_all();
+    release(module, &dll);
     let _ = fs::remove_dir_all(root);
 }

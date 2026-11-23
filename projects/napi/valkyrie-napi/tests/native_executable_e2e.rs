@@ -131,8 +131,12 @@ fn native_placeholder_matches_explicit_windows_target() {
     let _ = fs::remove_dir_all(&root);
 }
 
+/// 结构门：只核对 ELF 头事实，**不构成执行证据**。
+///
+/// Linux 真机执行门见 `linux_elf_executes_with_expected_exit_code`（仅在
+/// Linux 构建上编译）；非 Linux 构建上本测试通过只说明产物是合法 ELF。
 #[test]
-fn linux_target_emits_sysv_elf_from_the_same_source() {
+fn linux_target_emits_sysv_elf_headers_only() {
     let (outcome, root) = build_for("linux", SOURCE, "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu");
     assert!(outcome.ok, "linux legion build 失败: {:?}", outcome.error);
     let executable = PathBuf::from(outcome.artifacts.first().expect("linux artifact"));
@@ -142,6 +146,24 @@ fn linux_target_emits_sysv_elf_from_the_same_source() {
     assert_eq!(u16::from_le_bytes(bytes[18..20].try_into().unwrap()), 62, "ELF 架构必须是 x86-64");
     let entry = u64::from_le_bytes(bytes[24..32].try_into().unwrap());
     assert_ne!(entry, 0, "ELF e_entry 必须指向冻结入口");
+    if cfg!(target_os = "linux") {
+        eprintln!("linux runner 已就绪：执行门由 linux_elf_executes_with_expected_exit_code 承担");
+    }
+    else {
+        eprintln!("Linux 执行门待验：当前构建平台不是 Linux，ELF 头检查不是执行证据");
+    }
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// Linux 执行门：在真实 Linux runner 上启动 ELF 产物并核对退出码。
+#[cfg(target_os = "linux")]
+#[test]
+fn linux_elf_executes_with_expected_exit_code() {
+    let (outcome, root) = build_for("linux-run", SOURCE, "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu");
+    assert!(outcome.ok, "linux legion build 失败: {:?}", outcome.error);
+    let executable = PathBuf::from(outcome.artifacts.first().expect("linux artifact"));
+    let status = Command::new(&executable).status().expect("在 Linux runner 上启动 ELF 产物");
+    assert_eq!(status.code(), Some(42), "ELF 退出码必须来自冻结入口的返回值");
     let _ = fs::remove_dir_all(&root);
 }
 

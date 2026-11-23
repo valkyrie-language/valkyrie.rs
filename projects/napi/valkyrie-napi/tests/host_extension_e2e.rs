@@ -57,9 +57,15 @@ fn write_library_project(root: &std::path::Path) -> PathBuf {
 }
 
 fn build_library(prefix: &str, target: &str) -> (BuildOutcome, PathBuf) {
+    build_library_from_source(prefix, target, LIBRARY_SOURCE)
+}
+
+/// 用替换后的源码构建同一形状的库工程（反例与边界用例共用工程骨架）。
+fn build_library_from_source(prefix: &str, target: &str, source: &str) -> (BuildOutcome, PathBuf) {
     let root = std::env::temp_dir().join(format!("valkyrie-host-extension-{prefix}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     let project_dir = write_library_project(&root);
+    fs::write(project_dir.join("source").join("lib.v"), source).unwrap();
     let output_dir = project_dir.join("dist").join("extension");
     let outcome = build_project(&BuildOptions {
         project_dir: project_dir.clone(),
@@ -204,15 +210,25 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
         "    pass\n",
         "else:\n",
         "    raise AssertionError('out-of-i64 argument must raise OverflowError')\n",
-        // 重复调用与临时对象清理：1000 次往返后 gc 回收，返回对象引用计数正常。
+        // 重复调用与临时对象清理：1000 次往返后 gc 回收。
         "import gc, sys\n",
         "for i in range(1000):\n",
         "    assert app.first(i, 0) == i\n",
         "gc.collect()\n",
-        "value = app.first(123456789012, 0)\n",
-        "assert value == 123456789012\n",
-        "assert sys.getrefcount(value) >= 2, sys.getrefcount(value)\n",
-        "del value\n",
+        // 多持有引用：持有一个返回对象后继续往返；若返回路径多持一份引用，
+        // 该对象的引用计数会随调用次数上升（原来的 `>= 2` 判断不出这一点）。
+        "probe = app.first(123456789012, 0)\n",
+        "assert probe == 123456789012\n",
+        "baseline_refs = sys.getrefcount(probe)\n",
+        "baseline_blocks = sys.getallocatedblocks()\n",
+        "for _ in range(2000):\n",
+        "    app.first(7, 0)\n",
+        "gc.collect()\n",
+        "assert sys.getrefcount(probe) == baseline_refs, (sys.getrefcount(probe), baseline_refs)\n",
+        // 泄漏：每次调用返回的 PyLong 若未释放，分配块会随往返次数增长。
+        "delta = sys.getallocatedblocks() - baseline_blocks\n",
+        "assert delta <= 32, ('allocated blocks grew', delta)\n",
+        "del probe\n",
         "gc.collect()\n",
     );
     let output = Command::new("python")
@@ -228,5 +244,24 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let _ = fs::remove_dir_all(output_dir);
+}
+
+/// 第 5 个位置的整数形参超出 Win64 整数实参寄存器上限：必须在写出前结构化拒绝，
+/// 诊断指名导出与上限，不能静默把第 5 个实参塞进错误位置。
+#[test]
+fn node_extension_rejects_a_fifth_integer_parameter_before_codegen() {
+    let source = r#"namespace app;
+
+[export]
+micro five(a: i64, b: i64, c: i64, d: i64, e: i64) -> i64 {
+    return a
+}
+"#;
+    let (outcome, output_dir) = build_library_from_source("param-limit", "node", source);
+    assert!(!outcome.ok, "第 5 个整数形参必须写出前拒绝: {:?}", outcome.artifacts);
+    let error = outcome.error.unwrap_or_default();
+    assert!(error.contains("形参"), "诊断必须说明形参数量: {error}");
+    assert!(error.contains("上限"), "诊断必须给出整数实参上限: {error}");
     let _ = fs::remove_dir_all(output_dir);
 }

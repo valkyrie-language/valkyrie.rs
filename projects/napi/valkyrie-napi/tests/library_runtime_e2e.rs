@@ -5,7 +5,6 @@
 //! 首批导出面只开放已验证的标量形状（`i64`/`f64`/`bool`）；数组与文本跨边界
 //! 需要不透明句柄或显式序列投影合同，不在本门开放。
 
-use std::cell::RefCell;
 use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 
@@ -37,9 +36,23 @@ micro c_add(a: i64, b: i64) -> i64 {
     return a + b
 }
 
+micro mix_internal(a: i64, b: f64, c: i64) -> f64 {
+    return b + (a + c) as f64
+}
+
 [export]
 micro c_mix(a: i64, b: f64, c: i64) -> f64 {
     return b + (a + c) as f64
+}
+
+[export]
+micro c_mix_call(a: i64, b: f64, c: i64) -> f64 {
+    return app::mix_internal(a, b, c)
+}
+
+[export]
+micro c_mix4(a: i64, b: f64, c: i64, d: f64) -> f64 {
+    return b + d + (a + c) as f64
 }
 
 [export]
@@ -88,58 +101,76 @@ unsafe extern "system" {
     fn LoadLibraryExW(lp_lib_file_name: *const u16, h_file: *mut c_void, dw_flags: u32) -> *mut c_void;
     fn GetProcAddress(h_module: *mut c_void, lp_proc_name: *const i8) -> *mut c_void;
     fn FreeLibrary(h_module: *mut c_void) -> i32;
+    /// 按模块名/路径查询已装载模块；`UNCHANGED_REFCOUNT` 不为查询增加引用计数。
+    fn GetModuleHandleExW(flags: u32, module_name: *const u16, module: *mut *mut c_void) -> i32;
 }
 
-// 测试线程内已装载的模块句柄；卸载由 `unload_all` 逐一验证。
+/// `GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT`：查询本身不得改变引用计数，
+/// 否则「模块是否离开进程」的观测会自己留下引用。
 #[cfg(windows)]
-thread_local! {
-    static LOADED_MODULES: RefCell<Vec<*mut c_void>> = const { RefCell::new(Vec::new()) };
-}
+const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 0x0000_0002;
 
-/// 经系统加载器装载库并按名解析 C ABI 符号；符号缺失即测试失败。
+/// 模块当前是否仍驻留进程（按完整路径查询，不增加引用计数）。
 #[cfg(windows)]
-fn resolve(dll: &Path, symbol: &str) -> *mut c_void {
+fn module_present(dll: &Path) -> bool {
     use std::os::windows::ffi::OsStrExt;
     let wide: Vec<u16> = dll.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
-    let (module, address) = unsafe {
-        let module = LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), 0);
-        assert!(!module.is_null(), "系统加载器无法装载 {}", dll.display());
-        let name = format!("{symbol}\0");
-        let address = GetProcAddress(module, name.as_ptr() as *const i8);
-        (module, address)
+    let mut module: *mut c_void = std::ptr::null_mut();
+    let found = unsafe {
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, wide.as_ptr(), &mut module)
     };
-    assert!(!address.is_null(), "导出符号 `{symbol}` 不在库的导出面中");
-    LOADED_MODULES.with(|modules| {
-        if !modules.borrow().contains(&module) {
-            modules.borrow_mut().push(module);
-        }
-    });
+    found != 0 && !module.is_null()
+}
+
+/// 装载一次、按同一模块句柄解析全部导出符号；符号缺失即测试失败。
+#[cfg(windows)]
+fn load_module(dll: &Path) -> *mut c_void {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = dll.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    let module = unsafe { LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), 0) };
+    assert!(!module.is_null(), "系统加载器无法装载 {}", dll.display());
+    module
+}
+
+#[cfg(windows)]
+fn symbol(module: *mut c_void, name: &str) -> *mut c_void {
+    let owner = format!("{name}\0");
+    let address = unsafe { GetProcAddress(module, owner.as_ptr() as *const i8) };
+    assert!(!address.is_null(), "导出符号 `{name}` 不在库的导出面中");
     address
 }
 
+/// 一轮「装载 → 解析全部导出 → 调用 → 成对释放 → 验证模块离开进程」。
+///
+/// Windows 按装载次数计引用：一次 `LoadLibraryExW` 只对应一次 `FreeLibrary`，
+/// 同一模块句柄被多个符号复用时不得重复装载或重复释放。
 #[cfg(windows)]
-fn unload_all() {
-    let modules = LOADED_MODULES.with(|held| held.take());
-    assert!(!modules.is_empty(), "没有已装载的模块可卸载");
-    for module in modules {
-        let ok = unsafe { FreeLibrary(module) };
-        assert_ne!(ok, 0, "库必须可被系统加载器卸载");
-    }
-}
-
-#[cfg(windows)]
-fn load_once(dll: &Path) {
-    let add: extern "system" fn(i64, i64) -> i64 = unsafe { std::mem::transmute(resolve(dll, "c_add")) };
+fn exercise_round(dll: &Path) {
+    assert!(!module_present(dll), "本轮开始前模块不得驻留：{}", dll.display());
+    let module = load_module(dll);
+    let add: extern "system" fn(i64, i64) -> i64 = unsafe { std::mem::transmute(symbol(module, "c_add")) };
     assert_eq!(add(40, 2), 42, "C ABI `i64` 加法必须跨边界成立");
     assert_eq!(add(i64::MIN, 0), i64::MIN, "`i64` 全域载体不受宿主收窄");
-    let mix: extern "system" fn(i64, f64, i64) -> f64 = unsafe { std::mem::transmute(resolve(dll, "c_mix")) };
+    // 入站混合签名：整数与浮点按各自寄存器序列独立编号（Win64 C）。
+    let mix: extern "system" fn(i64, f64, i64) -> f64 = unsafe { std::mem::transmute(symbol(module, "c_mix")) };
     assert_eq!(mix(2, 3.5, 5), 10.5, "混合整数/浮点 ABI 参数位置必须与 Win64 C 一致");
-    let clamp: extern "system" fn(i64, i64, i64) -> i64 = unsafe { std::mem::transmute(resolve(dll, "c_clamp")) };
+    // 出站混合签名：guest 内部调用的寄存器分配必须与入站一致。
+    let mix_call: extern "system" fn(i64, f64, i64) -> f64 = unsafe { std::mem::transmute(symbol(module, "c_mix_call")) };
+    assert_eq!(mix_call(7, 1.25, 3), 11.25, "guest 内部混合签名调用必须与外部入站使用同一 ABI");
+    // 第 4 个位置是浮点（XMM1）：位置编号与寄存器类别分离，整数与浮点各自编号。
+    let mix4: extern "system" fn(i64, f64, i64, f64) -> f64 = unsafe { std::mem::transmute(symbol(module, "c_mix4")) };
+    assert_eq!(mix4(10, 0.5, 20, 0.25), 30.75, "第 4 个形参必须落在浮点寄存器类别的第 2 个位置（XMM1）");
+    let clamp: extern "system" fn(i64, i64, i64) -> i64 = unsafe { std::mem::transmute(symbol(module, "c_clamp")) };
     assert_eq!(clamp(-5, 0, 10), 0, "分支与下界钳制");
     assert_eq!(clamp(5, 0, 10), 5, "区间内原值返回");
     assert_eq!(clamp(50, 0, 10), 10, "上界钳制");
-    let negative: extern "system" fn(i64) -> bool = unsafe { std::mem::transmute(resolve(dll, "c_is_negative")) };
+    let negative: extern "system" fn(i64) -> bool = unsafe { std::mem::transmute(symbol(module, "c_is_negative")) };
     assert!(negative(-1) && !negative(0), "`bool` 返回载体必须归一为 0/1");
+
+    assert!(module_present(dll), "装载期间模块必须驻留进程：{}", dll.display());
+    let released = unsafe { FreeLibrary(module) };
+    assert_ne!(released, 0, "库必须可被系统加载器卸载");
+    assert!(!module_present(dll), "成对释放后模块必须离开进程：{}", dll.display());
 }
 
 #[cfg(windows)]
@@ -174,11 +205,10 @@ fn shared_library_exports_call_and_unload_through_system_loader() {
     // 交付身份：产物入口符号是首个导出名，且没有 CLI 运行合同（库用途语义）。
     assert_eq!(outcome.entry_symbol.as_deref(), Some("c_add"), "库交付必须报告导出身份");
     let dll = dll_artifact(&outcome);
-    // 装载→调用→卸载，重复两轮：第二轮必须重新解析成功，证明没有一次性状态泄漏。
-    load_once(&dll);
-    unload_all();
-    load_once(&dll);
-    unload_all();
+    // 两轮各自「装载一次 → 解析全部导出 → 释放一次 → 验证模块离开 → 重新装载」：
+    // 第二轮必须重新装载成功，证明没有一次性状态泄漏，也没有遗留引用。
+    exercise_round(&dll);
+    exercise_round(&dll);
     let _ = std::fs::remove_dir_all(root);
 }
 
@@ -189,4 +219,76 @@ fn library_without_exports_fails_closed() {
     let (outcome, root) = build_library("noexport", "namespace app;\nmicro helper(a: i64) -> i64 {\n    return a + 1\n}\n");
     assert!(!outcome.ok, "无导出面的库交付必须被拒绝");
     let _ = std::fs::remove_dir_all(root);
+}
+
+/// 第 5 个形参超出 Win64 寄存器传参上限（整数 4 + 浮点 4，栈上传参未实现）：
+/// 必须在 lowering 阶段结构化拒绝并指名函数与上限，不能静默错位传参。
+#[cfg(windows)]
+#[test]
+fn library_with_five_parameters_reports_the_register_limit() {
+    let source = r#"namespace app;
+
+[export]
+micro five(a: i64, b: f64, c: i64, d: f64, e: i64) -> i64 {
+    return a
+}
+"#;
+    let (outcome, root) = build_library("five-params", source);
+    assert!(!outcome.ok, "五个形参的导出必须在 lowering 阶段被拒绝: {:?}", outcome.artifacts);
+    let error = outcome.error.unwrap_or_default();
+    assert!(error.contains("five"), "诊断必须指名被拒函数: {error}");
+    assert!(error.contains("5 个形参"), "诊断必须说明形参数量: {error}");
+    assert!(error.contains("上限"), "诊断必须给出寄存器传参上限: {error}");
+    let _ = std::fs::remove_dir_all(root);
+}
+
+/// Linux 真机门：由系统加载器 `dlopen`/`dlsym` 装载 `.so` 并调用 C ABI 导出。
+///
+/// 只在真实 Linux runner 上编译执行；Windows 上的 `LoadLibraryExW` 门
+/// （`shared_library_exports_call_and_unload_through_system_loader`）不是它的替代证据。
+#[cfg(target_os = "linux")]
+mod linux_shared_object {
+    use super::*;
+    use std::ffi::{CString, c_void};
+    use std::os::unix::ffi::OsStrExt;
+
+    #[link(name = "dl")]
+    unsafe extern "C" {
+        fn dlopen(filename: *const i8, flag: i32) -> *mut c_void;
+        fn dlsym(handle: *mut c_void, symbol: *const i8) -> *mut c_void;
+        fn dlclose(handle: *mut c_void) -> i32;
+    }
+
+    /// `RTLD_NOW`：装载时解析全部符号，缺失即装载失败。
+    const RTLD_NOW: i32 = 2;
+
+    #[test]
+    fn linux_so_loads_and_calls_through_system_loader() {
+        let root = std::env::temp_dir().join(format!("valkyrie-library-linux-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let project_dir = write_project(&root);
+        let outcome = build_project(&BuildOptions {
+            project_dir,
+            target: Some("x86_64-unknown-linux-gnu".to_string()),
+            output_dir: Some(root.join("dist")),
+        });
+        assert!(outcome.ok, "Linux 共享库构建失败：{:?}", outcome.error);
+        let artifact = outcome
+            .artifacts
+            .iter()
+            .map(PathBuf::from)
+            .find(|path| path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("so")))
+            .unwrap_or_else(|| panic!("没有产出 `.so` 共享库: {:?}", outcome.artifacts));
+
+        let path = CString::new(artifact.as_os_str().as_bytes()).unwrap();
+        let handle = unsafe { dlopen(path.as_ptr(), RTLD_NOW) };
+        assert!(!handle.is_null(), "系统加载器无法装载 {}", artifact.display());
+        let name = CString::new("c_add").unwrap();
+        let address = unsafe { dlsym(handle, name.as_ptr()) };
+        assert!(!address.is_null(), "`.so` 必须导出 C ABI 符号 `c_add`");
+        let add: extern "C" fn(i64, i64) -> i64 = unsafe { std::mem::transmute(address) };
+        assert_eq!(add(40, 2), 42, "`.so` 跨边界调用必须成立");
+        assert_eq!(unsafe { dlclose(handle) }, 0, "共享库必须可被系统加载器卸载");
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
