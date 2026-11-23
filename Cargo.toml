@@ -29,9 +29,9 @@ data-text-valkyrie = { git = "https://github.com/oovm/rust-boost", rev = "71db8f
 rusty-valkyrie = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 # Node-API 导出层的唯一实现依赖：Boost 的 Valkyrie 产品工具链（legion / asgard / product / execution / ovm）。
 # `package.manager.asgard` 自 Boost `d84299a9` 起独立成 crate。
-package-manager-legion = { git = "https://github.com/oovm/rust-boost", rev = "e84cf11bc7d7f4ec9c3d2ebcc4c2ad7265942f01" }
+package-manager-legion = { git = "https://github.com/oovm/rust-boost", rev = "bd45015de90403ea8a4e2c5fc3c684c1eed5e945" }
 # Asgard 静态交付与 `legion test` 产品入口（`package.manager.asgard::product`）。
-package-manager-asgard = { git = "https://github.com/oovm/rust-boost", rev = "e84cf11bc7d7f4ec9c3d2ebcc4c2ad7265942f01" }
+package-manager-asgard = { git = "https://github.com/oovm/rust-boost", rev = "bd45015de90403ea8a4e2c5fc3c684c1eed5e945" }
 # harness 白盒测试夹具工具（runtime fixture sidecar / runner 模板）。
 nyar = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
 nyar-runner = { git = "https://github.com/nyar-vm/nyar-vm.rs", rev = "1a0e8a4dd498b21eb4f66b7c77c861c710f2a832" }
