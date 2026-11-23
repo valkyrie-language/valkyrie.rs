@@ -4,9 +4,18 @@ import {arch, platform} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+export type LegionLibraryExport = {
+    logicalName: string;
+    physicalArtifact: string;
+};
+
 export type LegionExecutionManifestView = {
     schemaVersion: number;
     target: string;
+    /** 产物种类：`binary` / `library`（由 Rust 权威 manifest 读取）。 */
+    artifactKind: string;
+    /** 库导出索引（逻辑名 + 物理产物）；非库产物为空数组。 */
+    libraryExports: LegionLibraryExport[];
     semanticClosureHash: string | null;
     canonicalSurfaceHash: string | null;
     hostProviderBindingHash: string | null;

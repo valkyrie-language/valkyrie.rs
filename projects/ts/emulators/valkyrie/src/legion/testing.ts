@@ -21,6 +21,10 @@ export type FreshnessResult = {fresh: boolean; reason?: string};
 export function readExecutionManifest(artifactDir: string): {
     schema_version: number;
     target: string;
+    /** 产物种类：`binary` / `library`。 */
+    artifact_kind: string;
+    /** 库导出索引（逻辑名 + 物理产物）；非库产物为空数组。 */
+    library_exports: { logical_name: string; physical_artifact: string }[];
     compiler_build_identity?: string;
     compile_evidence?: {
         semantic_closure_hash?: string;
@@ -36,6 +40,11 @@ export function readExecutionManifest(artifactDir: string): {
     return {
         schema_version: view.schemaVersion,
         target: view.target,
+        artifact_kind: view.artifactKind,
+        library_exports: (view.libraryExports ?? []).map((entry) => ({
+            logical_name: entry.logicalName,
+            physical_artifact: entry.physicalArtifact,
+        })),
         compiler_build_identity: view.compilerBuildIdentity ?? undefined,
         compile_evidence: {
             semantic_closure_hash: view.semanticClosureHash ?? undefined,

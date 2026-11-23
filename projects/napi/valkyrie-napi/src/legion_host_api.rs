@@ -12,6 +12,10 @@ pub struct LegionExecutionManifestView {
     pub schema_version: u32,
     /// canonical target 字符串。
     pub target: String,
+    /// 产物种类：`binary` / `library`。
+    pub artifact_kind: String,
+    /// 库导出索引（逻辑名 + 物理产物）；非库产物为空。
+    pub library_exports: Vec<LegionLibraryExport>,
     /// 语义闭包哈希。
     pub semantic_closure_hash: Option<String>,
     /// 规范表面哈希。
@@ -24,6 +28,15 @@ pub struct LegionExecutionManifestView {
     pub primary_logical_entry: Option<String>,
     /// 产出该构建的编译器构建身份；旧构建缺少该段时为 `null`。
     pub compiler_build_identity: Option<String>,
+}
+
+/// 库导出索引条目（逻辑导出名 + 物理产物）。
+#[napi(object)]
+pub struct LegionLibraryExport {
+    /// 逻辑导出名（`[export]` 名称）。
+    pub logical_name: String,
+    /// 物理产物（相对输出目录的文件名）。
+    pub physical_artifact: String,
 }
 
 /// 产物新鲜度检查结果。
@@ -59,6 +72,12 @@ pub fn legion_read_execution_manifest(output_dir: String) -> Option<LegionExecut
     Some(LegionExecutionManifestView {
         schema_version: manifest.schema_version,
         target: manifest.target,
+        artifact_kind: manifest.artifact_kind,
+        library_exports: manifest
+            .library_exports
+            .into_iter()
+            .map(|entry| LegionLibraryExport { logical_name: entry.logical_name, physical_artifact: entry.physical_artifact })
+            .collect(),
         semantic_closure_hash: manifest.semantic_closure_hash,
         canonical_surface_hash: manifest.canonical_surface_hash,
         host_provider_binding_hash: manifest.host_provider_binding_hash,
