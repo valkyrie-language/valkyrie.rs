@@ -202,6 +202,16 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
         "    pass\n",
         "else:\n",
         "    raise AssertionError('out-of-i64 argument must raise OverflowError')\n",
+        // 重复调用与临时对象清理：1000 次往返后 gc 回收，返回对象引用计数正常。
+        "import gc, sys\n",
+        "for i in range(1000):\n",
+        "    assert app.first(i, 0) == i\n",
+        "gc.collect()\n",
+        "value = app.first(123456789012, 0)\n",
+        "assert value == 123456789012\n",
+        "assert sys.getrefcount(value) >= 2, sys.getrefcount(value)\n",
+        "del value\n",
+        "gc.collect()\n",
     );
     let output = Command::new("python")
         .arg("-c")
