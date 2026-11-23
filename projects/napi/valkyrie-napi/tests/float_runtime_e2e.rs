@@ -144,6 +144,17 @@ micro main() -> i64 {
     if !(a32 < b32) {
         return 20
     }
+    # 边界内转换：-2^63 是合法下界，INT64_MIN 不再由越界非值冒充。
+    let low_edge: f64 = 0.0 - 9223372036854775808.0
+    let low_int: i64 = low_edge as i64
+    if low_int + 9223372036854775807 != -1 {
+        return 22
+    }
+    let high_edge: f64 = 4611686018427387904.0
+    let high_int: i64 = high_edge as i64
+    if high_int != 4611686018427387904 {
+        return 23
+    }
 
     return 0
 }
@@ -203,5 +214,54 @@ fn float_carriers_round_trip_through_sse2_and_abi() {
     let (outcome, root) = build("carriers", &float_source());
     assert!(outcome.ok, "浮点工程构建失败：{:?}", outcome.error);
     assert_eq!(exit_code(&executable(&outcome)), 0, "浮点载体、IEEE 语义与混合 ABI 必须全部成立");
+    let _ = fs::remove_dir_all(root);
+}
+
+/// 越界与 NaN 的浮点转整数必须走定义好的失败出口（异常终止），不得由非值冒充结果。
+#[cfg(windows)]
+#[test]
+fn float_to_int_out_of_range_and_nan_take_defined_failure_exit() {
+    let cases = [
+        // 上界排他：2^63 恰好落在 `i64` 区间之外。
+        ("trap-upper", "namespace app;\n[main]\nmicro main() -> i64 {\n    let x: f64 = 9223372036854775808.0\n    let n: i64 = x as i64\n    return n\n}\n"),
+        // 下界越界：-2^64 低于 -2^63。
+        ("trap-lower", "namespace app;\n[main]\nmicro main() -> i64 {\n    let x: f64 = 0.0 - 18446744073709551616.0\n    let n: i64 = x as i64\n    return n\n}\n"),
+        // NaN 没有整数对应值。
+        ("trap-nan", "namespace app;\n[main]\nmicro main() -> i64 {\n    let x: f64 = 0.0 / 0.0\n    let n: i64 = x as i64\n    return n\n}\n"),
+        // 单精度同样按目标形状检查：2^63 的 f32 精确值越界。
+        ("trap-single", "namespace app;\n[main]\nmicro main() -> i64 {\n    let x: f32 = 9223372036854775808.0 as f32\n    let n: i64 = x as i64\n    return n\n}\n"),
+    ];
+    for (prefix, source) in cases {
+        let (outcome, root) = build(prefix, source);
+        assert!(outcome.ok, "`{prefix}` 构建失败：{:?}", outcome.error);
+        let code = exit_code(&executable(&outcome));
+        assert_ne!(code, 0, "`{prefix}` 必须走失败出口而非正常返回 0");
+        let _ = fs::remove_dir_all(root);
+    }
+}
+
+/// 超出寄存器传参上限的调用必须结构化失败：栈上传参能力未开放，不得静默错编。
+#[cfg(windows)]
+#[test]
+fn five_register_arguments_fail_closed_at_build() {
+    let source = r#"namespace app;
+
+micro five(a: f64, b: f64, c: f64, d: f64, e: f64) -> f64 {
+    return a + b + c + d + e
+}
+
+[main]
+micro main() -> i64 {
+    let sum: f64 = five(1.0, 2.0, 3.0, 4.0, 5.0)
+    if sum == 15.0 {
+        return 0
+    }
+    return 1
+}
+"#;
+    let (outcome, root) = build("five-args", source);
+    assert!(!outcome.ok, "5 参浮点调用必须被结构化拒绝，而非静默错编");
+    let error = outcome.error.unwrap_or_default();
+    assert!(error.contains("寄存器传参上限") || error.contains("栈上传参未实现"), "诊断必须说明未开放的能力：{error}");
     let _ = fs::remove_dir_all(root);
 }
