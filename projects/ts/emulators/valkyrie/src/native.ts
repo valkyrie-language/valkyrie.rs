@@ -9,6 +9,10 @@ export type LegionLibraryExport = {
     sourceName: string;
     physicalArtifact: string;
     abi: string;
+    /** 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；未冻结时为空数组。 */
+    parameters: string[];
+    /** 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；未冻结时为空串。 */
+    returns: string;
 };
 
 export type LegionExecutionManifestView = {

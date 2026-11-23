@@ -131,13 +131,16 @@ fn export_of(manifest: &ExecutionManifest, source_name: &str) -> LibraryExportIn
         .clone()
 }
 
-/// 清单条目与宿主实际装载事实的逐项对照：公开名、ABI 标签、调用合同、物理模块。
+/// 清单条目与宿主实际装载事实的逐项对照：公开名、ABI 标签、调用合同、物理模块、
+/// 冻结载体签名。
 fn assert_export_matches(manifest: &ExecutionManifest, loaded: &Path, source_name: &str, public_name: &str, abi: &str, invocation: &str) {
     let export = export_of(manifest, source_name);
     assert_eq!(export.source_name, source_name, "`source_name` 必须是源码声明名");
     assert_eq!(export.logical_name, public_name, "`logical_name` 必须等于宿主实际可见名 `{public_name}`");
     assert_eq!(export.abi, abi, "`abi` 合同标签必须是 `{abi}`");
     assert_eq!(export.invocation, invocation, "`invocation` 必须是 `{invocation}`");
+    assert!(!export.parameters.is_empty(), "清单必须记录冻结形参载体，消费侧不得凭值形状猜");
+    assert!(!export.returns.is_empty(), "清单必须记录冻结返回载体，消费侧不得凭值形状猜");
     assert_eq!(
         Path::new(&export.physical_artifact).file_name().expect("物理产物必须有文件名"),
         loaded.file_name().expect("装载的模块必须有文件名"),

@@ -23,8 +23,17 @@ export function readExecutionManifest(artifactDir: string): {
     target: string;
     /** 产物种类：`binary` / `library`。 */
     artifact_kind: string;
-    /** 库导出索引（源码名 + 目标公开名 + 物理产物 + ABI 合同标签）；非库产物为空数组。 */
-    library_exports: { logical_name: string; source_name: string; physical_artifact: string; abi: string }[];
+    /** 库导出索引（源码名 + 目标公开名 + 物理产物 + ABI 合同标签 + 载体签名）；非库产物为空数组。 */
+    library_exports: {
+        logical_name: string;
+        source_name: string;
+        physical_artifact: string;
+        abi: string;
+        /** 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；未冻结时为空数组。 */
+        parameters: string[];
+        /** 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；未冻结时为空串。 */
+        returns: string;
+    }[];
     compiler_build_identity?: string;
     compile_evidence?: {
         semantic_closure_hash?: string;
@@ -46,6 +55,8 @@ export function readExecutionManifest(artifactDir: string): {
             source_name: entry.sourceName ?? '',
             physical_artifact: entry.physicalArtifact,
             abi: entry.abi ?? '',
+            parameters: entry.parameters ?? [],
+            returns: entry.returns ?? '',
         })),
         compiler_build_identity: view.compilerBuildIdentity ?? undefined,
         compile_evidence: {
