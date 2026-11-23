@@ -247,6 +247,130 @@ fn cpython_extension_loads_calls_and_propagates_errors() {
     let _ = fs::remove_dir_all(output_dir);
 }
 
+/// 文本导出：`utf8` 实参按 UTF-8 字节进入镜像 `Utf8Text`，返回按字节还原宿主字符串。
+const TEXT_LIBRARY_SOURCE: &str = r#"namespace app;
+
+[export]
+micro echo_text(text: utf8) -> utf8 {
+    return text
+}
+
+[export]
+micro greeting() -> utf8 {
+    return "中文😀"
+}
+"#;
+
+/// Node-API 文本往返：ASCII、多字节、非 BMP、内嵌 NUL 与空串都必须逐字节还原；
+/// 非字符串实参必须在调用 guest 前抛 `TypeError`。
+#[cfg(windows)]
+#[test]
+fn node_addon_round_trips_utf8_text() {
+    let (outcome, output_dir) = build_library_from_source("node-text", "node", TEXT_LIBRARY_SOURCE);
+    assert!(outcome.ok, "node 文本扩展构建失败: {:?}", outcome.error);
+    let addon = artifact_with_extension(&outcome, "node");
+
+    let script = r#"
+const addon = require(process.env.MODULE_PATH);
+const expect = (label, actual, want) => {
+    if (actual !== want) throw new Error(label + ": got " + JSON.stringify(actual) + " want " + JSON.stringify(want));
+};
+expect("echoText(ascii)", addon.echoText("hello"), "hello");
+expect("echoText(empty)", addon.echoText(""), "");
+expect("echoText(cjk)", addon.echoText("中文"), "中文");
+expect("echoText(non-bmp)", addon.echoText("😀"), "😀");
+expect("echoText(nul)", addon.echoText("a\u0000b"), "a\u0000b");
+if (typeof addon.echoText("x") !== "string") throw new Error("utf8 return must be a string");
+expect("greeting", addon.greeting(), "中文😀");
+// 源码名 `echo_text` 在 Node 面投影为 `echoText`，源名不泄漏。
+if (typeof addon.echo_text !== "undefined") throw new Error("source name `echo_text` must not leak to the Node surface");
+
+let typeError = null;
+try {
+    addon.echoText(123n);
+} catch (error) {
+    typeError = error;
+}
+if (!(typeError instanceof TypeError)) throw new Error("non-string argument must raise TypeError, got " + typeError);
+
+// 重复调用：桥侧临时副本每轮释放，后续调用仍必须正确。
+for (let i = 0; i < 2000; i += 1) {
+    if (addon.echoText("中文😀") !== "中文😀") throw new Error("iteration " + i + " failed");
+}
+process.stdout.write("ok text " + addon.echoText("中文😀"));
+"#;
+    let output = Command::new("node")
+        .arg("-e")
+        .arg(script)
+        .env("MODULE_PATH", &addon)
+        .output()
+        .expect("需要 node 宿主装载 .node 产物");
+    assert!(
+        output.status.success(),
+        "node 文本装载/调用失败: status={:?} stdout={} stderr={}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    eprintln!("node text stdout: {}", String::from_utf8_lossy(&output.stdout).trim());
+    let _ = fs::remove_dir_all(output_dir);
+}
+
+/// CPython 文本往返：`s#` 保留原始字节与内嵌 NUL；返回字符串不得随往返次数增加引用。
+#[cfg(windows)]
+#[test]
+fn cpython_extension_round_trips_utf8_text() {
+    let (outcome, output_dir) = build_library_from_source("python-text", "python", TEXT_LIBRARY_SOURCE);
+    assert!(outcome.ok, "CPython 文本扩展构建失败: {:?}", outcome.error);
+    let extension = artifact_with_extension(&outcome, "pyd");
+
+    let script = concat!(
+        "import os, sys, gc\n",
+        "sys.path.insert(0, os.environ['MODULE_DIR'])\n",
+        "import app\n",
+        "assert app.echo_text('hello') == 'hello'\n",
+        "assert app.echo_text('') == ''\n",
+        "assert app.echo_text('中文') == '中文'\n",
+        "assert app.echo_text('😀') == '😀'\n",
+        "assert app.echo_text('a\\0b') == 'a\\0b', repr(app.echo_text('a\\0b'))\n",
+        "assert app.greeting() == '中文😀'\n",
+        "assert isinstance(app.echo_text('x'), str)\n",
+        "try:\n",
+        "    app.echo_text(123)\n",
+        "except TypeError:\n",
+        "    pass\n",
+        "else:\n",
+        "    raise AssertionError('non-string argument must raise TypeError')\n",
+        // 持有返回字符串后继续往返：每次调用的临时镜像都必须释放，且返回对象不多持引用。
+        "probe = app.echo_text('持有引用')\n",
+        "assert probe == '持有引用'\n",
+        "baseline_refs = sys.getrefcount(probe)\n",
+        "baseline_blocks = sys.getallocatedblocks()\n",
+        "for _ in range(2000):\n",
+        "    assert app.echo_text('中文😀') == '中文😀'\n",
+        "gc.collect()\n",
+        "assert sys.getrefcount(probe) == baseline_refs, (sys.getrefcount(probe), baseline_refs)\n",
+        "delta = sys.getallocatedblocks() - baseline_blocks\n",
+        "assert delta <= 64, ('allocated blocks grew', delta)\n",
+        "del probe\n",
+        "gc.collect()\n",
+    );
+    let output = Command::new("python")
+        .arg("-c")
+        .arg(script)
+        .env("MODULE_DIR", extension.parent().unwrap())
+        .output()
+        .expect("需要 python 宿主装载 .pyd 产物");
+    assert!(
+        output.status.success(),
+        "python 文本装载/调用失败: status={:?} stdout={} stderr={}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let _ = fs::remove_dir_all(output_dir);
+}
+
 /// 第 5 个位置的整数形参超出 Win64 整数实参寄存器上限：必须在写出前结构化拒绝，
 /// 诊断指名导出与上限，不能静默把第 5 个实参塞进错误位置。
 #[test]

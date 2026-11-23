@@ -336,6 +336,86 @@ micro main() -> i64 {{
     )
 }
 
+/// 数组返回：实参镜像原样返回（别名）、新分配数组、零长数组三条路径。
+fn array_return_source() -> String {
+    format!(
+        r#"namespace app;
+{ARRAY_OPERATORS}
+[export]
+micro echo_values(values: [i64]) -> [i64] {{
+    array_set(values, 0, 42)
+    return values
+}}
+
+[export]
+micro pair() -> [i64] {{
+    let values: [i64] = array_new(2)
+    array_set(values, 0, 7)
+    array_set(values, 1, 9)
+    return values
+}}
+
+[export]
+micro fresh_zero(count: i64) -> [i64] {{
+    return array_new(count)
+}}
+"#
+    )
+}
+
+/// `.node` 数组返回：宿主得到逐元素 `bigint` 的新 JS 数组；guest 原样返回实参镜像时
+/// 必须先复制再释放镜像，返回值不得与宿主输入共享对象。
+#[cfg(windows)]
+#[test]
+fn node_export_returns_i64_arrays() {
+    let (outcome, root) = build_for("return", &array_return_source(), "node", LIBRARY_MANIFEST);
+    assert!(outcome.ok, "node 数组返回扩展构建失败: {:?}", outcome.error);
+    let addon = artifact_with_extension(&outcome, "node");
+
+    let script = r#"
+const addon = require(process.env.MODULE_PATH);
+const same = (actual, want) => Array.isArray(actual) && actual.length === want.length && actual.every((value, index) => value === want[index]);
+// 别名：guest 改首元素后原样返回实参镜像。
+const input = [3n, 1n, 2n];
+const echoed = addon.echoValues(input);
+if (echoed === input) throw new Error("returned sequence must be a new JS array, not the input object");
+if (!same(echoed, [42n, 1n, 2n])) throw new Error("echoValues must return [42n,1n,2n], got " + String(echoed));
+if (typeof echoed[0] !== "bigint") throw new Error("array elements must be bigint");
+if (!same(input, [42n, 1n, 2n])) throw new Error("input array must still be written back as [42n,1n,2n], got " + String(input));
+
+// guest 新分配：返回值与后续调用互不影响（复制而不是句柄）。
+const first = addon.pair();
+if (!same(first, [7n, 9n])) throw new Error("pair must return [7n,9n], got " + String(first));
+first[0] = 1n;
+if (!same(addon.pair(), [7n, 9n])) throw new Error("returned arrays must not alias guest storage");
+
+// 零长与 i64 两端必须无损。
+if (addon.freshZero(0n).length !== 0) throw new Error("zero-length return must be empty");
+const wide = addon.freshZero(3n);
+if (wide.length !== 3) throw new Error("freshZero(3) length");
+for (let i = 0; i < 1000; i += 1) {
+    const values = addon.pair();
+    if (!same(values, [7n, 9n])) throw new Error("iteration " + i + " failed: " + String(values));
+}
+process.stdout.write("ok arrays " + String(echoed));
+"#;
+    let output = Command::new("node")
+        .arg("-e")
+        .arg(script)
+        .env("MODULE_PATH", &addon)
+        .output()
+        .expect("需要 node 宿主装载 .node 产物");
+    assert!(
+        output.status.success(),
+        "node 数组返回装载/调用失败: status={:?} stdout={} stderr={}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    eprintln!("node array return stdout: {}", String::from_utf8_lossy(&output.stdout).trim());
+    let _ = fs::remove_dir_all(root);
+}
+
 /// 越界读取必须走显式失败出口，而不是读到相邻内存。
 fn out_of_bounds_source() -> String {
     format!(
