@@ -29,9 +29,13 @@ export function readExecutionManifest(artifactDir: string): {
         source_name: string;
         physical_artifact: string;
         abi: string;
-        /** 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；未冻结时为空数组。 */
+        /** 是否携带已冻结的载体签名；为 false 时参数/返回标签无意义。 */
+        signature_available: boolean;
+        /** 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；空数组表示已冻结的零形参。 */
         parameters: string[];
-        /** 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；未冻结时为空串。 */
+        /** 形参声明名（按形参顺序，与 `parameters` 等长）；消费侧按名绑定用例字段。 */
+        parameter_names: string[];
+        /** 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）。 */
         returns: string;
     }[];
     compiler_build_identity?: string;
@@ -55,7 +59,9 @@ export function readExecutionManifest(artifactDir: string): {
             source_name: entry.sourceName ?? '',
             physical_artifact: entry.physicalArtifact,
             abi: entry.abi ?? '',
+            signature_available: entry.signatureAvailable ?? false,
             parameters: entry.parameters ?? [],
+            parameter_names: entry.parameterNames ?? [],
             returns: entry.returns ?? '',
         })),
         compiler_build_identity: view.compilerBuildIdentity ?? undefined,

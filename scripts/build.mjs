@@ -19,20 +19,54 @@ import {fileURLToPath} from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * 从 Cargo.lock 解析 Boost `package-manager-legion` 的固定 rev，作为
+ * 先让 cargo 结算依赖图，再读 Cargo.lock。
+ *
+ * `NYAR_COMPILER_BUILD_ID` 必须在 legion 编译前注入，而 `Cargo.lock` 只有在
+ * cargo 解析依赖后才会写入新 pin。直接读锁会拿到上一次构建的 rev（本轮已发生
+ * 的内嵌身份错位）：addon 是新的，身份却是旧的。`cargo metadata` 在这里完成
+ * 锁更新，失败即终止，绝不带着待定身份继续编译。
+ */
+function syncCargoLock() {
+    const result = spawnSync('cargo', ['metadata', '--format-version', '1', '--quiet'], {
+        cwd: ROOT,
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+    });
+    if ((result.status ?? 1) !== 0) {
+        console.error('cargo metadata 失败：无法结算 Cargo.lock，拒绝以过期构建身份编译');
+        process.exit(result.status ?? 1);
+    }
+}
+
+/** 从 Cargo.toml 读取声明的 Boost `package-manager-legion` rev。 */
+function declaredBoostRev() {
+    const manifest = readFileSync(join(ROOT, 'Cargo.toml'), 'utf8');
+    const entry = manifest.match(/^package-manager-legion\s*=\s*\{[^}]*rev\s*=\s*"([0-9a-f]+)"/m);
+    return entry?.[1];
+}
+
+/**
+ * 从已结算的 Cargo.lock 解析 Boost `package-manager-legion` 的固定 rev，作为
  * `NYAR_COMPILER_BUILD_ID` 注入编译环境：git 依赖 checkout 没有 `.git`，
  * legion 侧 `option_env!` 否则退化为 `unknown`，native lane 的构建身份门
  * 会拒绝正式复用。注入后 addon 内嵌身份与产物清单 `compiler=` 段同源一致。
  */
 function boostBuildId() {
     if (process.env.NYAR_COMPILER_BUILD_ID) return process.env.NYAR_COMPILER_BUILD_ID;
+    syncCargoLock();
     const lock = readFileSync(join(ROOT, 'Cargo.lock'), 'utf8');
     const entry = lock.match(/\[\[package\]\]\nname = "package-manager-legion"\nversion = "[^"]*"\nsource = "git\+https:\/\/github\.com\/oovm\/rust-boost\?rev=([0-9a-f]+)#([0-9a-f]+)"/);
     if (!entry) {
         console.warn('warning: Cargo.lock 未含 package-manager-legion 的 git rev 条目，编译器构建身份将退化为 unknown');
         return undefined;
     }
-    return entry[2];
+    const locked = entry[2];
+    const declared = declaredBoostRev();
+    if (declared && declared !== locked) {
+        console.error(`Cargo.lock rev ${locked.slice(0, 12)} 与 Cargo.toml 声明 ${declared.slice(0, 12)} 不一致：拒绝注入错位身份`);
+        process.exit(1);
+    }
+    return locked;
 }
 
 /** @typedef {{ triple: string, packageDir: string, npmTriple: string, short: string }} NativeTarget */

@@ -41,9 +41,17 @@ pub struct LegionLibraryExport {
     pub physical_artifact: String,
     /// 目标 ABI 合同标签（`node-api` / `cpython` / `c-abi` / `wasm` 等）；旧 manifest 缺少该字段时为空串。
     pub abi: String,
-    /// 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；未冻结时为空列表。
+    /// 是否携带已冻结的载体签名；`false` 表示该 lane 尚未提供签名事实，
+    /// 此时 `parameters`/`returns` 无意义，消费侧必须在编组前拒绝。
+    pub signature_available: bool,
+    /// 形参宿主载体标签（`i64` / `i64[]` / `utf8`，按形参顺序）；仅当
+    /// `signature_available` 为真时有意义，空列表表示已冻结的零形参。
     pub parameters: Vec<String>,
-    /// 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；未冻结时为空串。
+    /// 形参声明名（按形参顺序，与 `parameters` 等长）；消费侧按名绑定用例字段，
+    /// 禁止依赖 JSON 对象键序。
+    pub parameter_names: Vec<String>,
+    /// 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；仅当
+    /// `signature_available` 为真时有意义。
     pub returns: String,
 }
 
@@ -89,7 +97,9 @@ pub fn legion_read_execution_manifest(output_dir: String) -> Option<LegionExecut
                 source_name: entry.source_name,
                 physical_artifact: entry.physical_artifact,
                 abi: entry.abi,
+                signature_available: entry.signature_available,
                 parameters: entry.parameters,
+                parameter_names: entry.parameter_names,
                 returns: entry.returns,
             })
             .collect(),

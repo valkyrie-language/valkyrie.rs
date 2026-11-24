@@ -139,7 +139,9 @@ fn assert_export_matches(manifest: &ExecutionManifest, loaded: &Path, source_nam
     assert_eq!(export.logical_name, public_name, "`logical_name` 必须等于宿主实际可见名 `{public_name}`");
     assert_eq!(export.abi, abi, "`abi` 合同标签必须是 `{abi}`");
     assert_eq!(export.invocation, invocation, "`invocation` 必须是 `{invocation}`");
+    assert!(export.signature_available, "清单必须标记载体签名可用");
     assert!(!export.parameters.is_empty(), "清单必须记录冻结形参载体，消费侧不得凭值形状猜");
+    assert_eq!(export.parameter_names.len(), export.parameters.len(), "清单形参名必须与载体标签等长，供按名绑定");
     assert!(!export.returns.is_empty(), "清单必须记录冻结返回载体，消费侧不得凭值形状猜");
     assert_eq!(
         Path::new(&export.physical_artifact).file_name().expect("物理产物必须有文件名"),
