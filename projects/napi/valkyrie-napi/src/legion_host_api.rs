@@ -53,6 +53,9 @@ pub struct LegionLibraryExport {
     /// 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）；仅当
     /// `signature_available` 为真时有意义。
     pub returns: String,
+    /// 依赖模块名才能导入的宿主的冻结模块名（当前仅 `cpython`），与产物文件名
+    /// 前缀和 `PyInit_` 入口同值；空串表示该 ABI 不依赖模块名。
+    pub module_name: String,
 }
 
 /// 产物新鲜度检查结果。
@@ -101,6 +104,7 @@ pub fn legion_read_execution_manifest(output_dir: String) -> Option<LegionExecut
                 parameters: entry.parameters,
                 parameter_names: entry.parameter_names,
                 returns: entry.returns,
+                module_name: entry.module_name,
             })
             .collect(),
         semantic_closure_hash: manifest.semantic_closure_hash,

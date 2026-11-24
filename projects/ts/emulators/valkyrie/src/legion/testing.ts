@@ -37,6 +37,8 @@ export function readExecutionManifest(artifactDir: string): {
         parameter_names: string[];
         /** 返回宿主载体标签（`i64` / `bool` / `utf8` / `i64[]` / `unit`）。 */
         returns: string;
+        /** 依赖模块名的宿主的冻结模块名（当前仅 `cpython`）；空串表示不依赖模块名。 */
+        module_name: string;
     }[];
     compiler_build_identity?: string;
     compile_evidence?: {
@@ -63,6 +65,7 @@ export function readExecutionManifest(artifactDir: string): {
             parameters: entry.parameters ?? [],
             parameter_names: entry.parameterNames ?? [],
             returns: entry.returns ?? '',
+            module_name: entry.moduleName ?? '',
         })),
         compiler_build_identity: view.compilerBuildIdentity ?? undefined,
         compile_evidence: {
