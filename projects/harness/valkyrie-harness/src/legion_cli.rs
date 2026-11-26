@@ -16,8 +16,9 @@ pub struct LegionInvocation {
 
 /// 解析 `@nyar/valkyrie` `legion` 入口。
 ///
-/// 优先级：`VALKYRIE_LEGION` → 工作区 `node_modules/@nyar/valkyrie` → 兄弟仓
-/// `nyar-vm.rs/projects/nyar.ts/emulators/valkyrie` → PATH 中的 `legion`。
+/// 优先级：`VALKYRIE_LEGION` → 仓内 `projects/ts/emulators/valkyrie`（CLI 正式
+/// 落点，与 [`crate::asgard_cli`] 同源）→ 工作区 `node_modules/@nyar/valkyrie` →
+/// PATH 中的 `legion`。
 pub fn resolve_legion() -> LegionInvocation {
     if let Ok(path) = std::env::var("VALKYRIE_LEGION") {
         return invocation_for_path(PathBuf::from(path));
@@ -26,9 +27,9 @@ pub fn resolve_legion() -> LegionInvocation {
     let harness_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let root = workspace_root();
     for candidate in [
+        root.join("projects/ts/emulators/valkyrie/bin/legion.mjs"),
         harness_dir.join("node_modules/@nyar/valkyrie/bin/legion.mjs"),
         root.join("node_modules/@nyar/valkyrie/bin/legion.mjs"),
-        root.join("../nyar-vm.rs/projects/nyar.ts/emulators/valkyrie/bin/legion.mjs"),
     ] {
         if candidate.is_file() {
             return invocation_for_path(candidate);
