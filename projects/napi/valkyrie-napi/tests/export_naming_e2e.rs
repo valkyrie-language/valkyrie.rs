@@ -13,7 +13,7 @@
 use std::{ffi::c_void, fs, path::{Path, PathBuf}, process::Command};
 
 use package_manager_legion::{
-    legion::cmds::run::{ExecutionManifest, LibraryExportIndexEntry},
+    legion::cmds::run::{ExecutionManifest, LibraryExportIndexEntry, EXECUTION_MANIFEST_SCHEMA_VERSION},
     product::{BuildOptions, BuildOutcome, build_project},
 };
 
@@ -241,7 +241,7 @@ fn node_extension_publishes_camel_case_projection_with_matching_manifest() {
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "ok export naming node");
 
     let manifest = manifest_at(&outcome);
-    assert_eq!(manifest.schema_version, 2, "导出身份合同拆分后清单 schema 必须升 2");
+    assert_eq!(manifest.schema_version, EXECUTION_MANIFEST_SCHEMA_VERSION, "清单 schema 必须与工具链生产者同代（导出身份合同自 2 起）");
     assert_export_matches(&manifest, &addon, "move_zeroes", "moveZeroes", "node-api", "node require");
     assert_export_matches(&manifest, &addon, "two_sum", "twoSum", "node-api", "node require");
     assert_eq!(manifest.library_exports.len(), 2, "清单只登记公开导出，私有 helper 不得入册");
@@ -281,7 +281,7 @@ fn cpython_extension_publishes_source_names_with_matching_manifest() {
     );
 
     let manifest = manifest_at(&outcome);
-    assert_eq!(manifest.schema_version, 2);
+    assert_eq!(manifest.schema_version, EXECUTION_MANIFEST_SCHEMA_VERSION);
     assert_export_matches(&manifest, &extension, "move_zeroes", "move_zeroes", "cpython", "python import");
     assert_export_matches(&manifest, &extension, "two_sum", "two_sum", "cpython", "python import");
     assert_eq!(manifest.library_exports.len(), 2);
@@ -315,7 +315,7 @@ fn plain_dll_publishes_source_names_with_matching_manifest() {
     release(module, &dll);
 
     let manifest = manifest_at(&outcome);
-    assert_eq!(manifest.schema_version, 2);
+    assert_eq!(manifest.schema_version, EXECUTION_MANIFEST_SCHEMA_VERSION);
     assert_export_matches(&manifest, &dll, "move_zeroes", "move_zeroes", "c-abi", "LoadLibraryW + GetProcAddress");
     assert_export_matches(&manifest, &dll, "two_sum", "two_sum", "c-abi", "LoadLibraryW + GetProcAddress");
     assert_eq!(manifest.library_exports.len(), 2);

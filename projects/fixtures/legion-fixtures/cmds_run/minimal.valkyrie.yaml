@@ -12,7 +12,7 @@ expect:
     per_artifact: {}
     artifacts: []
     compile_errors:
-    - 'build failed for clr-microsoft-unknown-managed: CLR 入口方法 `minimal_main` 返回类型 `int64` 不符合 CLR entry 合同（只接受 `void`/`int32`）'
+    - 'build failed for clr-microsoft-unknown-managed: [clr-binary] CLR 入口方法 `minimal_main` 返回类型 `int64` 不符合 CLR entry 合同（只接受 `void`/`int32`）'
     errors: []
   jvm-openjdk-unknown-managed:
     build_success: true

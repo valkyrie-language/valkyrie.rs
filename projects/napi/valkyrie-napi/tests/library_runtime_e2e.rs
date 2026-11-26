@@ -202,8 +202,10 @@ fn dll_artifact(outcome: &BuildOutcome) -> PathBuf {
 fn shared_library_exports_call_and_unload_through_system_loader() {
     let (outcome, root) = build_library("loader", library_source());
     assert!(outcome.ok, "共享库构建失败：{:?}", outcome.error);
-    // 交付身份：产物入口符号是首个导出名，且没有 CLI 运行合同（库用途语义）。
-    assert_eq!(outcome.entry_symbol.as_deref(), Some("c_add"), "库交付必须报告导出身份");
+    // 交付身份（Boost `db3975fd` 契约）：普通共享库没有单一入口，`entry_symbol`
+    // 必须为空——导出索引由清单 `library_exports` 承载，不得拿首个导出冒充入口；
+    // 真实按名装载与调用由下方系统加载器两轮验证。
+    assert_eq!(outcome.entry_symbol, None, "库交付不得报告冒充的入口符号");
     let dll = dll_artifact(&outcome);
     // 两轮各自「装载一次 → 解析全部导出 → 释放一次 → 验证模块离开 → 重新装载」：
     // 第二轮必须重新装载成功，证明没有一次性状态泄漏，也没有遗留引用。
